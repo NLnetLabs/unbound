@@ -58,6 +58,7 @@ struct ub_randstate;
 struct daemon_remote;
 struct respip_set;
 struct shm_main_info;
+struct cookie_secrets;
 struct fast_reload_thread;
 struct fast_reload_printq;
 
@@ -146,6 +147,8 @@ struct daemon {
 #endif
 	/** reuse existing cache on reload if other conditions allow it. */
 	int reuse_cache;
+	/** the EDNS cookie secrets from the cookie-secret-file */
+	struct cookie_secrets* cookie_secrets;
 	/** the fast reload thread, or NULL */
 	struct fast_reload_thread* fast_reload_thread;
 	/** the fast reload printq list */

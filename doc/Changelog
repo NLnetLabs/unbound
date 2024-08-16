@@ -1,3 +1,61 @@
+9 August 2024: Wouter
+	- Fix spelling for the cache-min-negative-ttl entry in the
+	  example.conf.
+	- Tag for release 1.21.0, the repository continues with 1.21.1
+	  in development.
+
+8 August 2024: Wouter
+	- Fix CAMP issues with global quota. Thanks to Huayi Duan, Marco
+	  Bearzi, Jodok Vieli, and Cagin Tanir from NetSec group, ETH Zurich.
+	- Fix CacheFlush issues with limit on NS RRs. Thanks to Yehuda Afek,
+	  Anat Bremler-Barr, Shoham Danino and Yuval Shavitt (Tel-Aviv
+	  University and Reichman University).
+	- Set version number to 1.21.0 for release. This has tag 1.21.0rc1.
+	- Fix that for windows the module startup is called and sets up
+	  the module-config.
+
+2 August 2024: Wouter
+	- Fix that alloc stats has strdup checks, it stops debuggers from
+	  complaining about mismatch at free time.
+	- Fix testbound for alloc stats strdup in util/alloc.c.
+	- Merge #1090: Cookie secret file. Adds
+	  `cookie-secret-file: "unbound_cookiesecrets.txt"` option to store
+	  cookie secrets for EDNS COOKIE secret rollover. The remote control
+	  add_cookie_secret, activate_cookie_secret and drop_cookie_secret
+	  commands can be used for rollover, the command print_cookie_secrets
+	  shows the values in use.
+	- Fix that alloc stats for forwards and hints are printed, and when
+	  alloc stats is enabled, the unit test for unbound control waits for
+	  reloads to complete.
+
+1 August 2024: Wouter
+	- Fix dnstap test program, cleans up to have clean memory on exit,
+	  for tap_data_free, does not delete NULL items. Also it does not try
+	  to free the tail, specifically in the free of the list since that
+	  picked up the next item in the list for its loop causing invalid
+	  free. Added internal unit test to unbound-dnstap-socket for that.
+	- Fix that the worker mem report with alloc stats does not attempt
+	  to print memory use of forwards and hints if they have been
+	  deleted already.
+
+31 July 2024: Wouter
+	- Fix for #1114: Fix that cache fill for forward-host names is
+	  performed, so that with nonzero target-fetch-policy it fetches
+	  forwarder addresses and uses them from cache. Also updated that
+	  delegation point cache fill routines use CDflag for AAAA message
+	  lookups, so that its negative lookup stops a recursion since the
+	  cache uses the bit for disambiguation for dns64 but the recursion
+	  uses CDflag for the AAAA target lookups, so the check correctly
+	  stops a useless recursion by its cache lookup.
+
+30 July 2024: Wouter
+	- Fix to document parameters of auth_zone_verify_zonemd_with_key.
+
+25 July 2024: Wouter
+	- Add root key 38696 from 2024 for DNSSEC validation. It is added
+	  to the default root keys in unbound-anchor. The content can be
+	  inspected with `unbound-anchor -l`.
+
 23 July 2024: Yorgos
 	- Fix #1106: ratelimit-below-domain logs the wrong FROM address.
 	- Cleanup ede.tdir test.

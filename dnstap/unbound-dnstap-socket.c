@@ -200,18 +200,25 @@ static void tap_data_list_try_to_free_tail(struct tap_data_list* list)
 }
 
 /** delete the tap structure */
-static void tap_data_free(struct tap_data* data)
+static void tap_data_free(struct tap_data* data, int free_tail)
 {
-	ub_event_del(data->ev);
-	ub_event_free(data->ev);
+	if(!data)
+		return;
+	if(data->ev) {
+		ub_event_del(data->ev);
+		ub_event_free(data->ev);
+	}
 #ifdef HAVE_SSL
 	SSL_free(data->ssl);
 #endif
-	close(data->fd);
+	sock_close(data->fd);
 	free(data->id);
 	free(data->frame);
-	data->data_list->d = NULL;
-	tap_data_list_try_to_free_tail(data->data_list);
+	if(data->data_list) {
+		data->data_list->d = NULL;
+		if(free_tail)
+			tap_data_list_try_to_free_tail(data->data_list);
+	}
 	free(data);
 }
 
@@ -237,7 +244,7 @@ static void tap_data_list_delete(struct tap_data_list* list)
 	while(e) {
 		next = e->next;
 		if(e->d) {
-			tap_data_free(e->d);
+			tap_data_free(e->d, 0);
 			e->d = NULL;
 		}
 		free(e);
@@ -260,7 +267,7 @@ static void tap_socket_close(struct tap_socket* s)
 {
 	if(!s) return;
 	if(s->fd == -1) return;
-	close(s->fd);
+	sock_close(s->fd);
 	s->fd = -1;
 }
 
@@ -992,7 +999,7 @@ static int tap_handshake(struct tap_data* data)
 			return 0;
 		} else if(r == 0) {
 			/* closed */
-			tap_data_free(data);
+			tap_data_free(data, 1);
 			return 0;
 		} else if(want == SSL_ERROR_SYSCALL) {
 			/* SYSCALL and errno==0 means closed uncleanly */
@@ -1010,7 +1017,7 @@ static int tap_handshake(struct tap_data* data)
 			if(!silent)
 				log_err("SSL_handshake syscall: %s",
 					strerror(errno));
-			tap_data_free(data);
+			tap_data_free(data, 1);
 			return 0;
 		} else {
 			unsigned long err = ERR_get_error();
@@ -1020,7 +1027,7 @@ static int tap_handshake(struct tap_data* data)
 				verbose(VERB_OPS, "ssl handshake failed "
 					"from %s", data->id);
 			}
-			tap_data_free(data);
+			tap_data_free(data, 1);
 			return 0;
 		}
 	}
@@ -1028,7 +1035,7 @@ static int tap_handshake(struct tap_data* data)
 	data->ssl_handshake_done = 1;
 	if(!tap_check_peer(data)) {
 		/* closed */
-		tap_data_free(data);
+		tap_data_free(data, 1);
 		return 0;
 	}
 	return 1;
@@ -1054,7 +1061,7 @@ void dtio_tap_callback(int ATTR_UNUSED(fd), short ATTR_UNUSED(bits), void* arg)
 		if(verbosity>=4) log_info("s recv %d", (int)ret);
 		if(ret == 0) {
 			/* closed or error */
-			tap_data_free(data);
+			tap_data_free(data, 1);
 			return;
 		} else if(ret == -1) {
 			/* continue later */
@@ -1076,7 +1083,7 @@ void dtio_tap_callback(int ATTR_UNUSED(fd), short ATTR_UNUSED(bits), void* arg)
 			data->frame = calloc(1, data->len);
 			if(!data->frame) {
 				log_err("out of memory");
-				tap_data_free(data);
+				tap_data_free(data, 1);
 				return;
 			}
 		}
@@ -1089,7 +1096,7 @@ void dtio_tap_callback(int ATTR_UNUSED(fd), short ATTR_UNUSED(bits), void* arg)
 		if(verbosity>=4) log_info("f recv %d", (int)r);
 		if(r == 0) {
 			/* closed or error */
-			tap_data_free(data);
+			tap_data_free(data, 1);
 			return;
 		} else if(r == -1) {
 			/* continue later */
@@ -1114,13 +1121,13 @@ void dtio_tap_callback(int ATTR_UNUSED(fd), short ATTR_UNUSED(bits), void* arg)
 		data->is_bidirectional = 1;
 		if(verbosity) log_info("bidirectional stream");
 		if(!reply_with_accept(data)) {
-			tap_data_free(data);
+			tap_data_free(data, 1);
 			return;
 		}
 	} else if(data->len >= 4 && sldns_read_uint32(data->frame) ==
 		FSTRM_CONTROL_FRAME_STOP && data->is_bidirectional) {
 		if(!reply_with_finish(data)) {
-			tap_data_free(data);
+			tap_data_free(data, 1);
 			return;
 		}
 	}
@@ -1400,6 +1407,41 @@ static int internal_unittest()
 	/* clean up */
 	tap_data_list_delete(socket->data_list);
 	free(socket);
+
+	/* Start again. Add two elements */
+	socket = calloc(1, sizeof(*socket));
+	log_assert(socket);
+	for(i=0; i<2; i++) {
+		datas[i] = calloc(1, sizeof(struct tap_data));
+		log_assert(datas[i]);
+		log_assert(tap_data_list_insert(&socket->data_list, datas[i]));
+	}
+	/* sanity base check */
+	list = socket->data_list;
+	for(i=0; list; i++) list = list->next;
+	log_assert(i==2);
+
+	/* Free the last data, tail cannot be erased */
+	list = socket->data_list;
+	while(list->next) list = list->next;
+	free(list->d);
+	list->d = NULL;
+	tap_data_list_try_to_free_tail(list);
+	list = socket->data_list;
+	for(i=0; list; i++) list = list->next;
+	log_assert(i==2);
+
+	/* clean up */
+	tap_data_list_delete(socket->data_list);
+	free(socket);
+
+	if(log_get_lock()) {
+		lock_basic_destroy((lock_basic_type*)log_get_lock());
+	}
+	checklock_stop();
+#ifdef USE_WINSOCK
+	WSACleanup();
+#endif
 	return 0;
 }
 
@@ -1531,6 +1573,9 @@ int main(int argc, char** argv)
 	config_delstrlist(tcp_list.first);
 	config_delstrlist(tls_list.first);
 
+	if(log_get_lock()) {
+		lock_basic_destroy((lock_basic_type*)log_get_lock());
+	}
 	checklock_stop();
 #ifdef USE_WINSOCK
 	WSACleanup();

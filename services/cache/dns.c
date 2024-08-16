@@ -346,6 +346,13 @@ find_add_addrs(struct module_env* env, uint16_t qclass,
 			 * not use dns64 translation */
 			neg = msg_cache_lookup(env, ns->name, ns->namelen,
 				LDNS_RR_TYPE_AAAA, qclass, 0, now, 0);
+			/* Because recursion for lookup uses BIT_CD, check
+			 * for that so it stops the recursion lookup, if a
+			 * negative answer is cached. Because the cache uses
+			 * the CD flag for type AAAA. */
+			if(!neg)
+				neg = msg_cache_lookup(env, ns->name, ns->namelen,
+					LDNS_RR_TYPE_AAAA, qclass, BIT_CD, now, 0);
 			if(neg) {
 				delegpt_add_neg_msg(dp, neg);
 				lock_rw_unlock(&neg->entry.lock);
@@ -405,6 +412,13 @@ cache_fill_missing(struct module_env* env, uint16_t qclass,
 			 * not use dns64 translation */
 			neg = msg_cache_lookup(env, ns->name, ns->namelen,
 				LDNS_RR_TYPE_AAAA, qclass, 0, now, 0);
+			/* Because recursion for lookup uses BIT_CD, check
+			 * for that so it stops the recursion lookup, if a
+			 * negative answer is cached. Because the cache uses
+			 * the CD flag for type AAAA. */
+			if(!neg)
+				neg = msg_cache_lookup(env, ns->name, ns->namelen,
+					LDNS_RR_TYPE_AAAA, qclass, BIT_CD, now, 0);
 			if(neg) {
 				delegpt_add_neg_msg(dp, neg);
 				lock_rw_unlock(&neg->entry.lock);

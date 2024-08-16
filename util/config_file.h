@@ -750,6 +750,8 @@ struct config_file {
 	uint8_t cookie_secret[40];
 	/** cookie secret length */
 	size_t  cookie_secret_len;
+	/** path to cookie secret store */
+	char* cookie_secret_file;
 
 	/* ipset module */
 #ifdef USE_IPSET

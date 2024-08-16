@@ -1117,7 +1117,7 @@ static void edns_ede_encode_encodedecode(struct query_info* qinfo,
 	sldns_buffer_skip(pkt, 2 + 2);
 	/* decode */
 	unit_assert(parse_edns_from_query_pkt(pkt, edns, NULL, NULL, NULL, 0,
-		region) == 0);
+		region, NULL) == 0);
 }
 
 static void edns_ede_encode_check(struct edns_data* edns, int* found_ede,

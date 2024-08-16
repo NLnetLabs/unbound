@@ -1,4 +1,4 @@
-# #-- dnstap.post --#
+# #-- cookie_file.post --#
 # source the master var file when it's there
 [ -f ../.tpkg.var.master ] && source ../.tpkg.var.master
 # source the test var file when it's there
@@ -6,12 +6,5 @@
 #
 # do your teardown here
 . ../common.sh
-PRE="../.."
-kill_pid $DNSTAP_SOCKET_PID
-kill_pid $FWD_PID
-kill $UNBOUND_PID
-kill $UNBOUND_PID >/dev/null 2>&1
+kill_from_pidfile "unbound.pid"
 cat unbound.log
-cat tap.log
-cat tap.errlog
-exit 0

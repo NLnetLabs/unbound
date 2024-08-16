@@ -228,7 +228,7 @@ server:
 
 	# the time to live (TTL) value lower bound, in seconds. Default 0.
 	# For negative responses in the cache. If disabled, default,
-	# cache-min-tll applies if configured.
+	# cache-min-ttl applies if configured.
 	# cache-min-negative-ttl: 0
 
 	# the time to live (TTL) value for cached roundtrip times, lameness and
@@ -1043,6 +1043,11 @@ server:
 	# useful for anycast deployments.
 	# example value "000102030405060708090a0b0c0d0e0f".
 	# cookie-secret: <128 bit random hex string>
+
+	# File with cookie secrets, the 'cookie-secret:' option is ignored
+	# and the file can be managed to have staging and active secrets
+	# with remote control commands. Disabled with "". Default is "".
+	# cookie-secret-file: "/usr/local/etc/unbound_cookiesecrets.txt"
 
 	# Enable to attach Extended DNS Error codes (RFC8914) to responses.
 	# ede: no
