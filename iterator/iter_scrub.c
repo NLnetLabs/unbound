@@ -443,7 +443,7 @@ scrub_normalize(sldns_buffer* pkt, struct msg_parse* msg,
 	prev = NULL;
 	rrset = msg->rrset_first;
 	while(rrset && rrset->section == LDNS_SECTION_ANSWER) {
-		if(cname_length > 11 /* env->cfg.iter_scrub_cname */) {
+		if(cname_length > env->cfg->iter_scrub_cname) {
 			/* Too many CNAMEs, or DNAMEs, from the authority
 			 * server, scrub down the length to something
 			 * shorter. This deletes everything after the limit
@@ -562,8 +562,8 @@ scrub_normalize(sldns_buffer* pkt, struct msg_parse* msg,
 					dname_pkt_compare(pkt, oldsname,
 					rrset->dname) == 0) {
 					if(rrset->type == LDNS_RR_TYPE_NS &&
-						rrset->rr_count > 20 /* env->cfg->iter_scrub_ns */) {
-						shorten_rrset(pkt, rrset, 20 /* env->cfg->iter_scrub_ns */);
+						rrset->rr_count > env->cfg->iter_scrub_ns) {
+						shorten_rrset(pkt, rrset, env->cfg->iter_scrub_ns);
 					}
 					prev = rrset;
 					rrset = rrset->rrset_all_next;
@@ -581,8 +581,8 @@ scrub_normalize(sldns_buffer* pkt, struct msg_parse* msg,
 		}
 
 		if(rrset->type == LDNS_RR_TYPE_NS &&
-			rrset->rr_count > 20 /* env->cfg->iter_scrub_ns */) {
-			shorten_rrset(pkt, rrset, 20 /* env->cfg->iter_scrub_ns */);
+			rrset->rr_count > env->cfg->iter_scrub_ns) {
+			shorten_rrset(pkt, rrset, env->cfg->iter_scrub_ns);
 		}
 
 		/* Mark the additional names from relevant rrset as OK. */
@@ -641,7 +641,7 @@ scrub_normalize(sldns_buffer* pkt, struct msg_parse* msg,
 					"RRset:", pkt, msg, prev, &rrset);
 				continue;
 			}
-			if(rrset->rr_count > 20 /* env->cfg->iter_scrub_ns */) {
+			if(rrset->rr_count > env->cfg->iter_scrub_ns) {
 				/* If this is not a referral, and the NS RRset
 				 * is signed, then remove it entirely, so
 				 * that when it becomes bogus it does not
@@ -657,7 +657,7 @@ scrub_normalize(sldns_buffer* pkt, struct msg_parse* msg,
 						"RRset:", pkt, msg, prev, &rrset);
 					continue;
 				} else {
-					shorten_rrset(pkt, rrset, 20 /* env->cfg->iter_scrub_ns */);
+					shorten_rrset(pkt, rrset, env->cfg->iter_scrub_ns);
 				}
 			}
 		}

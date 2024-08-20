@@ -187,6 +187,15 @@ server:
 	# query upon encountering a CNAME record.
 	# max-query-restarts: 11
 
+	# Limit on number of NS records in NS RRset for incoming packets.
+	# iter-scrub-ns: 20
+
+	# Limit on number of CNAME, DNAME records for incoming packets.
+	# iter-scrub-cname: 11
+
+	# Limit on upstream queries for an incoming query and its recursion.
+	# max-global-quota: 128
+
 	# msec for waiting for an unknown server to reply.  Increase if you
 	# are behind a slow satellite link, to eg. 1128.
 	# unknown-server-time-limit: 376

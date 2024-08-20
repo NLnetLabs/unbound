@@ -760,6 +760,12 @@ struct config_file {
 #endif
 	/** respond with Extended DNS Errors (RFC8914) */
 	int ede;
+	/** limit on NS RRs in RRset for the iterator scrubber. */
+	size_t iter_scrub_ns;
+	/** limit on CNAME, DNAME RRs in answer for the iterator scrubber. */
+	int iter_scrub_cname;
+	/** limit on upstream queries for an incoming query and subqueries. */
+	int max_global_quota;
 };
 
 /** from cfg username, after daemonize setup performed */

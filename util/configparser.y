@@ -205,7 +205,8 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_PROXY_PROTOCOL_PORT VAR_STATISTICS_INHIBIT_ZERO
 %token VAR_HARDEN_UNKNOWN_ADDITIONAL VAR_DISABLE_EDNS_DO VAR_CACHEDB_NO_STORE
 %token VAR_LOG_DESTADDR VAR_CACHEDB_CHECK_WHEN_SERVE_EXPIRED
-%token VAR_COOKIE_SECRET_FILE
+%token VAR_COOKIE_SECRET_FILE VAR_ITER_SCRUB_NS VAR_ITER_SCRUB_CNAME
+%token VAR_MAX_GLOBAL_QUOTA
 
 %%
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
@@ -343,7 +344,8 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_interface_automatic_ports | server_ede |
 	server_proxy_protocol_port | server_statistics_inhibit_zero |
 	server_harden_unknown_additional | server_disable_edns_do |
-	server_log_destaddr | server_cookie_secret_file
+	server_log_destaddr | server_cookie_secret_file |
+	server_iter_scrub_ns | server_iter_scrub_cname | server_max_global_quota
 	;
 stubstart: VAR_STUB_ZONE
 	{
@@ -4004,6 +4006,33 @@ server_cookie_secret_file: VAR_COOKIE_SECRET_FILE STRING_ARG
 		OUTYY(("P(cookie_secret_file:%s)\n", $2));
 		free(cfg_parser->cfg->cookie_secret_file);
 		cfg_parser->cfg->cookie_secret_file = $2;
+	}
+	;
+server_iter_scrub_ns: VAR_ITER_SCRUB_NS STRING_ARG
+	{
+		OUTYY(("P(server_iter_scrub_ns:%s)\n", $2));
+		if(atoi($2) == 0 && strcmp($2, "0") != 0)
+			yyerror("number expected");
+		else cfg_parser->cfg->iter_scrub_ns = atoi($2);
+		free($2);
+	}
+	;
+server_iter_scrub_cname: VAR_ITER_SCRUB_CNAME STRING_ARG
+	{
+		OUTYY(("P(server_iter_scrub_cname:%s)\n", $2));
+		if(atoi($2) == 0 && strcmp($2, "0") != 0)
+			yyerror("number expected");
+		else cfg_parser->cfg->iter_scrub_cname = atoi($2);
+		free($2);
+	}
+	;
+server_max_global_quota: VAR_MAX_GLOBAL_QUOTA STRING_ARG
+	{
+		OUTYY(("P(server_max_global_quota:%s)\n", $2));
+		if(atoi($2) == 0 && strcmp($2, "0") != 0)
+			yyerror("number expected");
+		else cfg_parser->cfg->max_global_quota = atoi($2);
+		free($2);
 	}
 	;
 ipsetstart: VAR_IPSET

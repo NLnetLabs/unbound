@@ -1,3 +1,7 @@
+20 August 2024: Wouter
+	- Add iter-scrub-ns, iter-scrub-cname and max-global-quota
+	  configuration options.
+
 19 August 2024: Wouter
 	- Fix #1126: unbound-control-setup hangs while testing for openssl
 	  presence starting from version 1.21.0.
