@@ -1,6 +1,5 @@
 21 August 2024: Wouter
-	- Add cross platform freebsd to github ci.
-	- Add cross platform openbsd to github ci.
+	- Add cross platform freebsd, openbsd and netbsd to github ci.
 
 20 August 2024: Wouter
 	- Add iter-scrub-ns, iter-scrub-cname and max-global-quota
