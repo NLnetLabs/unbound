@@ -351,7 +351,7 @@ jobs:
           memory: 4G
           cpu_count: 2
           run: |
-            ASSUME_ALWAYS_YES=yes sudo pkg install openssl libevent expat
+            sudo pkg install -y openssl libevent expat
             ./configure ${{ matrix.cross_platform_config }}
             make
             make test
