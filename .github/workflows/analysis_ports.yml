@@ -14,171 +14,171 @@ jobs:
     strategy:
       matrix:
         include:
-#          - name: GCC on Linux
-#            os: ubuntu-latest
-#            config: "--enable-debug --disable-flto"
-#            make_test: "yes"
-#          - name: Clang-analyzer
-#            os: ubuntu-latest
-#            config: "CC=clang --enable-debug --disable-flto --disable-static"
-#            make_test: "yes"
-#            clang_analysis: "yes"
-#          - name: libevent
-#            os: ubuntu-latest
-#            install_libevent: "yes"
-#            config: "CC=clang --enable-debug --disable-flto --with-libevent --disable-static"
-#            make_test: "yes"
-#            clang_analysis: "yes"
-#          - name: OS X
-#            os: macos-latest
-#            install_expat: "yes"
-#            config: "--enable-debug --disable-flto --with-ssl=/opt/homebrew/opt/openssl --with-libexpat=/opt/homebrew/opt/expat"
-#            make_test: "yes"
-#          - name: Clang on OS X
-#            os: macos-latest
-#            install_expat: "yes"
-#            config: "CC=clang --enable-debug --disable-flto --with-ssl=/opt/homebrew/opt/openssl --with-libexpat=/opt/homebrew/opt/expat --disable-static"
-#            make_test: "yes"
-#            clang_analysis: "yes"
-#          - name: ubsan (gcc undefined behaviour sanitizer)
-#            os: ubuntu-latest
-#            config: 'CFLAGS="-DNDEBUG -g2 -O3 -fsanitize=undefined -fno-sanitize-recover=all" --disable-flto --disable-static'
-#            make_test: "yes"
-#          - name: asan (gcc address sanitizer)
-#            os: ubuntu-latest
-#            config: 'CFLAGS="-DNDEBUG -g2 -O3 -fsanitize=address" --disable-flto --disable-static'
-#            make_test: "yes"
-#          - name: Apple iPhone on iOS, armv7
-#            os: macos-latest
-#            AUTOTOOLS_HOST: armv7-apple-ios
-#            OPENSSL_HOST: ios-cross
-#            IOS_SDK: iPhoneOS
-#            IOS_CPU: armv7s
-#            test_ios: "yes"
-#            config: "no"
-#            make: "no"
-#          - name: Apple iPhone on iOS, arm64
-#            os: macos-latest
-#            AUTOTOOLS_HOST: aarch64-apple-ios
-#            OPENSSL_HOST: ios64-cross
-#            IOS_SDK: iPhoneOS
-#            IOS_CPU: arm64
-#            test_ios: "yes"
-#            config: "no"
-#            make: "no"
-#          - name: Apple TV on iOS, arm64
-#            os: macos-latest
-#            AUTOTOOLS_HOST: aarch64-apple-ios
-#            OPENSSL_HOST: ios64-cross
-#            IOS_SDK: AppleTVOS
-#            IOS_CPU: arm64
-#            test_ios: "yes"
-#            config: "no"
-#            make: "no"
-#          - name: Apple Watch on iOS, armv7
-#            os: macos-latest
-#            AUTOTOOLS_HOST: armv7-apple-ios
-#            OPENSSL_HOST: ios-cross
-#            IOS_SDK: WatchOS
-#            IOS_CPU: armv7k
-#            test_ios: "yes"
-#            config: "no"
-#            make: "no"
-#          - name: iPhoneSimulator on OS X, i386
-#            os: macos-latest
-#            AUTOTOOLS_HOST: i386-apple-ios
-#            OPENSSL_HOST: iphoneos-cross
-#            IOS_SDK: iPhoneSimulator
-#            IOS_CPU: i386
-#            test_ios: "yes"
-#            config: "no"
-#            make: "no"
-#          - name: iPhoneSimulator on OS X, x86_64
-#            os: macos-latest
-#            AUTOTOOLS_HOST: x86_64-apple-ios
-#            OPENSSL_HOST: iphoneos-cross
-#            IOS_SDK: iPhoneSimulator
-#            IOS_CPU: x86_64
-#            test_ios: "yes"
-#            config: "no"
-#            make: "no"
-#          - name: AppleTVSimulator on OS X, x86_64
-#            os: macos-latest
-#            AUTOTOOLS_HOST: x86_64-apple-ios
-#            OPENSSL_HOST: iphoneos-cross
-#            IOS_SDK: AppleTVSimulator
-#            IOS_CPU: x86_64
-#            test_ios: "yes"
-#            config: "no"
-#            make: "no"
-#          - name: WatchSimulator on OS X, i386
-#            os: macos-latest
-#            AUTOTOOLS_HOST: i386-apple-ios
-#            OPENSSL_HOST: iphoneos-cross
-#            IOS_SDK: WatchSimulator
-#            IOS_CPU: i386
-#            test_ios: "yes"
-#            config: "no"
-#            make: "no"
-#          - name: Android armv7a
-#            os: ubuntu-latest
-#            AUTOTOOLS_HOST: armv7a-linux-androidabi
-#            OPENSSL_HOST: android-arm
-#            ANDROID_CPU: armv7a
-#            ANDROID_API: 23
-#            test_android: "yes"
-#            config: "no"
-#            make: "no"
-#          - name: Android aarch64
-#            os: ubuntu-latest
-#            AUTOTOOLS_HOST: aarch64-linux-android
-#            OPENSSL_HOST: android-arm64
-#            ANDROID_CPU: aarch64
-#            ANDROID_API: 23
-#            test_android: "yes"
-#            config: "no"
-#            make: "no"
-#          - name: Android x86
-#            os: ubuntu-latest
-#            AUTOTOOLS_HOST: i686-linux-android
-#            OPENSSL_HOST: android-x86
-#            ANDROID_CPU: x86
-#            ANDROID_API: 23
-#            test_android: "yes"
-#            config: "no"
-#            make: "no"
-#          - name: Android x86_64
-#            os: ubuntu-latest
-#            AUTOTOOLS_HOST: x86_64-linux-android
-#            OPENSSL_HOST: android-x86_64
-#            ANDROID_CPU: x86_64
-#            ANDROID_API: 23
-#            test_android: "yes"
-#            config: "no"
-#            make: "no"
-#          - name: Windows
-#            os: windows-latest
-#            test_windows: "yes"
-#            config: "no"
-#            make: "no"
-#          - name: FreeBSD
-#            os: ubuntu-latest
-#            config: "no"
-#            make: "no"
-#            with_cross_platform_action: "yes"
-#            cross_platform_os: "freebsd"
-#            cross_platform_arch: "x86-64"
-#            cross_platform_version: "14.1"
-#            cross_platform_config: "--enable-debug --disable-flto --with-libevent --disable-static"
-#          - name: OpenBSD
-#            os: ubuntu-latest
-#            config: "no"
-#            make: "no"
-#            with_cross_platform_action: "yes"
-#            cross_platform_os: "openbsd"
-#            cross_platform_arch: "x86-64"
-#            cross_platform_version: "7.5"
-#            cross_platform_config: "--enable-debug --disable-flto --with-libevent --disable-static"
+          - name: GCC on Linux
+            os: ubuntu-latest
+            config: "--enable-debug --disable-flto"
+            make_test: "yes"
+          - name: Clang-analyzer
+            os: ubuntu-latest
+            config: "CC=clang --enable-debug --disable-flto --disable-static"
+            make_test: "yes"
+            clang_analysis: "yes"
+          - name: libevent
+            os: ubuntu-latest
+            install_libevent: "yes"
+            config: "CC=clang --enable-debug --disable-flto --with-libevent --disable-static"
+            make_test: "yes"
+            clang_analysis: "yes"
+          - name: OS X
+            os: macos-latest
+            install_expat: "yes"
+            config: "--enable-debug --disable-flto --with-ssl=/opt/homebrew/opt/openssl --with-libexpat=/opt/homebrew/opt/expat"
+            make_test: "yes"
+          - name: Clang on OS X
+            os: macos-latest
+            install_expat: "yes"
+            config: "CC=clang --enable-debug --disable-flto --with-ssl=/opt/homebrew/opt/openssl --with-libexpat=/opt/homebrew/opt/expat --disable-static"
+            make_test: "yes"
+            clang_analysis: "yes"
+          - name: ubsan (gcc undefined behaviour sanitizer)
+            os: ubuntu-latest
+            config: 'CFLAGS="-DNDEBUG -g2 -O3 -fsanitize=undefined -fno-sanitize-recover=all" --disable-flto --disable-static'
+            make_test: "yes"
+          - name: asan (gcc address sanitizer)
+            os: ubuntu-latest
+            config: 'CFLAGS="-DNDEBUG -g2 -O3 -fsanitize=address" --disable-flto --disable-static'
+            make_test: "yes"
+          - name: Apple iPhone on iOS, armv7
+            os: macos-latest
+            AUTOTOOLS_HOST: armv7-apple-ios
+            OPENSSL_HOST: ios-cross
+            IOS_SDK: iPhoneOS
+            IOS_CPU: armv7s
+            test_ios: "yes"
+            config: "no"
+            make: "no"
+          - name: Apple iPhone on iOS, arm64
+            os: macos-latest
+            AUTOTOOLS_HOST: aarch64-apple-ios
+            OPENSSL_HOST: ios64-cross
+            IOS_SDK: iPhoneOS
+            IOS_CPU: arm64
+            test_ios: "yes"
+            config: "no"
+            make: "no"
+          - name: Apple TV on iOS, arm64
+            os: macos-latest
+            AUTOTOOLS_HOST: aarch64-apple-ios
+            OPENSSL_HOST: ios64-cross
+            IOS_SDK: AppleTVOS
+            IOS_CPU: arm64
+            test_ios: "yes"
+            config: "no"
+            make: "no"
+          - name: Apple Watch on iOS, armv7
+            os: macos-latest
+            AUTOTOOLS_HOST: armv7-apple-ios
+            OPENSSL_HOST: ios-cross
+            IOS_SDK: WatchOS
+            IOS_CPU: armv7k
+            test_ios: "yes"
+            config: "no"
+            make: "no"
+          - name: iPhoneSimulator on OS X, i386
+            os: macos-latest
+            AUTOTOOLS_HOST: i386-apple-ios
+            OPENSSL_HOST: iphoneos-cross
+            IOS_SDK: iPhoneSimulator
+            IOS_CPU: i386
+            test_ios: "yes"
+            config: "no"
+            make: "no"
+          - name: iPhoneSimulator on OS X, x86_64
+            os: macos-latest
+            AUTOTOOLS_HOST: x86_64-apple-ios
+            OPENSSL_HOST: iphoneos-cross
+            IOS_SDK: iPhoneSimulator
+            IOS_CPU: x86_64
+            test_ios: "yes"
+            config: "no"
+            make: "no"
+          - name: AppleTVSimulator on OS X, x86_64
+            os: macos-latest
+            AUTOTOOLS_HOST: x86_64-apple-ios
+            OPENSSL_HOST: iphoneos-cross
+            IOS_SDK: AppleTVSimulator
+            IOS_CPU: x86_64
+            test_ios: "yes"
+            config: "no"
+            make: "no"
+          - name: WatchSimulator on OS X, i386
+            os: macos-latest
+            AUTOTOOLS_HOST: i386-apple-ios
+            OPENSSL_HOST: iphoneos-cross
+            IOS_SDK: WatchSimulator
+            IOS_CPU: i386
+            test_ios: "yes"
+            config: "no"
+            make: "no"
+          - name: Android armv7a
+            os: ubuntu-latest
+            AUTOTOOLS_HOST: armv7a-linux-androidabi
+            OPENSSL_HOST: android-arm
+            ANDROID_CPU: armv7a
+            ANDROID_API: 23
+            test_android: "yes"
+            config: "no"
+            make: "no"
+          - name: Android aarch64
+            os: ubuntu-latest
+            AUTOTOOLS_HOST: aarch64-linux-android
+            OPENSSL_HOST: android-arm64
+            ANDROID_CPU: aarch64
+            ANDROID_API: 23
+            test_android: "yes"
+            config: "no"
+            make: "no"
+          - name: Android x86
+            os: ubuntu-latest
+            AUTOTOOLS_HOST: i686-linux-android
+            OPENSSL_HOST: android-x86
+            ANDROID_CPU: x86
+            ANDROID_API: 23
+            test_android: "yes"
+            config: "no"
+            make: "no"
+          - name: Android x86_64
+            os: ubuntu-latest
+            AUTOTOOLS_HOST: x86_64-linux-android
+            OPENSSL_HOST: android-x86_64
+            ANDROID_CPU: x86_64
+            ANDROID_API: 23
+            test_android: "yes"
+            config: "no"
+            make: "no"
+          - name: Windows
+            os: windows-latest
+            test_windows: "yes"
+            config: "no"
+            make: "no"
+          - name: FreeBSD
+            os: ubuntu-latest
+            config: "no"
+            make: "no"
+            with_cross_platform_action: "yes"
+            cross_platform_os: "freebsd"
+            cross_platform_arch: "x86-64"
+            cross_platform_version: "14.1"
+            cross_platform_config: "--enable-debug --disable-flto --with-libevent --disable-static"
+          - name: OpenBSD
+            os: ubuntu-latest
+            config: "no"
+            make: "no"
+            with_cross_platform_action: "yes"
+            cross_platform_os: "openbsd"
+            cross_platform_arch: "x86-64"
+            cross_platform_version: "7.5"
+            cross_platform_config: "--enable-debug --disable-flto --with-libevent --disable-static"
           - name: NetBSD
             os: ubuntu-latest
             config: "no"
