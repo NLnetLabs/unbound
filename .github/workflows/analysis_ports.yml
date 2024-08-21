@@ -169,7 +169,7 @@ jobs:
             cross_platform_os: "freebsd"
             cross_platform_arch: "x86-64"
             cross_platform_version: "14.1"
-            cross_platform_config: "--enable-debug --disable-flto"
+            cross_platform_config: "--enable-debug --disable-flto --with-libevent --disable-static"
  
     steps:
       - uses: actions/checkout@v4
@@ -343,7 +343,10 @@ jobs:
       - name: cross-platform-action on ${{ matrix.cross_platform_os }} ${{ matrix.cross_platform_version }}
         if: ${{ matrix.with_cross_platform_action == 'yes' }}
         uses: cross-platform-actions/action@v0.25.0
+        env:
+          CROSS_PLATFORM_OS: ${{ matrix.cross_platform_os }}
         with:
+          environment_variables: CROSS_PLATFORM_OS
           operating_system: ${{ matrix.cross_platform_os }}
           architecture: ${{ matrix.cross_platform_arch }}
           version: ${{ matrix.cross_platform_version }}
@@ -351,10 +354,16 @@ jobs:
           memory: 4G
           cpu_count: 2
           run: |
-            sudo pkg install -y openssl libevent expat
+            if test "$CROSS_PLATFORM_OS" = "freebsd"; then sudo pkg install -y openssl libevent expat; fi
+            echo "::group::configure"
             ./configure ${{ matrix.cross_platform_config }}
+            echo "::endgroup::"
+            echo "::group::make"
             make
+            echo "::endgroup::"
+            echo "::group::make test"
             make test
+            echo "::endgroup::"
       - name: install libevent
         if: ${{ matrix.install_libevent == 'yes' }}
         run: sudo apt-get install libevent-dev
