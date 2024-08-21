@@ -161,14 +161,23 @@ jobs:
 #            test_windows: "yes"
 #            config: "no"
 #            make: "no"
-          - name: FreeBSD
+#          - name: FreeBSD
+#            os: ubuntu-latest
+#            config: "no"
+#            make: "no"
+#            with_cross_platform_action: "yes"
+#            cross_platform_os: "freebsd"
+#            cross_platform_arch: "x86-64"
+#            cross_platform_version: "14.1"
+#            cross_platform_config: "--enable-debug --disable-flto --with-libevent --disable-static"
+          - name: OpenBSD
             os: ubuntu-latest
             config: "no"
             make: "no"
             with_cross_platform_action: "yes"
-            cross_platform_os: "freebsd"
+            cross_platform_os: "openbsd"
             cross_platform_arch: "x86-64"
-            cross_platform_version: "14.1"
+            cross_platform_version: "7.5"
             cross_platform_config: "--enable-debug --disable-flto --with-libevent --disable-static"
  
     steps:
@@ -354,7 +363,9 @@ jobs:
           memory: 4G
           cpu_count: 2
           run: |
+            set -e -x
             if test "$CROSS_PLATFORM_OS" = "freebsd"; then sudo pkg install -y openssl libevent expat; fi
+            if test "$CROSS_PLATFORM_OS" = "openbsd"; then sudo pkg_add libevent; fi
             echo "::group::configure"
             ./configure ${{ matrix.cross_platform_config }}
             echo "::endgroup::"
