@@ -1,5 +1,6 @@
 21 August 2024: Wouter
 	- Add cross platform freebsd, openbsd and netbsd to github ci.
+	- Fix for char signedness warnings on NetBSD.
 
 20 August 2024: Wouter
 	- Add iter-scrub-ns, iter-scrub-cname and max-global-quota

@@ -2332,7 +2332,7 @@ uint8_t* cfg_parse_nsid(const char* str, uint16_t* nsid_len)
 		uint8_t *dp;
 
 		for ( ch = str, dp = nsid
-		    ; isxdigit(ch[0]) && isxdigit(ch[1])
+		    ; isxdigit((unsigned char)ch[0]) && isxdigit((unsigned char)ch[1])
 		    ; ch += 2, dp++) {
 			*dp  = (uint8_t)sldns_hexdigit_to_int(ch[0]) * 16;
 			*dp += (uint8_t)sldns_hexdigit_to_int(ch[1]);

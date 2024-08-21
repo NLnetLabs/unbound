@@ -108,7 +108,7 @@ static void zonemd_generate_test(const char* zname, char* zfile,
 	digestdup = strdup(digest);
 	unit_assert(digestdup);
 	for(i=0; i<strlen(digestdup); i++) {
-		digestdup[i] = toupper(digestdup[i]);
+		digestdup[i] = toupper((unsigned char)digestdup[i]);
 	}
 	if(verbosity >= VERB_ALGO) {
 		char zname[255+1];
