@@ -254,7 +254,7 @@ error_supers(struct module_qstate* qstate, int id, struct module_qstate* super)
 		} else {
 			/* see if the failure did get (parent-lame) info */
 			if(!cache_fill_missing(super->env, super_iq->qchase.qclass,
-				super->region, super_iq->dp))
+				super->region, super_iq->dp, 0))
 				log_err("out of memory adding missing");
 		}
 		delegpt_mark_neg(dpns, qstate->qinfo.qtype);
@@ -1571,7 +1571,7 @@ processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
 			return error_response(qstate, id, LDNS_RCODE_SERVFAIL);
 		}
 		if(!cache_fill_missing(qstate->env, iq->qchase.qclass,
-			qstate->region, iq->dp)) {
+			qstate->region, iq->dp, 0)) {
 			errinf(qstate, "malloc failure, copy extra info into delegation point");
 			return error_response(qstate, id, LDNS_RCODE_SERVFAIL);
 		}
@@ -2152,6 +2152,15 @@ processLastResort(struct module_qstate* qstate, struct iter_qstate* iq,
 		verbose(VERB_QUERY, "configured stub or forward servers failed -- returning SERVFAIL");
 		return error_response_cache(qstate, id, LDNS_RCODE_SERVFAIL);
 	}
+	if(qstate->env->cfg->harden_unverified_glue) {
+		if(!cache_fill_missing(qstate->env, iq->qchase.qclass,
+			qstate->region, iq->dp, PACKED_RRSET_UNVERIFIED_GLUE))
+			log_err("out of memory in cache_fill_missing");
+		if(iq->dp->usable_list) {
+			verbose(VERB_ALGO, "try unverified glue from cache");
+			return next_state(iq, QUERYTARGETS_STATE);
+		}
+	}
 	if(!iq->dp->has_parent_side_NS && dname_is_root(iq->dp->name)) {
 		struct delegpt* dp;
 		int nolock = 0;
@@ -2194,7 +2203,7 @@ processLastResort(struct module_qstate* qstate, struct iter_qstate* iq,
 	}
 	/* see if that makes new names available */
 	if(!cache_fill_missing(qstate->env, iq->qchase.qclass, 
-		qstate->region, iq->dp))
+		qstate->region, iq->dp, 0))
 		log_err("out of memory in cache_fill_missing");
 	if(iq->dp->usable_list) {
 		verbose(VERB_ALGO, "try parent-side-name, w. glue from cache");
@@ -3426,7 +3435,7 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 				old_dp->name, old_dp->namelen);
 		}
 		if(!cache_fill_missing(qstate->env, iq->qchase.qclass, 
-			qstate->region, iq->dp)) {
+			qstate->region, iq->dp, 0)) {
 			errinf(qstate, "malloc failure, copy extra info into delegation point");
 			return error_response(qstate, id, LDNS_RCODE_SERVFAIL);
 		}

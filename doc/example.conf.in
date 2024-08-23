@@ -533,6 +533,9 @@ server:
 	# Harden against out of zone rrsets, to avoid spoofing attempts.
 	# harden-glue: yes
 
+	# Harden against unverified (outside-zone, including sibling zone) glue rrsets
+	# harden-unverified-glue: no
+
 	# Harden against receiving dnssec-stripped data. If you turn it
 	# off, failing to validate dnskey data for a trustanchor will
 	# trigger insecure mode for that zone (like without a trustanchor).

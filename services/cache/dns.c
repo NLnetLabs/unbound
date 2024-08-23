@@ -365,7 +365,7 @@ find_add_addrs(struct module_env* env, uint16_t qclass,
 /** find and add A and AAAA records for missing nameservers in delegpt */
 int
 cache_fill_missing(struct module_env* env, uint16_t qclass, 
-	struct regional* region, struct delegpt* dp)
+	struct regional* region, struct delegpt* dp, uint32_t flags)
 {
 	struct delegpt_ns* ns;
 	struct msgreply_entry* neg;
@@ -376,7 +376,7 @@ cache_fill_missing(struct module_env* env, uint16_t qclass,
 			continue;
 		ns->cache_lookup_count++;
 		akey = rrset_cache_lookup(env->rrset_cache, ns->name, 
-			ns->namelen, LDNS_RR_TYPE_A, qclass, 0, now, 0);
+			ns->namelen, LDNS_RR_TYPE_A, qclass, flags, now, 0);
 		if(akey) {
 			if(!delegpt_add_rrset_A(dp, region, akey, ns->lame,
 				NULL)) {

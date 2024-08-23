@@ -206,7 +206,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_HARDEN_UNKNOWN_ADDITIONAL VAR_DISABLE_EDNS_DO VAR_CACHEDB_NO_STORE
 %token VAR_LOG_DESTADDR VAR_CACHEDB_CHECK_WHEN_SERVE_EXPIRED
 %token VAR_COOKIE_SECRET_FILE VAR_ITER_SCRUB_NS VAR_ITER_SCRUB_CNAME
-%token VAR_MAX_GLOBAL_QUOTA
+%token VAR_MAX_GLOBAL_QUOTA VAR_HARDEN_UNVERIFIED_GLUE
 
 %%
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
@@ -345,7 +345,8 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_proxy_protocol_port | server_statistics_inhibit_zero |
 	server_harden_unknown_additional | server_disable_edns_do |
 	server_log_destaddr | server_cookie_secret_file |
-	server_iter_scrub_ns | server_iter_scrub_cname | server_max_global_quota
+	server_iter_scrub_ns | server_iter_scrub_cname | server_max_global_quota |
+	server_harden_unverified_glue
 	;
 stubstart: VAR_STUB_ZONE
 	{
@@ -1807,6 +1808,16 @@ server_harden_glue: VAR_HARDEN_GLUE STRING_ARG
 		free($2);
 	}
 	;
+server_harden_unverified_glue: VAR_HARDEN_UNVERIFIED_GLUE STRING_ARG
+       {
+               OUTYY(("P(server_harden_unverified_glue:%s)\n", $2));
+               if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
+                       yyerror("expected yes or no.");
+               else cfg_parser->cfg->harden_unverified_glue =
+                       (strcmp($2, "yes")==0);
+               free($2);
+       }
+       ;
 server_harden_dnssec_stripped: VAR_HARDEN_DNSSEC_STRIPPED STRING_ARG
 	{
 		OUTYY(("P(server_harden_dnssec_stripped:%s)\n", $2));

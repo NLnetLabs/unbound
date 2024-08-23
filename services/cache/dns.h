@@ -205,7 +205,7 @@ struct dns_msg* dns_cache_lookup(struct module_env* env,
  * @return false on alloc failure.
  */
 int cache_fill_missing(struct module_env* env, uint16_t qclass, 
-	struct regional* region, struct delegpt* dp);
+	struct regional* region, struct delegpt* dp, uint32_t flags);
 
 /**
  * Utility, create new, unpacked data structure for cache response.

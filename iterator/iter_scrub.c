@@ -871,6 +871,7 @@ scrub_sanitize(sldns_buffer* pkt, struct msg_parse* msg,
 {
 	int del_addi = 0; /* if additional-holding rrsets are deleted, we
 		do not trust the normalized additional-A-AAAA any more */
+	uint8_t* ns_rrset_dname = NULL;
 	int added_rrlen_ede = 0;
 	struct rrset_parse* rrset, *prev;
 	prev = NULL;
@@ -976,6 +977,16 @@ scrub_sanitize(sldns_buffer* pkt, struct msg_parse* msg,
 				continue;
 			}
 		}
+		if(rrset->type == LDNS_RR_TYPE_NS &&
+			(rrset->section == LDNS_SECTION_AUTHORITY ||
+			rrset->section == LDNS_SECTION_ANSWER)) {
+			/* If the type is NS, and we're in the
+			 * answer or authority section, then
+			 * store the dname so we can check
+			 * against the glue records
+			 * further down	*/
+			ns_rrset_dname = rrset->dname;
+		}
 		if(del_addi && rrset->section == LDNS_SECTION_ADDITIONAL) {
 			remove_rrset("sanitize: removing potential "
 			"poison reference RRset:", pkt, msg, prev, &rrset);
@@ -986,6 +997,26 @@ scrub_sanitize(sldns_buffer* pkt, struct msg_parse* msg,
 			sanitize_nsec_is_overreach(pkt, rrset, zonename)) {
 			remove_rrset("sanitize: removing overreaching NSEC "
 				"RRset:", pkt, msg, prev, &rrset);
+			continue;
+		}
+		if(env->cfg->harden_unverified_glue && ns_rrset_dname &&
+			rrset->section == LDNS_SECTION_ADDITIONAL &&
+			(rrset->type == LDNS_RR_TYPE_A || rrset->type == LDNS_RR_TYPE_AAAA) &&
+			!pkt_strict_sub(pkt, rrset->dname, ns_rrset_dname)) {
+			/* We're in the additional section, looking
+			 * at an A/AAAA rrset, have a previous
+			 * delegation point and we notice that
+			 * the glue records are NOT for strict
+			 * subdomains of the delegation. So set a
+			 * flag, recompute the hash for the rrset
+			 * and write the A/AAAA record to cache.
+			 * It'll be retrieved if we can't separately
+			 * resolve the glue	*/
+			rrset->flags = PACKED_RRSET_UNVERIFIED_GLUE;
+			rrset->hash = pkt_hash_rrset(pkt, rrset->dname, rrset->type, rrset->rrset_class, rrset->flags);
+			store_rrset(pkt, msg, env, rrset);
+			remove_rrset("sanitize: storing potential "
+			"unverified glue reference RRset:", pkt, msg, prev, &rrset);
 			continue;
 		}
 		prev = rrset;

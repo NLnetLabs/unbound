@@ -288,6 +288,8 @@ struct config_file {
 	int harden_large_queries;
 	/** harden against spoofed glue (out of zone data) */
 	int harden_glue;
+	/** harden against unverified glue */
+	int harden_unverified_glue;
 	/** harden against receiving no DNSSEC data for trust anchor */
 	int harden_dnssec_stripped;
 	/** harden against queries that fall under known nxdomain names */

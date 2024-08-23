@@ -1,3 +1,11 @@
+23 August 2024: Wouter
+	- Merge patch to fix for glue that is outside of zone, with
+	  `harden-unverified-glue`, from Karthik Umashankar (Microsoft).
+	  Enabling this option protects the Unbound resolver against bad
+	  glue, that is unverified out of zone glue, by resolving them.
+	  It uses the records as last resort if there is no other working
+	  glue.
+
 21 August 2024: Wouter
 	- Add cross platform freebsd, openbsd and netbsd to github ci.
 	- Fix for char signedness warnings on NetBSD.

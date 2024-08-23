@@ -1048,6 +1048,11 @@ payload is very large.
 .B harden\-glue: \fI<yes or no>
 Will trust glue only if it is within the servers authority. Default is yes.
 .TP
+.B harden\-unverified\-glue: \fI<yes or no>
+Will trust only in-zone glue. Will try to resolve all out of zone
+(\fI<unverfied>) glue. Will fallback to the original glue if unable to resolve.
+Default is no.
+.TP
 .B harden\-dnssec\-stripped: \fI<yes or no>
 Require DNSSEC data for trust\-anchored zones, if such data is absent,
 the zone becomes bogus. If turned off, and no DNSSEC data is received

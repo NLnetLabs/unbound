@@ -237,6 +237,7 @@ config_create(void)
 	cfg->harden_short_bufsize = 1;
 	cfg->harden_large_queries = 0;
 	cfg->harden_glue = 1;
+	cfg->harden_unverified_glue = 0;
 	cfg->harden_dnssec_stripped = 1;
 	cfg->harden_below_nxdomain = 1;
 	cfg->harden_referral_path = 0;
@@ -675,6 +676,7 @@ int config_set_option(struct config_file* cfg, const char* opt,
 	else S_STRLIST("root-hints:", root_hints)
 	else S_STR("target-fetch-policy:", target_fetch_policy)
 	else S_YNO("harden-glue:", harden_glue)
+	else S_YNO("harden-unverified-glue:", harden_unverified_glue)
 	else S_YNO("harden-short-bufsize:", harden_short_bufsize)
 	else S_YNO("harden-large-queries:", harden_large_queries)
 	else S_YNO("harden-dnssec-stripped:", harden_dnssec_stripped)
@@ -1168,6 +1170,7 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_YNO(opt, "harden-short-bufsize", harden_short_bufsize)
 	else O_YNO(opt, "harden-large-queries", harden_large_queries)
 	else O_YNO(opt, "harden-glue", harden_glue)
+	else O_YNO(opt, "harden-unverified-glue", harden_unverified_glue)
 	else O_YNO(opt, "harden-dnssec-stripped", harden_dnssec_stripped)
 	else O_YNO(opt, "harden-below-nxdomain", harden_below_nxdomain)
 	else O_YNO(opt, "harden-referral-path", harden_referral_path)
