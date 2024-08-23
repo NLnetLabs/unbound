@@ -212,7 +212,7 @@ extern struct config_parser_state* cfg_parser;
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
 toplevelvar: serverstart contents_server | stubstart contents_stub |
 	forwardstart contents_forward | pythonstart contents_py |
-	rcstart contents_rc | dtstart contents_dt | viewstart contents_view |
+	rcstart contents_rc | dtstart contents_dt | view_clause |
 	dnscstart contents_dnsc | cachedbstart contents_cachedb |
 	ipsetstart contents_ipset | authstart contents_auth |
 	rpzstart contents_rpz | dynlibstart contents_dl |
@@ -398,6 +398,14 @@ contents_forward: content_forward contents_forward
 content_forward: forward_name | forward_host | forward_addr | forward_first |
 	forward_no_cache | forward_ssl_upstream | forward_tcp_upstream
 	;
+view_clause: viewstart contents_view
+	{
+		/* view end */
+		if(cfg_parser->cfg->views &&
+			!cfg_parser->cfg->views->name)
+			yyerror("view without name");
+	}
+	;
 viewstart: VAR_VIEW
 	{
 		struct config_view* s;
@@ -412,14 +420,8 @@ viewstart: VAR_VIEW
 		}
 	}
 	;
-contents_view: content_view contents_view
-	|
-	{
-		/* view end */
-		if(cfg_parser->cfg->views &&
-			!cfg_parser->cfg->views->name)
-			yyerror("view without name");
-	};
+contents_view: contents_view content_view
+	| ;
 content_view: view_name | view_local_zone | view_local_data | view_first |
 		view_response_ip | view_response_ip_data | view_local_data_ptr
 	;

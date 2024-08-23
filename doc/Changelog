@@ -5,6 +5,8 @@
 	  glue, that is unverified out of zone glue, by resolving them.
 	  It uses the records as last resort if there is no other working
 	  glue.
+	- Fix #1127: error: "memory exhausted" when defining more than 9994
+	  local-zones.
 
 21 August 2024: Wouter
 	- Add cross platform freebsd, openbsd and netbsd to github ci.
