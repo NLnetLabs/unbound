@@ -696,6 +696,8 @@ struct module_qstate {
 	/** Extended result of response-ip action processing, mainly
 	 *  for logging purposes. */
 	struct respip_action_info* respip_action_info;
+	/** if the query has been modified by rpz processing. */
+	int rpz_applied;
 	/** if the query is rpz passthru, no further rpz processing for it */
 	int rpz_passthru;
 	/* Flag tcp required. */

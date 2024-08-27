@@ -2288,15 +2288,18 @@ rpz_apply_nsip_trigger(struct module_qstate* ms, struct query_info* qchase,
 	if(action == RPZ_LOCAL_DATA_ACTION && raddr->data == NULL) {
 		verbose(VERB_ALGO, "rpz: bug: nsip local data action but no local data");
 		ret = rpz_synthesize_nodata(r, ms, qchase, az);
+		ms->rpz_applied = 1;
 		goto done;
 	}
 
 	switch(action) {
 	case RPZ_NXDOMAIN_ACTION:
 		ret = rpz_synthesize_nxdomain(r, ms, qchase, az);
+		ms->rpz_applied = 1;
 		break;
 	case RPZ_NODATA_ACTION:
 		ret = rpz_synthesize_nodata(r, ms, qchase, az);
+		ms->rpz_applied = 1;
 		break;
 	case RPZ_TCP_ONLY_ACTION:
 		/* basically a passthru here but the tcp-only will be
@@ -2306,11 +2309,13 @@ rpz_apply_nsip_trigger(struct module_qstate* ms, struct query_info* qchase,
 		break;
 	case RPZ_DROP_ACTION:
 		ret = rpz_synthesize_nodata(r, ms, qchase, az);
+		ms->rpz_applied = 1;
 		ms->is_drop = 1;
 		break;
 	case RPZ_LOCAL_DATA_ACTION:
 		ret = rpz_synthesize_nsip_localdata(r, ms, qchase, raddr, az);
 		if(ret == NULL) { ret = rpz_synthesize_nodata(r, ms, qchase, az); }
+		ms->rpz_applied = 1;
 		break;
 	case RPZ_PASSTHRU_ACTION:
 		ret = NULL;
@@ -2318,6 +2323,7 @@ rpz_apply_nsip_trigger(struct module_qstate* ms, struct query_info* qchase,
 		break;
 	case RPZ_CNAME_OVERRIDE_ACTION:
 		ret = rpz_synthesize_cname_override_msg(r, ms, qchase);
+		ms->rpz_applied = 1;
 		break;
 	default:
 		verbose(VERB_ALGO, "rpz: nsip: bug: unhandled or invalid action: '%s'",
@@ -2352,9 +2358,11 @@ rpz_apply_nsdname_trigger(struct module_qstate* ms, struct query_info* qchase,
 	switch(action) {
 	case RPZ_NXDOMAIN_ACTION:
 		ret = rpz_synthesize_nxdomain(r, ms, qchase, az);
+		ms->rpz_applied = 1;
 		break;
 	case RPZ_NODATA_ACTION:
 		ret = rpz_synthesize_nodata(r, ms, qchase, az);
+		ms->rpz_applied = 1;
 		break;
 	case RPZ_TCP_ONLY_ACTION:
 		/* basically a passthru here but the tcp-only will be
@@ -2364,11 +2372,13 @@ rpz_apply_nsdname_trigger(struct module_qstate* ms, struct query_info* qchase,
 		break;
 	case RPZ_DROP_ACTION:
 		ret = rpz_synthesize_nodata(r, ms, qchase, az);
+		ms->rpz_applied = 1;
 		ms->is_drop = 1;
 		break;
 	case RPZ_LOCAL_DATA_ACTION:
 		ret = rpz_synthesize_nsdname_localdata(r, ms, qchase, z, match, az);
 		if(ret == NULL) { ret = rpz_synthesize_nodata(r, ms, qchase, az); }
+		ms->rpz_applied = 1;
 		break;
 	case RPZ_PASSTHRU_ACTION:
 		ret = NULL;
@@ -2376,6 +2386,7 @@ rpz_apply_nsdname_trigger(struct module_qstate* ms, struct query_info* qchase,
 		break;
 	case RPZ_CNAME_OVERRIDE_ACTION:
 		ret = rpz_synthesize_cname_override_msg(r, ms, qchase);
+		ms->rpz_applied = 1;
 		break;
 	default:
 		verbose(VERB_ALGO, "rpz: nsdname: bug: unhandled or invalid action: '%s'",
@@ -2579,9 +2590,11 @@ struct dns_msg* rpz_callback_from_iterator_cname(struct module_qstate* ms,
 	switch(localzone_type_to_rpz_action(lzt)) {
 	case RPZ_NXDOMAIN_ACTION:
 		ret = rpz_synthesize_nxdomain(r, ms, &is->qchase, a);
+		ms->rpz_applied = 1;
 		break;
 	case RPZ_NODATA_ACTION:
 		ret = rpz_synthesize_nodata(r, ms, &is->qchase, a);
+		ms->rpz_applied = 1;
 		break;
 	case RPZ_TCP_ONLY_ACTION:
 		/* basically a passthru here but the tcp-only will be
@@ -2591,11 +2604,13 @@ struct dns_msg* rpz_callback_from_iterator_cname(struct module_qstate* ms,
 		break;
 	case RPZ_DROP_ACTION:
 		ret = rpz_synthesize_nodata(r, ms, &is->qchase, a);
+		ms->rpz_applied = 1;
 		ms->is_drop = 1;
 		break;
 	case RPZ_LOCAL_DATA_ACTION:
 		ret = rpz_synthesize_qname_localdata_msg(r, ms, &is->qchase, z, a);
 		if(ret == NULL) { ret = rpz_synthesize_nodata(r, ms, &is->qchase, a); }
+		ms->rpz_applied = 1;
 		break;
 	case RPZ_PASSTHRU_ACTION:
 		ret = NULL;

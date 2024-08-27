@@ -1,3 +1,8 @@
+27 August 2024: Wouter
+	- Fix #1130: Loads of logs: "validation failure: key for validation
+	  <domain>. is marked as invalid because of a previous" for
+	  non-DNSSEC signed zone.
+
 23 August 2024: Wouter
 	- Merge patch to fix for glue that is outside of zone, with
 	  `harden-unverified-glue`, from Karthik Umashankar (Microsoft).
