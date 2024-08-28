@@ -1,6 +1,8 @@
 28 August 2024: Wouter
 	- Fix that when rpz is applied the message does not get picked up by
 	  the validator. That stops validation failures for the message.
+	- Fix that stub-zone and forward-zone clauses do not exhaust memory
+	  for long content.
 
 27 August 2024: Wouter
 	- Fix #1130: Loads of logs: "validation failure: key for validation

@@ -210,8 +210,8 @@ extern struct config_parser_state* cfg_parser;
 
 %%
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
-toplevelvar: serverstart contents_server | stubstart contents_stub |
-	forwardstart contents_forward | pythonstart contents_py |
+toplevelvar: serverstart contents_server | stub_clause |
+	forward_clause | pythonstart contents_py |
 	rcstart contents_rc | dtstart contents_dt | view_clause |
 	dnscstart contents_dnsc | cachedbstart contents_cachedb |
 	ipsetstart contents_ipset | authstart contents_auth |
@@ -348,6 +348,14 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_iter_scrub_ns | server_iter_scrub_cname | server_max_global_quota |
 	server_harden_unverified_glue
 	;
+stub_clause: stubstart contents_stub
+	{
+		/* stub end */
+		if(cfg_parser->cfg->stubs &&
+			!cfg_parser->cfg->stubs->name)
+			yyerror("stub-zone without name");
+	}
+	;
 stubstart: VAR_STUB_ZONE
 	{
 		struct config_stub* s;
@@ -362,16 +370,18 @@ stubstart: VAR_STUB_ZONE
 		}
 	}
 	;
-contents_stub: content_stub contents_stub
-	|
-	{
-		/* stub end */
-		if(cfg_parser->cfg->stubs &&
-			!cfg_parser->cfg->stubs->name)
-			yyerror("stub-zone without name");
-	};
+contents_stub: contents_stub content_stub
+	| ;
 content_stub: stub_name | stub_host | stub_addr | stub_prime | stub_first |
 	stub_no_cache | stub_ssl_upstream | stub_tcp_upstream
+	;
+forward_clause: forwardstart contents_forward
+	{
+		/* forward end */
+		if(cfg_parser->cfg->forwards &&
+			!cfg_parser->cfg->forwards->name)
+			yyerror("forward-zone without name");
+	}
 	;
 forwardstart: VAR_FORWARD_ZONE
 	{
@@ -387,14 +397,8 @@ forwardstart: VAR_FORWARD_ZONE
 		}
 	}
 	;
-contents_forward: content_forward contents_forward
-	|
-	{
-		/* forward end */
-		if(cfg_parser->cfg->forwards &&
-			!cfg_parser->cfg->forwards->name)
-			yyerror("forward-zone without name");
-	};
+contents_forward: contents_forward content_forward
+	| ;
 content_forward: forward_name | forward_host | forward_addr | forward_first |
 	forward_no_cache | forward_ssl_upstream | forward_tcp_upstream
 	;
