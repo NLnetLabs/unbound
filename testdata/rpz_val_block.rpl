@@ -30,6 +30,8 @@ $ORIGIN rpz.example.com.
 foo.org CNAME .
 foo2.org CNAME .
 foo3.org CNAME .
+bok.foo4.org A 4.0.5.5
+www.foo5.org CNAME alt.foo5.org.
 TEMPFILE_END
 
 CONFIG_END
@@ -152,6 +154,34 @@ foo3.org. IN NS  ns.foo3.org.
 SECTION ADDITIONAL
 ns.foo3.org. IN A 1.2.3.55
 ENTRY_END
+
+ENTRY_BEGIN
+MATCH opcode subdomain
+ADJUST copy_id copy_query
+REPLY QR NOERROR
+SECTION QUESTION
+foo4.org. IN NS
+SECTION AUTHORITY
+foo4.org.	3600	IN	DS	55567 8 2 db658962fbd0a03e81f1a68c33bb53eef3bc30e980040cb476fb191b24dfdd5a
+foo4.org.	3600	IN	RRSIG	DS 8 2 3600 20070926134150 20070829134150 1444 org. kO2d+9du+9y0HcAUq056qnqBoXLwT+/EN82lEocJjCE7lx9qxv4YpwfNd1Sr3J9lwvZbfEm5uRPmSwtrythlI4+qmlsEWE90mfUntH+JqlXj7t2E514AZ/SZPSUd6h6AKPlB/DIhHuI/fAEKB+S263NnvVMccaHh8ScJMsY9nGI=
+foo4.org. IN NS  ns.foo4.org.
+SECTION ADDITIONAL
+ns.foo4.org. IN A 1.2.3.56
+ENTRY_END
+
+ENTRY_BEGIN
+MATCH opcode subdomain
+ADJUST copy_id copy_query
+REPLY QR NOERROR
+SECTION QUESTION
+foo5.org. IN NS
+SECTION AUTHORITY
+foo5.org.	3600	IN	DS	55567 8 2 4046e908302813cad9b4448cd4c243be118b7c18f8414b820bce0a1eab6f6889
+foo5.org.	3600	IN	RRSIG	DS 8 2 3600 20070926134150 20070829134150 1444 org. e0+FRSrwoSeQxd35dcvsEFGQIO9nz+H6p52LAwPDUTOSwFcbR+q+x4OKX+eG8dbFXK7MGztdGdpPji95HzlezXRTt/66sXqYeDM61NezxVM6N/OjPIOL3VTGeyG4nvDj4ycvBbgjJqdhmev6aWYmTQwFa0+6Nxrlsldrl5/chW4=
+foo5.org. IN NS  ns.foo5.org.
+SECTION ADDITIONAL
+ns.foo5.org. IN A 1.2.3.57
+ENTRY_END
 RANGE_END
 
 ; ns1.servers.com for .com
@@ -187,6 +217,26 @@ SECTION QUESTION
 foo2.com. IN TXT
 SECTION ANSWER
 foo2.com. IN CNAME www.foo2.org.
+ENTRY_END
+
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR AA NOERROR
+SECTION QUESTION
+foo4.com. IN A
+SECTION ANSWER
+foo4.com. IN CNAME www.foo4.org.
+ENTRY_END
+
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR AA NOERROR
+SECTION QUESTION
+foo5.com. IN A
+SECTION ANSWER
+foo5.com. IN CNAME www.foo5.org.
 ENTRY_END
 RANGE_END
 
@@ -323,6 +373,133 @@ www2.foo3.org. IN TXT "a.b.g."
 ENTRY_END
 RANGE_END
 
+; ns.foo4.org for foo4.org
+RANGE_BEGIN 0 1000
+	ADDRESS 1.2.3.56
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR AA NOERROR
+SECTION QUESTION
+foo4.org. IN NS
+SECTION ANSWER
+foo4.org.	3600	IN	NS	ns.foo4.org.
+foo4.org.	3600	IN	RRSIG	NS 8 2 3600 20070926134150 20070829134150 55567 foo4.org. FXwXqJ8EW2XZDzHiMSiqiUpkk6tHGsJdlH1pfuOO6yPsmAmg6sSnyE9UsIDeW1bGwanYxbZGiD4YR9ED/NzdlMUrCI0fs4c0fa0yJjcF5WY0yZCL9OZbyn/dPIcqZ3D6UWjVVMW6EhZSPqzuz5gWYEiXkBDEc1s2BEjIYSwZo4g=
+SECTION ADDITIONAL
+ns.foo4.org.	3600	IN	A	1.2.3.56
+ns.foo4.org.	3600	IN	RRSIG	A 8 3 3600 20070926134150 20070829134150 55567 foo4.org. MgKROh4mE6pUyp0ik2CHTZuf7n9M4WaDvTLdI9qb+AvvpJJiwA1+7/v004A3PADvohsUytQttldYKwK6J9+c8R48lpieT+e/WzeyoCM1ieFhbP73By32Bl/akH+8cOUxfqqLD8Y+1z/oKV55LyqKP0H0DCb6vfYtSxWAYQym9PQ=
+ENTRY_END
+
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR AA NOERROR
+SECTION QUESTION
+foo4.org. IN DNSKEY
+SECTION ANSWER
+foo4.org.	IN	DNSKEY	257 3 8 AwEAAdug/L739i0mgN2nuK/bhxu3wFn5Ud9nK2+XUmZQlPUEZUC5YZvm1rfMmEWTGBn87fFxEu/kjFZHJ55JLzqsbbpVHLbmKCTT2gYR2FV2WDKROGKuYbVkJIXdKAjJ0ONuK507NinYvlWXIoxHn22KAWOd9wKgSTNHBlmGkX+ts3hh ;{id = 55567 (ksk), size = 1024b}
+foo4.org.	3600	IN	RRSIG	DNSKEY 8 2 3600 20070926134150 20070829134150 55567 foo4.org. Hy1tP0xBPp23e+w2YJ49e09e8AB9hLDP3ksWI/8ujNFK51Kuwo8HBx4R6zbcuOELlqWxr6IQU2w6AwB6UqClS88mc2sIgeEbw7Nm+nCDWPSPklPP4qa9pdXFh2M4txF4NxymrgRABjTTJiXK4oeWtFBNKkUu0hf6RGb9OJmdzF0=
+ENTRY_END
+
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR AA NOERROR
+SECTION QUESTION
+www.foo4.org. IN A
+SECTION ANSWER
+www.foo4.org.	3600	IN	CNAME	bok.foo4.org.
+www.foo4.org.	3600	IN	RRSIG	CNAME 8 3 3600 20070926134150 20070829134150 55567 foo4.org. ZRY/v7TPmkuKVNB739kTMiqPh84jtDO01hx2EtuPI2YwG4EnhWFV0fuz86FDMPKUD17MXRHKsi0+RUopqGUEbuZ7G9MzUFtuuTnVD8f9lNJVp2AfE2RAr1le8zZpdSvlmB1Y07HsrFPxxZAPYdBC2IY3VcpI0xaT1nHGsSpcoXc=
+ENTRY_END
+
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR AA NOERROR
+SECTION QUESTION
+bok.foo4.org. IN A
+SECTION ANSWER
+bok.foo4.org.	3600	IN	A	1.2.3.4
+bok.foo4.org.	3600	IN	RRSIG	A 8 3 3600 20070926134150 20070829134150 55567 foo4.org. xDPRNYlwWTxfQaX6kKHbYeKC/ro/U1TAQzEexUoQb/GDpx1zB1oqvYBuauivIjHyKwjrGg7f9WHyyzMxSby0G62hJLPoMJMLscLce17mwkWcG2AuojBiDwLBr5QXvJXhvT21LpOFt8xplLZuzNRyw4EsUau0ecd2nQ/5vtIz5aU=
+ENTRY_END
+RANGE_END
+
+; ns.foo5.org for foo5.org
+RANGE_BEGIN 0 1000
+	ADDRESS 1.2.3.57
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR AA NOERROR
+SECTION QUESTION
+foo5.org. IN NS
+SECTION ANSWER
+foo5.org.	3600	IN	NS	ns.foo5.org.
+foo5.org.	3600	IN	RRSIG	NS 8 2 3600 20070926134150 20070829134150 55567 foo5.org. Zv/zSvsLucTxX2LL+i4IZfFw/D/5HvzNKmRcohBjmP2W+F53KddGJpRHb2FPqcBzKhvjL/Awf0x1mhHUUBCSQcHA3FZQ9q2kfXK4pzg4XbI03U/hsY5b/1M8SC/DfGE+4jN59QadXZ6N4ouV4Ka9sqRfqXiQFED1Rz9WuMyHfXY=
+SECTION ADDITIONAL
+ns.foo5.org.	3600	IN	A	1.2.3.57
+ns.foo5.org.	3600	IN	RRSIG	A 8 3 3600 20070926134150 20070829134150 55567 foo5.org. TcHl2qjwwcfoM1kJ+rwje/VRmPJT62RvJvjHwri5NqJopKp9tcaKz1dYByTlhbGbB0tGihWPa271ja3s31dHuOlZsuWd8hdMr7Hq/COpyn7iVOoeU8bLRtkvReLyiD3Ju9IMmzLMyWCGNNzpuZrEBfbBwTC4ali5iL4OgPjMdhc=
+ENTRY_END
+
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR AA NOERROR
+SECTION QUESTION
+foo5.org. IN DNSKEY
+SECTION ANSWER
+foo5.org.	IN	DNSKEY	257 3 8 AwEAAdug/L739i0mgN2nuK/bhxu3wFn5Ud9nK2+XUmZQlPUEZUC5YZvm1rfMmEWTGBn87fFxEu/kjFZHJ55JLzqsbbpVHLbmKCTT2gYR2FV2WDKROGKuYbVkJIXdKAjJ0ONuK507NinYvlWXIoxHn22KAWOd9wKgSTNHBlmGkX+ts3hh ;{id = 55567 (ksk), size = 1024b}
+foo5.org.	3600	IN	RRSIG	DNSKEY 8 2 3600 20070926134150 20070829134150 55567 foo5.org. wq5nET6vQal5aXvNr6lhUI5VzGJNM52k9RVdNsntiN25GehtBKF/+O2OhrD4YoLCIkMM4dzSSlO/nbbtx/8V8Y5LlA5Kxx3DU+QWpn4iwJg01VwXhJaw8KqK20bUS+PbkG+ZwAqVD1veAdtKR7lfYI35XZojZQ1ReSMWb/vLv4s=
+ENTRY_END
+
+ENTRY_BEGIN
+MATCH opcode qname
+ADJUST copy_id copy_query
+REPLY QR AA NOERROR
+SECTION QUESTION
+www.foo5.org. IN A
+SECTION ANSWER
+www.foo5.org.	3600	IN	CNAME	bok.foo5.org.
+www.foo5.org.	3600	IN	RRSIG	CNAME 8 3 3600 20070926134150 20070829134150 55567 foo5.org. L/KOVafKFY401Y2k3J+QjkX0XcBTsMperFyhKfTmyQYY3lI5shvdJT0UGu6ogZ9cCWM+tLNyVr804+dfK6QL/wdYOx9hkK/fiePUhAU6lzepJBdg7wotw560Eu6J7UhhtopHKrWa5ElQFG1UFR/qjcx/m4Ms6BgCWh8yWy20N1E=
+ENTRY_END
+
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR AA NOERROR
+SECTION QUESTION
+alt.foo5.org. IN A
+SECTION ANSWER
+alt.foo5.org.	3600	IN	A	4.0.5.6
+alt.foo5.org.	3600	IN	RRSIG	A 8 3 3600 20070926134150 20070829134150 55567 foo5.org. vG+qffAmazC38iBE2QsZq5kFxNW5Mo+65epMjAA/06syLzjOKkfh8dbe++jQqvwqCqrIBb56miVFDCW1VEYOdh8vReptt9KtbQjXXMfRF39V3ccvbhEfP1xMG8Z8B7tkIBtLvfCNrsfYaccvYgq+gkPeeL1JEiK3ntOukJUbapM=
+ENTRY_END
+
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR AA NOERROR
+SECTION QUESTION
+bok.foo5.org. IN A
+SECTION ANSWER
+bok.foo5.org.	3600	IN	A	1.2.3.4
+bok.foo5.org.	3600	IN	RRSIG	A 8 3 3600 20070926134150 20070829134150 55567 foo5.org. rlBgWgq0R4yT+bK0CyuZfFJ36dCsZnpvc9/7tShcMAzDPDu4+hgbXuyMWcsnsZjX3ZfR0a4wRwOwH86ZNLLxdkXNO1/bSDq+IsLyXesoVBDmcNvtdq5PgupCNW5I/cBP4tK0DCytXDLRFtU7LOxdgPps4dFANhHU6Q6LboqW4t8=
+ENTRY_END
+
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR AA NOERROR
+SECTION QUESTION
+alt.foo5.org. IN DS
+SECTION ANSWER
+SECTION AUTHORITY
+foo5.org.	3600	IN	SOA	ns.foo5.org. host.foo5.org. 2007090422 3600 300 604800 3600
+foo5.org.	3600	IN	RRSIG	SOA 8 2 3600 20070926134150 20070829134150 55567 foo5.org. cHo00Jg0OI9sRaQV9t6WMybhkRwG6UFx6gEq87HOeOm2gPSbXFjIImyH6l1u8MPdXj8kYcGsUotWUEPuBTfA88bGb/lKfbu4aMD9GaqjB9oZF1iOCf7IdkXqHg/0iZNHOXbUNyNlCJgjkrVdZysJ1D1tAx7qmJgmzsJHerDuQzA=
+alt.foo5.org.	3600	IN	NSEC	alt2.foo5.org. A RRSIG NSEC
+alt.foo5.org.	3600	IN	RRSIG	NSEC 8 3 3600 20070926134150 20070829134150 55567 foo5.org. fgOxxCj+ZnRWyfVFlNCS/9UDg4n8+JaSmMjQzsqUoXk5Db9fMzOd3ScYqVxweXC/ER6Ly+XHz9RFVsAOA4I67eWGL6YJ5sA/MUJd3tB4Dk3xp0ycHH0ARvys9YedG9PLUvBY9B5qT/nhrw2N9yRtkq04z6DhjLh3uC0UJKsSiVc=
+ENTRY_END
+RANGE_END
+
 ; Test query
 STEP 10 QUERY
 ENTRY_BEGIN
@@ -341,6 +518,8 @@ foo.org. IN TXT
 SECTION ANSWER
 ENTRY_END
 
+; The foo2.org domain has no DS with NSEC. The queries for foo2.org DS and
+; DNSKEY are blocked.
 STEP 20 QUERY
 ENTRY_BEGIN
 REPLY RD
@@ -358,6 +537,9 @@ SECTION ANSWER
 www.foo2.org. IN TXT "a.b.e."
 ENTRY_END
 
+; The foo3.org domain has no DS with NSEC3. The queries for foo3.org DS and
+; DNSKEY are blocked. Because it is nsec3, there is no negative cache entry,
+; and a type DS query is made, that is then blocked.
 STEP 30 QUERY
 ENTRY_BEGIN
 REPLY RD
@@ -375,6 +557,8 @@ SECTION ANSWER
 www.foo3.org. IN TXT "a.b.f."
 ENTRY_END
 
+; This query would use a validation failure for foo3.org from the key cache,
+; if it previously failed.
 STEP 32 QUERY
 ENTRY_BEGIN
 REPLY RD
@@ -392,7 +576,8 @@ SECTION ANSWER
 www2.foo3.org. IN TXT "a.b.g."
 ENTRY_END
 
-; This query has a CNAME to foo.org.
+; This query has a CNAME to www.foo.org. It is signed, but foo.org is blocked,
+; for DS and DNSKEY queries. There is a DS, but the DNSKEY query is blocked.
 STEP 40 QUERY
 ENTRY_BEGIN
 REPLY RD
@@ -409,6 +594,50 @@ foo.com. IN TXT
 SECTION ANSWER
 foo.com. IN CNAME www.foo.org.
 www.foo.org.	3600	IN	TXT	"a.b.d."
+ENTRY_END
+
+; The foo4.com query has a CNAME to a validly signed domain www.foo4.org,
+; that has a cname to bok.foo4.org. The bok.foo4.org name is RPZ filtered,
+; with a new A record in the response, that is not signed, from RPZ.
+STEP 50 QUERY
+ENTRY_BEGIN
+REPLY RD
+SECTION QUESTION
+foo4.com. IN A
+ENTRY_END
+
+STEP 51 CHECK_ANSWER
+ENTRY_BEGIN
+MATCH all
+REPLY QR RD RA AA NOERROR
+SECTION QUESTION
+foo4.com. IN A
+SECTION ANSWER
+foo4.com. IN CNAME www.foo4.org.
+www.foo4.org. IN CNAME bok.foo4.org.
+bok.foo4.org IN A 4.0.5.5
+ENTRY_END
+
+; The foo5.com query has a CNAME to a signed domain www.foo5.org,
+; the www.foo5.org is filtered by RPZ with a different CNAME to another,
+; DNSSEC signed A record, alt.foo5.org, instead of bok.foo5.org.
+STEP 60 QUERY
+ENTRY_BEGIN
+REPLY RD
+SECTION QUESTION
+foo5.com. IN A
+ENTRY_END
+
+STEP 61 CHECK_ANSWER
+ENTRY_BEGIN
+MATCH all
+REPLY QR RD RA NOERROR
+SECTION QUESTION
+foo5.com. IN A
+SECTION ANSWER
+foo5.com. IN CNAME www.foo5.org.
+www.foo5.org. IN CNAME alt.foo5.org.
+alt.foo5.org IN A 4.0.5.6
 ENTRY_END
 
 SCENARIO_END

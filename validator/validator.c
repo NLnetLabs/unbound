@@ -2617,6 +2617,14 @@ val_operate(struct module_qstate* qstate, enum module_ev event, int id,
 			qstate->ext_state[id] = module_finished;
 			return;
 		}
+		if(qstate->rpz_applied) {
+			verbose(VERB_ALGO, "rpz applied, mark it as insecure");
+			if(qstate->return_msg)
+				qstate->return_msg->rep->security =
+					sec_status_insecure;
+			qstate->ext_state[id] = module_finished;
+			return;
+		}
 		/* qclass ANY should have validation result from spawned 
 		 * queries. If we get here, it is bogus or an internal error */
 		if(qstate->qinfo.qclass == LDNS_RR_CLASS_ANY) {

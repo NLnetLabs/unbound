@@ -1,3 +1,7 @@
+28 August 2024: Wouter
+	- Fix that when rpz is applied the message does not get picked up by
+	  the validator. That stops validation failures for the message.
+
 27 August 2024: Wouter
 	- Fix #1130: Loads of logs: "validation failure: key for validation
 	  <domain>. is marked as invalid because of a previous" for
