@@ -1,3 +1,6 @@
+29 August 2024: Wouter
+	- Unit test for auth zone transfer TLS, and TLS failure.
+
 28 August 2024: Wouter
 	- Fix that when rpz is applied the message does not get picked up by
 	  the validator. That stops validation failures for the message.
