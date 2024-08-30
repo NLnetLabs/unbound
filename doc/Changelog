@@ -1,6 +1,7 @@
 30 August 2024: Wouter
 	- Merge #1132: b.root renumbering.
 	- Fix for #1132, adjusted unit test for change in the test file.
+	- Fix for #1132, comment about adjusted copy of reference check.
 
 29 August 2024: Wouter
 	- Unit test for auth zone transfer TLS, and TLS failure.
