@@ -867,7 +867,8 @@ respip_rewrite_reply(const struct query_info* qinfo,
 	const struct respip_client_info* cinfo, const struct reply_info* rep,
 	struct reply_info** new_repp, struct respip_action_info* actinfo,
 	struct ub_packed_rrset_key** alias_rrset, int search_only,
-	struct regional* region, struct auth_zones* az, int* rpz_passthru)
+	struct regional* region, struct auth_zones* az, int* rpz_passthru,
+	struct views* views, struct respip_set* ipset)
 {
 	const uint8_t* ctaglist;
 	size_t ctaglen;
@@ -876,7 +877,6 @@ respip_rewrite_reply(const struct query_info* qinfo,
 	struct config_strlist** tag_datas;
 	size_t tag_datas_size;
 	struct view* view = NULL;
-	struct respip_set* ipset = NULL;
 	size_t rrset_id = 0, rr_id = 0;
 	enum respip_action action = respip_none;
 	int tag = -1;
@@ -899,8 +899,20 @@ respip_rewrite_reply(const struct query_info* qinfo,
 	tag_actions_size = cinfo->tag_actions_size;
 	tag_datas = cinfo->tag_datas;
 	tag_datas_size = cinfo->tag_datas_size;
-	view = cinfo->view;
-	ipset = cinfo->respip_set;
+	if(cinfo->view) {
+		view = cinfo->view;
+		lock_rw_rdlock(&view->lock);
+	} else if(cinfo->view_name) {
+		view = views_find_view(views, cinfo->view_name, 0);
+		if(!view) {
+			/* If the view no longer exists, the rewrite can not
+			 * be processed further. */
+			verbose(VERB_ALGO, "respip: failed because view %s no "
+				"longer exists", cinfo->view_name);
+			return 0;
+		}
+		/* The view is rdlocked by views_find_view. */
+	}
 
 	log_assert(ipset);
 
@@ -915,7 +927,6 @@ respip_rewrite_reply(const struct query_info* qinfo,
 	  * Note also that we assume 'view' is valid in this function, which
 	  * should be safe (see unbound bug #1191) */
 	if(view) {
-		lock_rw_rdlock(&view->lock);
 		if(view->respip_set) {
 			if((raddr = respip_addr_lookup(rep,
 				view->respip_set, &rrset_id, &rr_id))) {
@@ -1101,7 +1112,8 @@ respip_operate(struct module_qstate* qstate, enum module_ev event, int id,
 				qstate->client_info, qstate->return_msg->rep,
 				&new_rep, &actinfo, &alias_rrset, 0,
 				qstate->region, qstate->env->auth_zones,
-				&qstate->rpz_passthru)) {
+				&qstate->rpz_passthru, qstate->env->views,
+				qstate->env->respip_set)) {
 				goto servfail;
 			}
 			if(actinfo.action != respip_none) {
@@ -1149,7 +1161,8 @@ respip_merge_cname(struct reply_info* base_rep,
 	const struct query_info* qinfo, const struct reply_info* tgt_rep,
 	const struct respip_client_info* cinfo, int must_validate,
 	struct reply_info** new_repp, struct regional* region,
-	struct auth_zones* az)
+	struct auth_zones* az, struct views* views,
+	struct respip_set* respip_set)
 {
 	struct reply_info* new_rep;
 	struct reply_info* tmp_rep = NULL; /* just a placeholder */
@@ -1176,7 +1189,7 @@ respip_merge_cname(struct reply_info* base_rep,
 
 	/* see if the target reply would be subject to a response-ip action. */
 	if(!respip_rewrite_reply(qinfo, cinfo, tgt_rep, &tmp_rep, &actinfo,
-		&alias_rrset, 1, region, az, NULL))
+		&alias_rrset, 1, region, az, NULL, views, respip_set))
 		return 0;
 	if(actinfo.action != respip_none) {
 		log_info("CNAME target of redirect response-ip action would "
@@ -1229,7 +1242,8 @@ respip_inform_super(struct module_qstate* qstate, int id,
 	if(!respip_merge_cname(super->return_msg->rep, &qstate->qinfo,
 		qstate->return_msg->rep, super->client_info,
 		super->env->need_to_validate, &new_rep, super->region,
-		qstate->env->auth_zones))
+		qstate->env->auth_zones, qstate->env->views,
+		qstate->env->respip_set))
 		goto fail;
 	super->return_msg->rep = new_rep;
 	return;
@@ -1325,4 +1339,34 @@ respip_inform_print(struct respip_action_info* respip_actinfo, uint8_t* qname,
 		"%s/%d %s %s@%u", respip, respip_addr->net,
 		(actionstr) ? actionstr : "inform", srcip, port);
 	log_nametypeclass(NO_VERBOSE, txt, qname, qtype, qclass);
+}
+
+size_t respip_set_get_mem(struct respip_set* set)
+{
+	size_t m = sizeof(*set);
+	lock_rw_rdlock(&set->lock);
+	m += regional_get_mem(set->region);
+	lock_rw_unlock(&set->lock);
+	return m;
+}
+
+void
+respip_set_swap_tree(struct respip_set* respip_set,
+	struct respip_set* data)
+{
+	rbnode_type* oldroot = respip_set->ip_tree.root;
+	size_t oldcount = respip_set->ip_tree.count;
+	struct regional* oldregion = respip_set->region;
+	char* const* oldtagname = respip_set->tagname;
+	int oldnum_tags = respip_set->num_tags;
+	respip_set->ip_tree.root = data->ip_tree.root;
+	respip_set->ip_tree.count = data->ip_tree.count;
+	respip_set->region = data->region;
+	respip_set->tagname = data->tagname;
+	respip_set->num_tags = data->num_tags;
+	data->ip_tree.root = oldroot;
+	data->ip_tree.count = oldcount;
+	data->region = oldregion;
+	data->tagname = oldtagname;
+	data->num_tags = oldnum_tags;
 }
