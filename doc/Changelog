@@ -1,3 +1,6 @@
+5 September 2024: Wouter
+	- Fix config file read for dnstap-sample-rate.
+
 2 September 2024: Wouter
 	- Merge #1135: Add new IANA trust anchor.
 

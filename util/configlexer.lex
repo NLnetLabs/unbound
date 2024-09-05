@@ -514,7 +514,7 @@ dnstap-log-forwarder-query-messages{COLON}	{
 		YDVAR(1, VAR_DNSTAP_LOG_FORWARDER_QUERY_MESSAGES) }
 dnstap-log-forwarder-response-messages{COLON}	{
 		YDVAR(1, VAR_DNSTAP_LOG_FORWARDER_RESPONSE_MESSAGES) }
-dnstap-sample-rate		{ YDVAR(1, VAR_DNSTAP_SAMPLE_RATE) }
+dnstap-sample-rate{COLON}	{ YDVAR(1, VAR_DNSTAP_SAMPLE_RATE) }
 disable-dnssec-lame-check{COLON} { YDVAR(1, VAR_DISABLE_DNSSEC_LAME_CHECK) }
 ip-ratelimit{COLON}		{ YDVAR(1, VAR_IP_RATELIMIT) }
 ip-ratelimit-cookie{COLON}	{ YDVAR(1, VAR_IP_RATELIMIT_COOKIE) }
