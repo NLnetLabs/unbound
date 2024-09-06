@@ -97,8 +97,8 @@ fill_nsec3_iter(struct val_env* ve, char* s, int c)
 	int i;
 	free(ve->nsec3_keysize);
 	free(ve->nsec3_maxiter);
-	ve->nsec3_keysize = (size_t*)calloc(sizeof(size_t), (size_t)c);
-	ve->nsec3_maxiter = (size_t*)calloc(sizeof(size_t), (size_t)c);
+	ve->nsec3_keysize = (size_t*)calloc((size_t)c, sizeof(size_t));
+	ve->nsec3_maxiter = (size_t*)calloc((size_t)c, sizeof(size_t));
 	if(!ve->nsec3_keysize || !ve->nsec3_maxiter) {
 		log_err("out of memory");
 		return 0;

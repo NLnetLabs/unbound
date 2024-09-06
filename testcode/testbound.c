@@ -502,7 +502,7 @@ struct listen_port* daemon_remote_open_ports(struct config_file*
 
 struct daemon_remote* daemon_remote_create(struct config_file* ATTR_UNUSED(cfg))
 {
-	return (struct daemon_remote*)calloc(1,1);
+	return (struct daemon_remote*)calloc(1, sizeof(struct daemon_remote));
 }
 
 void daemon_remote_delete(struct daemon_remote* rc)

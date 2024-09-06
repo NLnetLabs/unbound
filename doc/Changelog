@@ -1,3 +1,6 @@
+6 September 2024: Yorgos
+	- Fix alloc-size and calloc-transposed-args compiler warnings.
+
 5 September 2024: Wouter
 	- Fix config file read for dnstap-sample-rate.
 
