@@ -3684,7 +3684,7 @@ auth_zone_parse_notify_serial(sldns_buffer* pkt, uint32_t *serial)
 	return 1;
 }
 
-/** print addr to str, and if not 53, append @port number, for logs. */
+/** print addr to str, and if not 53, append "@port_number", for logs. */
 static void addr_port_to_str(struct sockaddr_storage* addr, socklen_t addrlen,
 	char* buf, size_t len)
 {
