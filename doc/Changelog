@@ -1,6 +1,7 @@
 10 September 2024: Wouter
 	- Fix to limit NSEC and NSEC3 TTL when aggressive nsec is
 	  enabled (RFC9077).
+	- Add unit test for ttl limit for aggressive nsec.
 
 6 September 2024: Yorgos
 	- Fix alloc-size and calloc-transposed-args compiler warnings.
