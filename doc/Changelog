@@ -1,3 +1,6 @@
+11 September 2024: Yorgos
+	- Fix and add comments in testdata/val_negcache_ttl.rpl.
+
 10 September 2024: Wouter
 	- Fix to limit NSEC and NSEC3 TTL when aggressive nsec is
 	  enabled (RFC9077).
