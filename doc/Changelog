@@ -1,3 +1,6 @@
+16 September 2024: Wouter
+	- Merge #1140: Fix spelling mistake in comments.
+
 11 September 2024: Yorgos
 	- Fix and add comments in testdata/val_negcache_ttl.rpl.
 
