@@ -739,6 +739,10 @@ struct config_file {
 	char* redis_server_password;
 	/** timeout (in ms) for communication with the redis server */
 	int redis_timeout;
+	/** timeout (in ms) for redis commands */
+	int redis_command_timeout;
+	/** timeout (in ms) for redis connection set up */
+	int redis_connect_timeout;
 	/** set timeout on redis records based on DNS response ttl */
 	int redis_expire_records;
 	/** set the redis logical database upon connection */

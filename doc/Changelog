@@ -1,3 +1,9 @@
+17 September 2024: Wouter
+	- Add redis-command-timeout: 20 and redis-connect-timeout: 200,
+	  that can set the timeout separately for commands and the
+	  connection set up to the redis server. If they are not
+	  specified, the redis-timeout value is used.
+
 16 September 2024: Wouter
 	- Merge #1140: Fix spelling mistake in comments.
 
