@@ -1065,7 +1065,7 @@ dns_cache_store(struct module_env* env, struct query_info* msgqinf,
 		 * useful expired record exists. */
 		struct msgreply_entry* e = msg_cache_lookup(env,
 			msgqinf->qname, msgqinf->qname_len, msgqinf->qtype,
-			msgqinf->qclass, flags, 0, 1);
+			msgqinf->qclass, flags, 0, 0);
 		if(e) {
 			struct reply_info* cached = e->entry.data;
 			if(cached->ttl < *env->now
