@@ -2451,20 +2451,30 @@ processFinished(struct module_qstate* qstate, struct val_qstate* vq,
 			return 0;
 		}
 
-		if(SERVE_EXPIRED && (e=msg_cache_lookup(qstate->env,
-			qstate->qinfo.qname,
+		if(qstate->env->cfg->serve_expired &&
+			(e=msg_cache_lookup(qstate->env, qstate->qinfo.qname,
 			qstate->qinfo.qname_len, qstate->qinfo.qtype,
 			qstate->qinfo.qclass, qstate->query_flags,
 			0 /*now; allow expired*/,
 			1 /*wr; we may update the data*/))) {
 			struct reply_info* rep = (struct reply_info*)e->entry.data;
-			if(rep && rep->security > sec_status_bogus) {
+			if(rep && rep->security > sec_status_bogus &&
+				(!qstate->env->cfg->serve_expired_ttl ||
+				*qstate->env->now <= rep->serve_expired_ttl)) {
 				verbose(VERB_ALGO, "validation failed but "
 					"previously cached valid response "
 					"exists; set serve-expired-norec-ttl "
 					"for response in cache");
 				rep->serve_expired_norec_ttl = NORR_TTL +
 					*qstate->env->now;
+				if(qstate->env->cfg->serve_expired_ttl_reset &&
+					*qstate->env->now + qstate->env->cfg->serve_expired_ttl
+					> rep->serve_expired_ttl) {
+					verbose(VERB_ALGO, "reset serve-expired-ttl for "
+						"valid response in cache");
+					rep->serve_expired_ttl = *qstate->env->now +
+						qstate->env->cfg->serve_expired_ttl;
+				}
 				/* Return an error response.
 				 * If serve-expired-client-timeout is enabled,
 				 * the client-timeout logic will try to find an
