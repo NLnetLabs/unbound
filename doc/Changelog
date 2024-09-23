@@ -1,6 +1,11 @@
 23 September 2024: Wouter
 	- Fix dns64 with prefetch that the prefetch is stored in cache.
 
+23 September 2024: Yorgos
+	- Fix doxygen warnings by commenting out CLANG_ASSISTED_PARSING,
+	  CLANG_ADD_INC_PATHS, CLANG_OPTIONS and CLANG_DATABASE_PATH; they were
+	  already disabled.
+
 17 September 2024: Wouter
 	- Add redis-command-timeout: 20 and redis-connect-timeout: 200,
 	  that can set the timeout separately for commands and the
