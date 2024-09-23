@@ -2460,6 +2460,7 @@ processFinished(struct module_qstate* qstate, struct val_qstate* vq,
 			struct reply_info* rep = (struct reply_info*)e->entry.data;
 			if(rep && rep->security > sec_status_bogus &&
 				(!qstate->env->cfg->serve_expired_ttl ||
+				 qstate->env->cfg->serve_expired_ttl_reset ||
 				*qstate->env->now <= rep->serve_expired_ttl)) {
 				verbose(VERB_ALGO, "validation failed but "
 					"previously cached valid response "
