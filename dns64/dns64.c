@@ -847,6 +847,7 @@ dns64_adjust_a(int id, struct module_qstate* super, struct module_qstate* qstate
 	 */
 	cp = construct_reply_info_base(super->region, rep->flags, rep->qdcount,
 		rep->ttl, rep->prefetch_ttl, rep->serve_expired_ttl,
+		rep->serve_expired_norec_ttl,
 		rep->an_numrrsets, rep->ns_numrrsets, rep->ar_numrrsets,
 		rep->rrset_count, rep->security, LDNS_EDE_NONE);
 	if(!cp)

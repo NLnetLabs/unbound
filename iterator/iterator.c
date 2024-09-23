@@ -322,16 +322,21 @@ error_response_cache(struct module_qstate* qstate, int id, int rcode)
 		qstate->qinfo.qname, qstate->qinfo.qname_len,
 		qstate->qinfo.qtype, qstate->qinfo.qclass,
 		qstate->query_flags, 0,
-		qstate->env->cfg->serve_expired_ttl_reset)) != NULL) {
+		qstate->env->cfg->serve_expired)) != NULL) {
 		struct reply_info* rep = (struct reply_info*)msg->entry.data;
-		if(qstate->env->cfg->serve_expired &&
-			qstate->env->cfg->serve_expired_ttl_reset && rep &&
-			*qstate->env->now + qstate->env->cfg->serve_expired_ttl
-			> rep->serve_expired_ttl) {
-			verbose(VERB_ALGO, "reset serve-expired-ttl for "
+		if(qstate->env->cfg->serve_expired && rep) {
+			if(qstate->env->cfg->serve_expired_ttl_reset &&
+				*qstate->env->now + qstate->env->cfg->serve_expired_ttl
+				> rep->serve_expired_ttl) {
+				verbose(VERB_ALGO, "reset serve-expired-ttl for "
+					"response in cache");
+				rep->serve_expired_ttl = *qstate->env->now +
+					qstate->env->cfg->serve_expired_ttl;
+			}
+			verbose(VERB_ALGO, "set serve-expired-norec-ttl for "
 				"response in cache");
-			rep->serve_expired_ttl = *qstate->env->now +
-				qstate->env->cfg->serve_expired_ttl;
+			rep->serve_expired_norec_ttl = NORR_TTL +
+				*qstate->env->now;
 		}
 		if(rep && (FLAGS_GET_RCODE(rep->flags) ==
 			LDNS_RCODE_NOERROR ||
@@ -4046,6 +4051,8 @@ processClassResponse(struct module_qstate* qstate, int id,
 			to->rep->prefetch_ttl = from->rep->prefetch_ttl;
 		if(from->rep->serve_expired_ttl < to->rep->serve_expired_ttl)
 			to->rep->serve_expired_ttl = from->rep->serve_expired_ttl;
+		if(from->rep->serve_expired_norec_ttl < to->rep->serve_expired_norec_ttl)
+			to->rep->serve_expired_norec_ttl = from->rep->serve_expired_norec_ttl;
 	}
 	/* are we done? */
 	foriq->num_current_queries --;

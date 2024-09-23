@@ -661,22 +661,18 @@ answer_from_cache(struct worker* worker, struct query_info* qinfo,
 	if(rep->ttl < timenow) {
 		/* Check if we need to serve expired now */
 		if(worker->env.cfg->serve_expired &&
-			!worker->env.cfg->serve_expired_client_timeout
+			/* if serve-expired-client-timeout is set, serve
+			 * an expired record without attempting recursion
+			 * if the serve_expired_norec_ttl is set for the record
+			 * as we know that recursion is currently failing. */
+			(!worker->env.cfg->serve_expired_client_timeout ||
+			 timenow < rep->serve_expired_norec_ttl)
 #ifdef USE_CACHEDB
 			&& !(worker->env.cachedb_enabled &&
 			  worker->env.cfg->cachedb_check_when_serve_expired)
 #endif
 			) {
-				if(worker->env.cfg->serve_expired_ttl &&
-					rep->serve_expired_ttl < timenow)
-					return 0;
-				/* Ignore expired failure answers */
-				if(FLAGS_GET_RCODE(rep->flags) !=
-					LDNS_RCODE_NOERROR &&
-					FLAGS_GET_RCODE(rep->flags) !=
-					LDNS_RCODE_NXDOMAIN &&
-					FLAGS_GET_RCODE(rep->flags) !=
-					LDNS_RCODE_YXDOMAIN)
+				if(!reply_info_can_use_expired(rep, timenow))
 					return 0;
 				if(!rrset_array_lock(rep->ref, rep->rrset_count, 0))
 					return 0;

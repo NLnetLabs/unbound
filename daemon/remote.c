@@ -1953,6 +1953,8 @@ bogus_del_msg(struct lruhash_entry* e, void* arg)
 	struct reply_info* d = (struct reply_info*)e->data;
 	if(d->security == sec_status_bogus) {
 		d->ttl = inf->expired;
+		d->prefetch_ttl = inf->expired;
+		d->serve_expired_ttl = inf->expired;
 		inf->num_msgs++;
 #ifdef USE_CACHEDB
 		if(inf->remcachedb && inf->worker->env.cachedb_enabled)
@@ -2035,6 +2037,8 @@ negative_del_msg(struct lruhash_entry* e, void* arg)
 	 * or NOERROR rcode with ANCOUNT==0: a NODATA answer */
 	if(FLAGS_GET_RCODE(d->flags) != 0 || d->an_numrrsets == 0) {
 		d->ttl = inf->expired;
+		d->prefetch_ttl = inf->expired;
+		d->serve_expired_ttl = inf->expired;
 		inf->num_msgs++;
 #ifdef USE_CACHEDB
 		if(inf->remcachedb && inf->worker->env.cachedb_enabled)
