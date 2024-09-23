@@ -88,7 +88,7 @@ store_rrsets(struct module_env* env, struct reply_info* rep, time_t now,
 		/* update ref if it was in the cache */
 		switch(rrset_cache_update(env->rrset_cache, &rep->ref[i],
 				env->alloc, ((ntohs(rep->ref[i].key->rk.type)==
-				LDNS_RR_TYPE_NS && !pside)?qstarttime:now + leeway))) {
+				LDNS_RR_TYPE_NS && !pside)?qstarttime:now) + leeway)) {
 		case 0: /* ref unchanged, item inserted */
 			break;
 		case 2: /* ref updated, cache is superior */

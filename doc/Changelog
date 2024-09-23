@@ -1,3 +1,6 @@
+23 September 2024: Wouter
+	- Fix dns64 with prefetch that the prefetch is stored in cache.
+
 17 September 2024: Wouter
 	- Add redis-command-timeout: 20 and redis-connect-timeout: 200,
 	  that can set the timeout separately for commands and the
