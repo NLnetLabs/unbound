@@ -167,6 +167,12 @@ struct reply_info {
 	/**
 	 * TTL for an expired entry to be used without attempting recursion
 	 * since a previous recursion attempt failed to update the message.
+	 * This is just an efficiency timer when serve-expired-client-timeout
+	 * is configured. It will make Unbound immediately reply with the
+	 * expired entry instead of trying resolution first.
+	 * It is set on cached entries by modules that identified problems
+	 * while resolving, e.g., failed upstreams from Iterator, or failed
+	 * validation from Validator.
 	 */
 	time_t serve_expired_norec_ttl;
 
