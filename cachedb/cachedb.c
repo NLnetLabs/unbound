@@ -828,8 +828,6 @@ cachedb_handle_query(struct module_qstate* qstate,
 		/* In case we have expired data but there is a client timer for expired
 		 * answers, pass execution to next module in order to try updating the
 		 * data first.
-		 * TODO: this needs revisit. The expired data stored from cachedb has
-		 * 0 TTL which is picked up by iterator later when looking in the cache.
 		 */
 		if(qstate->env->cfg->serve_expired && msg_expired) {
 			qstate->return_msg = NULL;

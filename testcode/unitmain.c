@@ -1232,7 +1232,7 @@ static void edns_ede_answer_encode_test(void)
 	unit_assert(region);
 	rep = construct_reply_info_base(region,
 		LDNS_RCODE_NOERROR | BIT_QR, 1,
-		3600, 3600, 3600,
+		3600, 3600, 3600, 0,
 		0, 0, 0, 0,
 		sec_status_unchecked, LDNS_EDE_NONE);
 	unit_assert(rep);

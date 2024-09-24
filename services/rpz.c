@@ -1969,6 +1969,7 @@ rpz_synthesize_nodata(struct rpz* ATTR_UNUSED(r), struct module_qstate* ms,
 					     0, /* ttl */
 					     0, /* prettl */
 					     0, /* expttl */
+					     0, /* norecttl */
 					     0, /* an */
 					     0, /* ns */
 					     0, /* ar */
@@ -1999,6 +2000,7 @@ rpz_synthesize_nxdomain(struct rpz* r, struct module_qstate* ms,
 					     0, /* ttl */
 					     0, /* prettl */
 					     0, /* expttl */
+					     0, /* norecttl */
 					     0, /* an */
 					     0, /* ns */
 					     0, /* ar */
@@ -2031,6 +2033,7 @@ rpz_synthesize_localdata_from_rrset(struct rpz* ATTR_UNUSED(r), struct module_qs
                                                    0, /* ttl */
                                                    0, /* prettl */
                                                    0, /* expttl */
+                                                   0, /* norecttl */
                                                    1, /* an */
                                                    0, /* ns */
                                                    0, /* ar */
@@ -2176,6 +2179,7 @@ rpz_synthesize_cname_override_msg(struct rpz* r, struct module_qstate* ms,
                                                    0, /* ttl */
                                                    0, /* prettl */
                                                    0, /* expttl */
+                                                   0, /* norecttl */
                                                    1, /* an */
                                                    0, /* ns */
                                                    0, /* ar */

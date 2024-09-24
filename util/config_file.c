@@ -719,7 +719,9 @@ int config_set_option(struct config_file* cfg, const char* opt,
 	  SERVE_EXPIRED = cfg->serve_expired; }
 	else if(strcmp(opt, "serve-expired-ttl:") == 0)
 	{ IS_NUMBER_OR_ZERO; cfg->serve_expired_ttl = atoi(val); SERVE_EXPIRED_TTL=(time_t)cfg->serve_expired_ttl;}
-	else S_YNO("serve-expired-ttl-reset:", serve_expired_ttl_reset)
+	else if(strcmp(opt, "serve-expired-ttl-reset:") == 0)
+	{ IS_YES_OR_NO; cfg->serve_expired_ttl_reset = (strcmp(val, "yes") == 0);
+	  SERVE_EXPIRED_TTL_RESET = cfg->serve_expired_ttl_reset; }
 	else if(strcmp(opt, "serve-expired-reply-ttl:") == 0)
 	{ IS_NUMBER_OR_ZERO; cfg->serve_expired_reply_ttl = atoi(val); SERVE_EXPIRED_REPLY_TTL=(time_t)cfg->serve_expired_reply_ttl;}
 	else S_NUMBER_OR_ZERO("serve-expired-client-timeout:", serve_expired_client_timeout)
@@ -2395,6 +2397,7 @@ config_apply(struct config_file* config)
 	MIN_TTL = (time_t)config->min_ttl;
 	SERVE_EXPIRED = config->serve_expired;
 	SERVE_EXPIRED_TTL = (time_t)config->serve_expired_ttl;
+	SERVE_EXPIRED_TTL_RESET = config->serve_expired_ttl_reset;
 	SERVE_EXPIRED_REPLY_TTL = (time_t)config->serve_expired_reply_ttl;
 	SERVE_ORIGINAL_TTL = config->serve_original_ttl;
 	MAX_NEG_TTL = (time_t)config->max_negative_ttl;
