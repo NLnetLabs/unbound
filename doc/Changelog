@@ -1,5 +1,7 @@
 24 September 2024: Yorgos
 	- Attempt to further fix doh_downstream_buffer_size.tdir flakiness.
+	- More clear text for prefetch and minimal-responses in the
+	  unbound.conf man page.
 
 23 September 2024: Wouter
 	- Fix dns64 with prefetch that the prefetch is stored in cache.

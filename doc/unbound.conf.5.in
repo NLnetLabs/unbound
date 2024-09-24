@@ -1176,10 +1176,11 @@ IP6 ::1 and IP4 127.0.0.1/8. If no, then localhost can be used to send
 queries to. Default is yes.
 .TP
 .B prefetch: \fI<yes or no>
-If yes, message cache elements are prefetched before they expire to
-keep the cache up to date.  Default is no.  Turning it on gives about
-10 percent more traffic and load on the machine, but popular items do
-not expire from the cache.
+If yes, cache hits on message cache elements that are on their last 10 percent
+of their TTL value trigger a prefetch to keep the cache up to date.
+Default is no.
+Turning it on gives about 10 percent more traffic and load on the machine, but
+popular items do not expire from the cache.
 .TP
 .B prefetch\-key: \fI<yes or no>
 If yes, fetch the DNSKEYs earlier in the validation process, when a DS
@@ -1199,12 +1200,13 @@ from the query ID, for speed and thread safety).  Default is yes.
 .B minimal-responses: \fI<yes or no>
 If yes, Unbound does not insert authority/additional sections into response
 messages when those sections are not required.  This reduces response
-size significantly, and may avoid TCP fallback for some responses.
-This may cause a slight speedup.  The default is yes, even though the DNS
+size significantly, and may avoid TCP fallback for some responses which may
+cause a slight speedup.  The default is yes, even though the DNS
 protocol RFCs mandate these sections, and the additional content could
-be of use and save roundtrips for clients.  Because they are not used,
-and the saved roundtrips are easier saved with prefetch, whilst this is
-faster.
+save roundtrips for clients that use the additional content.
+However these sections are hardly used by clients.
+Enabling prefetch can benefit clients that need the additional content
+by trying to keep that content fresh in the cache.
 .TP
 .B disable-dnssec-lame-check: \fI<yes or no>
 If true, disables the DNSSEC lameness check in the iterator.  This check
