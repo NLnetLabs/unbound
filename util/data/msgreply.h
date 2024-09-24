@@ -407,13 +407,22 @@ int reply_info_alloc_rrset_keys(struct reply_info* rep,
 	struct alloc_cache* alloc, struct regional* region);
 
 /**
- * Check if an *expired* reply info (checked by the caller already) can be used
+ * Check if an *expired* (checked by the caller already) reply info can be used
  * as an expired answer.
  * @param rep: expired reply info to check.
  * @param timenow: the current time.
- * @return 1 if it can be used, 0 otherwise.
+ * @return 1 if it can be used as an answer, 0 otherwise.
  */
-int reply_info_can_use_expired(struct reply_info* rep, time_t timenow);
+int reply_info_can_answer_expired(struct reply_info* rep, time_t timenow);
+
+/**
+ * Check if an *expired* (checked by the caller already) reply info could be
+ * useful data to stay in the cache.
+ * @param rep: expired reply info to check.
+ * @param timenow: the current time.
+ * @return 1 if it is useful, 0 otherwise.
+ */
+int reply_info_could_use_expired(struct reply_info* rep, time_t timenow);
 
 /*
  * Create a new reply_info based on 'rep'.  The new info is based on

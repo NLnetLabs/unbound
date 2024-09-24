@@ -672,7 +672,7 @@ answer_from_cache(struct worker* worker, struct query_info* qinfo,
 			  worker->env.cfg->cachedb_check_when_serve_expired)
 #endif
 			) {
-				if(!reply_info_can_use_expired(rep, timenow))
+				if(!reply_info_can_answer_expired(rep, timenow))
 					return 0;
 				if(!rrset_array_lock(rep->ref, rep->rrset_count, 0))
 					return 0;

@@ -67,6 +67,8 @@ time_t MIN_NEG_TTL = 0;
 int SERVE_EXPIRED = 0;
 /** Time to serve records after expiration */
 time_t SERVE_EXPIRED_TTL = 0;
+/** Reset serve expired TTL after failed update attempt */
+time_t SERVE_EXPIRED_TTL_RESET = 0;
 /** TTL to use for expired records */
 time_t SERVE_EXPIRED_REPLY_TTL = 30;
 /** If we serve the original TTL or decrementing TTLs */
@@ -174,11 +176,24 @@ reply_info_alloc_rrset_keys(struct reply_info* rep, struct alloc_cache* alloc,
 }
 
 int
-reply_info_can_use_expired(struct reply_info* rep, time_t timenow)
+reply_info_can_answer_expired(struct reply_info* rep, time_t timenow)
 {
 	log_assert(rep->ttl < timenow);
 	/* Really expired */
 	if(SERVE_EXPIRED_TTL && rep->serve_expired_ttl < timenow) return 0;
+	/* Ignore expired failure answers */
+	if(FLAGS_GET_RCODE(rep->flags) != LDNS_RCODE_NOERROR &&
+		FLAGS_GET_RCODE(rep->flags) != LDNS_RCODE_NXDOMAIN &&
+		FLAGS_GET_RCODE(rep->flags) != LDNS_RCODE_YXDOMAIN) return 0;
+	return 1;
+}
+
+int reply_info_could_use_expired(struct reply_info* rep, time_t timenow)
+{
+	log_assert(rep->ttl < timenow);
+	/* Really expired */
+	if(SERVE_EXPIRED_TTL && rep->serve_expired_ttl < timenow &&
+		!SERVE_EXPIRED_TTL_RESET) return 0;
 	/* Ignore expired failure answers */
 	if(FLAGS_GET_RCODE(rep->flags) != LDNS_RCODE_NOERROR &&
 		FLAGS_GET_RCODE(rep->flags) != LDNS_RCODE_NXDOMAIN &&

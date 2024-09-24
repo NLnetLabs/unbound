@@ -608,7 +608,7 @@ tomsg(struct module_env* env, struct query_info* q, struct reply_info* r,
 	time_t now_control = now;
 	if(now > r->ttl) {
 		/* Check if we are allowed to serve expired */
-		if(!allow_expired || !reply_info_can_use_expired(r, now))
+		if(!allow_expired || !reply_info_can_answer_expired(r, now))
 			return NULL;
 		/* Change the current time so we can pass the below TTL checks when
 		 * serving expired data. */
@@ -1069,7 +1069,7 @@ dns_cache_store(struct module_env* env, struct query_info* msgqinf,
 		if(e) {
 			struct reply_info* cached = e->entry.data;
 			if(cached->ttl < *env->now
-				&& reply_info_can_use_expired(cached, *env->now)
+				&& reply_info_could_use_expired(cached, *env->now)
 				/* If we are validating make sure only
 				 * validating modules can update such messages.
 				 * In that case don't cache it and let a
