@@ -2,6 +2,9 @@
 	- Attempt to further fix doh_downstream_buffer_size.tdir flakiness.
 	- More clear text for prefetch and minimal-responses in the
 	  unbound.conf man page.
+	- Merge #1143: Fix cache update when serve expired is used. Expired
+	  records are favored over resolution and validation failures when
+	  serve-expired is used.
 
 23 September 2024: Wouter
 	- Fix dns64 with prefetch that the prefetch is stored in cache.
