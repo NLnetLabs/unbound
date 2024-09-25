@@ -138,6 +138,7 @@ config_create(void)
 	cfg->use_syslog = 1;
 	cfg->log_identity = NULL; /* changed later with argv[0] */
 	cfg->log_time_ascii = 0;
+	cfg->log_time_iso = 0;
 	cfg->log_queries = 0;
 	cfg->log_replies = 0;
 	cfg->log_tag_queryreply = 0;
@@ -547,6 +548,9 @@ int config_set_option(struct config_file* cfg, const char* opt,
 	else if(strcmp(opt, "log-time-ascii:") == 0)
 	{ IS_YES_OR_NO; cfg->log_time_ascii = (strcmp(val, "yes") == 0);
 	  log_set_time_asc(cfg->log_time_ascii); }
+	else if(strcmp(opt, "log-time-iso:") == 0)
+	{ IS_YES_OR_NO; cfg->log_time_iso = (strcmp(val, "yes") == 0);
+	  log_set_time_iso(cfg->log_time_iso); }
 	else S_SIZET_NONZERO("max-udp-size:", max_udp_size)
 	else S_YNO("use-syslog:", use_syslog)
 	else S_STR("log-identity:", log_identity)
@@ -1066,6 +1070,7 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_YNO(opt, "use-syslog", use_syslog)
 	else O_STR(opt, "log-identity", log_identity)
 	else O_YNO(opt, "log-time-ascii", log_time_ascii)
+	else O_YNO(opt, "log-time-iso", log_time_iso)
 	else O_DEC(opt, "num-threads", num_threads)
 	else O_IFC(opt, "interface", num_ifs, ifs)
 	else O_IFC(opt, "outgoing-interface", num_out_ifs, out_ifs)
@@ -2413,6 +2418,7 @@ config_apply(struct config_file* config)
 	USEFUL_SERVER_TOP_TIMEOUT = RTT_MAX_TIMEOUT;
 	BLACKLIST_PENALTY = USEFUL_SERVER_TOP_TIMEOUT*4;
 	log_set_time_asc(config->log_time_ascii);
+	log_set_time_iso(config->log_time_iso);
 	autr_permit_small_holddown = config->permit_small_holddown;
 	stream_wait_max = config->stream_wait_size;
 	http2_query_buffer_max = config->http_query_buffer_size;

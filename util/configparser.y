@@ -207,7 +207,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_HARDEN_UNKNOWN_ADDITIONAL VAR_DISABLE_EDNS_DO VAR_CACHEDB_NO_STORE
 %token VAR_LOG_DESTADDR VAR_CACHEDB_CHECK_WHEN_SERVE_EXPIRED
 %token VAR_COOKIE_SECRET_FILE VAR_ITER_SCRUB_NS VAR_ITER_SCRUB_CNAME
-%token VAR_MAX_GLOBAL_QUOTA VAR_HARDEN_UNVERIFIED_GLUE
+%token VAR_MAX_GLOBAL_QUOTA VAR_HARDEN_UNVERIFIED_GLUE VAR_LOG_TIME_ISO
 
 %%
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
@@ -347,7 +347,7 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_harden_unknown_additional | server_disable_edns_do |
 	server_log_destaddr | server_cookie_secret_file |
 	server_iter_scrub_ns | server_iter_scrub_cname | server_max_global_quota |
-	server_harden_unverified_glue
+	server_harden_unverified_glue | server_log_time_iso
 	;
 stub_clause: stubstart contents_stub
 	{
@@ -1247,6 +1247,15 @@ server_log_time_ascii: VAR_LOG_TIME_ASCII STRING_ARG
 		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
 			yyerror("expected yes or no.");
 		else cfg_parser->cfg->log_time_ascii = (strcmp($2, "yes")==0);
+		free($2);
+	}
+	;
+server_log_time_iso: VAR_LOG_TIME_ISO STRING_ARG
+	{
+		OUTYY(("P(server_log_time_iso:%s)\n", $2));
+		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
+			yyerror("expected yes or no.");
+		else cfg_parser->cfg->log_time_iso = (strcmp($2, "yes")==0);
 		free($2);
 	}
 	;
