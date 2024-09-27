@@ -202,6 +202,42 @@ struct doq_client_stream {
 static SSL_QUIC_METHOD quic_method;
 #endif
 
+/** Get the connection ngtcp2_conn from the ssl app data
+ * ngtcp2_crypto_conn_ref */
+static ngtcp2_conn* conn_ref_get_conn(ngtcp2_crypto_conn_ref* conn_ref)
+{
+	struct doq_client_data* data = (struct doq_client_data*)
+		conn_ref->user_data;
+	return data->conn;
+}
+
+static void
+set_app_data(SSL* ssl, struct doq_client_data* data)
+{
+#ifdef HAVE_NGTCP2_CRYPTO_QUICTLS_CONFIGURE_CLIENT_CONTEXT
+	data->conn_ref.get_conn = &conn_ref_get_conn;
+	data->conn_ref.user_data = data;
+	SSL_set_app_data(ssl, &data->conn_ref);
+#else
+	SSL_set_app_data(ssl, data);
+#endif
+}
+
+static struct doq_client_data*
+get_app_data(SSL* ssl)
+{
+	struct doq_client_data* data;
+#ifdef HAVE_NGTCP2_CRYPTO_QUICTLS_CONFIGURE_CLIENT_CONTEXT
+	data = (struct doq_client_data*)((struct ngtcp2_crypto_conn_ref*)
+		SSL_get_app_data(ssl))->user_data;
+#else
+	data = (struct doq_client_data*) SSL_get_app_data(ssl);
+#endif
+	return data;
+}
+
+
+
 /** write handle routine */
 static void on_write(struct doq_client_data* data);
 /** update the timer */
@@ -950,7 +986,7 @@ copy_ngaddr(struct ngtcp2_addr* ngaddr, struct sockaddr_storage* addr,
 #if defined(NGTCP2_USE_GENERIC_SOCKADDR) || defined(NGTCP2_USE_GENERIC_IPV6_SOCKADDR)
 		struct sockaddr_in* i6 = (struct sockaddr_in6*)addr;
 		struct ngtcp2_sockaddr_in6 a6;
-		ngaddr->addr = calloc(sizeof(a6), 1);
+		ngaddr->addr = calloc(1, sizeof(a6));
 		if(!ngaddr->addr) fatal_exit("calloc failed: out of memory");
 		ngaddr->addrlen = sizeof(a6);
 		memset(&a6, 0, sizeof(a6));
@@ -968,7 +1004,7 @@ copy_ngaddr(struct ngtcp2_addr* ngaddr, struct sockaddr_storage* addr,
 #ifdef NGTCP2_USE_GENERIC_SOCKADDR
 		struct sockaddr_in* i4 = (struct sockaddr_in*)addr;
 		struct ngtcp2_sockaddr_in a4;
-		ngaddr->addr = calloc(sizeof(a4), 1);
+		ngaddr->addr = calloc(1, sizeof(a4));
 		if(!ngaddr->addr) fatal_exit("calloc failed: out of memory");
 		ngaddr->addrlen = sizeof(a4);
 		memset(&a4, 0, sizeof(a4));
@@ -1201,8 +1237,7 @@ set_encryption_secrets(SSL *ssl, OSSL_ENCRYPTION_LEVEL ossl_level,
 	const uint8_t *read_secret, const uint8_t *write_secret,
 	size_t secret_len)
 {
-	struct doq_client_data* data = (struct doq_client_data*)
-		SSL_get_app_data(ssl);
+	struct doq_client_data* data = get_app_data(ssl);
 #ifdef HAVE_NGTCP2_ENCRYPTION_LEVEL
 	ngtcp2_encryption_level
 #else
@@ -1242,8 +1277,7 @@ static int
 add_handshake_data(SSL *ssl, OSSL_ENCRYPTION_LEVEL ossl_level,
 	const uint8_t *data, size_t len)
 {
-	struct doq_client_data* doqdata = (struct doq_client_data*)
-		SSL_get_app_data(ssl);
+	struct doq_client_data* doqdata = get_app_data(ssl);
 #ifdef HAVE_NGTCP2_ENCRYPTION_LEVEL
 	ngtcp2_encryption_level
 #else
@@ -1279,8 +1313,7 @@ static int
 send_alert(SSL *ssl, enum ssl_encryption_level_t ATTR_UNUSED(level),
 	uint8_t alert)
 {
-	struct doq_client_data* data = (struct doq_client_data*)
-		SSL_get_app_data(ssl);
+	struct doq_client_data* data = get_app_data(ssl);
 	data->tls_alert = alert;
 	return 1;
 }
@@ -1290,9 +1323,9 @@ send_alert(SSL *ssl, enum ssl_encryption_level_t ATTR_UNUSED(level),
 static int
 new_session_cb(SSL* ssl, SSL_SESSION* session)
 {
-	struct doq_client_data* data = (struct doq_client_data*)
-		SSL_get_app_data(ssl);
+	struct doq_client_data* data = get_app_data(ssl);
 	BIO *f;
+	log_assert(data->session_file);
 	verbose(1, "new session cb: the ssl session max_early_data_size is %u",
 		(unsigned)SSL_SESSION_get_max_early_data(session));
 	f = BIO_new_file(data->session_file, "w");
@@ -1335,14 +1368,6 @@ ctx_client_setup(void)
 	return ctx;
 }
 
-/** Get the connection ngtcp2_conn from the ssl app data
- * ngtcp2_crypto_conn_ref */
-static ngtcp2_conn* conn_ref_get_conn(ngtcp2_crypto_conn_ref* conn_ref)
-{
-	struct doq_client_data* data = (struct doq_client_data*)
-		conn_ref->user_data;
-	return data->conn;
-}
 
 /* setup the TLS object */
 static SSL*
@@ -1353,13 +1378,7 @@ ssl_client_setup(struct doq_client_data* data)
 		log_crypto_err("Could not SSL_new");
 		exit(1);
 	}
-#ifdef HAVE_NGTCP2_CRYPTO_QUICTLS_CONFIGURE_CLIENT_CONTEXT
-	data->conn_ref.get_conn = &conn_ref_get_conn;
-	data->conn_ref.user_data = data;
-	SSL_set_app_data(ssl, &data->conn_ref);
-#else
-	SSL_set_app_data(ssl, data);
-#endif
+	set_app_data(ssl, data);
 	SSL_set_connect_state(ssl);
 	if(!SSL_set_fd(ssl, data->fd)) {
 		log_crypto_err("Could not SSL_set_fd");
@@ -2199,7 +2218,7 @@ create_doq_client_data(const char* svr, int port, struct ub_event_base* base,
 	const char* transport_file, const char* session_file, int quiet)
 {
 	struct doq_client_data* data;
-	data = calloc(sizeof(*data), 1);
+	data = calloc(1, sizeof(*data));
 	if(!data) fatal_exit("calloc failed: out of memory");
 	data->base = base;
 	data->rnd = ub_initstate(NULL);
