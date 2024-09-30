@@ -1,3 +1,7 @@
+30 September 2024: Wouter
+	- Fix negative cache NSEC3 parameter compares for zero length NSEC3
+	  salt.
+
 25 September 2024: Wouter
 	- Fix #1144: [FR] log timestamps in ISO8601 format with timezone.
 	  This adds the option `log-time-iso: yes` that logs in ISO8601
