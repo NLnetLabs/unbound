@@ -1,6 +1,8 @@
 30 September 2024: Wouter
 	- Fix negative cache NSEC3 parameter compares for zero length NSEC3
 	  salt.
+	- Fix unbound dnstap socket test program analyzer warnings about
+	  unused variable assignments and variable initialization.
 
 25 September 2024: Wouter
 	- Fix #1144: [FR] log timestamps in ISO8601 format with timezone.

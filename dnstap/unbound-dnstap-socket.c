@@ -1151,7 +1151,9 @@ void dtio_mainfdcallback(int fd, short ATTR_UNUSED(bits), void* arg)
 	char* id = NULL;
 	struct sockaddr_storage addr;
 	socklen_t addrlen = (socklen_t)sizeof(addr);
-	int s = accept(fd, (struct sockaddr*)&addr, &addrlen);
+	int s;
+	memset(&addr, 0, sizeof(addr));
+	s = accept(fd, (struct sockaddr*)&addr, &addrlen);
 	if(s == -1) {
 #ifndef USE_WINSOCK
 		/* EINTR is signal interrupt. others are closed connection. */
@@ -1543,8 +1545,8 @@ int main(int argc, char** argv)
 				usage(argv);
 		}
 	}
-	argc -= optind;
-	argv += optind;
+	/* argc -= optind; not using further arguments */
+	/* argv += optind; not using further arguments */
 
 	if(usessl) {
 #ifdef HAVE_SSL
