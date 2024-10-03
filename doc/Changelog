@@ -1,3 +1,10 @@
+3 October 2024: Yorgos
+	- Fix CVE-2024-8508, unbounded name compression could lead to denial
+	  of service.
+	- This fix was part of 1.21.1, a security point release on 1.21.0.
+	  The code repository continues with this fix and the version number
+	  1.22.0.
+
 30 September 2024: Wouter
 	- Fix negative cache NSEC3 parameter compares for zero length NSEC3
 	  salt.
