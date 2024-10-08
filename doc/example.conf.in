@@ -877,7 +877,8 @@ server:
 	#   always_deny resolve in that way but ignore local data for
 	#   that name
 	# o block_a resolves all records normally but returns
-	#   NODATA for A queries and ignores local data for that name
+	#   NODATA for A queries and ignores local data for that name,
+	#   unless the client indicates it's DNSSEC-aware.
 	# o always_null returns 0.0.0.0 or ::0 for any name in the zone.
 	# o noview breaks out of that view towards global local-zones.
 	#
