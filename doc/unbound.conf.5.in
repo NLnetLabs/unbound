@@ -566,6 +566,9 @@ tls\-system\-cert to load CA certs, otherwise the connections cannot be
 authenticated. This option enables TLS for all of them, but if you do not set
 this you can configure TLS specifically for some forward zones with
 forward\-tls\-upstream.  And also with stub\-tls\-upstream.
+If the tls\-upstream option is enabled, it is for all the forwards and stubs,
+where the forward\-tls\-upstream and stub\-tls\-upstream options are ignored,
+as if they had been set to yes.
 .TP
 .B ssl\-upstream: \fI<yes or no>
 Alternate syntax for \fBtls\-upstream\fR.  If both are present in the config

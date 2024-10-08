@@ -1,6 +1,8 @@
 8 October 2024: Wouter
 	- Fix #1149: unbound-control-setup hangs sometimes depending on
 	  the openssl version.
+	- Fix #1128: Cannot override tcp-upstream and tls-upstream with
+	  forward-tcp-upstream and forward-tls-upstream.
 
 3 October 2024: Yorgos
 	- Fix CVE-2024-8508, unbounded name compression could lead to denial
