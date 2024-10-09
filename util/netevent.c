@@ -1522,8 +1522,8 @@ msghdr_get_ecn(struct msghdr* msg, int family)
 			return *ecn;
 		}
 	}
-	return 0;
 #endif /* S_SPLINT_S */
+	return 0;
 }
 
 /** receive packet for DoQ on UDP. get ancillary data for addresses,
