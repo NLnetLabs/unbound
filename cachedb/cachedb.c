@@ -621,6 +621,9 @@ parse_data(struct module_qstate* qstate, struct sldns_buffer* buf,
 	}
 	verbose(VERB_ALGO, "cachedb msg adjusted down by %d", (int)adjust);
 	adjust_msg_ttl(qstate->return_msg, adjust);
+	if(qstate->env->cfg->aggressive_nsec) {
+		limit_nsec_ttl(qstate->return_msg);
+	}
 
 	/* Similar to the unbound worker, if serve-expired is enabled and
 	 * the msg would be considered to be expired, mark the state so a

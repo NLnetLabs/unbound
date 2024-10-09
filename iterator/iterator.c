@@ -372,48 +372,6 @@ error_response_cache(struct module_qstate* qstate, int id, int rcode)
 	return error_response(qstate, id, rcode);
 }
 
-/** limit NSEC and NSEC3 TTL in response, RFC9077 */
-static void
-limit_nsec_ttl(struct dns_msg* msg)
-{
-	size_t i;
-	int found = 0;
-	time_t soa_ttl = 0;
-	/* Limit the NSEC and NSEC3 TTL values to the SOA TTL and SOA minimum
-	 * TTL. That has already been applied to the SOA record ttl. */
-	for(i=0; i<msg->rep->rrset_count; i++) {
-		struct ub_packed_rrset_key* s = msg->rep->rrsets[i];
-		if(ntohs(s->rk.type) == LDNS_RR_TYPE_SOA) {
-			struct packed_rrset_data* soadata = (struct packed_rrset_data*)s->entry.data;
-			found = 1;
-			soa_ttl = soadata->ttl;
-			break;
-		}
-	}
-	if(!found)
-		return;
-	for(i=0; i<msg->rep->rrset_count; i++) {
-		struct ub_packed_rrset_key* s = msg->rep->rrsets[i];
-		if(ntohs(s->rk.type) == LDNS_RR_TYPE_NSEC ||
-			ntohs(s->rk.type) == LDNS_RR_TYPE_NSEC3) {
-			struct packed_rrset_data* data = (struct packed_rrset_data*)s->entry.data;
-			/* Limit the negative TTL. */
-			if(data->ttl > soa_ttl) {
-				if(verbosity >= VERB_ALGO) {
-					char buf[256];
-					snprintf(buf, sizeof(buf),
-						"limiting TTL %d of %s record to the SOA TTL of %d for",
-						(int)data->ttl, ((ntohs(s->rk.type) == LDNS_RR_TYPE_NSEC)?"NSEC":"NSEC3"), (int)soa_ttl);
-					log_nametypeclass(VERB_ALGO, buf,
-						s->rk.dname, ntohs(s->rk.type),
-						ntohs(s->rk.rrset_class));
-				}
-				data->ttl = soa_ttl;
-			}
-		}
-	}
-}
-
 /** check if prepend item is duplicate item */
 static int
 prepend_is_duplicate(struct ub_packed_rrset_key** sets, size_t to,
@@ -456,8 +414,11 @@ iter_prepend(struct iter_qstate* iq, struct dns_msg* msg,
 	num_an = 0;
 	for(p = iq->an_prepend_list; p; p = p->next) {
 		sets[num_an++] = p->rrset;
-		if(ub_packed_rrset_ttl(p->rrset) < msg->rep->ttl)
+		if(ub_packed_rrset_ttl(p->rrset) < msg->rep->ttl) {
 			msg->rep->ttl = ub_packed_rrset_ttl(p->rrset);
+			msg->rep->prefetch_ttl = PREFETCH_TTL_CALC(msg->rep->ttl);
+			msg->rep->serve_expired_ttl = msg->rep->ttl + SERVE_EXPIRED_TTL;
+		}
 	}
 	memcpy(sets+num_an, msg->rep->rrsets, msg->rep->an_numrrsets *
 		sizeof(struct ub_packed_rrset_key*));
@@ -470,8 +431,11 @@ iter_prepend(struct iter_qstate* iq, struct dns_msg* msg,
 			msg->rep->ns_numrrsets, p->rrset))
 			continue;
 		sets[msg->rep->an_numrrsets + num_an + num_ns++] = p->rrset;
-		if(ub_packed_rrset_ttl(p->rrset) < msg->rep->ttl)
+		if(ub_packed_rrset_ttl(p->rrset) < msg->rep->ttl) {
 			msg->rep->ttl = ub_packed_rrset_ttl(p->rrset);
+			msg->rep->prefetch_ttl = PREFETCH_TTL_CALC(msg->rep->ttl);
+			msg->rep->serve_expired_ttl = msg->rep->ttl + SERVE_EXPIRED_TTL;
+		}
 	}
 	memcpy(sets + num_an + msg->rep->an_numrrsets + num_ns, 
 		msg->rep->rrsets + msg->rep->an_numrrsets, 
