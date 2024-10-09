@@ -1019,6 +1019,9 @@ void http2_session_add_stream(struct http2_session* h2_session,
 void http2_stream_add_meshstate(struct http2_stream* h2_stream,
 	struct mesh_area* mesh, struct mesh_state* m);
 
+/** Remove mesh state from stream. When the mesh state has been removed. */
+void http2_stream_remove_mesh_state(struct http2_stream* h2_stream);
+
 /**
  * DoQ socket address storage for IP4 or IP6 address. Smaller than
  * the sockaddr_storage because not with af_unix pathnames.

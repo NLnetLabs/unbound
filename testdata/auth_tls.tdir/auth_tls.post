@@ -1,4 +1,4 @@
-# #-- remote-threaded.post --#
+# #-- auth_tls.post --#
 # source the master var file when it's there
 [ -f ../.tpkg.var.master ] && source ../.tpkg.var.master
 # source the test var file when it's there
@@ -6,8 +6,9 @@
 #
 # do your teardown here
 . ../common.sh
-kill_pid $FWD_PID
-# unbound stopped by test (if successful)
-kill $UNBOUND_PID >/dev/null 2>&1
-kill $UNBOUND_PID >/dev/null 2>&1
-exit 0
+kill_pid $NSD_PID
+kill_pid $UNBOUND_PID
+echo "nsd.log"
+cat nsd.log
+echo "unbound.log"
+cat unbound.log

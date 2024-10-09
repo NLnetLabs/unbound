@@ -88,6 +88,10 @@
 #include "sldns/wire2str.h"
 #include "sldns/sbuffer.h"
 #include "util/timeval_func.h"
+#include "util/edns.h"
+#ifdef USE_CACHEDB
+#include "cachedb/cachedb.h"
+#endif
 
 #ifdef HAVE_SYS_TYPES_H
 #  include <sys/types.h>
@@ -106,6 +110,10 @@
 
 /** what to put on statistics lines between var and value, ": " or "=" */
 #define SQ "="
+
+/** Acceptable lengths of str lines */
+#define MAX_CMD_STRLINE 1024
+#define MAX_STDIN_STRLINE 2048
 
 static int
 remote_setup_ctx(struct daemon_remote* rc, struct config_file* cfg)
@@ -631,6 +639,25 @@ skipwhite(char* str)
 static void send_ok(RES* ssl)
 {
 	(void)ssl_printf(ssl, "ok\n");
+}
+
+/** tell other processes to execute the command */
+static void
+distribute_cmd(struct daemon_remote* rc, RES* ssl, char* cmd)
+{
+	int i;
+	if(!cmd || !ssl)
+		return;
+	/* skip i=0 which is me */
+	for(i=1; i<rc->worker->daemon->num; i++) {
+		worker_send_cmd(rc->worker->daemon->workers[i],
+			worker_cmd_remote);
+		if(!tube_write_msg(rc->worker->daemon->workers[i]->cmd,
+			(uint8_t*)cmd, strlen(cmd)+1, 0)) {
+			(void)ssl_printf(ssl, "error could not distribute cmd\n");
+			return;
+		}
+	}
 }
 
 /** do the stop command */
@@ -1228,19 +1255,28 @@ do_zone_add(RES* ssl, struct local_zones* zones, char* arg)
 
 /** Do the local_zones command */
 static void
-do_zones_add(RES* ssl, struct local_zones* zones)
+do_zones_add(struct daemon_remote* rc, RES* ssl, struct worker* worker)
 {
-	char buf[2048];
+	char buf[MAX_CMD_STRLINE + MAX_STDIN_STRLINE] = "local_zone ";
 	int num = 0;
-	while(ssl_read_line(ssl, buf, sizeof(buf))) {
-		if(buf[0] == 0 || (buf[0] == 0x04 && buf[1] == 0))
+	size_t cmd_len = strlen(buf);
+	while(ssl_read_line(ssl, buf+cmd_len, MAX_STDIN_STRLINE)) {
+		if(buf[0+cmd_len] == 0 ||
+			(buf[0+cmd_len] == 0x04 && buf[1+cmd_len] == 0))
 			break; /* zero byte line or end of transmission */
-		if(!perform_zone_add(ssl, zones, buf)) {
-			if(!ssl_printf(ssl, "error for input line: %s\n", buf))
+#ifdef THREADS_DISABLED
+		/* distribute single item command */
+		if(rc) distribute_cmd(rc, ssl, buf);
+#else
+		(void)rc; /* unused */
+#endif
+		if(!perform_zone_add(ssl, worker->daemon->local_zones,
+			buf+cmd_len)) {
+			if(!ssl_printf(ssl, "error for input line: %s\n",
+				buf+cmd_len))
 				return;
 		}
-		else
-			num++;
+		else	num++;
 	}
 	(void)ssl_printf(ssl, "added %d zones\n", num);
 }
@@ -1277,19 +1313,28 @@ do_zone_remove(RES* ssl, struct local_zones* zones, char* arg)
 
 /** Do the local_zones_remove command */
 static void
-do_zones_remove(RES* ssl, struct local_zones* zones)
+do_zones_remove(struct daemon_remote* rc, RES* ssl, struct worker* worker)
 {
-	char buf[2048];
+	char buf[MAX_CMD_STRLINE + MAX_STDIN_STRLINE] = "local_zone_remove ";
 	int num = 0;
-	while(ssl_read_line(ssl, buf, sizeof(buf))) {
-		if(buf[0] == 0 || (buf[0] == 0x04 && buf[1] == 0))
+	size_t cmd_len = strlen(buf);
+	while(ssl_read_line(ssl, buf+cmd_len, MAX_STDIN_STRLINE)) {
+		if(buf[0+cmd_len] == 0 ||
+			(buf[0+cmd_len] == 0x04 && buf[1+cmd_len] == 0))
 			break; /* zero byte line or end of transmission */
-		if(!perform_zone_remove(ssl, zones, buf)) {
-			if(!ssl_printf(ssl, "error for input line: %s\n", buf))
+#ifdef THREADS_DISABLED
+		/* distribute single item command */
+		if(rc) distribute_cmd(rc, ssl, buf);
+#else
+		(void)rc; /* unused */
+#endif
+		if(!perform_zone_remove(ssl, worker->daemon->local_zones,
+			buf+cmd_len)) {
+			if(!ssl_printf(ssl, "error for input line: %s\n",
+				buf+cmd_len))
 				return;
 		}
-		else
-			num++;
+		else	num++;
 	}
 	(void)ssl_printf(ssl, "removed %d zones\n", num);
 }
@@ -1341,15 +1386,24 @@ do_data_add(RES* ssl, struct local_zones* zones, char* arg)
 
 /** Do the local_datas command */
 static void
-do_datas_add(RES* ssl, struct local_zones* zones)
+do_datas_add(struct daemon_remote* rc, RES* ssl, struct worker* worker)
 {
-	char buf[2048];
+	char buf[MAX_CMD_STRLINE + MAX_STDIN_STRLINE] = "local_data ";
 	int num = 0, line = 0;
-	while(ssl_read_line(ssl, buf, sizeof(buf))) {
-		if(buf[0] == 0 || (buf[0] == 0x04 && buf[1] == 0))
+	size_t cmd_len = strlen(buf);
+	while(ssl_read_line(ssl, buf+cmd_len, MAX_STDIN_STRLINE)) {
+		if(buf[0+cmd_len] == 0 ||
+			(buf[0+cmd_len] == 0x04 && buf[1+cmd_len] == 0))
 			break; /* zero byte line or end of transmission */
+#ifdef THREADS_DISABLED
+		/* distribute single item command */
+		if(rc) distribute_cmd(rc, ssl, buf);
+#else
+		(void)rc; /* unused */
+#endif
 		line++;
-		if(perform_data_add(ssl, zones, buf, line))
+		if(perform_data_add(ssl, worker->daemon->local_zones,
+			buf+cmd_len, line))
 			num++;
 	}
 	(void)ssl_printf(ssl, "added %d datas\n", num);
@@ -1381,19 +1435,28 @@ do_data_remove(RES* ssl, struct local_zones* zones, char* arg)
 
 /** Do the local_datas_remove command */
 static void
-do_datas_remove(RES* ssl, struct local_zones* zones)
+do_datas_remove(struct daemon_remote* rc, RES* ssl, struct worker* worker)
 {
-	char buf[2048];
+	char buf[MAX_CMD_STRLINE + MAX_STDIN_STRLINE] = "local_data_remove ";
 	int num = 0;
-	while(ssl_read_line(ssl, buf, sizeof(buf))) {
-		if(buf[0] == 0 || (buf[0] == 0x04 && buf[1] == 0))
+	size_t cmd_len = strlen(buf);
+	while(ssl_read_line(ssl, buf+cmd_len, MAX_STDIN_STRLINE)) {
+		if(buf[0+cmd_len] == 0 ||
+			(buf[0+cmd_len] == 0x04 && buf[1+cmd_len] == 0))
 			break; /* zero byte line or end of transmission */
-		if(!perform_data_remove(ssl, zones, buf)) {
-			if(!ssl_printf(ssl, "error for input line: %s\n", buf))
+#ifdef THREADS_DISABLED
+		/* distribute single item command */
+		if(rc) distribute_cmd(rc, ssl, buf);
+#else
+		(void)rc; /* unused */
+#endif
+		if(!perform_data_remove(ssl, worker->daemon->local_zones,
+			buf+cmd_len)) {
+			if(!ssl_printf(ssl, "error for input line: %s\n",
+				buf+cmd_len))
 				return;
 		}
-		else
-			num++;
+		else	num++;
 	}
 	(void)ssl_printf(ssl, "removed %d datas\n", num);
 }
@@ -1481,9 +1544,13 @@ do_view_data_add(RES* ssl, struct worker* worker, char* arg)
 
 /** Add new RR data from stdin to view */
 static void
-do_view_datas_add(RES* ssl, struct worker* worker, char* arg)
+do_view_datas_add(struct daemon_remote* rc, RES* ssl, struct worker* worker,
+	char* arg)
 {
 	struct view* v;
+	char buf[MAX_CMD_STRLINE + MAX_STDIN_STRLINE] = "view_local_data ";
+	size_t cmd_len;
+	int num = 0, line = 0;
 	v = views_find_view(worker->daemon->views,
 		arg, 1 /* get write lock*/);
 	if(!v) {
@@ -1497,8 +1564,25 @@ do_view_datas_add(RES* ssl, struct worker* worker, char* arg)
 			return;
 		}
 	}
-	do_datas_add(ssl, v->local_zones);
+	/* put the view name in the command buf */
+	(void)snprintf(buf+strlen(buf), sizeof(buf)-strlen(buf), "%s ", arg);
+	cmd_len = strlen(buf);
+	while(ssl_read_line(ssl, buf+cmd_len, MAX_STDIN_STRLINE)) {
+		if(buf[0+cmd_len] == 0 ||
+			(buf[0+cmd_len] == 0x04 && buf[1+cmd_len] == 0))
+			break; /* zero byte line or end of transmission */
+#ifdef THREADS_DISABLED
+		/* distribute single item command */
+		if(rc) distribute_cmd(rc, ssl, buf);
+#else
+		(void)rc; /* unused */
+#endif
+		line++;
+		if(perform_data_add(ssl, v->local_zones, buf+cmd_len, line))
+			num++;
+	}
 	lock_rw_unlock(&v->lock);
+	(void)ssl_printf(ssl, "added %d datas\n", num);
 }
 
 /** Remove RR data from view */
@@ -1526,9 +1610,13 @@ do_view_data_remove(RES* ssl, struct worker* worker, char* arg)
 
 /** Remove RR data from stdin from view */
 static void
-do_view_datas_remove(RES* ssl, struct worker* worker, char* arg)
+do_view_datas_remove(struct daemon_remote* rc, RES* ssl, struct worker* worker,
+	char* arg)
 {
 	struct view* v;
+	char buf[MAX_CMD_STRLINE + MAX_STDIN_STRLINE] = "view_local_data_remove ";
+	int num = 0;
+	size_t cmd_len;
 	v = views_find_view(worker->daemon->views,
 		arg, 1 /* get write lock*/);
 	if(!v) {
@@ -1540,9 +1628,28 @@ do_view_datas_remove(RES* ssl, struct worker* worker, char* arg)
 		ssl_printf(ssl, "removed 0 datas\n");
 		return;
 	}
-
-	do_datas_remove(ssl, v->local_zones);
+	/* put the view name in the command buf */
+	(void)snprintf(buf+strlen(buf), sizeof(buf)-strlen(buf), "%s ", arg);
+	cmd_len = strlen(buf);
+	while(ssl_read_line(ssl, buf+cmd_len, MAX_STDIN_STRLINE)) {
+		if(buf[0+cmd_len] == 0 ||
+			(buf[0+cmd_len] == 0x04 && buf[1+cmd_len] == 0))
+			break; /* zero byte line or end of transmission */
+#ifdef THREADS_DISABLED
+		/* distribute single item command */
+		if(rc) distribute_cmd(rc, ssl, buf);
+#else
+		(void)rc; /* unused */
+#endif
+		if(!perform_data_remove(ssl, v->local_zones, buf+cmd_len)) {
+			if(!ssl_printf(ssl, "error for input line: %s\n",
+				buf+cmd_len))
+				return;
+		}
+		else	num++;
+	}
 	lock_rw_unlock(&v->lock);
+	(void)ssl_printf(ssl, "removed %d datas\n", num);
 }
 
 /** cache lookup of nameservers */
@@ -1561,7 +1668,7 @@ do_lookup(RES* ssl, struct worker* worker, char* arg)
 /** flush something from rrset and msg caches */
 static void
 do_cache_remove(struct worker* worker, uint8_t* nm, size_t nmlen,
-	uint16_t t, uint16_t c)
+	uint16_t t, uint16_t c, int remcachedb)
 {
 	hashvalue_type h;
 	struct query_info k;
@@ -1581,6 +1688,29 @@ do_cache_remove(struct worker* worker, uint8_t* nm, size_t nmlen,
 		h = query_info_hash(&k, BIT_CD);
 		slabhash_remove(worker->env.msg_cache, h, &k);
 	}
+#ifdef USE_CACHEDB
+	if(remcachedb && worker->env.cachedb_enabled)
+		cachedb_msg_remove_qinfo(&worker->env, &k);
+#else
+	(void)remcachedb;
+#endif
+}
+
+/** parse '+c' option, modifies string to return remainder. */
+static int
+parse_remcachedb(RES* ssl, char** arg, int* pc)
+{
+	*arg = skipwhite(*arg);
+	if((*arg)[0] == '+' && (*arg)[1] == 'c') {
+		char* arg2;
+		*pc = 1;
+		if(!find_arg2(ssl, *arg, &arg2))
+			return 0;
+		*arg = arg2;
+		return 1;
+	}
+	/* The option was not found, no problem */
+	return 1;
 }
 
 /** flush a type */
@@ -1592,15 +1722,20 @@ do_flush_type(RES* ssl, struct worker* worker, char* arg)
 	size_t nmlen;
 	char* arg2;
 	uint16_t t;
+	int pc = 0; /* '+c' option */
+	if(!parse_remcachedb(ssl, &arg, &pc))
+		return;
 	if(!find_arg2(ssl, arg, &arg2))
 		return;
 	if(!parse_arg_name(ssl, arg, &nm, &nmlen, &nmlabs))
 		return;
 	t = sldns_get_rr_type_by_name(arg2);
 	if(t == 0 && strcmp(arg2, "TYPE0") != 0) {
+		(void)ssl_printf(ssl, "error parsing RRset type: '%s'\n", arg2);
+		free(nm);
 		return;
 	}
-	do_cache_remove(worker, nm, nmlen, t, LDNS_RR_CLASS_IN);
+	do_cache_remove(worker, nm, nmlen, t, LDNS_RR_CLASS_IN, pc);
 
 	free(nm);
 	send_ok(ssl);
@@ -1638,6 +1773,8 @@ struct del_info {
 	socklen_t addrlen;
 	/** socket address for host deletion */
 	struct sockaddr_storage addr;
+	/** if cachedb information should be flushed too */
+	int remcachedb;
 };
 
 /** callback to delete hosts in infra cache */
@@ -1689,6 +1826,7 @@ do_flush_infra(RES* ssl, struct worker* worker, char* arg)
 	inf.num_msgs = 0;
 	inf.num_keys = 0;
 	inf.addrlen = len;
+	inf.remcachedb = 0;
 	memmove(&inf.addr, &addr, len);
 	slabhash_traverse(worker->env.infra_cache->hosts, 1, &infra_del_host,
 		&inf);
@@ -1735,6 +1873,10 @@ zone_del_msg(struct lruhash_entry* e, void* arg)
 			d->serve_expired_ttl = inf->expired;
 			inf->num_msgs++;
 		}
+#ifdef USE_CACHEDB
+		if(inf->remcachedb && inf->worker->env.cachedb_enabled)
+			cachedb_msg_remove_qinfo(&inf->worker->env, &k->key);
+#endif
 	}
 }
 
@@ -1762,6 +1904,9 @@ do_flush_zone(RES* ssl, struct worker* worker, char* arg)
 	int nmlabs;
 	size_t nmlen;
 	struct del_info inf;
+	int pc = 0; /* '+c' option */
+	if(!parse_remcachedb(ssl, &arg, &pc))
+		return;
 	if(!parse_arg_name(ssl, arg, &nm, &nmlen, &nmlabs))
 		return;
 	/* delete all RRs and key entries from zone */
@@ -1775,6 +1920,7 @@ do_flush_zone(RES* ssl, struct worker* worker, char* arg)
 	inf.num_rrsets = 0;
 	inf.num_msgs = 0;
 	inf.num_keys = 0;
+	inf.remcachedb = pc;
 	slabhash_traverse(&worker->env.rrset_cache->table, 1,
 		&zone_del_rrset, &inf);
 
@@ -1815,7 +1961,14 @@ bogus_del_msg(struct lruhash_entry* e, void* arg)
 	struct reply_info* d = (struct reply_info*)e->data;
 	if(d->security == sec_status_bogus) {
 		d->ttl = inf->expired;
+		d->prefetch_ttl = inf->expired;
+		d->serve_expired_ttl = inf->expired;
 		inf->num_msgs++;
+#ifdef USE_CACHEDB
+		if(inf->remcachedb && inf->worker->env.cachedb_enabled)
+			cachedb_msg_remove_qinfo(&inf->worker->env,
+				&((struct msgreply_entry*)e->key)->key);
+#endif
 	}
 }
 
@@ -1834,9 +1987,12 @@ bogus_del_kcache(struct lruhash_entry* e, void* arg)
 
 /** remove all bogus rrsets, msgs and keys from cache */
 static void
-do_flush_bogus(RES* ssl, struct worker* worker)
+do_flush_bogus(RES* ssl, struct worker* worker, char* arg)
 {
 	struct del_info inf;
+	int pc = 0; /* '+c' option */
+	if(!parse_remcachedb(ssl, &arg, &pc))
+		return;
 	/* what we do is to set them all expired */
 	inf.worker = worker;
 	inf.expired = *worker->env.now;
@@ -1844,6 +2000,7 @@ do_flush_bogus(RES* ssl, struct worker* worker)
 	inf.num_rrsets = 0;
 	inf.num_msgs = 0;
 	inf.num_keys = 0;
+	inf.remcachedb = pc;
 	slabhash_traverse(&worker->env.rrset_cache->table, 1,
 		&bogus_del_rrset, &inf);
 
@@ -1888,7 +2045,14 @@ negative_del_msg(struct lruhash_entry* e, void* arg)
 	 * or NOERROR rcode with ANCOUNT==0: a NODATA answer */
 	if(FLAGS_GET_RCODE(d->flags) != 0 || d->an_numrrsets == 0) {
 		d->ttl = inf->expired;
+		d->prefetch_ttl = inf->expired;
+		d->serve_expired_ttl = inf->expired;
 		inf->num_msgs++;
+#ifdef USE_CACHEDB
+		if(inf->remcachedb && inf->worker->env.cachedb_enabled)
+			cachedb_msg_remove_qinfo(&inf->worker->env,
+				&((struct msgreply_entry*)e->key)->key);
+#endif
 	}
 }
 
@@ -1909,9 +2073,12 @@ negative_del_kcache(struct lruhash_entry* e, void* arg)
 
 /** remove all negative(NODATA,NXDOMAIN), and servfail messages from cache */
 static void
-do_flush_negative(RES* ssl, struct worker* worker)
+do_flush_negative(RES* ssl, struct worker* worker, char* arg)
 {
 	struct del_info inf;
+	int pc = 0; /* '+c' option */
+	if(!parse_remcachedb(ssl, &arg, &pc))
+		return;
 	/* what we do is to set them all expired */
 	inf.worker = worker;
 	inf.expired = *worker->env.now;
@@ -1919,6 +2086,7 @@ do_flush_negative(RES* ssl, struct worker* worker)
 	inf.num_rrsets = 0;
 	inf.num_msgs = 0;
 	inf.num_keys = 0;
+	inf.remcachedb = pc;
 	slabhash_traverse(&worker->env.rrset_cache->table, 1,
 		&negative_del_rrset, &inf);
 
@@ -1942,20 +2110,23 @@ do_flush_name(RES* ssl, struct worker* w, char* arg)
 	uint8_t* nm;
 	int nmlabs;
 	size_t nmlen;
+	int pc = 0; /* '+c' option */
+	if(!parse_remcachedb(ssl, &arg, &pc))
+		return;
 	if(!parse_arg_name(ssl, arg, &nm, &nmlen, &nmlabs))
 		return;
-	do_cache_remove(w, nm, nmlen, LDNS_RR_TYPE_A, LDNS_RR_CLASS_IN);
-	do_cache_remove(w, nm, nmlen, LDNS_RR_TYPE_AAAA, LDNS_RR_CLASS_IN);
-	do_cache_remove(w, nm, nmlen, LDNS_RR_TYPE_NS, LDNS_RR_CLASS_IN);
-	do_cache_remove(w, nm, nmlen, LDNS_RR_TYPE_SOA, LDNS_RR_CLASS_IN);
-	do_cache_remove(w, nm, nmlen, LDNS_RR_TYPE_CNAME, LDNS_RR_CLASS_IN);
-	do_cache_remove(w, nm, nmlen, LDNS_RR_TYPE_DNAME, LDNS_RR_CLASS_IN);
-	do_cache_remove(w, nm, nmlen, LDNS_RR_TYPE_MX, LDNS_RR_CLASS_IN);
-	do_cache_remove(w, nm, nmlen, LDNS_RR_TYPE_PTR, LDNS_RR_CLASS_IN);
-	do_cache_remove(w, nm, nmlen, LDNS_RR_TYPE_SRV, LDNS_RR_CLASS_IN);
-	do_cache_remove(w, nm, nmlen, LDNS_RR_TYPE_NAPTR, LDNS_RR_CLASS_IN);
-	do_cache_remove(w, nm, nmlen, LDNS_RR_TYPE_SVCB, LDNS_RR_CLASS_IN);
-	do_cache_remove(w, nm, nmlen, LDNS_RR_TYPE_HTTPS, LDNS_RR_CLASS_IN);
+	do_cache_remove(w, nm, nmlen, LDNS_RR_TYPE_A, LDNS_RR_CLASS_IN, pc);
+	do_cache_remove(w, nm, nmlen, LDNS_RR_TYPE_AAAA, LDNS_RR_CLASS_IN, pc);
+	do_cache_remove(w, nm, nmlen, LDNS_RR_TYPE_NS, LDNS_RR_CLASS_IN, pc);
+	do_cache_remove(w, nm, nmlen, LDNS_RR_TYPE_SOA, LDNS_RR_CLASS_IN, pc);
+	do_cache_remove(w, nm, nmlen, LDNS_RR_TYPE_CNAME, LDNS_RR_CLASS_IN, pc);
+	do_cache_remove(w, nm, nmlen, LDNS_RR_TYPE_DNAME, LDNS_RR_CLASS_IN, pc);
+	do_cache_remove(w, nm, nmlen, LDNS_RR_TYPE_MX, LDNS_RR_CLASS_IN, pc);
+	do_cache_remove(w, nm, nmlen, LDNS_RR_TYPE_PTR, LDNS_RR_CLASS_IN, pc);
+	do_cache_remove(w, nm, nmlen, LDNS_RR_TYPE_SRV, LDNS_RR_CLASS_IN, pc);
+	do_cache_remove(w, nm, nmlen, LDNS_RR_TYPE_NAPTR, LDNS_RR_CLASS_IN, pc);
+	do_cache_remove(w, nm, nmlen, LDNS_RR_TYPE_SVCB, LDNS_RR_CLASS_IN, pc);
+	do_cache_remove(w, nm, nmlen, LDNS_RR_TYPE_HTTPS, LDNS_RR_CLASS_IN, pc);
 
 	free(nm);
 	send_ok(ssl);
@@ -2000,12 +2171,19 @@ static int
 print_root_fwds(RES* ssl, struct iter_forwards* fwds, uint8_t* root)
 {
 	struct delegpt* dp;
-	dp = forwards_lookup(fwds, root, LDNS_RR_CLASS_IN);
-	if(!dp)
+	int nolock = 0;
+	dp = forwards_lookup(fwds, root, LDNS_RR_CLASS_IN, nolock);
+	if(!dp) {
 		return ssl_printf(ssl, "off (using root hints)\n");
+	}
 	/* if dp is returned it must be the root */
 	log_assert(query_dname_compare(dp->name, root)==0);
-	return ssl_print_name_dp(ssl, NULL, root, LDNS_RR_CLASS_IN, dp);
+	if(!ssl_print_name_dp(ssl, NULL, root, LDNS_RR_CLASS_IN, dp)) {
+		lock_rw_unlock(&fwds->lock);
+		return 0;
+	}
+	lock_rw_unlock(&fwds->lock);
+	return 1;
 }
 
 /** parse args into delegpt */
@@ -2071,12 +2249,13 @@ parse_delegpt(RES* ssl, char* args, uint8_t* nm)
 	return dp;
 }
 
-/** do the status command */
+/** do the forward command */
 static void
 do_forward(RES* ssl, struct worker* worker, char* args)
 {
 	struct iter_forwards* fwd = worker->env.fwds;
 	uint8_t* root = (uint8_t*)"\000";
+	int nolock = 0;
 	if(!fwd) {
 		(void)ssl_printf(ssl, "error: structure not allocated\n");
 		return;
@@ -2090,12 +2269,12 @@ do_forward(RES* ssl, struct worker* worker, char* args)
 	/* delete all the existing queries first */
 	mesh_delete_all(worker->env.mesh);
 	if(strcmp(args, "off") == 0) {
-		forwards_delete_zone(fwd, LDNS_RR_CLASS_IN, root);
+		forwards_delete_zone(fwd, LDNS_RR_CLASS_IN, root, nolock);
 	} else {
 		struct delegpt* dp;
 		if(!(dp = parse_delegpt(ssl, args, root)))
 			return;
-		if(!forwards_add_zone(fwd, LDNS_RR_CLASS_IN, dp)) {
+		if(!forwards_add_zone(fwd, LDNS_RR_CLASS_IN, dp, nolock)) {
 			(void)ssl_printf(ssl, "error out of memory\n");
 			return;
 		}
@@ -2105,7 +2284,7 @@ do_forward(RES* ssl, struct worker* worker, char* args)
 
 static int
 parse_fs_args(RES* ssl, char* args, uint8_t** nm, struct delegpt** dp,
-	int* insecure, int* prime)
+	int* insecure, int* prime, int* tls)
 {
 	char* zonename;
 	char* rest;
@@ -2120,6 +2299,8 @@ parse_fs_args(RES* ssl, char* args, uint8_t** nm, struct delegpt** dp,
 				*insecure = 1;
 			else if(*args == 'p' && prime)
 				*prime = 1;
+			else if(*args == 't' && tls)
+				*tls = 1;
 			else {
 				(void)ssl_printf(ssl, "error: unknown option %s\n", args);
 				return 0;
@@ -2152,25 +2333,33 @@ static void
 do_forward_add(RES* ssl, struct worker* worker, char* args)
 {
 	struct iter_forwards* fwd = worker->env.fwds;
-	int insecure = 0;
+	int insecure = 0, tls = 0;
 	uint8_t* nm = NULL;
 	struct delegpt* dp = NULL;
-	if(!parse_fs_args(ssl, args, &nm, &dp, &insecure, NULL))
+	int nolock = 1;
+	if(!parse_fs_args(ssl, args, &nm, &dp, &insecure, NULL, &tls))
 		return;
+	if(tls)
+		dp->ssl_upstream = 1;
+	/* prelock forwarders for atomic operation with anchors */
+	lock_rw_wrlock(&fwd->lock);
 	if(insecure && worker->env.anchors) {
 		if(!anchors_add_insecure(worker->env.anchors, LDNS_RR_CLASS_IN,
 			nm)) {
+			lock_rw_unlock(&fwd->lock);
 			(void)ssl_printf(ssl, "error out of memory\n");
 			delegpt_free_mlc(dp);
 			free(nm);
 			return;
 		}
 	}
-	if(!forwards_add_zone(fwd, LDNS_RR_CLASS_IN, dp)) {
+	if(!forwards_add_zone(fwd, LDNS_RR_CLASS_IN, dp, nolock)) {
+		lock_rw_unlock(&fwd->lock);
 		(void)ssl_printf(ssl, "error out of memory\n");
 		free(nm);
 		return;
 	}
+	lock_rw_unlock(&fwd->lock);
 	free(nm);
 	send_ok(ssl);
 }
@@ -2182,12 +2371,16 @@ do_forward_remove(RES* ssl, struct worker* worker, char* args)
 	struct iter_forwards* fwd = worker->env.fwds;
 	int insecure = 0;
 	uint8_t* nm = NULL;
-	if(!parse_fs_args(ssl, args, &nm, NULL, &insecure, NULL))
+	int nolock = 1;
+	if(!parse_fs_args(ssl, args, &nm, NULL, &insecure, NULL, NULL))
 		return;
+	/* prelock forwarders for atomic operation with anchors */
+	lock_rw_wrlock(&fwd->lock);
 	if(insecure && worker->env.anchors)
 		anchors_delete_insecure(worker->env.anchors, LDNS_RR_CLASS_IN,
 			nm);
-	forwards_delete_zone(fwd, LDNS_RR_CLASS_IN, nm);
+	forwards_delete_zone(fwd, LDNS_RR_CLASS_IN, nm, nolock);
+	lock_rw_unlock(&fwd->lock);
 	free(nm);
 	send_ok(ssl);
 }
@@ -2197,38 +2390,53 @@ static void
 do_stub_add(RES* ssl, struct worker* worker, char* args)
 {
 	struct iter_forwards* fwd = worker->env.fwds;
-	int insecure = 0, prime = 0;
+	int insecure = 0, prime = 0, tls = 0;
 	uint8_t* nm = NULL;
 	struct delegpt* dp = NULL;
-	if(!parse_fs_args(ssl, args, &nm, &dp, &insecure, &prime))
+	int nolock = 1;
+	if(!parse_fs_args(ssl, args, &nm, &dp, &insecure, &prime, &tls))
 		return;
+	if(tls)
+		dp->ssl_upstream = 1;
+	/* prelock forwarders and hints for atomic operation with anchors */
+	lock_rw_wrlock(&fwd->lock);
+	lock_rw_wrlock(&worker->env.hints->lock);
 	if(insecure && worker->env.anchors) {
 		if(!anchors_add_insecure(worker->env.anchors, LDNS_RR_CLASS_IN,
 			nm)) {
+			lock_rw_unlock(&fwd->lock);
+			lock_rw_unlock(&worker->env.hints->lock);
 			(void)ssl_printf(ssl, "error out of memory\n");
 			delegpt_free_mlc(dp);
 			free(nm);
 			return;
 		}
 	}
-	if(!forwards_add_stub_hole(fwd, LDNS_RR_CLASS_IN, nm)) {
+	if(!forwards_add_stub_hole(fwd, LDNS_RR_CLASS_IN, nm, nolock)) {
 		if(insecure && worker->env.anchors)
 			anchors_delete_insecure(worker->env.anchors,
 				LDNS_RR_CLASS_IN, nm);
+		lock_rw_unlock(&fwd->lock);
+		lock_rw_unlock(&worker->env.hints->lock);
 		(void)ssl_printf(ssl, "error out of memory\n");
 		delegpt_free_mlc(dp);
 		free(nm);
 		return;
 	}
-	if(!hints_add_stub(worker->env.hints, LDNS_RR_CLASS_IN, dp, !prime)) {
+	if(!hints_add_stub(worker->env.hints, LDNS_RR_CLASS_IN, dp, !prime,
+		nolock)) {
 		(void)ssl_printf(ssl, "error out of memory\n");
-		forwards_delete_stub_hole(fwd, LDNS_RR_CLASS_IN, nm);
+		forwards_delete_stub_hole(fwd, LDNS_RR_CLASS_IN, nm, nolock);
 		if(insecure && worker->env.anchors)
 			anchors_delete_insecure(worker->env.anchors,
 				LDNS_RR_CLASS_IN, nm);
+		lock_rw_unlock(&fwd->lock);
+		lock_rw_unlock(&worker->env.hints->lock);
 		free(nm);
 		return;
 	}
+	lock_rw_unlock(&fwd->lock);
+	lock_rw_unlock(&worker->env.hints->lock);
 	free(nm);
 	send_ok(ssl);
 }
@@ -2240,13 +2448,19 @@ do_stub_remove(RES* ssl, struct worker* worker, char* args)
 	struct iter_forwards* fwd = worker->env.fwds;
 	int insecure = 0;
 	uint8_t* nm = NULL;
-	if(!parse_fs_args(ssl, args, &nm, NULL, &insecure, NULL))
+	int nolock = 1;
+	if(!parse_fs_args(ssl, args, &nm, NULL, &insecure, NULL, NULL))
 		return;
+	/* prelock forwarders and hints for atomic operation with anchors */
+	lock_rw_wrlock(&fwd->lock);
+	lock_rw_wrlock(&worker->env.hints->lock);
 	if(insecure && worker->env.anchors)
 		anchors_delete_insecure(worker->env.anchors, LDNS_RR_CLASS_IN,
 			nm);
-	forwards_delete_stub_hole(fwd, LDNS_RR_CLASS_IN, nm);
-	hints_delete_stub(worker->env.hints, LDNS_RR_CLASS_IN, nm);
+	forwards_delete_stub_hole(fwd, LDNS_RR_CLASS_IN, nm, nolock);
+	hints_delete_stub(worker->env.hints, LDNS_RR_CLASS_IN, nm, nolock);
+	lock_rw_unlock(&fwd->lock);
+	lock_rw_unlock(&worker->env.hints->lock);
 	free(nm);
 	send_ok(ssl);
 }
@@ -2675,6 +2889,7 @@ do_list_forwards(RES* ssl, struct worker* worker)
 	struct iter_forward_zone* z;
 	struct trust_anchor* a;
 	int insecure;
+	lock_rw_rdlock(&fwds->lock);
 	RBTREE_FOR(z, struct iter_forward_zone*, fwds->tree) {
 		if(!z->dp) continue; /* skip empty marker for stub */
 
@@ -2689,9 +2904,12 @@ do_list_forwards(RES* ssl, struct worker* worker)
 		}
 
 		if(!ssl_print_name_dp(ssl, (insecure?"forward +i":"forward"),
-			z->name, z->dclass, z->dp))
+			z->name, z->dclass, z->dp)) {
+			lock_rw_unlock(&fwds->lock);
 			return;
+		}
 	}
+	lock_rw_unlock(&fwds->lock);
 }
 
 /** do the list_stubs command */
@@ -2702,6 +2920,7 @@ do_list_stubs(RES* ssl, struct worker* worker)
 	struct trust_anchor* a;
 	int insecure;
 	char str[32];
+	lock_rw_rdlock(&worker->env.hints->lock);
 	RBTREE_FOR(z, struct iter_hints_stub*, &worker->env.hints->tree) {
 
 		/* see if it is insecure */
@@ -2717,9 +2936,12 @@ do_list_stubs(RES* ssl, struct worker* worker)
 		snprintf(str, sizeof(str), "stub %sprime%s",
 			(z->noprime?"no":""), (insecure?" +i":""));
 		if(!ssl_print_name_dp(ssl, str, z->node.name,
-			z->node.dclass, z->dp))
+			z->node.dclass, z->dp)) {
+			lock_rw_unlock(&worker->env.hints->lock);
 			return;
+		}
 	}
+	lock_rw_unlock(&worker->env.hints->lock);
 }
 
 /** do the list_auth_zones command */
@@ -2986,23 +3208,208 @@ do_rpz_disable(RES* ssl, struct worker* worker, char* arg)
     do_rpz_enable_disable(ssl, worker, arg, 0);
 }
 
-/** tell other processes to execute the command */
+/** Write the cookie secrets to file, returns `0` on failure.
+ * Caller has to hold the lock. */
+static int
+cookie_secret_file_dump(RES* ssl, struct worker* worker) {
+	char const* secret_file = worker->env.cfg->cookie_secret_file;
+	struct cookie_secrets* cookie_secrets = worker->daemon->cookie_secrets;
+	char secret_hex[UNBOUND_COOKIE_SECRET_SIZE * 2 + 1];
+	FILE* f;
+	size_t i;
+	if(secret_file == NULL || secret_file[0]==0) {
+		(void)ssl_printf(ssl, "error: no cookie secret file configured\n");
+		return 0;
+	}
+	log_assert( secret_file != NULL );
+
+	/* open write only and truncate */
+	if((f = fopen(secret_file, "w")) == NULL ) {
+		(void)ssl_printf(ssl, "unable to open cookie secret file %s: %s",
+		                 secret_file, strerror(errno));
+		return 0;
+	}
+	if(cookie_secrets == NULL) {
+		/* nothing to write */
+		fclose(f);
+		return 1;
+	}
+
+	for(i = 0; i < cookie_secrets->cookie_count; i++) {
+		struct cookie_secret const* cs = &cookie_secrets->
+			cookie_secrets[i];
+		ssize_t const len = hex_ntop(cs->cookie_secret,
+			UNBOUND_COOKIE_SECRET_SIZE, secret_hex,
+			sizeof(secret_hex));
+		(void)len; /* silence unused variable warning with -DNDEBUG */
+		log_assert( len == UNBOUND_COOKIE_SECRET_SIZE * 2 );
+		secret_hex[UNBOUND_COOKIE_SECRET_SIZE * 2] = '\0';
+		fprintf(f, "%s\n", secret_hex);
+	}
+	explicit_bzero(secret_hex, sizeof(secret_hex));
+	fclose(f);
+	return 1;
+}
+
+/** Activate cookie secret */
 static void
-distribute_cmd(struct daemon_remote* rc, RES* ssl, char* cmd)
-{
-	int i;
-	if(!cmd || !ssl)
+do_activate_cookie_secret(RES* ssl, struct worker* worker) {
+	char const* secret_file = worker->env.cfg->cookie_secret_file;
+	struct cookie_secrets* cookie_secrets = worker->daemon->cookie_secrets;
+
+	if(secret_file == NULL || secret_file[0] == 0) {
+		(void)ssl_printf(ssl, "error: no cookie secret file configured\n");
 		return;
-	/* skip i=0 which is me */
-	for(i=1; i<rc->worker->daemon->num; i++) {
-		worker_send_cmd(rc->worker->daemon->workers[i],
-			worker_cmd_remote);
-		if(!tube_write_msg(rc->worker->daemon->workers[i]->cmd,
-			(uint8_t*)cmd, strlen(cmd)+1, 0)) {
-			ssl_printf(ssl, "error could not distribute cmd\n");
+	}
+	if(cookie_secrets == NULL) {
+		(void)ssl_printf(ssl, "error: there are no cookie_secrets.");
+		return;
+	}
+	lock_basic_lock(&cookie_secrets->lock);
+
+	if(cookie_secrets->cookie_count <= 1 ) {
+		lock_basic_unlock(&cookie_secrets->lock);
+		(void)ssl_printf(ssl, "error: no staging cookie secret to activate\n");
+		return;
+	}
+	/* Only the worker 0 writes to file, the others update state. */
+	if(worker->thread_num == 0 && !cookie_secret_file_dump(ssl, worker)) {
+		lock_basic_unlock(&cookie_secrets->lock);
+		(void)ssl_printf(ssl, "error: writing to cookie secret file: \"%s\"\n",
+				secret_file);
+		return;
+	}
+	activate_cookie_secret(cookie_secrets);
+	if(worker->thread_num == 0)
+		(void)cookie_secret_file_dump(ssl, worker);
+	lock_basic_unlock(&cookie_secrets->lock);
+	send_ok(ssl);
+}
+
+/** Drop cookie secret */
+static void
+do_drop_cookie_secret(RES* ssl, struct worker* worker) {
+	char const* secret_file = worker->env.cfg->cookie_secret_file;
+	struct cookie_secrets* cookie_secrets = worker->daemon->cookie_secrets;
+
+	if(secret_file == NULL || secret_file[0] == 0) {
+		(void)ssl_printf(ssl, "error: no cookie secret file configured\n");
+		return;
+	}
+	if(cookie_secrets == NULL) {
+		(void)ssl_printf(ssl, "error: there are no cookie_secrets.");
+		return;
+	}
+	lock_basic_lock(&cookie_secrets->lock);
+
+	if(cookie_secrets->cookie_count <= 1 ) {
+		lock_basic_unlock(&cookie_secrets->lock);
+		(void)ssl_printf(ssl, "error: can not drop the currently active cookie secret\n");
+		return;
+	}
+	/* Only the worker 0 writes to file, the others update state. */
+	if(worker->thread_num == 0 && !cookie_secret_file_dump(ssl, worker)) {
+		lock_basic_unlock(&cookie_secrets->lock);
+		(void)ssl_printf(ssl, "error: writing to cookie secret file: \"%s\"\n",
+				secret_file);
+		return;
+	}
+	drop_cookie_secret(cookie_secrets);
+	if(worker->thread_num == 0)
+		(void)cookie_secret_file_dump(ssl, worker);
+	lock_basic_unlock(&cookie_secrets->lock);
+	send_ok(ssl);
+}
+
+/** Add cookie secret */
+static void
+do_add_cookie_secret(RES* ssl, struct worker* worker, char* arg) {
+	uint8_t secret[UNBOUND_COOKIE_SECRET_SIZE];
+	char const* secret_file = worker->env.cfg->cookie_secret_file;
+	struct cookie_secrets* cookie_secrets = worker->daemon->cookie_secrets;
+
+	if(secret_file == NULL || secret_file[0] == 0) {
+		(void)ssl_printf(ssl, "error: no cookie secret file configured\n");
+		return;
+	}
+	if(cookie_secrets == NULL) {
+		worker->daemon->cookie_secrets = cookie_secrets_create();
+		if(!worker->daemon->cookie_secrets) {
+			(void)ssl_printf(ssl, "error: out of memory");
 			return;
 		}
+		cookie_secrets = worker->daemon->cookie_secrets;
 	}
+	lock_basic_lock(&cookie_secrets->lock);
+
+	if(*arg == '\0') {
+		lock_basic_unlock(&cookie_secrets->lock);
+		(void)ssl_printf(ssl, "error: missing argument (cookie_secret)\n");
+		return;
+	}
+	if(strlen(arg) != 32) {
+		lock_basic_unlock(&cookie_secrets->lock);
+		explicit_bzero(arg, strlen(arg));
+		(void)ssl_printf(ssl, "invalid cookie secret: invalid argument length\n");
+		(void)ssl_printf(ssl, "please provide a 128bit hex encoded secret\n");
+		return;
+	}
+	if(hex_pton(arg, secret, UNBOUND_COOKIE_SECRET_SIZE) !=
+		UNBOUND_COOKIE_SECRET_SIZE ) {
+		lock_basic_unlock(&cookie_secrets->lock);
+		explicit_bzero(secret, UNBOUND_COOKIE_SECRET_SIZE);
+		explicit_bzero(arg, strlen(arg));
+		(void)ssl_printf(ssl, "invalid cookie secret: parse error\n");
+		(void)ssl_printf(ssl, "please provide a 128bit hex encoded secret\n");
+		return;
+	}
+	/* Only the worker 0 writes to file, the others update state. */
+	if(worker->thread_num == 0 && !cookie_secret_file_dump(ssl, worker)) {
+		lock_basic_unlock(&cookie_secrets->lock);
+		explicit_bzero(secret, UNBOUND_COOKIE_SECRET_SIZE);
+		explicit_bzero(arg, strlen(arg));
+		(void)ssl_printf(ssl, "error: writing to cookie secret file: \"%s\"\n",
+				secret_file);
+		return;
+	}
+	add_cookie_secret(cookie_secrets, secret, UNBOUND_COOKIE_SECRET_SIZE);
+	explicit_bzero(secret, UNBOUND_COOKIE_SECRET_SIZE);
+	if(worker->thread_num == 0)
+		(void)cookie_secret_file_dump(ssl, worker);
+	lock_basic_unlock(&cookie_secrets->lock);
+	explicit_bzero(arg, strlen(arg));
+	send_ok(ssl);
+}
+
+/** Print cookie secrets */
+static void
+do_print_cookie_secrets(RES* ssl, struct worker* worker) {
+	struct cookie_secrets* cookie_secrets = worker->daemon->cookie_secrets;
+	char secret_hex[UNBOUND_COOKIE_SECRET_SIZE * 2 + 1];
+	int i;
+
+	if(!cookie_secrets)
+		return; /* Output is empty. */
+	lock_basic_lock(&cookie_secrets->lock);
+	for(i = 0; (size_t)i < cookie_secrets->cookie_count; i++) {
+		struct cookie_secret const* cs = &cookie_secrets->
+			cookie_secrets[i];
+		ssize_t const len = hex_ntop(cs->cookie_secret,
+			UNBOUND_COOKIE_SECRET_SIZE, secret_hex,
+			sizeof(secret_hex));
+		(void)len; /* silence unused variable warning with -DNDEBUG */
+		log_assert( len == UNBOUND_COOKIE_SECRET_SIZE * 2 );
+		secret_hex[UNBOUND_COOKIE_SECRET_SIZE * 2] = '\0';
+		if (i == 0)
+			(void)ssl_printf(ssl, "active : %s\n",  secret_hex);
+		else if (cookie_secrets->cookie_count == 2)
+			(void)ssl_printf(ssl, "staging: %s\n",  secret_hex);
+		else
+			(void)ssl_printf(ssl, "staging[%d]: %s\n", i,
+				secret_hex);
+	}
+	lock_basic_unlock(&cookie_secrets->lock);
+	explicit_bzero(secret_hex, sizeof(secret_hex));
 }
 
 /** check for name with end-of-string, space or tab after it */
@@ -3038,9 +3445,23 @@ execute_cmd(struct daemon_remote* rc, RES* ssl, char* cmd,
 		do_status(ssl, worker);
 		return;
 	} else if(cmdcmp(p, "dump_cache", 10)) {
+#ifdef THREADS_DISABLED
+		if(worker->daemon->num > 1) {
+			(void)ssl_printf(ssl, "dump_cache/load_cache is not "
+				"supported in multi-process operation\n");
+			return;
+		}
+#endif
 		(void)dump_cache(ssl, worker);
 		return;
 	} else if(cmdcmp(p, "load_cache", 10)) {
+#ifdef THREADS_DISABLED
+		if(worker->daemon->num > 1) {
+			/* The warning can't be printed when stdin is sending
+			 * data; just return */
+			return;
+		}
+#endif
 		if(load_cache(ssl, worker)) send_ok(ssl);
 		return;
 	} else if(cmdcmp(p, "list_forwards", 13)) {
@@ -3079,26 +3500,6 @@ execute_cmd(struct daemon_remote* rc, RES* ssl, char* cmd,
 	} else if(cmdcmp(p, "auth_zone_transfer", 18)) {
 		do_auth_zone_transfer(ssl, worker, skipwhite(p+18));
 		return;
-	} else if(cmdcmp(p, "stub_add", 8)) {
-		/* must always distribute this cmd */
-		if(rc) distribute_cmd(rc, ssl, cmd);
-		do_stub_add(ssl, worker, skipwhite(p+8));
-		return;
-	} else if(cmdcmp(p, "stub_remove", 11)) {
-		/* must always distribute this cmd */
-		if(rc) distribute_cmd(rc, ssl, cmd);
-		do_stub_remove(ssl, worker, skipwhite(p+11));
-		return;
-	} else if(cmdcmp(p, "forward_add", 11)) {
-		/* must always distribute this cmd */
-		if(rc) distribute_cmd(rc, ssl, cmd);
-		do_forward_add(ssl, worker, skipwhite(p+11));
-		return;
-	} else if(cmdcmp(p, "forward_remove", 14)) {
-		/* must always distribute this cmd */
-		if(rc) distribute_cmd(rc, ssl, cmd);
-		do_forward_remove(ssl, worker, skipwhite(p+14));
-		return;
 	} else if(cmdcmp(p, "insecure_add", 12)) {
 		/* must always distribute this cmd */
 		if(rc) distribute_cmd(rc, ssl, cmd);
@@ -3108,11 +3509,6 @@ execute_cmd(struct daemon_remote* rc, RES* ssl, char* cmd,
 		/* must always distribute this cmd */
 		if(rc) distribute_cmd(rc, ssl, cmd);
 		do_insecure_remove(ssl, worker, skipwhite(p+15));
-		return;
-	} else if(cmdcmp(p, "forward", 7)) {
-		/* must always distribute this cmd */
-		if(rc) distribute_cmd(rc, ssl, cmd);
-		do_forward(ssl, worker, skipwhite(p+7));
 		return;
 	} else if(cmdcmp(p, "flush_stats", 11)) {
 		/* must always distribute this cmd */
@@ -3126,6 +3522,30 @@ execute_cmd(struct daemon_remote* rc, RES* ssl, char* cmd,
 		return;
 	} else if(cmdcmp(p, "lookup", 6)) {
 		do_lookup(ssl, worker, skipwhite(p+6));
+		return;
+	/* The following are commands that read stdin.
+	 * Each line needs to be distributed if THREADS_DISABLED.
+	 */
+	} else if(cmdcmp(p, "local_zones_remove", 18)) {
+		do_zones_remove(rc, ssl, worker);
+		return;
+	} else if(cmdcmp(p, "local_zones", 11)) {
+		do_zones_add(rc, ssl, worker);
+		return;
+	} else if(cmdcmp(p, "local_datas_remove", 18)) {
+		do_datas_remove(rc, ssl, worker);
+		return;
+	} else if(cmdcmp(p, "local_datas", 11)) {
+		do_datas_add(rc, ssl, worker);
+		return;
+	} else if(cmdcmp(p, "view_local_datas_remove", 23)){
+		do_view_datas_remove(rc, ssl, worker, skipwhite(p+23));
+		return;
+	} else if(cmdcmp(p, "view_local_datas", 16)) {
+		do_view_datas_add(rc, ssl, worker, skipwhite(p+16));
+		return;
+	} else if(cmdcmp(p, "print_cookie_secrets", 20)) {
+		do_print_cookie_secrets(ssl, worker);
 		return;
 	}
 
@@ -3141,32 +3561,30 @@ execute_cmd(struct daemon_remote* rc, RES* ssl, char* cmd,
 		do_verbosity(ssl, skipwhite(p+9));
 	} else if(cmdcmp(p, "local_zone_remove", 17)) {
 		do_zone_remove(ssl, worker->daemon->local_zones, skipwhite(p+17));
-	} else if(cmdcmp(p, "local_zones_remove", 18)) {
-		do_zones_remove(ssl, worker->daemon->local_zones);
 	} else if(cmdcmp(p, "local_zone", 10)) {
 		do_zone_add(ssl, worker->daemon->local_zones, skipwhite(p+10));
-	} else if(cmdcmp(p, "local_zones", 11)) {
-		do_zones_add(ssl, worker->daemon->local_zones);
 	} else if(cmdcmp(p, "local_data_remove", 17)) {
 		do_data_remove(ssl, worker->daemon->local_zones, skipwhite(p+17));
-	} else if(cmdcmp(p, "local_datas_remove", 18)) {
-		do_datas_remove(ssl, worker->daemon->local_zones);
 	} else if(cmdcmp(p, "local_data", 10)) {
 		do_data_add(ssl, worker->daemon->local_zones, skipwhite(p+10));
-	} else if(cmdcmp(p, "local_datas", 11)) {
-		do_datas_add(ssl, worker->daemon->local_zones);
+	} else if(cmdcmp(p, "forward_add", 11)) {
+		do_forward_add(ssl, worker, skipwhite(p+11));
+	} else if(cmdcmp(p, "forward_remove", 14)) {
+		do_forward_remove(ssl, worker, skipwhite(p+14));
+	} else if(cmdcmp(p, "forward", 7)) {
+		do_forward(ssl, worker, skipwhite(p+7));
+	} else if(cmdcmp(p, "stub_add", 8)) {
+		do_stub_add(ssl, worker, skipwhite(p+8));
+	} else if(cmdcmp(p, "stub_remove", 11)) {
+		do_stub_remove(ssl, worker, skipwhite(p+11));
 	} else if(cmdcmp(p, "view_local_zone_remove", 22)) {
 		do_view_zone_remove(ssl, worker, skipwhite(p+22));
 	} else if(cmdcmp(p, "view_local_zone", 15)) {
 		do_view_zone_add(ssl, worker, skipwhite(p+15));
 	} else if(cmdcmp(p, "view_local_data_remove", 22)) {
 		do_view_data_remove(ssl, worker, skipwhite(p+22));
-	} else if(cmdcmp(p, "view_local_datas_remove", 23)){
-		do_view_datas_remove(ssl, worker, skipwhite(p+23));
 	} else if(cmdcmp(p, "view_local_data", 15)) {
 		do_view_data_add(ssl, worker, skipwhite(p+15));
-	} else if(cmdcmp(p, "view_local_datas", 16)) {
-		do_view_datas_add(ssl, worker, skipwhite(p+16));
 	} else if(cmdcmp(p, "flush_zone", 10)) {
 		do_flush_zone(ssl, worker, skipwhite(p+10));
 	} else if(cmdcmp(p, "flush_type", 10)) {
@@ -3186,13 +3604,19 @@ execute_cmd(struct daemon_remote* rc, RES* ssl, char* cmd,
 	} else if(cmdcmp(p, "get_option", 10)) {
 		do_get_option(ssl, worker, skipwhite(p+10));
 	} else if(cmdcmp(p, "flush_bogus", 11)) {
-		do_flush_bogus(ssl, worker);
+		do_flush_bogus(ssl, worker, skipwhite(p+11));
 	} else if(cmdcmp(p, "flush_negative", 14)) {
-		do_flush_negative(ssl, worker);
+		do_flush_negative(ssl, worker, skipwhite(p+14));
 	} else if(cmdcmp(p, "rpz_enable", 10)) {
 		do_rpz_enable(ssl, worker, skipwhite(p+10));
 	} else if(cmdcmp(p, "rpz_disable", 11)) {
 		do_rpz_disable(ssl, worker, skipwhite(p+11));
+	} else if(cmdcmp(p, "add_cookie_secret", 17)) {
+		do_add_cookie_secret(ssl, worker, skipwhite(p+17));
+	} else if(cmdcmp(p, "drop_cookie_secret", 18)) {
+		do_drop_cookie_secret(ssl, worker);
+	} else if(cmdcmp(p, "activate_cookie_secret", 22)) {
+		do_activate_cookie_secret(ssl, worker);
 	} else {
 		(void)ssl_printf(ssl, "error unknown command '%s'\n", p);
 	}
@@ -3220,7 +3644,7 @@ handle_req(struct daemon_remote* rc, struct rc_state* s, RES* res)
 	int r;
 	char pre[10];
 	char magic[7];
-	char buf[1024];
+	char buf[MAX_CMD_STRLINE];
 #ifdef USE_WINSOCK
 	/* makes it possible to set the socket blocking again. */
 	/* basically removes it from winsock_event ... */

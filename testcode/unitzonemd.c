@@ -108,7 +108,7 @@ static void zonemd_generate_test(const char* zname, char* zfile,
 	digestdup = strdup(digest);
 	unit_assert(digestdup);
 	for(i=0; i<strlen(digestdup); i++) {
-		digestdup[i] = toupper(digestdup[i]);
+		digestdup[i] = toupper((unsigned char)digestdup[i]);
 	}
 	if(verbosity >= VERB_ALGO) {
 		char zname[255+1];
@@ -165,9 +165,10 @@ static void zonemd_generate_tests(void)
 		1, 1, "1291b78ddf7669b1a39d014d87626b709b55774c5d7d58fadc556439889a10eaf6f11d615900a4f996bd46279514e473");
 
 	/* https://tools.ietf.org/html/draft-ietf-dnsop-dns-zone-digest-12
-	 * from section A.5 */
+	 * from section A.5.
+	 * Adjusted with renumbered B.root. */
 	zonemd_generate_test("root-servers.net", SRCDIRSTR "/testdata/zonemd.example_a5.zone",
-		1, 1, "f1ca0ccd91bd5573d9f431c00ee0101b2545c97602be0a978a3b11dbfc1c776d5b3e86ae3d973d6b5349ba7f04340f79");
+		1, 1, "5a9521d88984ee123d9626191e2a327a43a16fd4339dd4ecc13d8672d5bae527d066d33645e35778677800005247d199");
 }
 
 /** test the zonemd check routine */
@@ -256,7 +257,6 @@ static void zonemd_verify_test(char* zname, char* zfile, char* tastr,
 	struct auth_zone* z;
 
 	/* setup test harness */
-	memset(&mods, 0, sizeof(mods));
 	memset(&env, 0, sizeof(env));
 	env.scratch = regional_create();
 	if(!env.scratch)
@@ -288,8 +288,10 @@ static void zonemd_verify_test(char* zname, char* zfile, char* tastr,
 	if(!env.auth_zones)
 		fatal_exit("out of memory");
 	modstack_init(&mods);
-	if(!modstack_setup(&mods, env.cfg->module_conf, &env))
-		fatal_exit("could not modstack_setup");
+	if(!modstack_call_startup(&mods, env.cfg->module_conf, &env))
+		fatal_exit("could not modstack_startup");
+	if(!modstack_call_init(&mods, env.cfg->module_conf, &env))
+		fatal_exit("could not modstack_call_init");
 	env.mesh = mesh_create(&mods, &env);
 	if(!env.mesh)
 		fatal_exit("out of memory");
@@ -327,7 +329,9 @@ static void zonemd_verify_test(char* zname, char* zfile, char* tastr,
 
 	/* desetup test harness */
 	mesh_delete(env.mesh);
-	modstack_desetup(&mods, &env);
+	modstack_call_deinit(&mods, &env);
+	modstack_call_destartup(&mods, &env);
+	modstack_free(&mods);
 	auth_zones_delete(env.auth_zones);
 	anchors_delete(env.anchors);
 	config_delete(env.cfg);

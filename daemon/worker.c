@@ -160,9 +160,11 @@ worker_mem_report(struct worker* ATTR_UNUSED(worker),
 		+ sizeof(worker->rndstate)
 		+ regional_get_mem(worker->scratchpad)
 		+ sizeof(*worker->env.scratch_buffer)
-		+ sldns_buffer_capacity(worker->env.scratch_buffer)
-		+ forwards_get_mem(worker->env.fwds)
-		+ hints_get_mem(worker->env.hints);
+		+ sldns_buffer_capacity(worker->env.scratch_buffer);
+	if(worker->daemon->env->fwds)
+		log_info("forwards=%u", (unsigned)forwards_get_mem(worker->env.fwds));
+	if(worker->daemon->env->hints)
+		log_info("hints=%u", (unsigned)hints_get_mem(worker->env.hints));
 	if(worker->thread_num == 0)
 		me += acl_list_get_mem(worker->daemon->acl);
 	if(cur_serv) {
@@ -659,17 +661,18 @@ answer_from_cache(struct worker* worker, struct query_info* qinfo,
 	if(rep->ttl < timenow) {
 		/* Check if we need to serve expired now */
 		if(worker->env.cfg->serve_expired &&
-			!worker->env.cfg->serve_expired_client_timeout) {
-				if(worker->env.cfg->serve_expired_ttl &&
-					rep->serve_expired_ttl < timenow)
-					return 0;
-				/* Ignore expired failure answers */
-				if(FLAGS_GET_RCODE(rep->flags) !=
-					LDNS_RCODE_NOERROR &&
-					FLAGS_GET_RCODE(rep->flags) !=
-					LDNS_RCODE_NXDOMAIN &&
-					FLAGS_GET_RCODE(rep->flags) !=
-					LDNS_RCODE_YXDOMAIN)
+			/* if serve-expired-client-timeout is set, serve
+			 * an expired record without attempting recursion
+			 * if the serve_expired_norec_ttl is set for the record
+			 * as we know that recursion is currently failing. */
+			(!worker->env.cfg->serve_expired_client_timeout ||
+			 timenow < rep->serve_expired_norec_ttl)
+#ifdef USE_CACHEDB
+			&& !(worker->env.cachedb_enabled &&
+			  worker->env.cfg->cachedb_check_when_serve_expired)
+#endif
+			) {
+				if(!reply_info_can_answer_expired(rep, timenow))
 					return 0;
 				if(!rrset_array_lock(rep->ref, rep->rrset_count, 0))
 					return 0;
@@ -1566,7 +1569,8 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 	if((ret=parse_edns_from_query_pkt(
 			c->buffer, &edns, worker->env.cfg, c, repinfo,
 			(worker->env.now ? *worker->env.now : time(NULL)),
-			worker->scratchpad)) != 0) {
+			worker->scratchpad,
+			worker->daemon->cookie_secrets)) != 0) {
 		struct edns_data reply_edns;
 		verbose(VERB_ALGO, "worker parse edns: formerror.");
 		log_addr(VERB_CLIENT, "from", &repinfo->client_addr,
@@ -1943,7 +1947,7 @@ send_reply_rc:
 	/*
 	 * sending src (client)/dst (local service) addresses over DNSTAP from send_reply code label (when we serviced local zone for ex.)
 	 */
-	if(worker->dtenv.log_client_response_messages) {
+	if(worker->dtenv.log_client_response_messages && rc !=0) {
 		log_addr(VERB_ALGO, "from local addr", (void*)repinfo->c->socket->addr, repinfo->c->socket->addrlen);
 		log_addr(VERB_ALGO, "response to client", &repinfo->client_addr, repinfo->client_addrlen);
 		dt_msg_send_client_response(&worker->dtenv, &repinfo->client_addr, (void*)repinfo->c->socket->addr, c->type, c->ssl, c->buffer);
@@ -2263,18 +2267,6 @@ worker_init(struct worker* worker, struct config_file *cfg,
 		worker_delete(worker);
 		return 0;
 	}
-	if(!(worker->env.fwds = forwards_create()) ||
-		!forwards_apply_cfg(worker->env.fwds, cfg)) {
-		log_err("Could not set forward zones");
-		worker_delete(worker);
-		return 0;
-	}
-	if(!(worker->env.hints = hints_create()) ||
-		!hints_apply_cfg(worker->env.hints, cfg)) {
-		log_err("Could not set root or stub hints");
-		worker_delete(worker);
-		return 0;
-	}
 	/* one probe timer per process -- if we have 5011 anchors */
 	if(autr_get_num_anchors(worker->env.anchors) > 0
 #ifndef THREADS_DISABLED
@@ -2347,8 +2339,6 @@ worker_delete(struct worker* worker)
 	outside_network_quit_prepare(worker->back);
 	mesh_delete(worker->env.mesh);
 	sldns_buffer_free(worker->env.scratch_buffer);
-	forwards_delete(worker->env.fwds);
-	hints_delete(worker->env.hints);
 	listen_delete(worker->front);
 	outside_network_delete(worker->back);
 	comm_signal_delete(worker->comsig);

@@ -293,6 +293,8 @@ struct config_file {
 	int harden_large_queries;
 	/** harden against spoofed glue (out of zone data) */
 	int harden_glue;
+	/** harden against unverified glue */
+	int harden_unverified_glue;
 	/** harden against receiving no DNSSEC data for trust anchor */
 	int harden_dnssec_stripped;
 	/** harden against queries that fall under known nxdomain names */
@@ -320,6 +322,8 @@ struct config_file {
 	int min_ttl;
 	/** the number of seconds maximal negative TTL for SOA in auth */
 	int max_negative_ttl;
+	/** the number of seconds minimal negative TTL for SOA in auth */
+	int min_negative_ttl;
 	/** if prefetching of messages should be performed. */
 	int prefetch;
 	/** if prefetching of DNSKEYs should be performed. */
@@ -342,6 +346,8 @@ struct config_file {
 	int use_syslog;
 	/** log timestamp in ascii UTC */
 	int log_time_ascii;
+	/** log timestamp in ISO8601 format */
+	int log_time_iso;
 	/** log queries with one line per query */
 	int log_queries;
 	/** log replies with one line per reply */
@@ -540,6 +546,21 @@ struct config_file {
 	/* wait time for unknown server in msec */
 	int unknown_server_time_limit;
 
+	/** Wait time to drop recursion replies */
+	int discard_timeout;
+
+	/** Wait limit for number of replies per IP address */
+	int wait_limit;
+
+	/** Wait limit for number of replies per IP address with cookie */
+	int wait_limit_cookie;
+
+	/** wait limit per netblock */
+	struct config_str2list* wait_limit_netblock;
+
+	/** wait limit with cookie per netblock */
+	struct config_str2list* wait_limit_cookie_netblock;
+
 	/* maximum UDP response size */
 	size_t max_udp_size;
 
@@ -580,6 +601,8 @@ struct config_file {
 	char* dnstap_identity;
 	/** dnstap "version", package version is used if "". */
 	char* dnstap_version;
+	/** dnstap sample rate */
+	int dnstap_sample_rate;
 
 	/** true to log dnstap RESOLVER_QUERY message events */
 	int dnstap_log_resolver_query_messages;
@@ -710,6 +733,8 @@ struct config_file {
 	char* cachedb_secret;
 	/** cachedb that does not store, but only reads from database, if on */
 	int cachedb_no_store;
+	/** cachedb check before serving serve-expired response */
+	int cachedb_check_when_serve_expired;
 #ifdef USE_REDIS
 	/** redis server's IP address or host name */
 	char* redis_server_host;
@@ -721,6 +746,10 @@ struct config_file {
 	char* redis_server_password;
 	/** timeout (in ms) for communication with the redis server */
 	int redis_timeout;
+	/** timeout (in ms) for redis commands */
+	int redis_command_timeout;
+	/** timeout (in ms) for redis connection set up */
+	int redis_connect_timeout;
 	/** set timeout on redis records based on DNS response ttl */
 	int redis_expire_records;
 	/** set the redis logical database upon connection */
@@ -734,6 +763,8 @@ struct config_file {
 	uint8_t cookie_secret[40];
 	/** cookie secret length */
 	size_t  cookie_secret_len;
+	/** path to cookie secret store */
+	char* cookie_secret_file;
 
 	/* ipset module */
 #ifdef USE_IPSET
@@ -742,6 +773,12 @@ struct config_file {
 #endif
 	/** respond with Extended DNS Errors (RFC8914) */
 	int ede;
+	/** limit on NS RRs in RRset for the iterator scrubber. */
+	size_t iter_scrub_ns;
+	/** limit on CNAME, DNAME RRs in answer for the iterator scrubber. */
+	int iter_scrub_cname;
+	/** limit on upstream queries for an incoming query and subqueries. */
+	int max_global_quota;
 };
 
 /** from cfg username, after daemonize setup performed */

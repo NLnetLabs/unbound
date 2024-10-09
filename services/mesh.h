@@ -673,11 +673,12 @@ void mesh_serve_expired_callback(void* arg);
  * the same behavior as when replying from cache.
  * @param qstate: the module qstate.
  * @param lookup_qinfo: the query info to look for in the cache.
+ * @param is_expired: set if the cached answer is expired.
  * @return dns_msg if a cached answer was found, otherwise NULL.
  */
 struct dns_msg*
 mesh_serve_expired_lookup(struct module_qstate* qstate,
-	struct query_info* lookup_qinfo);
+	struct query_info* lookup_qinfo, int* is_expired);
 
 /**
  * See if the mesh has space for more queries. You can allocate queries
@@ -689,5 +690,11 @@ mesh_serve_expired_lookup(struct module_qstate* qstate,
  * 	that were created by the iterator, or other modules.
  */
 int mesh_jostle_exceeded(struct mesh_area* mesh);
+
+/**
+ * Give the serve expired responses.
+ * @param mstate: mesh state for query that has serve_expired_data.
+ */
+void mesh_respond_serve_expired(struct mesh_state* mstate);
 
 #endif /* SERVICES_MESH_H */

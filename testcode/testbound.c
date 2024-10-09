@@ -48,6 +48,7 @@
 #include "testcode/fake_event.h"
 #include "daemon/remote.h"
 #include "libunbound/worker.h"
+#include "daemon/worker.h"
 #include "util/config_file.h"
 #include "sldns/keyraw.h"
 #ifdef UB_ON_WINDOWS
@@ -70,23 +71,6 @@ int daemon_main(int argc, char* argv[]);
 #define MAX_LINE_LEN 1024
 /** config files (removed at exit) */
 static struct config_strlist* cfgfiles = NULL;
-
-#ifdef UNBOUND_ALLOC_STATS
-#  define strdup(s) unbound_stat_strdup_log(s, __FILE__, __LINE__, __func__)
-char* unbound_stat_strdup_log(char* s, const char* file, int line,
-	const char* func);
-char* unbound_stat_strdup_log(char* s, const char* file, int line,
-        const char* func) {
-	char* result;
-	size_t len;
-	if(!s) return NULL;
-	len = strlen(s);
-	log_info("%s:%d %s strdup(%u)", file, line, func, (unsigned)len+1);
-	result = unbound_stat_malloc(len+1);
-	memmove(result, s, len+1);
-	return result;
-}
-#endif /* UNBOUND_ALLOC_STATS */
 
 /** give commandline usage for testbound. */
 static void
@@ -518,7 +502,7 @@ struct listen_port* daemon_remote_open_ports(struct config_file*
 
 struct daemon_remote* daemon_remote_create(struct config_file* ATTR_UNUSED(cfg))
 {
-	return (struct daemon_remote*)calloc(1,1);
+	return (struct daemon_remote*)calloc(1, sizeof(struct daemon_remote));
 }
 
 void daemon_remote_delete(struct daemon_remote* rc)
@@ -532,9 +516,10 @@ void daemon_remote_clear(struct daemon_remote* ATTR_UNUSED(rc))
 }
 
 int daemon_remote_open_accept(struct daemon_remote* ATTR_UNUSED(rc),
-        struct listen_port* ATTR_UNUSED(ports), 
-	struct worker* ATTR_UNUSED(worker))
+        struct listen_port* ATTR_UNUSED(ports), struct worker* worker)
 {
+	struct replay_runtime* runtime = (struct replay_runtime*)worker->base;
+	runtime->daemon = worker->daemon;
 	return 1;
 }
 

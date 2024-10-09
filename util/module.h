@@ -143,7 +143,7 @@
  * also contain an rcode that is nonzero, but in this case additional
  * information (query, additional) can be passed along.
  *
- * The rcode and dns_msg are used to pass the result from the the rightmost
+ * The rcode and dns_msg are used to pass the result from the rightmost
  * module towards the leftmost modules and then towards the user.
  *
  * If you want to avoid recursion-cycles where queries need other queries
@@ -180,6 +180,7 @@ struct iter_hints;
 struct respip_set;
 struct respip_client_info;
 struct respip_addr_info;
+struct module_stack;
 
 /** Maximum number of modules in operation */
 #define MAX_MODULE 16
@@ -318,13 +319,15 @@ typedef int inplace_cb_query_response_func_type(struct module_qstate* qstate,
 /**
  * Function called when looking for (expired) cached answers during the serve
  * expired logic.
- * Called as func(qstate, lookup_qinfo)
+ * Called as func(qstate, lookup_qinfo, &is_expired)
  * Where:
  *	qstate: the query state.
  *	lookup_qinfo: the qinfo to lookup for.
+ *      is_expired: set if the cached answer is expired.
  */
 typedef struct dns_msg* serve_expired_lookup_func_type(
-	struct module_qstate* qstate, struct query_info* lookup_qinfo);
+	struct module_qstate* qstate, struct query_info* lookup_qinfo,
+	int* is_expired);
 
 /**
  * Module environment.
@@ -511,10 +514,10 @@ struct module_env {
 	/** auth zones */
 	struct auth_zones* auth_zones;
 	/** Mapping of forwarding zones to targets.
-	 * iterator forwarder information. per-thread, created by worker */
+	 * iterator forwarder information. */
 	struct iter_forwards* fwds;
 	/** 
-	 * iterator forwarder information. per-thread, created by worker.
+	 * iterator stub information.
 	 * The hints -- these aren't stored in the cache because they don't 
 	 * expire. The hints are always used to "prime" the cache. Note 
 	 * that both root hints and stub zone "hints" are stored in this 
@@ -537,6 +540,12 @@ struct module_env {
 	/** EDNS client string information */
 	struct edns_strings* edns_strings;
 
+	/** module stack */
+	struct module_stack* modstack;
+#ifdef USE_CACHEDB
+	/** the cachedb enabled value, copied and stored here. */
+	int cachedb_enabled;
+#endif
 	/* Make every mesh state unique, do not aggregate mesh states. */
 	int unique_mesh;
 };
@@ -689,6 +698,8 @@ struct module_qstate {
 	/** Extended result of response-ip action processing, mainly
 	 *  for logging purposes. */
 	struct respip_action_info* respip_action_info;
+	/** if the query has been modified by rpz processing. */
+	int rpz_applied;
 	/** if the query is rpz passthru, no further rpz processing for it */
 	int rpz_passthru;
 	/* Flag tcp required. */
@@ -705,8 +716,29 @@ struct module_func_block {
 	/** text string name of module */
 	const char* name;
 
-	/** 
-	 * init the module. Called once for the global state.
+	/**
+	 * Set up the module for start. This is called only once at startup.
+	 * Privileged operations like opening device files may be done here.
+	 * The function ptr can be NULL, if it is not used.
+	 * @param env: module environment.
+	 * @param id: module id number.
+	 * return: 0 on error
+	 */
+	int (*startup)(struct module_env* env, int id);
+
+	/**
+	 * Close down the module for stop. This is called only once before
+	 * shutdown to free resources allocated during startup().
+	 * Closing privileged ports or files must be done here.
+	 * The function ptr can be NULL, if it is not used.
+	 * @param env: module environment.
+	 * @param id: module id number.
+	 */
+	void (*destartup)(struct module_env* env, int id);
+
+	/**
+	 * Initialise the module. Called when restarting or reloading the
+	 * daemon.
 	 * This is the place to apply settings from the config file.
 	 * @param env: module environment.
 	 * @param id: module id number.
@@ -715,7 +747,8 @@ struct module_func_block {
 	int (*init)(struct module_env* env, int id);
 
 	/**
-	 * de-init, delete, the module. Called once for the global state.
+	 * Deinitialise the module, undo stuff done during init().
+	 * Called before reloading the daemon.
 	 * @param env: module environment.
 	 * @param id: module id number.
 	 */
@@ -824,10 +857,11 @@ void errinf_dname(struct module_qstate* qstate, const char* str,
 /**
  * Create error info in string.  For validation failures.
  * @param qstate: query state.
+ * @param region: the region for the result or NULL for malloced result.
  * @return string or NULL on malloc failure (already logged).
- *    This string is malloced and has to be freed by caller.
+ *    This string is malloced if region is NULL and has to be freed by caller.
  */
-char* errinf_to_str_bogus(struct module_qstate* qstate);
+char* errinf_to_str_bogus(struct module_qstate* qstate, struct regional* region);
 
 /**
  * Check the sldns_ede_code of the qstate->errinf.
@@ -840,7 +874,6 @@ sldns_ede_code errinf_to_reason_bogus(struct module_qstate* qstate);
  * Create error info in string.  For other servfails.
  * @param qstate: query state.
  * @return string or NULL on malloc failure (already logged).
- *    This string is malloced and has to be freed by caller.
  */
 char* errinf_to_str_servfail(struct module_qstate* qstate);
 
@@ -848,7 +881,6 @@ char* errinf_to_str_servfail(struct module_qstate* qstate);
  * Create error info in string.  For misc failures that are not servfail.
  * @param qstate: query state.
  * @return string or NULL on malloc failure (already logged).
- *    This string is malloced and has to be freed by caller.
  */
 char* errinf_to_str_misc(struct module_qstate* qstate);
 
