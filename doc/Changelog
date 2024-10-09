@@ -7,6 +7,7 @@
 	  pass that with `--with-ssl=path` to compile unbound as well.
 	- Fix to limit NSEC TTL for messages from cachedb. Fix to limit the
 	  prefetch ttl for messages after a CNAME with short TTL.
+	- Fix for dnstap compile of doqclient with doq disabled.
 
 8 October 2024: Wouter
 	- Fix #1149: unbound-control-setup hangs sometimes depending on
