@@ -920,6 +920,7 @@ server:
 	# tls-service-pem: "path/to/publiccertfile.pem"
 	# tls-port: 853
 	# https-port: 443
+	# quic-port: 853
 
 	# cipher setting for TLSv1.2
 	# tls-ciphers: "DHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES128-GCM-SHA256:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-SHA256:DHE-RSA-AES128-SHA256:ECDHE-RSA-AES256-SHA384:ECDHE-RSA-AES128-SHA256"
@@ -983,6 +984,9 @@ server:
 
 	# Disable TLS for DNS-over-HTTP downstream service.
 	# http-notls-downstream: no
+
+	# Maximum number of bytes used for QUIC buffers.
+	# quic-size: 8m
 
 	# The interfaces that use these listed port numbers will support and
 	# expect PROXYv2. For UDP and TCP/TLS interfaces.

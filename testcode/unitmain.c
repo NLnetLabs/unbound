@@ -1432,6 +1432,9 @@ main(int argc, char* argv[])
 #ifdef CLIENT_SUBNET
 	ecs_test();
 #endif /* CLIENT_SUBNET */
+#ifdef HAVE_NGTCP2
+	doq_test();
+#endif /* HAVE_NGTCP2 */
 	if(log_get_lock()) {
 		lock_basic_destroy((lock_basic_type*)log_get_lock());
 	}

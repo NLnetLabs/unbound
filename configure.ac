@@ -1579,6 +1579,64 @@ if test x_$withval = x_yes -o x_$withval != x_no; then
     ])
 fi
 
+# ngtcp2
+AC_ARG_WITH(libngtcp2, AS_HELP_STRING([--with-libngtcp2=path],[specify explicit path for libngtcp2, for QUIC.]),
+    [ ],[ withval="no" ])
+found_libngtcp2="no"
+if test x_$withval = x_yes -o x_$withval != x_no; then
+   AC_MSG_CHECKING(for libngtcp2)
+   if test x_$withval = x_ -o x_$withval = x_yes; then
+            withval="/usr/local /opt/local /usr/lib /usr/pkg /usr/sfw /usr"
+   fi
+   for dir in $withval ; do
+            if test -f "$dir/include/ngtcp2/ngtcp2.h"; then
+		found_libngtcp2="yes"
+		dnl assume /usr is in default path.
+		if test "$dir" != "/usr"; then
+                    CPPFLAGS="$CPPFLAGS -I$dir/include"
+		    LDFLAGS="$LDFLAGS -L$dir/lib"
+		fi
+		AC_MSG_RESULT(found in $dir)
+		AC_DEFINE([HAVE_NGTCP2], [1], [Define this to use ngtcp2.])
+		LIBS="$LIBS -lngtcp2"
+                break;
+            fi
+    done
+    if test x_$found_libngtcp2 != x_yes; then
+	AC_MSG_ERROR([Could not find libngtcp2, ngtcp2.h])
+    fi
+    AC_CHECK_HEADERS([ngtcp2/ngtcp2.h ngtcp2/ngtcp2_crypto_openssl.h ngtcp2/ngtcp2_crypto_quictls.h],,, [AC_INCLUDES_DEFAULT])
+    AC_CHECK_DECLS([ngtcp2_conn_server_new], [], [], [AC_INCLUDES_DEFAULT
+    #include <ngtcp2/ngtcp2.h>
+    ])
+    AC_CHECK_DECLS([ngtcp2_crypto_encrypt_cb], [], [], [AC_INCLUDES_DEFAULT
+    #include <ngtcp2/ngtcp2_crypto.h>
+    ])
+    AC_CHECK_LIB([ngtcp2_crypto_openssl], [ngtcp2_crypto_encrypt_cb], [ LIBS="$LIBS -lngtcp2_crypto_openssl" ])
+    AC_CHECK_LIB([ngtcp2_crypto_quictls], [ngtcp2_crypto_encrypt_cb], [ LIBS="$LIBS -lngtcp2_crypto_quictls" ])
+    AC_CHECK_FUNCS([ngtcp2_crypto_encrypt_cb ngtcp2_ccerr_default ngtcp2_conn_in_closing_period ngtcp2_conn_in_draining_period ngtcp2_conn_get_max_local_streams_uni ngtcp2_crypto_quictls_from_ossl_encryption_level ngtcp2_crypto_quictls_configure_server_context ngtcp2_crypto_quictls_configure_client_context ngtcp2_conn_get_num_scid ngtcp2_conn_tls_early_data_rejected ngtcp2_conn_encode_0rtt_transport_params])
+    AC_CHECK_FUNCS([SSL_is_quic], [], [AC_MSG_ERROR([No QUIC support detected in OpenSSL. Need OpenSSL version with QUIC support to enable DNS over QUIC with libngtcp2.])])
+    AC_CHECK_TYPES([struct ngtcp2_version_cid, ngtcp2_encryption_level],,,[AC_INCLUDES_DEFAULT
+    #include <ngtcp2/ngtcp2.h>
+    ])
+    AC_CHECK_MEMBERS([struct ngtcp2_pkt_hd.tokenlen, struct ngtcp2_settings.tokenlen, struct ngtcp2_settings.max_tx_udp_payload_size, struct ngtcp2_transport_params.original_dcid_present],,,[AC_INCLUDES_DEFAULT
+    #include <ngtcp2/ngtcp2.h>
+    ])
+
+    AC_MSG_CHECKING([whether ngtcp2_conn_shutdown_stream has 4 arguments])
+    AC_COMPILE_IFELSE([AC_LANG_PROGRAM([AC_INCLUDES_DEFAULT
+#include <ngtcp2/ngtcp2.h>
+    ],[
+	(void)ngtcp2_conn_shutdown_stream(NULL, 0, 0, 0);
+    ])],[
+	AC_MSG_RESULT(yes)
+	AC_DEFINE(HAVE_NGTCP2_CONN_SHUTDOWN_STREAM4, 1, [Define if ngtcp2_conn_shutdown_stream has 4 arguments.])
+    ],[
+	AC_MSG_RESULT(no)
+    ])
+
+fi
+
 # set static linking for uninstalled libraries if requested
 AC_SUBST(staticexe)
 staticexe=""
@@ -1894,10 +1952,12 @@ if test x_$enable_lock_checks = x_yes; then
 	UBSYMS="-export-symbols clubsyms.def"
 	cp ${srcdir}/libunbound/ubsyms.def clubsyms.def
 	echo lock_protect >> clubsyms.def
+	echo lock_protect_place >> clubsyms.def
 	echo lock_unprotect >> clubsyms.def
 	echo lock_get_mem >> clubsyms.def
 	echo checklock_start >> clubsyms.def
 	echo checklock_stop >> clubsyms.def
+	echo checklock_set_output_name >> clubsyms.def
 	echo checklock_lock >> clubsyms.def
 	echo checklock_unlock >> clubsyms.def
 	echo checklock_init >> clubsyms.def
@@ -2356,6 +2416,8 @@ char *unbound_stat_strdup_log(const char *s, const char* file, int line,
 #define UNBOUND_DNS_OVER_TLS_PORT 853
 /** default port for DNS over HTTPS traffic. */
 #define UNBOUND_DNS_OVER_HTTPS_PORT 443
+/** default port for DNS over QUIC traffic. */
+#define UNBOUND_DNS_OVER_QUIC_PORT 853
 /** default port for unbound control traffic, registered port with IANA,
     ub-dns-control  8953/tcp    unbound dns nameserver control */
 #define UNBOUND_CONTROL_PORT 8953

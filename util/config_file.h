@@ -161,6 +161,11 @@ struct config_file {
 	/** Disable TLS for http sockets downstream */
 	int http_notls_downstream;
 
+	/** port on which to provide DNS over QUIC service */
+	int quic_port;
+	/** size of the quic data, max bytes */
+	size_t quic_size;
+
 	/** outgoing port range number of ports (per thread) */
 	int outgoing_num_ports;
 	/** number of outgoing tcp buffers per (per thread) */
@@ -1406,6 +1411,10 @@ int if_is_pp2(const char* ifname, const char* port,
 
 /** see if interface is DNSCRYPT, its port number == the dnscrypt port number */
 int if_is_dnscrypt(const char* ifname, const char* port, int dnscrypt_port);
+
+/** see if interface is quic, its port number == the quic port number */
+int if_is_quic(const char* ifname, const char* port, int quic_port);
+
 #ifdef USE_LINUX_IP_LOCAL_PORT_RANGE
 #define LINUX_IP_LOCAL_PORT_RANGE_PATH "/proc/sys/net/ipv4/ip_local_port_range"
 #endif

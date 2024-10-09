@@ -203,6 +203,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_RPZ_SIGNAL_NXDOMAIN_RA VAR_INTERFACE_AUTOMATIC_PORTS VAR_EDE
 %token VAR_INTERFACE_ACTION VAR_INTERFACE_VIEW VAR_INTERFACE_TAG
 %token VAR_INTERFACE_TAG_ACTION VAR_INTERFACE_TAG_DATA
+%token VAR_QUIC_PORT VAR_QUIC_SIZE
 %token VAR_PROXY_PROTOCOL_PORT VAR_STATISTICS_INHIBIT_ZERO
 %token VAR_HARDEN_UNKNOWN_ADDITIONAL VAR_DISABLE_EDNS_DO VAR_CACHEDB_NO_STORE
 %token VAR_LOG_DESTADDR VAR_CACHEDB_CHECK_WHEN_SERVE_EXPIRED
@@ -342,6 +343,7 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_edns_client_string_opcode | server_nsid |
 	server_zonemd_permissive_mode | server_max_reuse_tcp_queries |
 	server_tcp_reuse_timeout | server_tcp_auth_query_timeout |
+	server_quic_port | server_quic_size |
 	server_interface_automatic_ports | server_ede |
 	server_proxy_protocol_port | server_statistics_inhibit_zero |
 	server_harden_unknown_additional | server_disable_edns_do |
@@ -1207,6 +1209,21 @@ server_http_notls_downstream: VAR_HTTP_NOTLS_DOWNSTREAM STRING_ARG
 		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
 			yyerror("expected yes or no.");
 		else cfg_parser->cfg->http_notls_downstream = (strcmp($2, "yes")==0);
+		free($2);
+	};
+server_quic_port: VAR_QUIC_PORT STRING_ARG
+	{
+		OUTYY(("P(server_quic_port:%s)\n", $2));
+		if(atoi($2) == 0)
+			yyerror("port number expected");
+		else cfg_parser->cfg->quic_port = atoi($2);
+		free($2);
+	};
+server_quic_size: VAR_QUIC_SIZE STRING_ARG
+	{
+		OUTYY(("P(server_quic_size:%s)\n", $2));
+		if(!cfg_parse_memsize($2, &cfg_parser->cfg->quic_size))
+			yyerror("memory size expected");
 		free($2);
 	};
 server_use_systemd: VAR_USE_SYSTEMD STRING_ARG
