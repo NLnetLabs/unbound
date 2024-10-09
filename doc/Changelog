@@ -1,3 +1,11 @@
+9 October 2024: Wouter
+	- Merge #871: DNS over QUIC. This adds `quic-port: 853` and
+	  `quic-size: 8m` that enable dnsoverquic, and the counters
+	  `num.query.quic` and `mem.quic` in the statistics output.
+	  The feature needs to be enabled by compiling with libngtcp2,
+	  with `--with-libngtcp2=path` and libngtcp2 needs openssl+quic,
+	  pass that with `--with-ssl=path` to compile unbound as well.
+
 8 October 2024: Wouter
 	- Fix #1149: unbound-control-setup hangs sometimes depending on
 	  the openssl version.
