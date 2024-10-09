@@ -4737,6 +4737,7 @@ doq_conn_setup(struct doq_conn* conn, uint8_t* scid, size_t scidlen,
 	struct ngtcp2_transport_params params;
 	memset(&dcid, 0, sizeof(dcid));
 	memset(&sv_scid, 0, sizeof(sv_scid));
+	memset(&scid_cid, 0, sizeof(scid_cid));
 	memset(&path, 0, sizeof(path));
 	memset(&callbacks, 0, sizeof(callbacks));
 	memset(&settings, 0, sizeof(settings));
