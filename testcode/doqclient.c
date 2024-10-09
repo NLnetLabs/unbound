@@ -1190,7 +1190,7 @@ early_data_write_transport(struct doq_client_data* data)
 		perror(data->transport_file);
 		return;
 	}
-	if(fwrite(buf, 1, len, out) != 1) {
+	if(fwrite(buf, 1, len, out) != (size_t)len) {
 		log_err("fwrite %s failed: %s", data->transport_file,
 			strerror(errno));
 	}
