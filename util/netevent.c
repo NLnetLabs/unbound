@@ -1272,8 +1272,7 @@ doq_print_addr_port(struct doq_addr_storage* addr, socklen_t addrlen,
 		log_assert(addrlen >= sizeof(*sa));
 		if(inet_ntop(sa->sin_family, &sa->sin_addr, host,
 			(socklen_t)hostlen) == 0) {
-			log_err("doq_send_retry failed: inet_ntop error");
-			log_hex("inet ntop address", &sa->sin_addr,
+			log_hex("inet_ntop error: address", &sa->sin_addr,
 				sizeof(sa->sin_addr));
 			return 0;
 		}
@@ -1283,8 +1282,7 @@ doq_print_addr_port(struct doq_addr_storage* addr, socklen_t addrlen,
 		log_assert(addrlen >= sizeof(*sa6));
 		if(inet_ntop(sa6->sin6_family, &sa6->sin6_addr, host,
 			(socklen_t)hostlen) == 0) {
-			log_err("doq_send_retry failed: inet_ntop error");
-			log_hex("inet ntop address", &sa6->sin6_addr,
+			log_hex("inet_ntop error: address", &sa6->sin6_addr,
 				sizeof(sa6->sin6_addr));
 			return 0;
 		}
@@ -1802,6 +1800,7 @@ doq_send_retry(struct comm_point* c, struct doq_pkt_addr* paddr,
 
 	if(!doq_print_addr_port(&paddr->addr, paddr->addrlen, host,
 		sizeof(host), port, sizeof(port))) {
+		log_err("doq_send_retry failed");
 		return;
 	}
 	verbose(VERB_ALGO, "doq: sending retry packet to %s %s", host, port);
@@ -1866,8 +1865,10 @@ doq_verify_retry_token(struct comm_point* c, struct doq_pkt_addr* paddr,
 	char host[256], port[32];
 	ngtcp2_tstamp ts;
 	if(!doq_print_addr_port(&paddr->addr, paddr->addrlen, host,
-		sizeof(host), port, sizeof(port)))
+		sizeof(host), port, sizeof(port))) {
+		log_err("doq_verify_retry_token failed");
 		return 0;
+	}
 	ts = doq_get_timestamp_nanosec();
 	verbose(VERB_ALGO, "doq: verifying retry token from %s %s", host,
 		port);
@@ -1897,8 +1898,10 @@ doq_verify_token(struct comm_point* c, struct doq_pkt_addr* paddr,
 	char host[256], port[32];
 	ngtcp2_tstamp ts;
 	if(!doq_print_addr_port(&paddr->addr, paddr->addrlen, host,
-		sizeof(host), port, sizeof(port)))
+		sizeof(host), port, sizeof(port))) {
+		log_err("doq_verify_token failed");
 		return 0;
+	}
 	ts = doq_get_timestamp_nanosec();
 	verbose(VERB_ALGO, "doq: verifying token from %s %s", host, port);
 	if(ngtcp2_crypto_verify_regular_token(

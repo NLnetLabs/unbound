@@ -60,6 +60,7 @@
 #include "services/mesh.h"
 #include "util/fptr_wlist.h"
 #include "util/locks.h"
+#include "util/timeval_func.h"
 
 #ifdef HAVE_NETDB_H
 #include <netdb.h>
@@ -3475,22 +3476,6 @@ doq_timer_unset(struct doq_table* table, struct doq_timer* timer)
 	timer->worker_doq_socket = NULL;
 }
 
-/** subtract timers and the values do not overflow or become negative */
-static void
-timeval_subtract(struct timeval* d, const struct timeval* end, 
-	const struct timeval* start)
-{
-#ifndef S_SPLINT_S
-	time_t end_usec = end->tv_usec;
-	d->tv_sec = end->tv_sec - start->tv_sec;
-	if(end_usec < start->tv_usec) {
-		end_usec += 1000000;
-		d->tv_sec--;
-	}
-	d->tv_usec = end_usec - start->tv_usec;
-#endif
-}
-
 void doq_timer_set(struct doq_table* table, struct doq_timer* timer,
 	struct doq_server_socket* worker_doq_socket, struct timeval* tv)
 {
@@ -3569,7 +3554,11 @@ doq_conn_create(struct comm_point* c, struct doq_pkt_addr* paddr,
 	lock_protect(&conn->lock, &conn->version, sizeof(conn->version));
 	lock_protect(&conn->lock, &conn->conn, sizeof(conn->conn));
 	lock_protect(&conn->lock, &conn->conid_list, sizeof(conn->conid_list));
+#ifdef HAVE_NGTCP2_CCERR_DEFAULT
+	lock_protect(&conn->lock, &conn->ccerr, sizeof(conn->ccerr));
+#else
 	lock_protect(&conn->lock, &conn->last_error, sizeof(conn->last_error));
+#endif
 	lock_protect(&conn->lock, &conn->tls_alert, sizeof(conn->tls_alert));
 	lock_protect(&conn->lock, &conn->ssl, sizeof(conn->ssl));
 	lock_protect(&conn->lock, &conn->close_pkt, sizeof(conn->close_pkt));
