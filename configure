@@ -22210,16 +22210,17 @@ fi
 # ngtcp2
 
 # Check whether --with-libngtcp2 was given.
-if test "${with_libngtcp2+set}" = set; then :
+if test ${with_libngtcp2+y}
+then :
   withval=$with_libngtcp2;
-else
+else $as_nop
    withval="no"
 fi
 
 found_libngtcp2="no"
 if test x_$withval = x_yes -o x_$withval != x_no; then
-   { $as_echo "$as_me:${as_lineno-$LINENO}: checking for libngtcp2" >&5
-$as_echo_n "checking for libngtcp2... " >&6; }
+   { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for libngtcp2" >&5
+printf %s "checking for libngtcp2... " >&6; }
    if test x_$withval = x_ -o x_$withval = x_yes; then
             withval="/usr/local /opt/local /usr/lib /usr/pkg /usr/sfw /usr"
    fi
@@ -22230,10 +22231,10 @@ $as_echo_n "checking for libngtcp2... " >&6; }
                     CPPFLAGS="$CPPFLAGS -I$dir/include"
 		    LDFLAGS="$LDFLAGS -L$dir/lib"
 		fi
-		{ $as_echo "$as_me:${as_lineno-$LINENO}: result: found in $dir" >&5
-$as_echo "found in $dir" >&6; }
+		{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: found in $dir" >&5
+printf "%s\n" "found in $dir" >&6; }
 
-$as_echo "#define HAVE_NGTCP2 1" >>confdefs.h
+printf "%s\n" "#define HAVE_NGTCP2 1" >>confdefs.h
 
 		LIBS="$LIBS -lngtcp2"
                 break;
@@ -22242,53 +22243,58 @@ $as_echo "#define HAVE_NGTCP2 1" >>confdefs.h
     if test x_$found_libngtcp2 != x_yes; then
 	as_fn_error $? "Could not find libngtcp2, ngtcp2.h" "$LINENO" 5
     fi
-    for ac_header in ngtcp2/ngtcp2.h ngtcp2/ngtcp2_crypto_openssl.h ngtcp2/ngtcp2_crypto_quictls.h
-do :
-  as_ac_Header=`$as_echo "ac_cv_header_$ac_header" | $as_tr_sh`
-ac_fn_c_check_header_compile "$LINENO" "$ac_header" "$as_ac_Header" "$ac_includes_default
+    ac_fn_c_check_header_compile "$LINENO" "ngtcp2/ngtcp2.h" "ac_cv_header_ngtcp2_ngtcp2_h" "$ac_includes_default
 "
-if eval test \"x\$"$as_ac_Header"\" = x"yes"; then :
-  cat >>confdefs.h <<_ACEOF
-#define `$as_echo "HAVE_$ac_header" | $as_tr_cpp` 1
-_ACEOF
+if test "x$ac_cv_header_ngtcp2_ngtcp2_h" = xyes
+then :
+  printf "%s\n" "#define HAVE_NGTCP2_NGTCP2_H 1" >>confdefs.h
+
+fi
+ac_fn_c_check_header_compile "$LINENO" "ngtcp2/ngtcp2_crypto_openssl.h" "ac_cv_header_ngtcp2_ngtcp2_crypto_openssl_h" "$ac_includes_default
+"
+if test "x$ac_cv_header_ngtcp2_ngtcp2_crypto_openssl_h" = xyes
+then :
+  printf "%s\n" "#define HAVE_NGTCP2_NGTCP2_CRYPTO_OPENSSL_H 1" >>confdefs.h
+
+fi
+ac_fn_c_check_header_compile "$LINENO" "ngtcp2/ngtcp2_crypto_quictls.h" "ac_cv_header_ngtcp2_ngtcp2_crypto_quictls_h" "$ac_includes_default
+"
+if test "x$ac_cv_header_ngtcp2_ngtcp2_crypto_quictls_h" = xyes
+then :
+  printf "%s\n" "#define HAVE_NGTCP2_NGTCP2_CRYPTO_QUICTLS_H 1" >>confdefs.h
 
 fi
 
-done
-
-    ac_fn_c_check_decl "$LINENO" "ngtcp2_conn_server_new" "ac_cv_have_decl_ngtcp2_conn_server_new" "$ac_includes_default
+    ac_fn_check_decl "$LINENO" "ngtcp2_conn_server_new" "ac_cv_have_decl_ngtcp2_conn_server_new" "$ac_includes_default
     #include <ngtcp2/ngtcp2.h>
 
-"
-if test "x$ac_cv_have_decl_ngtcp2_conn_server_new" = xyes; then :
+" "$ac_c_undeclared_builtin_options" "CFLAGS"
+if test "x$ac_cv_have_decl_ngtcp2_conn_server_new" = xyes
+then :
   ac_have_decl=1
-else
+else $as_nop
   ac_have_decl=0
 fi
+printf "%s\n" "#define HAVE_DECL_NGTCP2_CONN_SERVER_NEW $ac_have_decl" >>confdefs.h
 
-cat >>confdefs.h <<_ACEOF
-#define HAVE_DECL_NGTCP2_CONN_SERVER_NEW $ac_have_decl
-_ACEOF
-
-    ac_fn_c_check_decl "$LINENO" "ngtcp2_crypto_encrypt_cb" "ac_cv_have_decl_ngtcp2_crypto_encrypt_cb" "$ac_includes_default
+    ac_fn_check_decl "$LINENO" "ngtcp2_crypto_encrypt_cb" "ac_cv_have_decl_ngtcp2_crypto_encrypt_cb" "$ac_includes_default
     #include <ngtcp2/ngtcp2_crypto.h>
 
-"
-if test "x$ac_cv_have_decl_ngtcp2_crypto_encrypt_cb" = xyes; then :
+" "$ac_c_undeclared_builtin_options" "CFLAGS"
+if test "x$ac_cv_have_decl_ngtcp2_crypto_encrypt_cb" = xyes
+then :
   ac_have_decl=1
-else
+else $as_nop
   ac_have_decl=0
 fi
+printf "%s\n" "#define HAVE_DECL_NGTCP2_CRYPTO_ENCRYPT_CB $ac_have_decl" >>confdefs.h
 
-cat >>confdefs.h <<_ACEOF
-#define HAVE_DECL_NGTCP2_CRYPTO_ENCRYPT_CB $ac_have_decl
-_ACEOF
-
-    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for ngtcp2_crypto_encrypt_cb in -lngtcp2_crypto_openssl" >&5
-$as_echo_n "checking for ngtcp2_crypto_encrypt_cb in -lngtcp2_crypto_openssl... " >&6; }
-if ${ac_cv_lib_ngtcp2_crypto_openssl_ngtcp2_crypto_encrypt_cb+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
+    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for ngtcp2_crypto_encrypt_cb in -lngtcp2_crypto_openssl" >&5
+printf %s "checking for ngtcp2_crypto_encrypt_cb in -lngtcp2_crypto_openssl... " >&6; }
+if test ${ac_cv_lib_ngtcp2_crypto_openssl_ngtcp2_crypto_encrypt_cb+y}
+then :
+  printf %s "(cached) " >&6
+else $as_nop
   ac_check_lib_save_LIBS=$LIBS
 LIBS="-lngtcp2_crypto_openssl  $LIBS"
 cat confdefs.h - <<_ACEOF >conftest.$ac_ext
@@ -22297,38 +22303,38 @@ cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* Override any GCC internal prototype to avoid an error.
    Use char because int might match the return type of a GCC
    builtin and then its argument prototype would still apply.  */
-#ifdef __cplusplus
-extern "C"
-#endif
 char ngtcp2_crypto_encrypt_cb ();
 int
-main ()
+main (void)
 {
 return ngtcp2_crypto_encrypt_cb ();
   ;
   return 0;
 }
 _ACEOF
-if ac_fn_c_try_link "$LINENO"; then :
+if ac_fn_c_try_link "$LINENO"
+then :
   ac_cv_lib_ngtcp2_crypto_openssl_ngtcp2_crypto_encrypt_cb=yes
-else
+else $as_nop
   ac_cv_lib_ngtcp2_crypto_openssl_ngtcp2_crypto_encrypt_cb=no
 fi
-rm -f core conftest.err conftest.$ac_objext \
+rm -f core conftest.err conftest.$ac_objext conftest.beam \
     conftest$ac_exeext conftest.$ac_ext
 LIBS=$ac_check_lib_save_LIBS
 fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_ngtcp2_crypto_openssl_ngtcp2_crypto_encrypt_cb" >&5
-$as_echo "$ac_cv_lib_ngtcp2_crypto_openssl_ngtcp2_crypto_encrypt_cb" >&6; }
-if test "x$ac_cv_lib_ngtcp2_crypto_openssl_ngtcp2_crypto_encrypt_cb" = xyes; then :
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_ngtcp2_crypto_openssl_ngtcp2_crypto_encrypt_cb" >&5
+printf "%s\n" "$ac_cv_lib_ngtcp2_crypto_openssl_ngtcp2_crypto_encrypt_cb" >&6; }
+if test "x$ac_cv_lib_ngtcp2_crypto_openssl_ngtcp2_crypto_encrypt_cb" = xyes
+then :
    LIBS="$LIBS -lngtcp2_crypto_openssl"
 fi
 
-    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for ngtcp2_crypto_encrypt_cb in -lngtcp2_crypto_quictls" >&5
-$as_echo_n "checking for ngtcp2_crypto_encrypt_cb in -lngtcp2_crypto_quictls... " >&6; }
-if ${ac_cv_lib_ngtcp2_crypto_quictls_ngtcp2_crypto_encrypt_cb+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
+    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for ngtcp2_crypto_encrypt_cb in -lngtcp2_crypto_quictls" >&5
+printf %s "checking for ngtcp2_crypto_encrypt_cb in -lngtcp2_crypto_quictls... " >&6; }
+if test ${ac_cv_lib_ngtcp2_crypto_quictls_ngtcp2_crypto_encrypt_cb+y}
+then :
+  printf %s "(cached) " >&6
+else $as_nop
   ac_check_lib_save_LIBS=$LIBS
 LIBS="-lngtcp2_crypto_quictls  $LIBS"
 cat confdefs.h - <<_ACEOF >conftest.$ac_ext
@@ -22337,67 +22343,120 @@ cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* Override any GCC internal prototype to avoid an error.
    Use char because int might match the return type of a GCC
    builtin and then its argument prototype would still apply.  */
-#ifdef __cplusplus
-extern "C"
-#endif
 char ngtcp2_crypto_encrypt_cb ();
 int
-main ()
+main (void)
 {
 return ngtcp2_crypto_encrypt_cb ();
   ;
   return 0;
 }
 _ACEOF
-if ac_fn_c_try_link "$LINENO"; then :
+if ac_fn_c_try_link "$LINENO"
+then :
   ac_cv_lib_ngtcp2_crypto_quictls_ngtcp2_crypto_encrypt_cb=yes
-else
+else $as_nop
   ac_cv_lib_ngtcp2_crypto_quictls_ngtcp2_crypto_encrypt_cb=no
 fi
-rm -f core conftest.err conftest.$ac_objext \
+rm -f core conftest.err conftest.$ac_objext conftest.beam \
     conftest$ac_exeext conftest.$ac_ext
 LIBS=$ac_check_lib_save_LIBS
 fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_ngtcp2_crypto_quictls_ngtcp2_crypto_encrypt_cb" >&5
-$as_echo "$ac_cv_lib_ngtcp2_crypto_quictls_ngtcp2_crypto_encrypt_cb" >&6; }
-if test "x$ac_cv_lib_ngtcp2_crypto_quictls_ngtcp2_crypto_encrypt_cb" = xyes; then :
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_ngtcp2_crypto_quictls_ngtcp2_crypto_encrypt_cb" >&5
+printf "%s\n" "$ac_cv_lib_ngtcp2_crypto_quictls_ngtcp2_crypto_encrypt_cb" >&6; }
+if test "x$ac_cv_lib_ngtcp2_crypto_quictls_ngtcp2_crypto_encrypt_cb" = xyes
+then :
    LIBS="$LIBS -lngtcp2_crypto_quictls"
 fi
 
-    for ac_func in ngtcp2_crypto_encrypt_cb ngtcp2_ccerr_default ngtcp2_conn_in_closing_period ngtcp2_conn_in_draining_period ngtcp2_conn_get_max_local_streams_uni ngtcp2_crypto_quictls_from_ossl_encryption_level ngtcp2_crypto_quictls_configure_server_context ngtcp2_crypto_quictls_configure_client_context ngtcp2_conn_get_num_scid ngtcp2_conn_tls_early_data_rejected ngtcp2_conn_encode_0rtt_transport_params
-do :
-  as_ac_var=`$as_echo "ac_cv_func_$ac_func" | $as_tr_sh`
-ac_fn_c_check_func "$LINENO" "$ac_func" "$as_ac_var"
-if eval test \"x\$"$as_ac_var"\" = x"yes"; then :
-  cat >>confdefs.h <<_ACEOF
-#define `$as_echo "HAVE_$ac_func" | $as_tr_cpp` 1
-_ACEOF
+    ac_fn_c_check_func "$LINENO" "ngtcp2_crypto_encrypt_cb" "ac_cv_func_ngtcp2_crypto_encrypt_cb"
+if test "x$ac_cv_func_ngtcp2_crypto_encrypt_cb" = xyes
+then :
+  printf "%s\n" "#define HAVE_NGTCP2_CRYPTO_ENCRYPT_CB 1" >>confdefs.h
 
 fi
-done
+ac_fn_c_check_func "$LINENO" "ngtcp2_ccerr_default" "ac_cv_func_ngtcp2_ccerr_default"
+if test "x$ac_cv_func_ngtcp2_ccerr_default" = xyes
+then :
+  printf "%s\n" "#define HAVE_NGTCP2_CCERR_DEFAULT 1" >>confdefs.h
 
-    for ac_func in SSL_is_quic
+fi
+ac_fn_c_check_func "$LINENO" "ngtcp2_conn_in_closing_period" "ac_cv_func_ngtcp2_conn_in_closing_period"
+if test "x$ac_cv_func_ngtcp2_conn_in_closing_period" = xyes
+then :
+  printf "%s\n" "#define HAVE_NGTCP2_CONN_IN_CLOSING_PERIOD 1" >>confdefs.h
+
+fi
+ac_fn_c_check_func "$LINENO" "ngtcp2_conn_in_draining_period" "ac_cv_func_ngtcp2_conn_in_draining_period"
+if test "x$ac_cv_func_ngtcp2_conn_in_draining_period" = xyes
+then :
+  printf "%s\n" "#define HAVE_NGTCP2_CONN_IN_DRAINING_PERIOD 1" >>confdefs.h
+
+fi
+ac_fn_c_check_func "$LINENO" "ngtcp2_conn_get_max_local_streams_uni" "ac_cv_func_ngtcp2_conn_get_max_local_streams_uni"
+if test "x$ac_cv_func_ngtcp2_conn_get_max_local_streams_uni" = xyes
+then :
+  printf "%s\n" "#define HAVE_NGTCP2_CONN_GET_MAX_LOCAL_STREAMS_UNI 1" >>confdefs.h
+
+fi
+ac_fn_c_check_func "$LINENO" "ngtcp2_crypto_quictls_from_ossl_encryption_level" "ac_cv_func_ngtcp2_crypto_quictls_from_ossl_encryption_level"
+if test "x$ac_cv_func_ngtcp2_crypto_quictls_from_ossl_encryption_level" = xyes
+then :
+  printf "%s\n" "#define HAVE_NGTCP2_CRYPTO_QUICTLS_FROM_OSSL_ENCRYPTION_LEVEL 1" >>confdefs.h
+
+fi
+ac_fn_c_check_func "$LINENO" "ngtcp2_crypto_quictls_configure_server_context" "ac_cv_func_ngtcp2_crypto_quictls_configure_server_context"
+if test "x$ac_cv_func_ngtcp2_crypto_quictls_configure_server_context" = xyes
+then :
+  printf "%s\n" "#define HAVE_NGTCP2_CRYPTO_QUICTLS_CONFIGURE_SERVER_CONTEXT 1" >>confdefs.h
+
+fi
+ac_fn_c_check_func "$LINENO" "ngtcp2_crypto_quictls_configure_client_context" "ac_cv_func_ngtcp2_crypto_quictls_configure_client_context"
+if test "x$ac_cv_func_ngtcp2_crypto_quictls_configure_client_context" = xyes
+then :
+  printf "%s\n" "#define HAVE_NGTCP2_CRYPTO_QUICTLS_CONFIGURE_CLIENT_CONTEXT 1" >>confdefs.h
+
+fi
+ac_fn_c_check_func "$LINENO" "ngtcp2_conn_get_num_scid" "ac_cv_func_ngtcp2_conn_get_num_scid"
+if test "x$ac_cv_func_ngtcp2_conn_get_num_scid" = xyes
+then :
+  printf "%s\n" "#define HAVE_NGTCP2_CONN_GET_NUM_SCID 1" >>confdefs.h
+
+fi
+ac_fn_c_check_func "$LINENO" "ngtcp2_conn_tls_early_data_rejected" "ac_cv_func_ngtcp2_conn_tls_early_data_rejected"
+if test "x$ac_cv_func_ngtcp2_conn_tls_early_data_rejected" = xyes
+then :
+  printf "%s\n" "#define HAVE_NGTCP2_CONN_TLS_EARLY_DATA_REJECTED 1" >>confdefs.h
+
+fi
+ac_fn_c_check_func "$LINENO" "ngtcp2_conn_encode_0rtt_transport_params" "ac_cv_func_ngtcp2_conn_encode_0rtt_transport_params"
+if test "x$ac_cv_func_ngtcp2_conn_encode_0rtt_transport_params" = xyes
+then :
+  printf "%s\n" "#define HAVE_NGTCP2_CONN_ENCODE_0RTT_TRANSPORT_PARAMS 1" >>confdefs.h
+
+fi
+
+
+  for ac_func in SSL_is_quic
 do :
   ac_fn_c_check_func "$LINENO" "SSL_is_quic" "ac_cv_func_SSL_is_quic"
-if test "x$ac_cv_func_SSL_is_quic" = xyes; then :
-  cat >>confdefs.h <<_ACEOF
-#define HAVE_SSL_IS_QUIC 1
-_ACEOF
+if test "x$ac_cv_func_SSL_is_quic" = xyes
+then :
+  printf "%s\n" "#define HAVE_SSL_IS_QUIC 1" >>confdefs.h
 
-else
+else $as_nop
   as_fn_error $? "No QUIC support detected in OpenSSL. Need OpenSSL version with QUIC support to enable DNS over QUIC with libngtcp2." "$LINENO" 5
 fi
-done
 
+done
     ac_fn_c_check_type "$LINENO" "struct ngtcp2_version_cid" "ac_cv_type_struct_ngtcp2_version_cid" "$ac_includes_default
     #include <ngtcp2/ngtcp2.h>
 
 "
-if test "x$ac_cv_type_struct_ngtcp2_version_cid" = xyes; then :
+if test "x$ac_cv_type_struct_ngtcp2_version_cid" = xyes
+then :
 
-cat >>confdefs.h <<_ACEOF
-#define HAVE_STRUCT_NGTCP2_VERSION_CID 1
-_ACEOF
+printf "%s\n" "#define HAVE_STRUCT_NGTCP2_VERSION_CID 1" >>confdefs.h
 
 
 fi
@@ -22405,11 +22464,10 @@ ac_fn_c_check_type "$LINENO" "ngtcp2_encryption_level" "ac_cv_type_ngtcp2_encryp
     #include <ngtcp2/ngtcp2.h>
 
 "
-if test "x$ac_cv_type_ngtcp2_encryption_level" = xyes; then :
+if test "x$ac_cv_type_ngtcp2_encryption_level" = xyes
+then :
 
-cat >>confdefs.h <<_ACEOF
-#define HAVE_NGTCP2_ENCRYPTION_LEVEL 1
-_ACEOF
+printf "%s\n" "#define HAVE_NGTCP2_ENCRYPTION_LEVEL 1" >>confdefs.h
 
 
 fi
@@ -22418,11 +22476,10 @@ fi
     #include <ngtcp2/ngtcp2.h>
 
 "
-if test "x$ac_cv_member_struct_ngtcp2_pkt_hd_tokenlen" = xyes; then :
+if test "x$ac_cv_member_struct_ngtcp2_pkt_hd_tokenlen" = xyes
+then :
 
-cat >>confdefs.h <<_ACEOF
-#define HAVE_STRUCT_NGTCP2_PKT_HD_TOKENLEN 1
-_ACEOF
+printf "%s\n" "#define HAVE_STRUCT_NGTCP2_PKT_HD_TOKENLEN 1" >>confdefs.h
 
 
 fi
@@ -22430,11 +22487,10 @@ ac_fn_c_check_member "$LINENO" "struct ngtcp2_settings" "tokenlen" "ac_cv_member
     #include <ngtcp2/ngtcp2.h>
 
 "
-if test "x$ac_cv_member_struct_ngtcp2_settings_tokenlen" = xyes; then :
+if test "x$ac_cv_member_struct_ngtcp2_settings_tokenlen" = xyes
+then :
 
-cat >>confdefs.h <<_ACEOF
-#define HAVE_STRUCT_NGTCP2_SETTINGS_TOKENLEN 1
-_ACEOF
+printf "%s\n" "#define HAVE_STRUCT_NGTCP2_SETTINGS_TOKENLEN 1" >>confdefs.h
 
 
 fi
@@ -22442,11 +22498,10 @@ ac_fn_c_check_member "$LINENO" "struct ngtcp2_settings" "max_tx_udp_payload_size
     #include <ngtcp2/ngtcp2.h>
 
 "
-if test "x$ac_cv_member_struct_ngtcp2_settings_max_tx_udp_payload_size" = xyes; then :
+if test "x$ac_cv_member_struct_ngtcp2_settings_max_tx_udp_payload_size" = xyes
+then :
 
-cat >>confdefs.h <<_ACEOF
-#define HAVE_STRUCT_NGTCP2_SETTINGS_MAX_TX_UDP_PAYLOAD_SIZE 1
-_ACEOF
+printf "%s\n" "#define HAVE_STRUCT_NGTCP2_SETTINGS_MAX_TX_UDP_PAYLOAD_SIZE 1" >>confdefs.h
 
 
 fi
@@ -22454,25 +22509,24 @@ ac_fn_c_check_member "$LINENO" "struct ngtcp2_transport_params" "original_dcid_p
     #include <ngtcp2/ngtcp2.h>
 
 "
-if test "x$ac_cv_member_struct_ngtcp2_transport_params_original_dcid_present" = xyes; then :
+if test "x$ac_cv_member_struct_ngtcp2_transport_params_original_dcid_present" = xyes
+then :
 
-cat >>confdefs.h <<_ACEOF
-#define HAVE_STRUCT_NGTCP2_TRANSPORT_PARAMS_ORIGINAL_DCID_PRESENT 1
-_ACEOF
+printf "%s\n" "#define HAVE_STRUCT_NGTCP2_TRANSPORT_PARAMS_ORIGINAL_DCID_PRESENT 1" >>confdefs.h
 
 
 fi
 
 
-    { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether ngtcp2_conn_shutdown_stream has 4 arguments" >&5
-$as_echo_n "checking whether ngtcp2_conn_shutdown_stream has 4 arguments... " >&6; }
+    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking whether ngtcp2_conn_shutdown_stream has 4 arguments" >&5
+printf %s "checking whether ngtcp2_conn_shutdown_stream has 4 arguments... " >&6; }
     cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 $ac_includes_default
 #include <ngtcp2/ngtcp2.h>
 
 int
-main ()
+main (void)
 {
 
 	(void)ngtcp2_conn_shutdown_stream(NULL, 0, 0, 0);
@@ -22481,21 +22535,22 @@ main ()
   return 0;
 }
 _ACEOF
-if ac_fn_c_try_compile "$LINENO"; then :
+if ac_fn_c_try_compile "$LINENO"
+then :
 
-	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
-$as_echo "yes" >&6; }
+	{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+printf "%s\n" "yes" >&6; }
 
-$as_echo "#define HAVE_NGTCP2_CONN_SHUTDOWN_STREAM4 1" >>confdefs.h
+printf "%s\n" "#define HAVE_NGTCP2_CONN_SHUTDOWN_STREAM4 1" >>confdefs.h
 
 
-else
+else $as_nop
 
-	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
+	{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
+printf "%s\n" "no" >&6; }
 
 fi
-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
 
 fi
 
