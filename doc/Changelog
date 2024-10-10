@@ -1,3 +1,7 @@
+10 October 2024: Wouter
+	- Fix cookie_file test sporadic fails for time change during
+	  the test.
+
 9 October 2024: Wouter
 	- Merge #871: DNS over QUIC. This adds `quic-port: 853` and
 	  `quic-size: 8m` that enable dnsoverquic, and the counters
