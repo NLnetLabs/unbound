@@ -1,3 +1,7 @@
+11 October 2024: Wouter
+	- Fix to disable detection of quic configured ports when quic is
+	  not compiled in.
+
 10 October 2024: Wouter
 	- Fix cookie_file test sporadic fails for time change during
 	  the test.

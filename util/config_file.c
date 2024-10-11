@@ -2832,10 +2832,17 @@ if_is_dnscrypt(const char* ifname, const char* port, int dnscrypt_port)
 int
 if_is_quic(const char* ifname, const char* port, int quic_port)
 {
+#ifndef HAVE_NGTCP2
+	(void)ifname;
+	(void)port;
+	(void)quic_port;
+	return 0;
+#else
 	char* p = strchr(ifname, '@');
 	if(!p && atoi(port) == quic_port)
 		return 1;
 	if(p && atoi(p+1) == quic_port)
 		return 1;
 	return 0;
+#endif
 }
