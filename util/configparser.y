@@ -1214,6 +1214,11 @@ server_http_notls_downstream: VAR_HTTP_NOTLS_DOWNSTREAM STRING_ARG
 server_quic_port: VAR_QUIC_PORT STRING_ARG
 	{
 		OUTYY(("P(server_quic_port:%s)\n", $2));
+#ifndef HAVE_NGTCP2
+		log_warn("%s:%d: Unbound is not compiled with "
+			"ngtcp2. This is required to use DNS "
+			"over QUIC.", cfg_parser->filename, cfg_parser->line);
+#endif
 		if(atoi($2) == 0)
 			yyerror("port number expected");
 		else cfg_parser->cfg->quic_port = atoi($2);
