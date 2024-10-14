@@ -3929,6 +3929,9 @@ doq_stream_close(struct doq_conn* conn, struct doq_stream* stream,
 		}
 		doq_conn_write_enable(conn);
 	}
+	verbose(VERB_ALGO, "doq: conn extend max streams bidi by 1");
+	ngtcp2_conn_extend_max_streams_bidi(conn->conn, 1);
+	doq_conn_write_enable(conn);
 	doq_stream_remove_in_buffer(stream, conn->doq_socket->table);
 	doq_stream_remove_out_buffer(stream, conn->doq_socket->table);
 	doq_table_quic_size_subtract(conn->doq_socket->table, sizeof(*stream));

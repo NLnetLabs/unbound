@@ -1,6 +1,7 @@
 14 October 2024: Wouter
 	- Fix to display warning if quic-port is set but dnsoverquic is not
 	  enabled when compiled.
+	- Fix dnsoverquic to extend the number of streams when one is closed.
 
 11 October 2024: Wouter
 	- Fix to disable detection of quic configured ports when quic is
