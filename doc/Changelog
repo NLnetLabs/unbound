@@ -1,3 +1,7 @@
+16 October 2024: Yorgos
+	- Fix for dnsoverquic and dnstap to use the correct dnstap
+	  environment.
+
 14 October 2024: Wouter
 	- Fix to display warning if quic-port is set but dnsoverquic is not
 	  enabled when compiled.

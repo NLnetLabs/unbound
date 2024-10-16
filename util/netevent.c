@@ -6624,6 +6624,20 @@ comm_point_delete(struct comm_point* c)
 	free(c);
 }
 
+#ifdef USE_DNSTAP
+static void
+send_reply_dnstap(struct dt_env* dtenv,
+	struct sockaddr* addr, socklen_t addrlen,
+	struct sockaddr_storage* client_addr, socklen_t client_addrlen,
+	enum comm_point_type type, void* ssl, sldns_buffer* buffer)
+{
+	log_addr(VERB_ALGO, "from local addr", (void*)addr, addrlen);
+	log_addr(VERB_ALGO, "response to client", client_addr, client_addrlen);
+	dt_msg_send_client_response(dtenv, client_addr,
+		(struct sockaddr_storage*)addr, type, ssl, buffer);
+}
+#endif
+
 void
 comm_point_send_reply(struct comm_reply *repinfo)
 {
@@ -6648,24 +6662,37 @@ comm_point_send_reply(struct comm_reply *repinfo)
 				repinfo->remote_addrlen, 0);
 #ifdef USE_DNSTAP
 		/*
-		 * sending src (client)/dst (local service) addresses over DNSTAP from udp callback
+		 * sending src (client)/dst (local service) addresses over
+		 * DNSTAP from udp callback
 		 */
 		if(repinfo->c->dtenv != NULL && repinfo->c->dtenv->log_client_response_messages) {
-			log_addr(VERB_ALGO, "from local addr", (void*)repinfo->c->socket->addr, repinfo->c->socket->addrlen);
-			log_addr(VERB_ALGO, "response to client", &repinfo->client_addr, repinfo->client_addrlen);
-			dt_msg_send_client_response(repinfo->c->dtenv, &repinfo->client_addr, (void*)repinfo->c->socket->addr, repinfo->c->type, repinfo->c->ssl, repinfo->c->buffer);
+			send_reply_dnstap(repinfo->c->dtenv,
+				repinfo->c->socket->addr,
+				repinfo->c->socket->addrlen,
+				&repinfo->client_addr, repinfo->client_addrlen,
+				repinfo->c->type, repinfo->c->ssl,
+				repinfo->c->buffer);
 		}
 #endif
 	} else {
 #ifdef USE_DNSTAP
+		struct dt_env* dtenv = repinfo->c->doq_socket
+			?repinfo->c->dtenv
+			:repinfo->c->tcp_parent->dtenv;
+		struct sldns_buffer* dtbuffer = repinfo->c->tcp_req_info
+			?repinfo->c->tcp_req_info->spool_buffer
+			:repinfo->c->buffer;
 		/*
-		 * sending src (client)/dst (local service) addresses over DNSTAP from TCP callback
+		 * sending src (client)/dst (local service) addresses over
+		 * DNSTAP from other callbacks
 		 */
-		if(repinfo->c->tcp_parent->dtenv != NULL && repinfo->c->tcp_parent->dtenv->log_client_response_messages) {
-			log_addr(VERB_ALGO, "from local addr", (void*)repinfo->c->socket->addr, repinfo->c->socket->addrlen);
-			log_addr(VERB_ALGO, "response to client", &repinfo->client_addr, repinfo->client_addrlen);
-			dt_msg_send_client_response(repinfo->c->tcp_parent->dtenv, &repinfo->client_addr, (void*)repinfo->c->socket->addr, repinfo->c->type, repinfo->c->ssl,
-				( repinfo->c->tcp_req_info? repinfo->c->tcp_req_info->spool_buffer: repinfo->c->buffer ));
+		if(dtenv != NULL && dtenv->log_client_response_messages) {
+			send_reply_dnstap(dtenv,
+				repinfo->c->socket->addr,
+				repinfo->c->socket->addrlen,
+				&repinfo->client_addr, repinfo->client_addrlen,
+				repinfo->c->type, repinfo->c->ssl,
+				dtbuffer);
 		}
 #endif
 		if(repinfo->c->tcp_req_info) {
