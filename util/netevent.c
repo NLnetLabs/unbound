@@ -6676,12 +6676,19 @@ comm_point_send_reply(struct comm_reply *repinfo)
 #endif
 	} else {
 #ifdef USE_DNSTAP
-		struct dt_env* dtenv = repinfo->c->doq_socket
-			?repinfo->c->dtenv
-			:repinfo->c->tcp_parent->dtenv;
+		struct dt_env* dtenv =
+#ifdef HAVE_NGTCP2
+			repinfo->c->doq_socket
+			?repinfo->c->dtenv:
+#endif
+			repinfo->c->tcp_parent->dtenv;
 		struct sldns_buffer* dtbuffer = repinfo->c->tcp_req_info
 			?repinfo->c->tcp_req_info->spool_buffer
 			:repinfo->c->buffer;
+#ifdef USE_DNSCRYPT
+		if(repinfo->c->dnscrypt && repinfo->is_dnscrypted)
+			dtbuffer = repinfo->c->buffer;
+#endif
 		/*
 		 * sending src (client)/dst (local service) addresses over
 		 * DNSTAP from other callbacks
