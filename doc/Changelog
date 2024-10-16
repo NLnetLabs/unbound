@@ -4,6 +4,8 @@
 
 16 October 2024: Wouter
 	- Fix for dnstap with dnscrypt and dnstap without dnsoverquic.
+	- Fix #1154: Tag Incorrectly Applying for Other Interfaces
+	  Using the Same IP. This fix is not for 1.22.0.
 
 14 October 2024: Wouter
 	- Fix to display warning if quic-port is set but dnsoverquic is not

@@ -290,6 +290,18 @@ int sockaddr_cmp_addr(struct sockaddr_storage* addr1, socklen_t len1,
 	struct sockaddr_storage* addr2, socklen_t len2);
 
 /**
+ * Compare two sockaddrs. Imposes an ordering on the addresses.
+ * Compares address and port. It also compares scope_id for ip6.
+ * @param addr1: address 1.
+ * @param len1: lengths of addr1.
+ * @param addr2: address 2.
+ * @param len2: lengths of addr2.
+ * @return: 0 if addr1 == addr2. -1 if addr1 is smaller, +1 if larger.
+ */
+int sockaddr_cmp_scopeid(struct sockaddr_storage* addr1, socklen_t len1,
+	struct sockaddr_storage* addr2, socklen_t len2);
+
+/**
  * Checkout address family.
  * @param addr: the sockaddr to examine.
  * @param len: the length of addr.
