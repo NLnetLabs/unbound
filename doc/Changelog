@@ -30,6 +30,7 @@
 	- Fix add reallocarray to alloc stats unit test, and disable
 	  override of strdup in unbound-host, and the result of config
 	  get option is freed properly.
+	- Tag for 1.22.0rc1.
 
 9 October 2024: Wouter
 	- Merge #871: DNS over QUIC. This adds `quic-port: 853` and
