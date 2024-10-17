@@ -1585,10 +1585,11 @@ Ie. answer queries with fixed data and also log the machines that ask.
 Like transparent, but ignores local data and resolves normally.
 .TP 10
 \h'5'\fIblock_a\fR
-Like transparent, but ignores local data and resolves normally all query
-types excluding A. For A queries it unconditionally returns NODATA.
-Useful in cases when there is a need to explicitly force all apps to use
-IPv6 protocol and avoid any queries to IPv4.
+Like transparent, but ignores local data and resolves normally all
+query types excluding A.  For A queries it returns NODATA, unless
+the client indicates that it is DNSSEC-aware.  Useful in cases when
+there is a need to explicitly force all apps to use IPv6 protocol
+and avoid any queries to IPv4.
 .TP 10
 \h'5'\fIalways_refuse\fR
 Like refuse, but ignores local data and refuses the query.
