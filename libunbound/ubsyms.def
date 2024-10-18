@@ -34,3 +34,9 @@ ub_resolve_free
 ub_strerror
 ub_version
 ub_wait
+ubc_ctx_create
+ubc_ctx_data_add
+ubc_ctx_delete
+ubc_ctx_do_cmd
+ubc_ctx_get_quiet
+ubc_ctx_set_quiet
