@@ -585,6 +585,7 @@ void tube_remove_bg_listen(struct tube* tube)
 {
 	verbose(VERB_ALGO, "tube remove_bg_listen");
 	ub_winsock_unregister_wsaevent(tube->ev_listen);
+	tube->ev_listen = NULL;
 }
 
 void tube_remove_bg_write(struct tube* tube)
