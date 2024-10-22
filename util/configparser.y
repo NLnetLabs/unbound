@@ -182,7 +182,6 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_CACHEDB_REDISHOST VAR_CACHEDB_REDISPORT VAR_CACHEDB_REDISTIMEOUT
 %token VAR_CACHEDB_REDISEXPIRERECORDS VAR_CACHEDB_REDISPATH VAR_CACHEDB_REDISPASSWORD
 %token VAR_CACHEDB_REDISLOGICALDB
-%token VAR_CACHEDB_REDISCOMMANDTIMEOUT VAR_CACHEDB_REDISCONNECTTIMEOUT
 %token VAR_UDP_UPSTREAM_WITHOUT_DOWNSTREAM VAR_FOR_UPSTREAM
 %token VAR_AUTH_ZONE VAR_ZONEFILE VAR_MASTER VAR_URL VAR_FOR_DOWNSTREAM
 %token VAR_FALLBACK_ENABLED VAR_TLS_ADDITIONAL_PORT VAR_LOW_RTT VAR_LOW_RTT_PERMIL
@@ -194,7 +193,6 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_DISCARD_TIMEOUT VAR_WAIT_LIMIT VAR_WAIT_LIMIT_COOKIE
 %token VAR_WAIT_LIMIT_NETBLOCK VAR_WAIT_LIMIT_COOKIE_NETBLOCK
 %token VAR_STREAM_WAIT_SIZE VAR_TLS_CIPHERS VAR_TLS_CIPHERSUITES VAR_TLS_USE_SNI
-%token VAR_IPSET VAR_IPSET_NAME_V4 VAR_IPSET_NAME_V6
 %token VAR_TLS_SESSION_TICKET_KEYS VAR_RPZ VAR_TAGS VAR_RPZ_ACTION_OVERRIDE
 %token VAR_RPZ_CNAME_OVERRIDE VAR_RPZ_LOG VAR_RPZ_LOG_NAME
 %token VAR_DYNLIB VAR_DYNLIB_FILE VAR_EDNS_CLIENT_STRING
@@ -203,22 +201,19 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_RPZ_SIGNAL_NXDOMAIN_RA VAR_INTERFACE_AUTOMATIC_PORTS VAR_EDE
 %token VAR_INTERFACE_ACTION VAR_INTERFACE_VIEW VAR_INTERFACE_TAG
 %token VAR_INTERFACE_TAG_ACTION VAR_INTERFACE_TAG_DATA
-%token VAR_QUIC_PORT VAR_QUIC_SIZE
 %token VAR_PROXY_PROTOCOL_PORT VAR_STATISTICS_INHIBIT_ZERO
 %token VAR_HARDEN_UNKNOWN_ADDITIONAL VAR_DISABLE_EDNS_DO VAR_CACHEDB_NO_STORE
 %token VAR_LOG_DESTADDR VAR_CACHEDB_CHECK_WHEN_SERVE_EXPIRED
-%token VAR_COOKIE_SECRET_FILE VAR_ITER_SCRUB_NS VAR_ITER_SCRUB_CNAME
-%token VAR_MAX_GLOBAL_QUOTA VAR_HARDEN_UNVERIFIED_GLUE VAR_LOG_TIME_ISO
+%token VAR_COOKIE_SECRET_FILE
 
 %%
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
-toplevelvar: serverstart contents_server | stub_clause |
-	forward_clause | pythonstart contents_py |
-	rcstart contents_rc | dtstart contents_dt | view_clause |
+toplevelvar: serverstart contents_server | stubstart contents_stub |
+	forwardstart contents_forward | pythonstart contents_py |
+	rcstart contents_rc | dtstart contents_dt | viewstart contents_view |
 	dnscstart contents_dnsc | cachedbstart contents_cachedb |
-	ipsetstart contents_ipset | authstart contents_auth |
-	rpzstart contents_rpz | dynlibstart contents_dl |
-	force_toplevel
+	authstart contents_auth | rpzstart contents_rpz |
+    dynlibstart contents_dl | force_toplevel
 	;
 force_toplevel: VAR_FORCE_TOPLEVEL
 	{
@@ -343,21 +338,10 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_edns_client_string_opcode | server_nsid |
 	server_zonemd_permissive_mode | server_max_reuse_tcp_queries |
 	server_tcp_reuse_timeout | server_tcp_auth_query_timeout |
-	server_quic_port | server_quic_size |
 	server_interface_automatic_ports | server_ede |
 	server_proxy_protocol_port | server_statistics_inhibit_zero |
 	server_harden_unknown_additional | server_disable_edns_do |
-	server_log_destaddr | server_cookie_secret_file |
-	server_iter_scrub_ns | server_iter_scrub_cname | server_max_global_quota |
-	server_harden_unverified_glue | server_log_time_iso
-	;
-stub_clause: stubstart contents_stub
-	{
-		/* stub end */
-		if(cfg_parser->cfg->stubs &&
-			!cfg_parser->cfg->stubs->name)
-			yyerror("stub-zone without name");
-	}
+	server_log_destaddr | server_cookie_secret_file
 	;
 stubstart: VAR_STUB_ZONE
 	{
@@ -373,18 +357,16 @@ stubstart: VAR_STUB_ZONE
 		}
 	}
 	;
-contents_stub: contents_stub content_stub
-	| ;
+contents_stub: content_stub contents_stub
+	|
+	{
+		/* stub end */
+		if(cfg_parser->cfg->stubs &&
+			!cfg_parser->cfg->stubs->name)
+			yyerror("stub-zone without name");
+	};
 content_stub: stub_name | stub_host | stub_addr | stub_prime | stub_first |
 	stub_no_cache | stub_ssl_upstream | stub_tcp_upstream
-	;
-forward_clause: forwardstart contents_forward
-	{
-		/* forward end */
-		if(cfg_parser->cfg->forwards &&
-			!cfg_parser->cfg->forwards->name)
-			yyerror("forward-zone without name");
-	}
 	;
 forwardstart: VAR_FORWARD_ZONE
 	{
@@ -400,18 +382,16 @@ forwardstart: VAR_FORWARD_ZONE
 		}
 	}
 	;
-contents_forward: contents_forward content_forward
-	| ;
+contents_forward: content_forward contents_forward
+	|
+	{
+		/* forward end */
+		if(cfg_parser->cfg->forwards &&
+			!cfg_parser->cfg->forwards->name)
+			yyerror("forward-zone without name");
+	};
 content_forward: forward_name | forward_host | forward_addr | forward_first |
 	forward_no_cache | forward_ssl_upstream | forward_tcp_upstream
-	;
-view_clause: viewstart contents_view
-	{
-		/* view end */
-		if(cfg_parser->cfg->views &&
-			!cfg_parser->cfg->views->name)
-			yyerror("view without name");
-	}
 	;
 viewstart: VAR_VIEW
 	{
@@ -427,8 +407,14 @@ viewstart: VAR_VIEW
 		}
 	}
 	;
-contents_view: contents_view content_view
-	| ;
+contents_view: content_view contents_view
+	|
+	{
+		/* view end */
+		if(cfg_parser->cfg->views &&
+			!cfg_parser->cfg->views->name)
+			yyerror("view without name");
+	};
 content_view: view_name | view_local_zone | view_local_data | view_first |
 		view_response_ip | view_response_ip_data | view_local_data_ptr
 	;
@@ -1211,26 +1197,6 @@ server_http_notls_downstream: VAR_HTTP_NOTLS_DOWNSTREAM STRING_ARG
 		else cfg_parser->cfg->http_notls_downstream = (strcmp($2, "yes")==0);
 		free($2);
 	};
-server_quic_port: VAR_QUIC_PORT STRING_ARG
-	{
-		OUTYY(("P(server_quic_port:%s)\n", $2));
-#ifndef HAVE_NGTCP2
-		log_warn("%s:%d: Unbound is not compiled with "
-			"ngtcp2. This is required to use DNS "
-			"over QUIC.", cfg_parser->filename, cfg_parser->line);
-#endif
-		if(atoi($2) == 0)
-			yyerror("port number expected");
-		else cfg_parser->cfg->quic_port = atoi($2);
-		free($2);
-	};
-server_quic_size: VAR_QUIC_SIZE STRING_ARG
-	{
-		OUTYY(("P(server_quic_size:%s)\n", $2));
-		if(!cfg_parse_memsize($2, &cfg_parser->cfg->quic_size))
-			yyerror("memory size expected");
-		free($2);
-	};
 server_use_systemd: VAR_USE_SYSTEMD STRING_ARG
 	{
 		OUTYY(("P(server_use_systemd:%s)\n", $2));
@@ -1269,15 +1235,6 @@ server_log_time_ascii: VAR_LOG_TIME_ASCII STRING_ARG
 		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
 			yyerror("expected yes or no.");
 		else cfg_parser->cfg->log_time_ascii = (strcmp($2, "yes")==0);
-		free($2);
-	}
-	;
-server_log_time_iso: VAR_LOG_TIME_ISO STRING_ARG
-	{
-		OUTYY(("P(server_log_time_iso:%s)\n", $2));
-		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
-			yyerror("expected yes or no.");
-		else cfg_parser->cfg->log_time_iso = (strcmp($2, "yes")==0);
 		free($2);
 	}
 	;
@@ -1846,16 +1803,6 @@ server_harden_glue: VAR_HARDEN_GLUE STRING_ARG
 		free($2);
 	}
 	;
-server_harden_unverified_glue: VAR_HARDEN_UNVERIFIED_GLUE STRING_ARG
-       {
-               OUTYY(("P(server_harden_unverified_glue:%s)\n", $2));
-               if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
-                       yyerror("expected yes or no.");
-               else cfg_parser->cfg->harden_unverified_glue =
-                       (strcmp($2, "yes")==0);
-               free($2);
-       }
-       ;
 server_harden_dnssec_stripped: VAR_HARDEN_DNSSEC_STRIPPED STRING_ARG
 	{
 		OUTYY(("P(server_harden_dnssec_stripped:%s)\n", $2));
@@ -2377,22 +2324,11 @@ server_local_zone: VAR_LOCAL_ZONE STRING_ARG STRING_ARG
 				local_zones_nodefault, $2))
 				fatal_exit("out of memory adding local-zone");
 			free($3);
-#ifdef USE_IPSET
-		} else if(strcmp($3, "ipset")==0) {
-			size_t len = strlen($2);
-			/* Make sure to add the trailing dot.
-			 * These are str compared to domain names. */
-			if($2[len-1] != '.') {
-				if(!($2 = realloc($2, len+2))) {
-					fatal_exit("out of memory adding local-zone");
-				}
-				$2[len] = '.';
-				$2[len+1] = 0;
-			}
-			if(!cfg_strlist_insert(&cfg_parser->cfg->
-				local_zones_ipset, $2))
-				fatal_exit("out of memory adding local-zone");
-			free($3);
+#ifdef USE_IPSET 
+        } else if (strcmp($3, "ipset") == 0) {
+            /* Transaprent pass-through to 5-param variant */
+            free($2);
+            free($3);
 #endif
 		} else {
 			if(!cfg_str2list_insert(&cfg_parser->cfg->local_zones,
@@ -2400,6 +2336,59 @@ server_local_zone: VAR_LOCAL_ZONE STRING_ARG STRING_ARG
 				fatal_exit("out of memory adding local-zone");
 		}
 	}
+                 | VAR_LOCAL_ZONE STRING_ARG STRING_ARG STRING_ARG STRING_ARG STRING_ARG
+    {
+        OUTYY(("P(server_local_zone: %s %s %s %s %s)\n", $2, $3, $4, $5, $6));
+        if (strcmp($3, "ipset") != 0) {
+			yyerror("local-zone type: expected static, deny, "
+				"refuse, redirect, transparent, "
+				"typetransparent, inform, inform_deny, "
+				"inform_redirect, always_transparent, block_a,"
+				"always_refuse, always_nxdomain, "
+				"always_nodata, always_deny, always_null, "
+				"noview, nodefault or ipset");
+			free($2);
+			free($3);
+            free($4);
+            free($5);
+            free($6);
+#ifdef USE_IPSET
+        } else if (strcmp($3, "ipset") == 0) {
+            /* Format: <domain> ipset <protocol> <set name> <ttl/no-ttl> */
+            if (strncmp($6, "ttl", 3) != 0
+                && strncmp($6, "no-ttl", 6) != 0) {
+                yyerror("local-zone with ipset expected ttl/no-ttl");
+                free($2);
+                free($3);
+                free($4);
+                free($5);
+                free($6);
+            } else {
+                size_t len = strlen($2);
+                /* Make sure to add the trailing dot.
+                 * These are str compared to domain names. */
+                if ($2[len-1] != '.') {
+                    if (!($2 = realloc($2, len+2))) {
+                        fatal_exit("out of memory adding local-zone");
+                    }
+                    $2[len] = '.';
+                    $2[len+1] = 0;
+                }
+                if(!cfg_str4list_insert(&cfg_parser->cfg->
+                    local_zones_ipset, $2, $4, $5, $6))
+                    fatal_exit("out of memory adding local-zone");
+                free($3);
+            }
+#endif
+        } else {
+            yyerror("local-zone: too many parameters");
+            free($2);
+            free($3);
+            free($4);
+            free($5);
+            free($6);
+        }
+    }
 	;
 server_local_data: VAR_LOCAL_DATA STRING_ARG
 	{
@@ -3339,22 +3328,9 @@ view_local_zone: VAR_LOCAL_ZONE STRING_ARG STRING_ARG
 				local_zones_nodefault, $2))
 				fatal_exit("out of memory adding local-zone");
 			free($3);
-#ifdef USE_IPSET
-		} else if(strcmp($3, "ipset")==0) {
-			size_t len = strlen($2);
-			/* Make sure to add the trailing dot.
-			 * These are str compared to domain names. */
-			if($2[len-1] != '.') {
-				if(!($2 = realloc($2, len+2))) {
-					fatal_exit("out of memory adding local-zone");
-				}
-				$2[len] = '.';
-				$2[len+1] = 0;
-			}
-			if(!cfg_strlist_insert(&cfg_parser->cfg->views->
-				local_zones_ipset, $2))
-				fatal_exit("out of memory adding local-zone");
-			free($3);
+#ifdef USE_IPSET 
+        } else if (strcmp($3, "ipset") == 0) {
+            /* Transaprent pass-through to 5-param variant */
 #endif
 		} else {
 			if(!cfg_str2list_insert(
@@ -3363,6 +3339,59 @@ view_local_zone: VAR_LOCAL_ZONE STRING_ARG STRING_ARG
 				fatal_exit("out of memory adding local-zone");
 		}
 	}
+                 | VAR_LOCAL_ZONE STRING_ARG STRING_ARG STRING_ARG STRING_ARG STRING_ARG
+    {
+        OUTYY(("P(server_local_zone: %s %s %s %s %s)\n", $2, $3, $4, $5, $6));
+        if (strcmp($3, "ipset") != 0) {
+			yyerror("local-zone type: expected static, deny, "
+				"refuse, redirect, transparent, "
+				"typetransparent, inform, inform_deny, "
+				"inform_redirect, always_transparent, "
+				"always_refuse, always_nxdomain, "
+				"always_nodata, always_deny, always_null, "
+				"noview, nodefault or ipset");
+			free($2);
+			free($3);
+            free($4);
+            free($5);
+            free($6);
+#ifdef USE_IPSET
+        } else if (strcmp($3, "ipset") == 0) {
+            /* Format: <domain> ipset <protocol> <table> <set name> <ttl/no-ttl> */
+            if (strncmp($6, "ttl", 3) != 0
+                || strncmp($6, "no-ttl", 6) != 0) {
+                yyerror("local-zone with ipset expected ttl/no-ttl");
+                free($2);
+                free($3);
+                free($4);
+                free($5);
+                free($6);
+            } else {
+                size_t len = strlen($2);
+                /* Make sure to add the trailing dot.
+                 * These are str compared to domain names. */
+                if ($2[len-1] != '.') {
+                    if (!($2 = realloc($2, len+2))) {
+                        fatal_exit("out of memory adding local-zone");
+                    }
+                    $2[len] = '.';
+                    $2[len+1] = 0;
+                }
+                if(!cfg_str4list_insert(&cfg_parser->cfg->views->
+                    local_zones_ipset, $2, $4, $5, $6))
+                    fatal_exit("out of memory adding local-zone");
+                free($3);
+            }
+#endif
+        } else {
+            yyerror("local-zone: too many parameters");
+            free($2);
+            free($3);
+            free($4);
+            free($5);
+            free($6);
+        }
+    }
 	;
 view_response_ip: VAR_RESPONSE_IP STRING_ARG STRING_ARG
 	{
@@ -3870,8 +3899,7 @@ contents_cachedb: contents_cachedb content_cachedb
 content_cachedb: cachedb_backend_name | cachedb_secret_seed |
 	redis_server_host | redis_server_port | redis_timeout |
 	redis_expire_records | redis_server_path | redis_server_password |
-	cachedb_no_store | redis_logical_db | cachedb_check_when_serve_expired |
-	redis_command_timeout | redis_connect_timeout
+	cachedb_no_store | redis_logical_db | cachedb_check_when_serve_expired
 	;
 cachedb_backend_name: VAR_CACHEDB_BACKEND STRING_ARG
 	{
@@ -3987,32 +4015,6 @@ redis_timeout: VAR_CACHEDB_REDISTIMEOUT STRING_ARG
 		free($2);
 	}
 	;
-redis_command_timeout: VAR_CACHEDB_REDISCOMMANDTIMEOUT STRING_ARG
-	{
-	#if defined(USE_CACHEDB) && defined(USE_REDIS)
-		OUTYY(("P(redis_command_timeout:%s)\n", $2));
-		if(atoi($2) == 0 && strcmp($2, "0") != 0)
-			yyerror("redis command timeout value expected");
-		else cfg_parser->cfg->redis_command_timeout = atoi($2);
-	#else
-		OUTYY(("P(Compiled without cachedb or redis, ignoring)\n"));
-	#endif
-		free($2);
-	}
-	;
-redis_connect_timeout: VAR_CACHEDB_REDISCONNECTTIMEOUT STRING_ARG
-	{
-	#if defined(USE_CACHEDB) && defined(USE_REDIS)
-		OUTYY(("P(redis_connect_timeout:%s)\n", $2));
-		if(atoi($2) == 0 && strcmp($2, "0") != 0)
-			yyerror("redis connect timeout value expected");
-		else cfg_parser->cfg->redis_connect_timeout = atoi($2);
-	#else
-		OUTYY(("P(Compiled without cachedb or redis, ignoring)\n"));
-	#endif
-		free($2);
-	}
-	;
 redis_expire_records: VAR_CACHEDB_REDISEXPIRERECORDS STRING_ARG
 	{
 	#if defined(USE_CACHEDB) && defined(USE_REDIS)
@@ -4082,73 +4084,6 @@ server_cookie_secret_file: VAR_COOKIE_SECRET_FILE STRING_ARG
 		OUTYY(("P(cookie_secret_file:%s)\n", $2));
 		free(cfg_parser->cfg->cookie_secret_file);
 		cfg_parser->cfg->cookie_secret_file = $2;
-	}
-	;
-server_iter_scrub_ns: VAR_ITER_SCRUB_NS STRING_ARG
-	{
-		OUTYY(("P(server_iter_scrub_ns:%s)\n", $2));
-		if(atoi($2) == 0 && strcmp($2, "0") != 0)
-			yyerror("number expected");
-		else cfg_parser->cfg->iter_scrub_ns = atoi($2);
-		free($2);
-	}
-	;
-server_iter_scrub_cname: VAR_ITER_SCRUB_CNAME STRING_ARG
-	{
-		OUTYY(("P(server_iter_scrub_cname:%s)\n", $2));
-		if(atoi($2) == 0 && strcmp($2, "0") != 0)
-			yyerror("number expected");
-		else cfg_parser->cfg->iter_scrub_cname = atoi($2);
-		free($2);
-	}
-	;
-server_max_global_quota: VAR_MAX_GLOBAL_QUOTA STRING_ARG
-	{
-		OUTYY(("P(server_max_global_quota:%s)\n", $2));
-		if(atoi($2) == 0 && strcmp($2, "0") != 0)
-			yyerror("number expected");
-		else cfg_parser->cfg->max_global_quota = atoi($2);
-		free($2);
-	}
-	;
-ipsetstart: VAR_IPSET
-	{
-		OUTYY(("\nP(ipset:)\n"));
-		cfg_parser->started_toplevel = 1;
-	}
-	;
-contents_ipset: contents_ipset content_ipset
-	| ;
-content_ipset: ipset_name_v4 | ipset_name_v6
-	;
-ipset_name_v4: VAR_IPSET_NAME_V4 STRING_ARG
-	{
-	#ifdef USE_IPSET
-		OUTYY(("P(name-v4:%s)\n", $2));
-		if(cfg_parser->cfg->ipset_name_v4)
-			yyerror("ipset name v4 override, there must be one "
-				"name for ip v4");
-		free(cfg_parser->cfg->ipset_name_v4);
-		cfg_parser->cfg->ipset_name_v4 = $2;
-	#else
-		OUTYY(("P(Compiled without ipset, ignoring)\n"));
-		free($2);
-	#endif
-	}
-	;
-ipset_name_v6: VAR_IPSET_NAME_V6 STRING_ARG
-	{
-	#ifdef USE_IPSET
-		OUTYY(("P(name-v6:%s)\n", $2));
-		if(cfg_parser->cfg->ipset_name_v6)
-			yyerror("ipset name v6 override, there must be one "
-				"name for ip v6");
-		free(cfg_parser->cfg->ipset_name_v6);
-		cfg_parser->cfg->ipset_name_v6 = $2;
-	#else
-		OUTYY(("P(Compiled without ipset, ignoring)\n"));
-		free($2);
-	#endif
 	}
 	;
 %%

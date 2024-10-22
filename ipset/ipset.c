@@ -16,6 +16,9 @@
 #include "sldns/sbuffer.h"
 #include "sldns/wire2str.h"
 #include "sldns/parseutil.h"
+#include <string.h>
+#include <errno.h>
+#include <time.h>
 
 #ifdef HAVE_NET_PFVAR_H
 #include <fcntl.h>
@@ -139,10 +142,15 @@ static int add_to_ipset(filter_dev dev, const char *setname, const void *ipaddr,
 	return 0;
 }
 #else
-static int add_to_ipset(filter_dev dev, const char *setname, const void *ipaddr, int af) {
+static int add_to_ipset(filter_dev dev, const char *setname, const void *ipaddr,
+                        int af, time_t ttl) {
+    int result;
+    int seq;
+    unsigned int port_id;
 	struct nlmsghdr *nlh;
 	struct nfgenmsg *nfg;
-	struct nlattr *nested[2];
+	struct nlattr *nested[3];
+    char* recv_buffer;
 	static char buffer[BUFF_LEN];
 
 	if (strlen(setname) >= IPSET_MAXNAMELEN) {
@@ -157,6 +165,7 @@ static int add_to_ipset(filter_dev dev, const char *setname, const void *ipaddr,
 	nlh = mnl_nlmsg_put_header(buffer);
 	nlh->nlmsg_type = IPSET_CMD_ADD | (NFNL_SUBSYS_IPSET << 8);
 	nlh->nlmsg_flags = NLM_F_REQUEST|NLM_F_ACK|NLM_F_EXCL;
+    nlh->nlmsg_seq = seq = time(NULL);
 
 	nfg = mnl_nlmsg_put_extra_header(nlh, sizeof(struct nfgenmsg));
 	nfg->nfgen_family = af;
@@ -170,11 +179,40 @@ static int add_to_ipset(filter_dev dev, const char *setname, const void *ipaddr,
 	mnl_attr_put(nlh, (af == AF_INET ? IPSET_ATTR_IPADDR_IPV4 : IPSET_ATTR_IPADDR_IPV6)
 			| NLA_F_NET_BYTEORDER, (af == AF_INET ? sizeof(struct in_addr) : sizeof(struct in6_addr)), ipaddr);
 	mnl_attr_nest_end(nlh, nested[1]);
+    if (ttl >= 0) {
+        nested[2] = mnl_attr_nest_start(nlh, IPSET_ATTR_TIMEOUT);
+        mnl_attr_put(nlh, NLA_F_NET_BYTEORDER, sizeof(time_t), &ttl);
+        mnl_attr_nest_end(nlh, nested[2]);
+    }
 	mnl_attr_nest_end(nlh, nested[0]);
 
-	if (mnl_socket_sendto(dev, nlh, nlh->nlmsg_len) < 0) {
+	if ((result = mnl_socket_sendto(dev, nlh, nlh->nlmsg_len)) < 0) {
+        log_err("ipset: failed to send netlink packet: %s", strerror(errno));
 		return -1;
 	}
+    port_id = mnl_socket_get_portid(dev);
+    recv_buffer = (char*) calloc(MNL_SOCKET_BUFFER_SIZE, sizeof(char));
+    if (!recv_buffer) {
+        log_err("ipset: failed to allocate receive buffer");
+        return -1;
+    }
+    do {
+        result = mnl_socket_recvfrom(dev, recv_buffer, MNL_SOCKET_BUFFER_SIZE);
+        if (result < 0) {
+            log_err("ipset: failed to ACK netlink request: %s", strerror(errno));
+            free(recv_buffer);
+            return -1;
+        }
+        result = mnl_cb_run(recv_buffer, result, seq, port_id, NULL, NULL);
+        if (result < 0) {
+            log_err("ipset: netlink response had error: %s", strerror(errno));
+            free(recv_buffer);
+            return -1;
+        } else if (result == 0) {
+            break;
+        }
+    } while (result > 0);
+    free(recv_buffer);
 	return 0;
 }
 #endif
@@ -182,30 +220,48 @@ static int add_to_ipset(filter_dev dev, const char *setname, const void *ipaddr,
 static void
 ipset_add_rrset_data(struct ipset_env *ie,
 	struct packed_rrset_data *d, const char* setname, int af,
-	const char* dname)
+	const char* dname, bool set_ttl)
 {
 	int ret;
 	size_t j, rr_len, rd_len;
+    time_t rr_ttl;
 	uint8_t *rr_data;
 
 	/* to d->count, not d->rrsig_count, because we do not want to add the RRSIGs, only the addresses */
 	for (j = 0; j < d->count; j++) {
 		rr_len = d->rr_len[j];
 		rr_data = d->rr_data[j];
+        rr_ttl = d->rr_ttl[j];
 
 		rd_len = sldns_read_uint16(rr_data);
 		if(af == AF_INET && rd_len != INET_SIZE)
 			continue;
 		if(af == AF_INET6 && rd_len != INET6_SIZE)
 			continue;
+        if (!set_ttl) {
+            rr_ttl = -1;
+        }
 		if (rr_len - 2 >= rd_len) {
 			if(verbosity >= VERB_QUERY) {
 				char ip[128];
 				if(inet_ntop(af, rr_data+2, ip, (socklen_t)sizeof(ip)) == 0)
 					snprintf(ip, sizeof(ip), "(inet_ntop_error)");
-				verbose(VERB_QUERY, "ipset: add %s to %s for %s", ip, setname, dname);
+                // TODO: Remove the table argument from the config, it's not needed
+                if (set_ttl) {
+				    verbose(
+                        VERB_QUERY,
+                        "ipset: add %s to %s for %s with ttl %lds",
+                        ip, setname, dname, rr_ttl
+                    );
+                } else {
+				    verbose(
+                        VERB_QUERY,
+                        "ipset: add %s to %s for %s",
+                        ip, setname, dname
+                    );
+                }
 			}
-			ret = add_to_ipset((filter_dev)ie->dev, setname, rr_data + 2, af);
+			ret = add_to_ipset((filter_dev)ie->dev, setname, rr_data + 2, af, rr_ttl);
 			if (ret < 0) {
 				log_err("ipset: could not add %s into %s", dname, setname);
 
@@ -224,13 +280,13 @@ ipset_add_rrset_data(struct ipset_env *ie,
 static int
 ipset_check_zones_for_rrset(struct module_env *env, struct ipset_env *ie,
 	struct ub_packed_rrset_key *rrset, const char *qname, int qlen,
-	const char *setname, int af)
+	int af)
 {
 	static char dname[BUFF_LEN];
 	const char *ds, *qs;
 	int dlen, plen;
 
-	struct config_strlist *p;
+	struct config_str4list *p;
 	struct packed_rrset_data *d;
 
 	dlen = sldns_wire2str_dname_buf(rrset->rk.dname, rrset->rk.dname_len, dname, BUFF_LEN);
@@ -252,19 +308,43 @@ ipset_check_zones_for_rrset(struct module_env *env, struct ipset_env *ie,
 		if (p->str[plen - 1] == '.') {
 			plen--;
 		}
-
+        int set_af;
+        if (strncasecmp(p->str2, "ipv4", 4) == 0) {
+            set_af = AF_INET;
+        } else if (strncasecmp(p->str2, "ipv6", 4) == 0) {
+            set_af = AF_INET6;
+        } else {
+            continue;
+        }
 		if (dlen == plen || (dlen > plen && dname[dlen - plen - 1] == '.' )) {
 			ds = dname + (dlen - plen);
 		}
 		if (qlen == plen || (qlen > plen && qname[qlen - plen - 1] == '.' )) {
 			qs = qname + (qlen - plen);
 		}
-		if ((ds && strncasecmp(p->str, ds, plen) == 0)
-			|| (qs && strncasecmp(p->str, qs, plen) == 0)) {
+		if (((ds && strncasecmp(p->str, ds, plen) == 0)
+			|| (qs && strncasecmp(p->str, qs, plen) == 0))
+            && set_af == af) {
+            verbose(
+                VERB_QUERY,
+                "ipset: match ((%s && %s == %s) || (%s && %s == %s)) && %d == %d",
+                ds ? "true" : "false", p->str, ds,
+                qs ? "true" : "false", p->str, qs,
+                set_af, af
+            );
 			d = (struct packed_rrset_data*)rrset->entry.data;
-			ipset_add_rrset_data(ie, d, setname, af, dname);
+            bool set_ttl = strncasecmp(p->str4, "ttl", 3) == 0;
+			ipset_add_rrset_data(ie, d, p->str3, af, dname, set_ttl);
 			break;
-		}
+		} else {
+            verbose(
+                VERB_QUERY,
+                "ipset: no match ((%s && %s == %s) || (%s && %s == %s)) && %d == %d",
+                ds ? "true" : "false", p->str, ds,
+                qs ? "true" : "false", p->str, qs,
+                set_af, af
+            );
+        }
 	}
 	return 0;
 }
@@ -299,23 +379,16 @@ static int ipset_update(struct module_env *env, struct dns_msg *return_msg,
 	}
 
 	for(i = 0; i < return_msg->rep->rrset_count; i++) {
-		setname = NULL;
 		rrset = return_msg->rep->rrsets[i];
-		if(ntohs(rrset->rk.type) == LDNS_RR_TYPE_A &&
-			ie->v4_enabled == 1) {
+		if(ntohs(rrset->rk.type) == LDNS_RR_TYPE_A) {
 			af = AF_INET;
-			setname = ie->name_v4;
-		} else if(ntohs(rrset->rk.type) == LDNS_RR_TYPE_AAAA &&
-			ie->v6_enabled == 1) {
+		} else if(ntohs(rrset->rk.type) == LDNS_RR_TYPE_AAAA) {
 			af = AF_INET6;
-			setname = ie->name_v6;
 		}
 
-		if (setname) {
-			if(ipset_check_zones_for_rrset(env, ie, rrset, qname,
-				qlen, setname, af) == -1)
-				return -1;
-		}
+        if(ipset_check_zones_for_rrset(env, ie, rrset, qname,
+            qlen, af) == -1)
+            return -1;
 	}
 
 	return 0;
@@ -368,19 +441,6 @@ void ipset_destartup(struct module_env* env, int id) {
 }
 
 int ipset_init(struct module_env* env, int id) {
-	struct ipset_env *ipset_env = env->modinfo[id];
-
-	ipset_env->name_v4 = env->cfg->ipset_name_v4;
-	ipset_env->name_v6 = env->cfg->ipset_name_v6;
-
-	ipset_env->v4_enabled = !ipset_env->name_v4 || (strlen(ipset_env->name_v4) == 0) ? 0 : 1;
-	ipset_env->v6_enabled = !ipset_env->name_v6 || (strlen(ipset_env->name_v6) == 0) ? 0 : 1;
-
-	if ((ipset_env->v4_enabled < 1) && (ipset_env->v6_enabled < 1)) {
-		log_err("ipset: set name no configuration?");
-		return 0;
-	}
-
 	return 1;
 }
 

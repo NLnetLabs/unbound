@@ -32,13 +32,18 @@ void ub_c_error(const char *message);
 /** avoid warning in about fwrite return value */
 #define ECHO ub_c_error_msg("syntax error at text: %s", yytext)
 
-/** A parser variable, this is a statement in the config file which is
- * of the form variable: value1 value2 ...  nargs is the number of values. */
-#define YDVAR(nargs, var) \
-	num_args=(nargs); \
-	LEXOUT(("v(%s%d) ", yytext, num_args)); \
+/* A parser variable of variable argument count in the range [min, max] in
+ * the config of the form: value1 value 2 ... */
+#define YDVARMM(nargs_min, nargs_max, var) \
+	num_args=(nargs_min); \
+	num_args_max=(nargs_max); \
+	LEXOUT(("v(%s%d-%d) ", yytext, num_args, num_args_max)); \
 	if(num_args > 0) { BEGIN(val); } \
 	return (var);
+
+/** A parser variable, this is a statement in the config file which is
+ * of the form variable: value1 value2 ...  nargs is the number of values. */
+#define YDVAR(nargs, var) YDVARMM(nargs, nargs, var)
 
 struct inc_state {
 	char* filename;
@@ -51,6 +56,7 @@ static struct inc_state* config_include_stack = NULL;
 static int inc_depth = 0;
 static int inc_prev = 0;
 static int num_args = 0;
+static int num_args_max = 0;
 static int inc_toplevel = 0;
 
 void init_cfg_parse(void)
@@ -184,6 +190,22 @@ static void config_end_include(void)
         }
 #endif
 
+#define ENSURE_VARARG_CONSISTENCY \
+    if (num_args == 0 && num_args_max > 0) { \
+        num_args = num_args_max; \
+    } \
+    num_args_max--; \
+	if(--num_args == 0) { \
+        if (num_args_max > 0) { \
+            LEXOUT(("ARGC(0,%d) ",num_args_max)); \
+            BEGIN(val); \
+        } else { \
+            BEGIN(INITIAL); \
+        } \
+    } else { \
+        BEGIN(val); \
+    }
+
 %}
 %option noinput
 %option nounput
@@ -269,8 +291,6 @@ http-query-buffer-size{COLON}	{ YDVAR(1, VAR_HTTP_QUERY_BUFFER_SIZE) }
 http-response-buffer-size{COLON} { YDVAR(1, VAR_HTTP_RESPONSE_BUFFER_SIZE) }
 http-nodelay{COLON}		{ YDVAR(1, VAR_HTTP_NODELAY) }
 http-notls-downstream{COLON}	{ YDVAR(1, VAR_HTTP_NOTLS_DOWNSTREAM) }
-quic-port{COLON}		{ YDVAR(1, VAR_QUIC_PORT) }
-quic-size{COLON}		{ YDVAR(1, VAR_QUIC_SIZE) }
 use-systemd{COLON}		{ YDVAR(1, VAR_USE_SYSTEMD) }
 do-daemonize{COLON}		{ YDVAR(1, VAR_DO_DAEMONIZE) }
 interface{COLON}		{ YDVAR(1, VAR_INTERFACE) }
@@ -317,7 +337,6 @@ target-fetch-policy{COLON}	{ YDVAR(1, VAR_TARGET_FETCH_POLICY) }
 harden-short-bufsize{COLON}	{ YDVAR(1, VAR_HARDEN_SHORT_BUFSIZE) }
 harden-large-queries{COLON}	{ YDVAR(1, VAR_HARDEN_LARGE_QUERIES) }
 harden-glue{COLON}		{ YDVAR(1, VAR_HARDEN_GLUE) }
-harden-unverified-glue{COLON}	{ YDVAR(1, VAR_HARDEN_UNVERIFIED_GLUE) }
 harden-dnssec-stripped{COLON}	{ YDVAR(1, VAR_HARDEN_DNSSEC_STRIPPED) }
 harden-below-nxdomain{COLON}	{ YDVAR(1, VAR_HARDEN_BELOW_NXDOMAIN) }
 harden-referral-path{COLON}	{ YDVAR(1, VAR_HARDEN_REFERRAL_PATH) }
@@ -433,14 +452,13 @@ permit-small-holddown{COLON}	{ YDVAR(1, VAR_PERMIT_SMALL_HOLDDOWN) }
 use-syslog{COLON}		{ YDVAR(1, VAR_USE_SYSLOG) }
 log-identity{COLON}		{ YDVAR(1, VAR_LOG_IDENTITY) }
 log-time-ascii{COLON}		{ YDVAR(1, VAR_LOG_TIME_ASCII) }
-log-time-iso{COLON}		{ YDVAR(1, VAR_LOG_TIME_ISO) }
 log-queries{COLON}		{ YDVAR(1, VAR_LOG_QUERIES) }
 log-replies{COLON}		{ YDVAR(1, VAR_LOG_REPLIES) }
 log-tag-queryreply{COLON}	{ YDVAR(1, VAR_LOG_TAG_QUERYREPLY) }
 log-local-actions{COLON}       { YDVAR(1, VAR_LOG_LOCAL_ACTIONS) }
 log-servfail{COLON}		{ YDVAR(1, VAR_LOG_SERVFAIL) }
 log-destaddr{COLON}		{ YDVAR(1, VAR_LOG_DESTADDR) }
-local-zone{COLON}		{ YDVAR(2, VAR_LOCAL_ZONE) }
+local-zone{COLON}		{ YDVARMM(2, 5, VAR_LOCAL_ZONE) }
 local-data{COLON}		{ YDVAR(1, VAR_LOCAL_DATA) }
 local-data-ptr{COLON}		{ YDVAR(1, VAR_LOCAL_DATA_PTR) }
 unblock-lan-zones{COLON}	{ YDVAR(1, VAR_UNBLOCK_LAN_ZONES) }
@@ -517,7 +535,7 @@ dnstap-log-forwarder-query-messages{COLON}	{
 		YDVAR(1, VAR_DNSTAP_LOG_FORWARDER_QUERY_MESSAGES) }
 dnstap-log-forwarder-response-messages{COLON}	{
 		YDVAR(1, VAR_DNSTAP_LOG_FORWARDER_RESPONSE_MESSAGES) }
-dnstap-sample-rate{COLON}	{ YDVAR(1, VAR_DNSTAP_SAMPLE_RATE) }
+dnstap-sample-rate		{ YDVAR(1, VAR_DNSTAP_SAMPLE_RATE) }
 disable-dnssec-lame-check{COLON} { YDVAR(1, VAR_DISABLE_DNSSEC_LAME_CHECK) }
 ip-ratelimit{COLON}		{ YDVAR(1, VAR_IP_RATELIMIT) }
 ip-ratelimit-cookie{COLON}	{ YDVAR(1, VAR_IP_RATELIMIT_COOKIE) }
@@ -577,13 +595,8 @@ redis-server-port{COLON}	{ YDVAR(1, VAR_CACHEDB_REDISPORT) }
 redis-server-path{COLON}	{ YDVAR(1, VAR_CACHEDB_REDISPATH) }
 redis-server-password{COLON}	{ YDVAR(1, VAR_CACHEDB_REDISPASSWORD) }
 redis-timeout{COLON}		{ YDVAR(1, VAR_CACHEDB_REDISTIMEOUT) }
-redis-command-timeout{COLON}	{ YDVAR(1, VAR_CACHEDB_REDISCOMMANDTIMEOUT) }
-redis-connect-timeout{COLON}	{ YDVAR(1, VAR_CACHEDB_REDISCONNECTTIMEOUT) }
 redis-expire-records{COLON}	{ YDVAR(1, VAR_CACHEDB_REDISEXPIRERECORDS) }
 redis-logical-db{COLON}		{ YDVAR(1, VAR_CACHEDB_REDISLOGICALDB) }
-ipset{COLON}			{ YDVAR(0, VAR_IPSET) }
-name-v4{COLON}			{ YDVAR(1, VAR_IPSET_NAME_V4) }
-name-v6{COLON}			{ YDVAR(1, VAR_IPSET_NAME_V6) }
 udp-upstream-without-downstream{COLON} { YDVAR(1, VAR_UDP_UPSTREAM_WITHOUT_DOWNSTREAM) }
 tcp-connection-limit{COLON}	{ YDVAR(2, VAR_TCP_CONNECTION_LIMIT) }
 answer-cookie{COLON}		{ YDVAR(1, VAR_ANSWER_COOKIE ) }
@@ -594,26 +607,34 @@ edns-client-string-opcode{COLON} { YDVAR(1, VAR_EDNS_CLIENT_STRING_OPCODE) }
 nsid{COLON}			{ YDVAR(1, VAR_NSID ) }
 ede{COLON}			{ YDVAR(1, VAR_EDE ) }
 proxy-protocol-port{COLON}	{ YDVAR(1, VAR_PROXY_PROTOCOL_PORT) }
-iter-scrub-ns{COLON}		{ YDVAR(1, VAR_ITER_SCRUB_NS) }
-iter-scrub-cname{COLON}		{ YDVAR(1, VAR_ITER_SCRUB_CNAME) }
-max-global-quota{COLON}		{ YDVAR(1, VAR_MAX_GLOBAL_QUOTA) }
-<INITIAL,val>{NEWLINE}		{ LEXOUT(("NL\n")); cfg_parser->line++; }
+<INITIAL,val>{NEWLINE}		{
+    LEXOUT(("NL(%d,%d)\n", num_args, num_args_max));
+    if (num_args == 0 && num_args_max > 0) {
+        /* Early match a set of tokens between the min and max */
+        num_args = 0;
+        num_args_max = 0;
+        /* Return newline characters to stream for matching */
+        /* yyless(0);*/
+        LEXOUT(("TOKENS: %s\n", yytext));
+        BEGIN(INITIAL);
+    } else {
+        cfg_parser->line++;
+    }
+}
 
 	/* Quoted strings. Strip leading and ending quotes */
 <val>\"			{ BEGIN(quotedstring); LEXOUT(("QS ")); }
 <quotedstring><<EOF>>   {
-        yyerror("EOF inside quoted string");
-	if(--num_args == 0) { BEGIN(INITIAL); }
-	else		    { BEGIN(val); }
+    yyerror("EOF inside quoted string");
+    ENSURE_VARARG_CONSISTENCY
 }
 <quotedstring>{DQANY}*  { LEXOUT(("STR(%s) ", yytext)); yymore(); }
 <quotedstring>{NEWLINE} { yyerror("newline inside quoted string, no end \"");
 			  cfg_parser->line++; BEGIN(INITIAL); }
 <quotedstring>\" {
-        LEXOUT(("QE "));
-	if(--num_args == 0) { BEGIN(INITIAL); }
-	else		    { BEGIN(val); }
-        yytext[yyleng - 1] = '\0';
+    LEXOUT(("QE "));
+    ENSURE_VARARG_CONSISTENCY
+    yytext[yyleng - 1] = '\0';
 	yylval.str = strdup(yytext);
 	if(!yylval.str)
 		yyerror("out of memory");
@@ -623,18 +644,16 @@ max-global-quota{COLON}		{ YDVAR(1, VAR_MAX_GLOBAL_QUOTA) }
 	/* Single Quoted strings. Strip leading and ending quotes */
 <val>\'			{ BEGIN(singlequotedstr); LEXOUT(("SQS ")); }
 <singlequotedstr><<EOF>>   {
-        yyerror("EOF inside quoted string");
-	if(--num_args == 0) { BEGIN(INITIAL); }
-	else		    { BEGIN(val); }
+    yyerror("EOF inside quoted string");
+    ENSURE_VARARG_CONSISTENCY
 }
 <singlequotedstr>{SQANY}*  { LEXOUT(("STR(%s) ", yytext)); yymore(); }
 <singlequotedstr>{NEWLINE} { yyerror("newline inside quoted string, no end '");
 			     cfg_parser->line++; BEGIN(INITIAL); }
 <singlequotedstr>\' {
-        LEXOUT(("SQE "));
-	if(--num_args == 0) { BEGIN(INITIAL); }
-	else		    { BEGIN(val); }
-        yytext[yyleng - 1] = '\0';
+    LEXOUT(("SQE "));
+    ENSURE_VARARG_CONSISTENCY
+    yytext[yyleng - 1] = '\0';
 	yylval.str = strdup(yytext);
 	if(!yylval.str)
 		yyerror("out of memory");
@@ -716,9 +735,12 @@ max-global-quota{COLON}		{ YDVAR(1, VAR_MAX_GLOBAL_QUOTA) }
 	return (VAR_FORCE_TOPLEVEL);
 }
 
-<val>{UNQUOTEDLETTER}*	{ LEXOUT(("unquotedstr(%s) ", yytext));
-			if(--num_args == 0) { BEGIN(INITIAL); }
-			yylval.str = strdup(yytext); return STRING_ARG; }
+<val>{UNQUOTEDLETTER}*	{
+    LEXOUT(("unquotedstr(%s) ", yytext));
+    ENSURE_VARARG_CONSISTENCY
+    yylval.str = strdup(yytext);
+    return STRING_ARG;
+}
 
 {UNQUOTEDLETTER_NOCOLON}*	{
 	ub_c_error_msg("unknown keyword '%s'", yytext);

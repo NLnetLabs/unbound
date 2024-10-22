@@ -48,6 +48,7 @@ struct config_view;
 struct config_strlist;
 struct config_str2list;
 struct config_str3list;
+struct config_str4list;
 struct config_strbytelist;
 struct module_qstate;
 struct sock_list;
@@ -160,11 +161,6 @@ struct config_file {
 	int http_nodelay;
 	/** Disable TLS for http sockets downstream */
 	int http_notls_downstream;
-
-	/** port on which to provide DNS over QUIC service */
-	int quic_port;
-	/** size of the quic data, max bytes */
-	size_t quic_size;
 
 	/** outgoing port range number of ports (per thread) */
 	int outgoing_num_ports;
@@ -293,8 +289,6 @@ struct config_file {
 	int harden_large_queries;
 	/** harden against spoofed glue (out of zone data) */
 	int harden_glue;
-	/** harden against unverified glue */
-	int harden_unverified_glue;
 	/** harden against receiving no DNSSEC data for trust anchor */
 	int harden_dnssec_stripped;
 	/** harden against queries that fall under known nxdomain names */
@@ -346,8 +340,6 @@ struct config_file {
 	int use_syslog;
 	/** log timestamp in ascii UTC */
 	int log_time_ascii;
-	/** log timestamp in ISO8601 format */
-	int log_time_iso;
 	/** log queries with one line per query */
 	int log_queries;
 	/** log replies with one line per reply */
@@ -465,7 +457,7 @@ struct config_file {
 	struct config_strlist* local_zones_nodefault;
 #ifdef USE_IPSET
 	/** local zones ipset list */
-	struct config_strlist* local_zones_ipset;
+    struct config_str4list* local_zones_ipset;
 #endif
 	/** do not add any default local zone */
 	int local_zones_disable_default;
@@ -746,10 +738,6 @@ struct config_file {
 	char* redis_server_password;
 	/** timeout (in ms) for communication with the redis server */
 	int redis_timeout;
-	/** timeout (in ms) for redis commands */
-	int redis_command_timeout;
-	/** timeout (in ms) for redis connection set up */
-	int redis_connect_timeout;
 	/** set timeout on redis records based on DNS response ttl */
 	int redis_expire_records;
 	/** set the redis logical database upon connection */
@@ -765,20 +753,8 @@ struct config_file {
 	size_t  cookie_secret_len;
 	/** path to cookie secret store */
 	char* cookie_secret_file;
-
-	/* ipset module */
-#ifdef USE_IPSET
-	char* ipset_name_v4;
-	char* ipset_name_v6;
-#endif
 	/** respond with Extended DNS Errors (RFC8914) */
 	int ede;
-	/** limit on NS RRs in RRset for the iterator scrubber. */
-	size_t iter_scrub_ns;
-	/** limit on CNAME, DNAME RRs in answer for the iterator scrubber. */
-	int iter_scrub_cname;
-	/** limit on upstream queries for an incoming query and subqueries. */
-	int max_global_quota;
 };
 
 /** from cfg username, after daemonize setup performed */
@@ -880,7 +856,7 @@ struct config_view {
 	struct config_strlist* local_zones_nodefault;
 #ifdef USE_IPSET
 	/** local zones ipset list */
-	struct config_strlist* local_zones_ipset;
+	struct config_str4list* local_zones_ipset;
 #endif
 	/** Fallback to global local_zones when there is no match in the view
 	 * view specific tree. 1 for yes, 0 for no */
@@ -925,6 +901,21 @@ struct config_str3list {
 	char* str2;
 	/** third string */
 	char* str3;
+};
+
+struct config_str4list {
+	/** next item in list */
+	struct config_str4list* next;
+	/** first string */
+	char* str;
+	/** second string */
+	char* str2;
+	/** third string */
+	char* str3;
+    /** fourth string */
+    char* str4;
+    /** fifth string */
+    char* str5;
 };
 
 
@@ -1105,6 +1096,18 @@ int cfg_str2list_insert(struct config_str2list** head, char* item, char* i2);
  */
 int cfg_str3list_insert(struct config_str3list** head, char* item, char* i2,
 	char* i3);
+
+/**
+ * Insert string into str4list.
+ * @param head: pointer to str4list head variable.
+ * @param item: new item. malloced by caller. If NULL the insertion fails.
+ * @param i2: 2nd string, malloced by caller. If NULL the insertion fails.
+ * @param i3: 3rd string, malloced by caller. If NULL the insertion fails.
+ * @param i4: 4th string, malloced by caller. If NULL the insertion fails.
+ * @return: true on success.
+ */
+int cfg_str4list_insert(struct config_str4list** head, char* item, char* i2,
+	char* i3, char* i4);
 
 /**
  * Insert string into strbytelist.
@@ -1411,10 +1414,6 @@ int if_is_pp2(const char* ifname, const char* port,
 
 /** see if interface is DNSCRYPT, its port number == the dnscrypt port number */
 int if_is_dnscrypt(const char* ifname, const char* port, int dnscrypt_port);
-
-/** see if interface is quic, its port number == the quic port number */
-int if_is_quic(const char* ifname, const char* port, int quic_port);
-
 #ifdef USE_LINUX_IP_LOCAL_PORT_RANGE
 #define LINUX_IP_LOCAL_PORT_RANGE_PATH "/proc/sys/net/ipv4/ip_local_port_range"
 #endif
