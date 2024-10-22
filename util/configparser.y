@@ -4164,6 +4164,33 @@ server_cookie_secret_file: VAR_COOKIE_SECRET_FILE STRING_ARG
 		cfg_parser->cfg->cookie_secret_file = $2;
 	}
 	;
+server_iter_scrub_ns: VAR_ITER_SCRUB_NS STRING_ARG
+	{
+		OUTYY(("P(server_iter_scrub_ns:%s)\n", $2));
+		if(atoi($2) == 0 && strcmp($2, "0") != 0)
+			yyerror("number expected");
+		else cfg_parser->cfg->iter_scrub_ns = atoi($2);
+		free($2);
+	}
+	;
+server_iter_scrub_cname: VAR_ITER_SCRUB_CNAME STRING_ARG
+	{
+		OUTYY(("P(server_iter_scrub_cname:%s)\n", $2));
+		if(atoi($2) == 0 && strcmp($2, "0") != 0)
+			yyerror("number expected");
+		else cfg_parser->cfg->iter_scrub_cname = atoi($2);
+		free($2);
+	}
+	;
+server_max_global_quota: VAR_MAX_GLOBAL_QUOTA STRING_ARG
+	{
+		OUTYY(("P(server_max_global_quota:%s)\n", $2));
+		if(atoi($2) == 0 && strcmp($2, "0") != 0)
+			yyerror("number expected");
+		else cfg_parser->cfg->max_global_quota = atoi($2);
+		free($2);
+	}
+	;
 %%
 
 /* parse helper routines could be here */
