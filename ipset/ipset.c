@@ -86,7 +86,8 @@ static void * open_filter() {
 #endif
 
 #ifdef HAVE_NET_PFVAR_H
-static int add_to_ipset(filter_dev dev, const char *setname, const void *ipaddr, int af) {
+static int add_to_ipset(filter_dev dev, const char *setname, const void *ipaddr,
+                        int af, time_t _ttl) {
 	struct pfioc_table io;
 	struct pfr_addr addr;
 	const char *p;
@@ -325,27 +326,12 @@ ipset_check_zones_for_rrset(struct module_env *env, struct ipset_env *ie,
 		if (((ds && strncasecmp(p->str, ds, plen) == 0)
 			|| (qs && strncasecmp(p->str, qs, plen) == 0))
             && set_af == af) {
-            verbose(
-                VERB_QUERY,
-                "ipset: match ((%s && %s == %s) || (%s && %s == %s)) && %d == %d",
-                ds ? "true" : "false", p->str, ds,
-                qs ? "true" : "false", p->str, qs,
-                set_af, af
-            );
 			d = (struct packed_rrset_data*)rrset->entry.data;
             bool set_ttl = strncasecmp(p->str4, "ttl", 3) == 0;
 			ipset_add_rrset_data(ie, d, p->str3, af, dname, set_ttl);
 			break;
-		} else {
-            verbose(
-                VERB_QUERY,
-                "ipset: no match ((%s && %s == %s) || (%s && %s == %s)) && %d == %d",
-                ds ? "true" : "false", p->str, ds,
-                qs ? "true" : "false", p->str, qs,
-                set_af, af
-            );
-        }
-	}
+		}
+    }
 	return 0;
 }
 
@@ -440,7 +426,7 @@ void ipset_destartup(struct module_env* env, int id) {
 	env->modinfo[id] = NULL;
 }
 
-int ipset_init(struct module_env* env, int id) {
+int ipset_init(struct module_env *ATTR_UNUSED(env), int ATTR_UNUSED(id)) {
 	return 1;
 }
 

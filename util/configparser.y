@@ -43,6 +43,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <assert.h>
+#include <stdbool.h>
 
 #include "util/configyyrename.h"
 #include "util/config_file.h"
@@ -52,11 +53,14 @@
 int ub_c_lex(void);
 void ub_c_error(const char *message);
 
+static void yywarn(const char *str);
 static void validate_respip_action(const char* action);
 static void validate_acl_action(const char* action);
 
 /* these need to be global, otherwise they cannot be used inside yacc */
 extern struct config_parser_state* cfg_parser;
+
+static bool ttl_pf_have_warned = false;
 
 #if 0
 #define OUTYY(s)  printf s /* used ONLY when debugging */
@@ -2404,7 +2408,7 @@ server_local_zone: VAR_LOCAL_ZONE STRING_ARG STRING_ARG
             free($5);
             free($6);
 #ifdef USE_IPSET
-        } else if (strcmp($3, "ipset") == 0) {
+        } else if (strncmp($3, "ipset", 5) == 0) {
             /* Format: <domain> ipset <protocol> <set name> <ttl/no-ttl> */
             if (strncmp($6, "ttl", 3) != 0
                 && strncmp($6, "no-ttl", 6) != 0) {
@@ -2415,6 +2419,15 @@ server_local_zone: VAR_LOCAL_ZONE STRING_ARG STRING_ARG
                 free($5);
                 free($6);
             } else {
+#ifdef HAVE_NET_PFVAR_H
+                if (!ttl_pf_have_warned && strncmp($6, "ttl", 3) == 0) {
+                    yywarn(
+                        "local-zone ipset: per-address TTL not supported in"
+                        "BSD packet filter tables, ignoring"
+                    );
+                    ttl_pf_have_warned = false;
+                }
+#endif
                 size_t len = strlen($2);
                 /* Make sure to add the trailing dot.
                  * These are str compared to domain names. */
@@ -3408,7 +3421,7 @@ view_local_zone: VAR_LOCAL_ZONE STRING_ARG STRING_ARG
             free($6);
 #ifdef USE_IPSET
         } else if (strcmp($3, "ipset") == 0) {
-            /* Format: <domain> ipset <protocol> <table> <set name> <ttl/no-ttl> */
+            /* Format: <domain> ipset <protocol> <set name> <ttl/no-ttl> */
             if (strncmp($6, "ttl", 3) != 0
                 || strncmp($6, "no-ttl", 6) != 0) {
                 yyerror("local-zone with ipset expected ttl/no-ttl");
@@ -3418,6 +3431,15 @@ view_local_zone: VAR_LOCAL_ZONE STRING_ARG STRING_ARG
                 free($5);
                 free($6);
             } else {
+#ifdef HAVE_NET_PFVAR_H
+                if (!ttl_pf_have_warned && strncmp($6, "ttl", 3) == 0) {
+                    yywarn(
+                        "local-zone ipset: per-address TTL not supported in"
+                        "BSD packet filter tables, ignoring"
+                    );
+                    ttl_pf_have_warned = false;
+                }
+#endif
                 size_t len = strlen($2);
                 /* Make sure to add the trailing dot.
                  * These are str compared to domain names. */
@@ -4227,4 +4249,8 @@ validate_acl_action(const char* action)
 			"refuse_non_local, allow, allow_setrd, "
 			"allow_snoop or allow_cookie as access control action");
 	}
+}
+
+static void yywarn(const char *str) {
+    fprintf(stderr, "warning: %s\n", str);
 }
