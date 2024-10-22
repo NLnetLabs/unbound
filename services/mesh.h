@@ -132,6 +132,10 @@ struct mesh_area {
 	size_t ans_nodata;
 	/** (extended stats) type of applied RPZ action */
 	size_t rpz_action[UB_STATS_RPZ_ACTION_NUM];
+	/** stats, number of queries removed due to discard-timeout */
+	size_t num_queries_discard_timeout;
+	/** stats, number of queries removed due to wait-limit */
+	size_t num_queries_wait_limit;
 
 	/** backup of query if other operations recurse and need the
 	 * network buffers */

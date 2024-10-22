@@ -281,6 +281,10 @@ server_stats_compile(struct worker* worker, struct ub_stats_info* s, int reset)
 		s->svr.rpz_action[i] += (long long)worker->env.mesh->rpz_action[i];
 	timehist_export(worker->env.mesh->histogram, s->svr.hist,
 		NUM_BUCKETS_HIST);
+	s->svr.num_queries_discard_timeout +=
+		(long long)worker->env.mesh->num_queries_discard_timeout;
+	s->svr.num_queries_wait_limit +=
+		(long long)worker->env.mesh->num_queries_wait_limit;
 	/* values from outside network */
 	s->svr.unwanted_replies = (long long)worker->back->unwanted_replies;
 	s->svr.qtcp_outgoing = (long long)worker->back->num_tcp_outgoing;
@@ -498,6 +502,10 @@ void server_stats_add(struct ub_stats_info* total, struct ub_stats_info* a)
 		total->svr.unwanted_replies += a->svr.unwanted_replies;
 		total->svr.unwanted_queries += a->svr.unwanted_queries;
 		total->svr.tcp_accept_usage += a->svr.tcp_accept_usage;
+		total->svr.num_queries_discard_timeout +=
+			a->svr.num_queries_discard_timeout;
+		total->svr.num_queries_wait_limit +=
+			a->svr.num_queries_wait_limit;
 #ifdef USE_CACHEDB
 		total->svr.num_query_cachedb += a->svr.num_query_cachedb;
 #endif
