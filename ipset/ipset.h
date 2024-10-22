@@ -19,14 +19,14 @@
  * To use the IPset module, install the libmnl-dev (or libmnl-devel) package
  * and configure with --enable-ipset.  And compile.  Then enable the ipset
  * module in unbound.conf with module-config: "ipset validator iterator"
- * then create it with ipset -N blacklist iphash and then add
- * local-zone: "example.com." ipset <protocol> <table> <set name> <ttl/no-ttl>
+ * then create it with "ipset create <set name> hash:ip" and then add
+ * local-zone: "example.com." ipset <protocol> <set name> <ttl/no-ttl>
  * statements for the zones where you want the addresses of the names
- * looked up added to specified table + set. Declaring the protocol as either
+ * looked up added to specified set. Declaring the protocol as either
  * "ipv4" or "ipv6" determines which address family to use from the RRSet
- * when populating the ipset entry. Specifying ttl at the end will mark the
+ * when populating the ipset entry. Specifying "ttl" at the end will mark the
  * ipset entry with a timeout (aka expiry) matching the RRSet TTL, specifying
- * no-ttl will prevent setting the TTL on the set entry.
+ * "no-ttl" will prevent setting the TTL on the set entry.
  */
 
 #include "util/module.h"
