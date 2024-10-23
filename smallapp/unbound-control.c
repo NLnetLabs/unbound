@@ -222,6 +222,9 @@ static void pr_stats(const char* nm, struct ub_stats_info* s)
 		s->svr.num_queries_cookie_client);
 	PR_UL_NM("num.queries_cookie_invalid",
 		s->svr.num_queries_cookie_invalid);
+	PR_UL_NM("num.queries_discard_timeout",
+		s->svr.num_queries_discard_timeout);
+	PR_UL_NM("num.queries_wait_limit", s->svr.num_queries_wait_limit);
 	PR_UL_NM("num.cachehits",
 		s->svr.num_queries - s->svr.num_queries_missed_cache);
 	PR_UL_NM("num.cachemiss", s->svr.num_queries_missed_cache);
