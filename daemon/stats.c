@@ -455,6 +455,9 @@ void server_stats_add(struct ub_stats_info* total, struct ub_stats_info* a)
 	total->svr.num_queries_cookie_valid += a->svr.num_queries_cookie_valid;
 	total->svr.num_queries_cookie_client += a->svr.num_queries_cookie_client;
 	total->svr.num_queries_cookie_invalid += a->svr.num_queries_cookie_invalid;
+	total->svr.num_queries_discard_timeout +=
+		a->svr.num_queries_discard_timeout;
+	total->svr.num_queries_wait_limit += a->svr.num_queries_wait_limit;
 	total->svr.num_queries_missed_cache += a->svr.num_queries_missed_cache;
 	total->svr.num_queries_prefetch += a->svr.num_queries_prefetch;
 	total->svr.num_queries_timed_out += a->svr.num_queries_timed_out;
@@ -502,10 +505,6 @@ void server_stats_add(struct ub_stats_info* total, struct ub_stats_info* a)
 		total->svr.unwanted_replies += a->svr.unwanted_replies;
 		total->svr.unwanted_queries += a->svr.unwanted_queries;
 		total->svr.tcp_accept_usage += a->svr.tcp_accept_usage;
-		total->svr.num_queries_discard_timeout +=
-			a->svr.num_queries_discard_timeout;
-		total->svr.num_queries_wait_limit +=
-			a->svr.num_queries_wait_limit;
 #ifdef USE_CACHEDB
 		total->svr.num_query_cachedb += a->svr.num_query_cachedb;
 #endif
