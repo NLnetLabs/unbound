@@ -300,9 +300,6 @@ struct auth_zones* auth_zones_create(void)
 	}
 	rbtree_init(&az->ztree, &auth_zone_cmp);
 	rbtree_init(&az->xtree, &auth_xfer_cmp);
-	lock_rw_init(&az->lock);
-	lock_protect(&az->lock, &az->ztree, sizeof(az->ztree));
-	lock_protect(&az->lock, &az->xtree, sizeof(az->xtree));
 	/* also lock protects the rbnode's in struct auth_zone, auth_xfer */
 	lock_rw_init(&az->rpz_lock);
 	lock_protect(&az->rpz_lock, &az->rpz_first, sizeof(az->rpz_first));
@@ -1787,19 +1784,16 @@ auth_zones_read_zones(struct auth_zones* az, struct config_file* cfg,
 	struct module_env* env, struct module_stack* mods)
 {
 	struct auth_zone* z;
-	lock_rw_wrlock(&az->lock);
 	RBTREE_FOR(z, struct auth_zone*, &az->ztree) {
 		lock_rw_wrlock(&z->lock);
 		if(!auth_zone_read_zonefile(z, cfg)) {
 			lock_rw_unlock(&z->lock);
-			lock_rw_unlock(&az->lock);
 			return 0;
 		}
 		if(z->zonefile && z->zonefile[0]!=0 && env)
 			zonemd_offline_verify(z, env, mods);
 		lock_rw_unlock(&z->lock);
 	}
-	lock_rw_unlock(&az->lock);
 	return 1;
 }
 
@@ -2065,7 +2059,6 @@ auth_zones_setup_zones(struct auth_zones* az)
 {
 	struct auth_zone* z;
 	struct auth_xfer* x;
-	lock_rw_wrlock(&az->lock);
 	RBTREE_FOR(z, struct auth_zone*, &az->ztree) {
 		lock_rw_wrlock(&z->lock);
 		x = auth_xfer_find(az, z->name, z->namelen, z->dclass);
@@ -2077,7 +2070,6 @@ auth_zones_setup_zones(struct auth_zones* az)
 				lock_basic_unlock(&x->lock);
 			}
 			lock_rw_unlock(&z->lock);
-			lock_rw_unlock(&az->lock);
 			return 0;
 		}
 		if(x) {
@@ -2085,7 +2077,6 @@ auth_zones_setup_zones(struct auth_zones* az)
 		}
 		lock_rw_unlock(&z->lock);
 	}
-	lock_rw_unlock(&az->lock);
 	return 1;
 }
 
@@ -2102,9 +2093,7 @@ auth_zones_cfg(struct auth_zones* az, struct config_auth* c)
 		 * locks to avoid a lock dependency cycle */
 		lock_rw_wrlock(&az->rpz_lock);
 	}
-	lock_rw_wrlock(&az->lock);
 	if(!(z=auth_zones_find_or_add_zone(az, c->name))) {
-		lock_rw_unlock(&az->lock);
 		if(c->isrpz) {
 			lock_rw_unlock(&az->rpz_lock);
 		}
@@ -2112,7 +2101,6 @@ auth_zones_cfg(struct auth_zones* az, struct config_auth* c)
 	}
 	if(c->masters || c->urls) {
 		if(!(x=auth_zones_find_or_add_xfer(az, z))) {
-			lock_rw_unlock(&az->lock);
 			lock_rw_unlock(&z->lock);
 			if(c->isrpz) {
 				lock_rw_unlock(&az->rpz_lock);
@@ -2122,7 +2110,6 @@ auth_zones_cfg(struct auth_zones* az, struct config_auth* c)
 	}
 	if(c->for_downstream)
 		az->have_downstream = 1;
-	lock_rw_unlock(&az->lock);
 
 	/* set options */
 	z->zone_deleted = 0;
@@ -2195,13 +2182,11 @@ static void
 az_setall_deleted(struct auth_zones* az)
 {
 	struct auth_zone* z;
-	lock_rw_wrlock(&az->lock);
 	RBTREE_FOR(z, struct auth_zone*, &az->ztree) {
 		lock_rw_wrlock(&z->lock);
 		z->zone_deleted = 1;
 		lock_rw_unlock(&z->lock);
 	}
-	lock_rw_unlock(&az->lock);
 }
 
 /** find zones that are marked deleted and delete them.
@@ -2213,7 +2198,6 @@ az_delete_deleted_zones(struct auth_zones* az)
 	struct auth_zone* z;
 	struct auth_zone* delete_list = NULL, *next;
 	struct auth_xfer* xfr;
-	lock_rw_wrlock(&az->lock);
 	RBTREE_FOR(z, struct auth_zone*, &az->ztree) {
 		lock_rw_wrlock(&z->lock);
 		if(z->zone_deleted) {
@@ -2239,7 +2223,6 @@ az_delete_deleted_zones(struct auth_zones* az)
 		auth_zone_delete(z, az);
 		z = next;
 	}
-	lock_rw_unlock(&az->lock);
 }
 
 int auth_zones_apply_cfg(struct auth_zones* az, struct config_file* cfg,
@@ -2368,7 +2351,6 @@ auth_xfer_del(rbnode_type* n, void* ATTR_UNUSED(arg))
 void auth_zones_delete(struct auth_zones* az)
 {
 	if(!az) return;
-	lock_rw_destroy(&az->lock);
 	lock_rw_destroy(&az->rpz_lock);
 	traverse_postorder(&az->ztree, auth_zone_del, NULL);
 	traverse_postorder(&az->xtree, auth_xfer_del, NULL);
@@ -3495,16 +3477,13 @@ int auth_zones_lookup(struct auth_zones* az, struct query_info* qinfo,
 	int r;
 	struct auth_zone* z;
 	/* find the zone that should contain the answer. */
-	lock_rw_rdlock(&az->lock);
 	z = auth_zone_find(az, dp_nm, dp_nmlen, qinfo->qclass);
 	if(!z) {
-		lock_rw_unlock(&az->lock);
 		/* no auth zone, fallback to internet */
 		*fallback = 1;
 		return 0;
 	}
 	lock_rw_rdlock(&z->lock);
-	lock_rw_unlock(&az->lock);
 
 	/* if not for upstream queries, fallback */
 	if(!z->for_upstream) {
@@ -3577,10 +3556,8 @@ int auth_zones_answer(struct auth_zones* az, struct module_env* env,
 	int r;
 	int fallback = 0;
 
-	lock_rw_rdlock(&az->lock);
 	if(!az->have_downstream) {
 		/* no downstream auth zones */
-		lock_rw_unlock(&az->lock);
 		return 0;
 	}
 	if(qinfo->qtype == LDNS_RR_TYPE_DS) {
@@ -3595,11 +3572,9 @@ int auth_zones_answer(struct auth_zones* az, struct module_env* env,
 	}
 	if(!z) {
 		/* no zone above it */
-		lock_rw_unlock(&az->lock);
 		return 0;
 	}
 	lock_rw_rdlock(&z->lock);
-	lock_rw_unlock(&az->lock);
 	if(!z->for_downstream) {
 		lock_rw_unlock(&z->lock);
 		return 0;
@@ -3610,9 +3585,7 @@ int auth_zones_answer(struct auth_zones* az, struct module_env* env,
 			return 0;
 		}
 		lock_rw_unlock(&z->lock);
-		lock_rw_wrlock(&az->lock);
-		az->num_query_down++;
-		lock_rw_unlock(&az->lock);
+		env->stats->num_query_authzone_down++;
 		auth_error_encode(qinfo, env, edns, repinfo, buf, temp,
 			LDNS_RCODE_SERVFAIL);
 		return 1;
@@ -3625,9 +3598,7 @@ int auth_zones_answer(struct auth_zones* az, struct module_env* env,
 		/* fallback to regular answering (recursive) */
 		return 0;
 	}
-	lock_rw_wrlock(&az->lock);
-	az->num_query_down++;
-	lock_rw_unlock(&az->lock);
+	env->stats->num_query_authzone_down++;
 
 	/* encode answer */
 	if(!r)
@@ -3643,15 +3614,12 @@ int auth_zones_can_fallback(struct auth_zones* az, uint8_t* nm, size_t nmlen,
 {
 	int r;
 	struct auth_zone* z;
-	lock_rw_rdlock(&az->lock);
 	z = auth_zone_find(az, nm, nmlen, dclass);
 	if(!z) {
-		lock_rw_unlock(&az->lock);
 		/* no such auth zone, fallback */
 		return 1;
 	}
 	lock_rw_rdlock(&z->lock);
-	lock_rw_unlock(&az->lock);
 	r = z->fallback_enabled || (!z->for_upstream);
 	lock_rw_unlock(&z->lock);
 	return r;
@@ -3840,16 +3808,13 @@ int auth_zones_notify(struct auth_zones* az, struct module_env* env,
 	struct auth_xfer* xfr;
 	struct auth_master* fromhost = NULL;
 	/* see which zone this is */
-	lock_rw_rdlock(&az->lock);
 	xfr = auth_xfer_find(az, nm, nmlen, dclass);
 	if(!xfr) {
-		lock_rw_unlock(&az->lock);
 		/* no such zone, refuse the notify */
 		*refused = 1;
 		return 0;
 	}
 	lock_basic_lock(&xfr->lock);
-	lock_rw_unlock(&az->lock);
 	
 	/* check access list for notifies */
 	if(!az_xfr_allowed_notify(xfr, addr, addrlen, &fromhost)) {
@@ -3868,14 +3833,11 @@ int auth_zones_startprobesequence(struct auth_zones* az,
 	struct module_env* env, uint8_t* nm, size_t nmlen, uint16_t dclass)
 {
 	struct auth_xfer* xfr;
-	lock_rw_rdlock(&az->lock);
 	xfr = auth_xfer_find(az, nm, nmlen, dclass);
 	if(!xfr) {
-		lock_rw_unlock(&az->lock);
 		return 0;
 	}
 	lock_basic_lock(&xfr->lock);
-	lock_rw_unlock(&az->lock);
 
 	xfr_process_notify(xfr, env, 0, 0, NULL);
 	return 1;
@@ -3894,15 +3856,12 @@ auth_xfer_set_expired(struct auth_xfer* xfr, struct module_env* env,
 	lock_basic_unlock(&xfr->lock);
 
 	/* find auth_zone */
-	lock_rw_rdlock(&env->auth_zones->lock);
 	z = auth_zone_find(env->auth_zones, xfr->name, xfr->namelen,
 		xfr->dclass);
 	if(!z) {
-		lock_rw_unlock(&env->auth_zones->lock);
 		return;
 	}
 	lock_rw_wrlock(&z->lock);
-	lock_rw_unlock(&env->auth_zones->lock);
 
 	/* expire auth_zone */
 	z->zone_expired = expired;
@@ -5208,18 +5167,15 @@ xfr_write_after_update(struct auth_xfer* xfr, struct module_env* env)
 
 	/* get lock again, so it is a readlock and concurrently queries
 	 * can be answered */
-	lock_rw_rdlock(&env->auth_zones->lock);
 	z = auth_zone_find(env->auth_zones, xfr->name, xfr->namelen,
 		xfr->dclass);
 	if(!z) {
-		lock_rw_unlock(&env->auth_zones->lock);
 		/* the zone is gone, ignore xfr results */
 		lock_basic_lock(&xfr->lock);
 		return;
 	}
 	lock_rw_rdlock(&z->lock);
 	lock_basic_lock(&xfr->lock);
-	lock_rw_unlock(&env->auth_zones->lock);
 
 	if(z->zonefile == NULL || z->zonefile[0] == 0) {
 		lock_rw_unlock(&z->lock);
@@ -5277,18 +5233,15 @@ static int xfr_process_reacquire_locks(struct auth_xfer* xfr,
 {
 	/* release xfr lock, then, while holding az->lock grab both
 	 * z->lock and xfr->lock */
-	lock_rw_rdlock(&env->auth_zones->lock);
 	*z = auth_zone_find(env->auth_zones, xfr->name, xfr->namelen,
 		xfr->dclass);
 	if(!*z) {
-		lock_rw_unlock(&env->auth_zones->lock);
 		lock_basic_lock(&xfr->lock);
 		*z = NULL;
 		return 0;
 	}
 	lock_rw_wrlock(&(*z)->lock);
 	lock_basic_lock(&xfr->lock);
-	lock_rw_unlock(&env->auth_zones->lock);
 	return 1;
 }
 
@@ -7015,7 +6968,6 @@ void
 auth_xfer_pickup_initial(struct auth_zones* az, struct module_env* env)
 {
 	struct auth_xfer* x;
-	lock_rw_wrlock(&az->lock);
 	RBTREE_FOR(x, struct auth_xfer*, &az->xtree) {
 		lock_basic_lock(&x->lock);
 		/* set lease_time, because we now have timestamp in env,
@@ -7028,13 +6980,11 @@ auth_xfer_pickup_initial(struct auth_zones* az, struct module_env* env)
 		}
 		lock_basic_unlock(&x->lock);
 	}
-	lock_rw_unlock(&az->lock);
 }
 
 void auth_zones_cleanup(struct auth_zones* az)
 {
 	struct auth_xfer* x;
-	lock_rw_wrlock(&az->lock);
 	RBTREE_FOR(x, struct auth_xfer*, &az->xtree) {
 		lock_basic_lock(&x->lock);
 		if(x->task_nextprobe && x->task_nextprobe->worker != NULL) {
@@ -7049,7 +6999,6 @@ void auth_zones_cleanup(struct auth_zones* az)
 		}
 		lock_basic_unlock(&x->lock);
 	}
-	lock_rw_unlock(&az->lock);
 }
 
 /**
@@ -8553,7 +8502,6 @@ void auth_zones_pickup_zonemd_verify(struct auth_zones* az,
 	size_t savezname_len;
 	struct auth_zone* z;
 	key.node.key = &key;
-	lock_rw_rdlock(&az->lock);
 	RBTREE_FOR(z, struct auth_zone*, &az->ztree) {
 		lock_rw_wrlock(&z->lock);
 		if(!z->zonemd_check) {
@@ -8569,10 +8517,8 @@ void auth_zones_pickup_zonemd_verify(struct auth_zones* az,
 		}
 		savezname_len = z->namelen;
 		memmove(savezname, z->name, z->namelen);
-		lock_rw_unlock(&az->lock);
 		auth_zone_verify_zonemd(z, env, &env->mesh->mods, NULL, 0, 1);
 		lock_rw_unlock(&z->lock);
-		lock_rw_rdlock(&az->lock);
 		/* find the zone we had before, it is not deleted,
 		 * because we have a flag for that that is processed at
 		 * apply_cfg time */
@@ -8582,5 +8528,4 @@ void auth_zones_pickup_zonemd_verify(struct auth_zones* az,
 		if(!z)
 			break;
 	}
-	lock_rw_unlock(&az->lock);
 }

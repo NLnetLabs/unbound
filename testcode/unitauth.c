@@ -663,9 +663,7 @@ authtest_addzone(struct auth_zones* az, const char* name, char* fname)
 	uint8_t* nm = sldns_str2wire_dname(name, &nmlen);
 	struct config_file* cfg;
 	if(!nm) fatal_exit("out of memory");
-	lock_rw_wrlock(&az->lock);
 	z = auth_zone_create(az, nm, nmlen, LDNS_RR_CLASS_IN);
-	lock_rw_unlock(&az->lock);
 	if(!z) fatal_exit("cannot find zone");
 	auth_zone_set_zonefile(z, fname);
 	z->for_upstream = 1;

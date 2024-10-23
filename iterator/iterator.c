@@ -1076,15 +1076,12 @@ auth_zone_delegpt(struct module_qstate* qstate, struct iter_qstate* iq,
 		delname = iq->qchase.qname;
 		delnamelen = iq->qchase.qname_len;
 	}
-	lock_rw_rdlock(&qstate->env->auth_zones->lock);
 	z = auth_zones_find_zone(qstate->env->auth_zones, delname, delnamelen,
 		qstate->qinfo.qclass);
 	if(!z) {
-		lock_rw_unlock(&qstate->env->auth_zones->lock);
 		return 1;
 	}
 	lock_rw_rdlock(&z->lock);
-	lock_rw_unlock(&qstate->env->auth_zones->lock);
 	if(z->for_upstream) {
 		if(iq->dp && query_dname_compare(z->name, iq->dp->name) == 0
 			&& iq->dp->auth_dp && qstate->blacklist &&
@@ -2741,9 +2738,7 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 		if((iq->chase_flags&BIT_RD) && !(iq->response->rep->flags&BIT_AA)) {
 			verbose(VERB_ALGO, "forwarder, ignoring referral from auth zone");
 		} else {
-			lock_rw_wrlock(&qstate->env->auth_zones->lock);
-			qstate->env->auth_zones->num_query_up++;
-			lock_rw_unlock(&qstate->env->auth_zones->lock);
+			qstate->env->stats->num_query_authzone_up++;
 			iq->num_current_queries++;
 			iq->chase_to_rd = 0;
 			iq->dnssec_lame_query = 0;

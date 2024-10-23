@@ -2230,6 +2230,7 @@ worker_init(struct worker* worker, struct config_file *cfg,
 	worker->env = *worker->daemon->env;
 	comm_base_timept(worker->base, &worker->env.now, &worker->env.now_tv);
 	worker->env.worker = worker;
+	worker->env.stats = &worker->stats;
 	worker->env.worker_base = worker->base;
 	worker->env.send_query = &worker_send_query;
 	worker->env.alloc = worker->alloc;

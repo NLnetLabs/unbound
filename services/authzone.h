@@ -70,18 +70,12 @@ struct auth_chunk;
  * Authoritative zones, shared.
  */
 struct auth_zones {
-	/** lock on the authzone trees */
-	lock_rw_type lock;
 	/** rbtree of struct auth_zone */
 	rbtree_type ztree;
 	/** rbtree of struct auth_xfer */
 	rbtree_type xtree;
 	/** do we have downstream enabled */
 	int have_downstream;
-	/** number of queries upstream */
-	size_t num_query_up;
-	/** number of queries downstream */
-	size_t num_query_down;
 	/** first auth zone containing rpz item in linked list */
 	struct auth_zone* rpz_first;
 	/** rw lock for rpz linked list, needed when iterating or editing linked

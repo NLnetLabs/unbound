@@ -153,6 +153,8 @@
 
 #ifndef UTIL_MODULE_H
 #define UTIL_MODULE_H
+/* stats struct */
+#include "libunbound/unbound.h"
 #include "util/storage/lruhash.h"
 #include "util/data/msgreply.h"
 #include "util/data/msgparse.h"
@@ -484,6 +486,8 @@ struct module_env {
 	struct sldns_buffer* scratch_buffer;
 	/** internal data for daemon - worker thread. */
 	struct worker* worker;
+	/** worker's per thread statistics */
+	struct ub_server_stats* stats;
 	/** the worker event base */
 	struct comm_base* worker_base;
 	/** the outside network */

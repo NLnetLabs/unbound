@@ -2754,7 +2754,6 @@ do_auth_zone_reload(RES* ssl, struct worker* worker, char* arg)
 	if(!parse_arg_name(ssl, arg, &nm, &nmlen, &nmlabs))
 		return;
 	if(az) {
-		lock_rw_rdlock(&az->lock);
 		z = auth_zone_find(az, nm, nmlen, LDNS_RR_CLASS_IN);
 		if(z) {
 			lock_rw_wrlock(&z->lock);
@@ -2763,7 +2762,6 @@ do_auth_zone_reload(RES* ssl, struct worker* worker, char* arg)
 		if(xfr) {
 			lock_basic_lock(&xfr->lock);
 		}
-		lock_rw_unlock(&az->lock);
 	}
 	free(nm);
 	if(!z) {
@@ -2950,7 +2948,6 @@ do_list_auth_zones(RES* ssl, struct auth_zones* az)
 {
 	struct auth_zone* z;
 	char buf[257], buf2[256];
-	lock_rw_rdlock(&az->lock);
 	RBTREE_FOR(z, struct auth_zone*, &az->ztree) {
 		lock_rw_rdlock(&z->lock);
 		dname_str(z->name, buf);
@@ -2966,12 +2963,10 @@ do_list_auth_zones(RES* ssl, struct auth_zones* az)
 		if(!ssl_printf(ssl, "%s\t%s\n", buf, buf2)) {
 			/* failure to print */
 			lock_rw_unlock(&z->lock);
-			lock_rw_unlock(&az->lock);
 			return;
 		}
 		lock_rw_unlock(&z->lock);
 	}
-	lock_rw_unlock(&az->lock);
 }
 
 /** do the list_local_zones command */
@@ -3168,12 +3163,10 @@ do_rpz_enable_disable(RES* ssl, struct worker* worker, char* arg, int enable) {
     if (!parse_arg_name(ssl, arg, &nm, &nmlen, &nmlabs))
         return;
     if (az) {
-        lock_rw_rdlock(&az->lock);
         z = auth_zone_find(az, nm, nmlen, LDNS_RR_CLASS_IN);
         if (z) {
             lock_rw_wrlock(&z->lock);
         }
-        lock_rw_unlock(&az->lock);
     }
     free(nm);
     if (!z) {
