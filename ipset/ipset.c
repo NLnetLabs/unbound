@@ -432,20 +432,20 @@ int convert_global_ipset(struct module_env* env, struct ipset_env* ipset_env) {
             continue;
         }
         if (ipset_env->v4_enabled) {
-            p->str2 = "ipv4";
+            p->str2 = strdup("ipv4");
             p->str3 = strdup(ipset_env->name_v4);
         } else if (ipset_env->v6_enabled) {
-            p->str2 = "ipv6";
+            p->str2 = strdup("ipv6");
             p->str3 = strdup(ipset_env->name_v6);
             continue;
         }
-        if (ipset_env->v4_enabled && ipset->v6_enabled) {
+        if (ipset_env->v4_enabled && ipset_env->v6_enabled) {
             if (!cfg_str4list_insert(
                 &env->cfg->local_zones_ipset,
                 strdup(p->str),
-                "ipv6",
+                strdup("ipv6"),
                 strdup(ipset_env->name_v6),
-                "no-ttl"
+                strdup("no-ttl")
             )) {
                 log_err("ipset: out of memory adding rule mapping for global declaration");
                 return 0;
@@ -464,8 +464,7 @@ int ipset_init(struct module_env* env, int id) {
 	ipset_env->v6_enabled = !ipset_env->name_v6 || (strlen(ipset_env->name_v6) == 0) ? 0 : 1;
 
 	if ((ipset_env->v4_enabled < 1) && (ipset_env->v6_enabled < 1)) {
-		log_err("ipset: set name no configuration?");
-		return 0;
+		return 1;
 	}
     
     convert_global_ipset(env, ipset_env);

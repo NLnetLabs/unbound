@@ -2395,8 +2395,9 @@ server_local_zone: VAR_LOCAL_ZONE STRING_ARG STRING_ARG
                 $2[len+1] = 0;
             }
             if(!cfg_str4list_insert(&cfg_parser->cfg->
-                local_zones_ipset, $2, "@global@", "@global@", "no-ttl"))
+                local_zones_ipset, $2, strdup("@global@"), strdup("@global@"), strdup("no-ttl"))) {
                 fatal_exit("out of memory adding local-zone");
+            }
             free($3);
 #endif
 		} else {
@@ -3420,8 +3421,9 @@ view_local_zone: VAR_LOCAL_ZONE STRING_ARG STRING_ARG
                 $2[len+1] = 0;
             }
             if(!cfg_str4list_insert(&cfg_parser->cfg->views->
-                local_zones_ipset, $2, "@global@", "@global@", "no-ttl"))
+                local_zones_ipset, $2, strdup("@global@"), strdup("@global@"), strdup("no-ttl"))) {
                 fatal_exit("out of memory adding local-zone");
+            }
             free($3);
 #endif
 		} else {
