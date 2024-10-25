@@ -2650,7 +2650,6 @@ cfg_parse_local_zone(struct config_file* cfg, const char* val)
 	}
 	(void)strlcpy(buf, name, sizeof(buf));
 	buf[name_end-name] = '\0';
-#define USE_IPSET
 #ifdef USE_IPSET
     type = name_end;
     int result = get_next_token(name_end, &type, &type_end);
@@ -2665,7 +2664,7 @@ cfg_parse_local_zone(struct config_file* cfg, const char* val)
             goto parse_global_ipset;
         }
         ipset_name = protocol_end;
-        if (get_next_token(ip_table_end,  &ipset_name, &ipset_name_end)) {
+        if (get_next_token(protocol_end,  &ipset_name, &ipset_name_end)) {
             log_err("syntax error: expected ipset zone set name: %s", val);
             return 0;
         }
@@ -2698,8 +2697,8 @@ parse_global_ipset:;
 			strdup(name));
 #ifdef USE_IPSET
 	} else if(strcmp(type, "ipset")==0) {
-		return cfg_strlist_insert(&cfg->local_zones_ipset,
-			strdup(name));
+		return cfg_str4list_insert(&cfg->local_zones_ipset,
+			strdup(name), "@global@", "@global@", "no-ttl");
 #endif
 	} else {
 		return cfg_str2list_insert(&cfg->local_zones, strdup(buf),
