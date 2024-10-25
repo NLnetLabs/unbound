@@ -1,3 +1,6 @@
+25 October 2024: Yorgos
+	- Fix #1163: Typos in unbound.conf documentation.
+
 17 October 2024: Wouter
 	- Tag for 1.22.0 release. This did not contain the 1154 fix
 	  from 16 oct. The code repository continues with
