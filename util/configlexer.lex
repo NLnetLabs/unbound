@@ -622,9 +622,6 @@ max-global-quota{COLON}		{ YDVAR(1, VAR_MAX_GLOBAL_QUOTA) }
         /* Early match a set of tokens between the min and max */
         num_args = 0;
         num_args_max = 0;
-        /* Return newline characters to stream for matching */
-        /* yyless(0);*/
-        LEXOUT(("TOKENS: %s\n", yytext));
         BEGIN(INITIAL);
     } else {
         cfg_parser->line++;
