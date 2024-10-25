@@ -247,7 +247,6 @@ ipset_add_rrset_data(struct ipset_env *ie,
 				char ip[128];
 				if(inet_ntop(af, rr_data+2, ip, (socklen_t)sizeof(ip)) == 0)
 					snprintf(ip, sizeof(ip), "(inet_ntop_error)");
-                // TODO: Remove the table argument from the config, it's not needed
                 if (set_ttl) {
 				    verbose(
                         VERB_QUERY,
