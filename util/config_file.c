@@ -410,8 +410,8 @@ config_create(void)
 #endif  /* USE_REDIS */
 #endif  /* USE_CACHEDB */
 #ifdef USE_IPSET
-    cfg->ipset_name_v4 = NULL;
-    cfg->ipset_name_v6 = NULL;
+	cfg->ipset_name_v4 = NULL;
+	cfg->ipset_name_v6 = NULL;
 #endif
 	cfg->ede = 0;
 	cfg->iter_scrub_ns = 20;
@@ -1386,8 +1386,8 @@ config_get_option(struct config_file* cfg, const char* opt,
 #endif  /* USE_REDIS */
 #endif  /* USE_CACHEDB */
 #ifdef USE_IPSET
-    else O_STR(opt, "name-v4", ipset_name_v4)
-    else O_STR(opt, "name-v6", ipset_name_v6)
+	else O_STR(opt, "name-v4", ipset_name_v4)
+	else O_STR(opt, "name-v6", ipset_name_v6)
 #endif
 	/* not here:
 	 * outgoing-permit, outgoing-avoid - have list of ports
@@ -2650,6 +2650,7 @@ cfg_parse_local_zone(struct config_file* cfg, const char* val)
 	}
 	(void)strlcpy(buf, name, sizeof(buf));
 	buf[name_end-name] = '\0';
+#define USE_IPSET
 #ifdef USE_IPSET
     type = name_end;
     int result = get_next_token(name_end, &type, &type_end);
@@ -2660,8 +2661,8 @@ cfg_parse_local_zone(struct config_file* cfg, const char* val)
             *ipset_name, *ipset_name_end, *ttl;
         protocol = type_end;
         if (get_next_token(type_end, &protocol, &protocol_end)) {
-            log_err("syntax error: expected ipset zone protocol: %s", val);
-            return 0;
+            /* We don't have the 5 argument variant, so defer to 2 arg variant */
+            goto parse_global_ipset;
         }
         ipset_name = protocol_end;
         if (get_next_token(ip_table_end,  &ipset_name, &ipset_name_end)) {
@@ -2679,6 +2680,7 @@ cfg_parse_local_zone(struct config_file* cfg, const char* val)
 			strdup(name), strdup(protocol),
             strdup(ipset_name), strdup(ttl));
     }
+parse_global_ipset:;
     /* There was no next-space after this token, so it must be final
      * and as such we don't have enough tokens*/
 #endif
@@ -2694,6 +2696,11 @@ cfg_parse_local_zone(struct config_file* cfg, const char* val)
 	if(strcmp(type, "nodefault")==0) {
 		return cfg_strlist_insert(&cfg->local_zones_nodefault,
 			strdup(name));
+#ifdef USE_IPSET
+	} else if(strcmp(type, "ipset")==0) {
+		return cfg_strlist_insert(&cfg->local_zones_ipset,
+			strdup(name));
+#endif
 	} else {
 		return cfg_str2list_insert(&cfg->local_zones, strdup(buf),
 			strdup(type));
