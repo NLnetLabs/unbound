@@ -37,6 +37,12 @@ extern "C" {
 
 struct ipset_env {
 	void* dev;
+
+    int v4_enabled;
+    int v6_enabled;
+
+    const char *name_v4;
+    const char *name_v6;
 };
 
 struct ipset_qstate {

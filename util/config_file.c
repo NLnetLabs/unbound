@@ -409,6 +409,10 @@ config_create(void)
 	cfg->redis_logical_db = 0;
 #endif  /* USE_REDIS */
 #endif  /* USE_CACHEDB */
+#ifdef USE_IPSET
+    cfg->ipset_name_v4 = NULL;
+    cfg->ipset_name_v6 = NULL;
+#endif
 	cfg->ede = 0;
 	cfg->iter_scrub_ns = 20;
 	cfg->iter_scrub_cname = 11;
@@ -1381,6 +1385,10 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_DEC(opt, "redis-logical-db", redis_logical_db)
 #endif  /* USE_REDIS */
 #endif  /* USE_CACHEDB */
+#ifdef USE_IPSET
+    else O_STR(opt, "name-v4", ipset_name_v4)
+    else O_STR(opt, "name-v6", ipset_name_v6)
+#endif
 	/* not here:
 	 * outgoing-permit, outgoing-avoid - have list of ports
 	 * local-zone - zones and nodefault variables
@@ -1772,6 +1780,14 @@ config_delete(struct config_file* cfg)
 	free(cfg->redis_server_password);
 #endif  /* USE_REDIS */
 #endif  /* USE_CACHEDB */
+#ifdef USE_IPSET
+    if (cfg->ipset_name_v4 != NULL) {
+        free(cfg->ipset_name_v4);
+    }
+    if (cfg->ipset_name_v6 != NULL) {
+        free(cfg->ipset_name_v6);
+    }
+#endif
 	free(cfg);
 }
 

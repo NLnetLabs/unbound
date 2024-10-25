@@ -766,6 +766,10 @@ struct config_file {
 	size_t  cookie_secret_len;
 	/** path to cookie secret store */
 	char* cookie_secret_file;
+#ifdef USE_IPSET
+    char* ipset_name_v4;
+    char* ipset_name_v6;
+#endif
 	/** respond with Extended DNS Errors (RFC8914) */
 	int ede;
 	/** limit on NS RRs in RRset for the iterator scrubber. */

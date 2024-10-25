@@ -198,6 +198,7 @@ static bool ttl_pf_have_warned = false;
 %token VAR_DISCARD_TIMEOUT VAR_WAIT_LIMIT VAR_WAIT_LIMIT_COOKIE
 %token VAR_WAIT_LIMIT_NETBLOCK VAR_WAIT_LIMIT_COOKIE_NETBLOCK
 %token VAR_STREAM_WAIT_SIZE VAR_TLS_CIPHERS VAR_TLS_CIPHERSUITES VAR_TLS_USE_SNI
+%token VAR_IPSET VAR_IPSET_NAME_V4 VAR_IPSET_NAME_V6
 %token VAR_TLS_SESSION_TICKET_KEYS VAR_RPZ VAR_TAGS VAR_RPZ_ACTION_OVERRIDE
 %token VAR_RPZ_CNAME_OVERRIDE VAR_RPZ_LOG VAR_RPZ_LOG_NAME
 %token VAR_DYNLIB VAR_DYNLIB_FILE VAR_EDNS_CLIENT_STRING
@@ -219,8 +220,9 @@ toplevelvar: serverstart contents_server | stub_clause |
 	forward_clause | pythonstart contents_py |
 	rcstart contents_rc | dtstart contents_dt | view_clause |
 	dnscstart contents_dnsc | cachedbstart contents_cachedb |
-	authstart contents_auth | rpzstart contents_rpz |
-    dynlibstart contents_dl | force_toplevel
+    ipsetstart contents_ipset |authstart contents_auth | 
+    rpzstart contents_rpz | dynlibstart contents_dl | 
+    force_toplevel
 	;
 force_toplevel: VAR_FORCE_TOPLEVEL
 	{
@@ -2381,8 +2383,20 @@ server_local_zone: VAR_LOCAL_ZONE STRING_ARG STRING_ARG
 			free($3);
 #ifdef USE_IPSET 
         } else if (strcmp($3, "ipset") == 0) {
-            /* Transaprent pass-through to 5-param variant */
-            free($2);
+            /* Transform existing 2 param variant into 5 param with global lookup */
+            size_t len = strlen($2);
+            /* Make sure to add the trailing dot.
+             * These are str compared to domain names. */
+            if ($2[len-1] != '.') {
+                if (!($2 = realloc($2, len+2))) {
+                    fatal_exit("out of memory adding local-zone");
+                }
+                $2[len] = '.';
+                $2[len+1] = 0;
+            }
+            if(!cfg_str4list_insert(&cfg_parser->cfg->
+                local_zones_ipset, $2, "@global@", "@global@", "no-ttl"))
+                fatal_exit("out of memory adding local-zone");
             free($3);
 #endif
 		} else {
@@ -3394,7 +3408,21 @@ view_local_zone: VAR_LOCAL_ZONE STRING_ARG STRING_ARG
 			free($3);
 #ifdef USE_IPSET 
         } else if (strcmp($3, "ipset") == 0) {
-            /* Transaprent pass-through to 5-param variant */
+            /* Transform existing 2 param variant into 5 param with global lookup */
+            size_t len = strlen($2);
+            /* Make sure to add the trailing dot.
+             * These are str compared to domain names. */
+            if ($2[len-1] != '.') {
+                if (!($2 = realloc($2, len+2))) {
+                    fatal_exit("out of memory adding local-zone");
+                }
+                $2[len] = '.';
+                $2[len+1] = 0;
+            }
+            if(!cfg_str4list_insert(&cfg_parser->cfg->views->
+                local_zones_ipset, $2, "@global@", "@global@", "no-ttl"))
+                fatal_exit("out of memory adding local-zone");
+            free($3);
 #endif
 		} else {
 			if(!cfg_str2list_insert(
@@ -4211,6 +4239,46 @@ server_max_global_quota: VAR_MAX_GLOBAL_QUOTA STRING_ARG
 			yyerror("number expected");
 		else cfg_parser->cfg->max_global_quota = atoi($2);
 		free($2);
+	}
+    ;
+ipsetstart: VAR_IPSET
+	{
+		OUTYY(("\nP(ipset:)\n"));
+		cfg_parser->started_toplevel = 1;
+	}
+	;
+contents_ipset: contents_ipset content_ipset
+	| ;
+content_ipset: ipset_name_v4 | ipset_name_v6
+	;
+ipset_name_v4: VAR_IPSET_NAME_V4 STRING_ARG
+	{
+	#ifdef USE_IPSET
+		OUTYY(("P(name-v4:%s)\n", $2));
+		if(cfg_parser->cfg->ipset_name_v4)
+			yyerror("ipset name v4 override, there must be one "
+				"name for ip v4");
+		free(cfg_parser->cfg->ipset_name_v4);
+		cfg_parser->cfg->ipset_name_v4 = $2;
+	#else
+		OUTYY(("P(Compiled without ipset, ignoring)\n"));
+		free($2);
+	#endif
+	}
+	;
+ipset_name_v6: VAR_IPSET_NAME_V6 STRING_ARG
+	{
+	#ifdef USE_IPSET
+		OUTYY(("P(name-v6:%s)\n", $2));
+		if(cfg_parser->cfg->ipset_name_v6)
+			yyerror("ipset name v6 override, there must be one "
+				"name for ip v6");
+		free(cfg_parser->cfg->ipset_name_v6);
+		cfg_parser->cfg->ipset_name_v6 = $2;
+	#else
+		OUTYY(("P(Compiled without ipset, ignoring)\n"));
+		free($2);
+	#endif
 	}
 	;
 %%
