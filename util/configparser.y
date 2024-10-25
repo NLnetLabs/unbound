@@ -60,7 +60,7 @@ static void validate_acl_action(const char* action);
 /* these need to be global, otherwise they cannot be used inside yacc */
 extern struct config_parser_state* cfg_parser;
 
-static bool ttl_pf_have_warned = false;
+static bool ttl_pf_has_warned = false;
 
 #if 0
 #define OUTYY(s)  printf s /* used ONLY when debugging */
@@ -2435,12 +2435,12 @@ server_local_zone: VAR_LOCAL_ZONE STRING_ARG STRING_ARG
                 free($6);
             } else {
 #ifdef HAVE_NET_PFVAR_H
-                if (!ttl_pf_have_warned && strncmp($6, "ttl", 3) == 0) {
+                if (!ttl_pf_has_warned && strncmp($6, "ttl", 3) == 0) {
                     yywarn(
                         "local-zone ipset: per-address TTL not supported in"
                         "BSD packet filter tables, ignoring"
                     );
-                    ttl_pf_have_warned = false;
+                    ttl_pf_has_warned = true;
                 }
 #endif
                 size_t len = strlen($2);
@@ -3462,12 +3462,12 @@ view_local_zone: VAR_LOCAL_ZONE STRING_ARG STRING_ARG
                 free($6);
             } else {
 #ifdef HAVE_NET_PFVAR_H
-                if (!ttl_pf_have_warned && strncmp($6, "ttl", 3) == 0) {
+                if (!ttl_pf_has_warned && strncmp($6, "ttl", 3) == 0) {
                     yywarn(
                         "local-zone ipset: per-address TTL not supported in"
                         "BSD packet filter tables, ignoring"
                     );
-                    ttl_pf_have_warned = false;
+                    ttl_pf_has_warned = true;
                 }
 #endif
                 size_t len = strlen($2);
