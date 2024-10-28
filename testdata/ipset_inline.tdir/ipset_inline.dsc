@@ -1,8 +1,8 @@
 BaseName: ipset_inline
 Version: 1.0
 Description: mock test ipset module with inline declarations
-CreationDate: Wed Mar 2 13:00:38 CET 2022
-Maintainer: George Thessalonikefs
+CreationDate: Mon Oct 28 15:22:32 AEST 2024
+Maintainer: Jack Kilrain
 Category:
 Component:
 CmdDepends:
