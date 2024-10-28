@@ -1056,11 +1056,11 @@ closer to that of BIND 9, while setting "\-1 \-1 \-1 \-1 \-1" gives behaviour
 rumoured to be closer to that of BIND 8.
 .TP
 .B harden\-short\-bufsize: \fI<yes or no>
-Very small EDNS buffer sizes from queries are ignored. Default is on, as
+Very small EDNS buffer sizes from queries are ignored. Default is yes, as
 described in the standard.
 .TP
 .B harden\-large\-queries: \fI<yes or no>
-Very large queries are ignored. Default is off, since it is legal protocol
+Very large queries are ignored. Default is no, since it is legal protocol
 wise to send these, and could be necessary for operation if TSIG or EDNS
 payload is very large.
 .TP
@@ -1131,7 +1131,7 @@ queries.  For domains that do not support 0x20 and also fail with fallback
 because they keep sending different answers, like some load balancers.
 Can be given multiple times, for different domains.
 .TP
-.B caps\-whitelist: \fI<yes or no>
+.B caps\-whitelist: \fI<domain>
 Alternate syntax for \fBcaps\-exempt\fR.
 .TP
 .B qname\-minimisation: \fI<yes or no>
@@ -2715,7 +2715,7 @@ Allow the ipsecmod functionality for the domain so that the module logic will be
 executed.  Can be given multiple times, for different domains.  If the option is
 not specified, all domains are treated as being allowed (default).
 .TP
-.B ipsecmod\-whitelist: \fI<yes or no>
+.B ipsecmod\-whitelist: \fI<domain>
 Alternate syntax for \fBipsecmod\-allow\fR.
 .SS "Cache DB Module Options"
 .LP

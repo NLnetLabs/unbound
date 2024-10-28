@@ -1,3 +1,11 @@
+25 October 2024: Yorgos
+	- Fix #1163: Typos in unbound.conf documentation.
+
+17 October 2024: Wouter
+	- Tag for 1.22.0 release. This did not contain the 1154 fix
+	  from 16 oct. The code repository continues with
+	  version 1.22.1 in development.
+
 16 October 2024: Yorgos
 	- Fix for dnsoverquic and dnstap to use the correct dnstap
 	  environment.
@@ -25,6 +33,7 @@
 	- Fix add reallocarray to alloc stats unit test, and disable
 	  override of strdup in unbound-host, and the result of config
 	  get option is freed properly.
+	- Tag for 1.22.0rc1.
 
 9 October 2024: Wouter
 	- Merge #871: DNS over QUIC. This adds `quic-port: 853` and
