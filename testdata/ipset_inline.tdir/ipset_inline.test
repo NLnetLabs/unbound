@@ -1,0 +1,66 @@
+# #-- ipset_inline.test --#
+# source the master var file when it's there
+[ -f ../.tpkg.var.master ] && source ../.tpkg.var.master
+# use .tpkg.var.test for in test variable passing
+[ -f .tpkg.var.test ] && source .tpkg.var.test
+
+. ...netmon.sh
+PRE="../.."
+
+# Global ipset declaration
+
+# Make all the queries. They need to succeed by the way.
+echo "> dig cname.example.net. A"
+dig @127.0.0.1 -p $UNBOUND_PORT cname.example.net. A | tee outfile
+echo "> check answer"
+if grep "1.1.1.1" outfile; then
+	echo "OK"
+else
+	echo "> cat logfiles"
+	cat fwd.log
+	cat unbound.log
+	echo "Not OK"
+	exit 1
+fi
+echo "> check ipset"
+if grep "ipset: add 1.1.1.1 to anothermadeupnamefor4 for target.example.net. with ttl 3600" unbound.log; then
+	echo "ipset OK"
+else
+	echo "> cat logfiles"
+	cat fwd.log
+	cat unbound.log
+	echo "Not OK"
+	exit 1
+fi
+
+echo "> dig cname.example.net. AAAA"
+dig @127.0.0.1 -p $UNBOUND_PORT cname.example.net. AAAA | tee outfile
+echo "> check answer"
+if grep "::1" outfile; then
+	echo "OK"
+else
+	echo "> cat logfiles"
+	cat fwd.log
+	cat unbound.log
+	echo "Not OK"
+	exit 1
+fi
+echo "> check ipset"
+if grep "ipset: add ::1 to anothermadeupnamefor6 for target.example.net." unbound.log; then
+	echo "ipset OK"
+else
+	echo "> cat logfiles"
+	cat fwd.log
+	cat unbound.log
+	echo "Not OK"
+	exit 1
+fi
+
+# Finalisation
+
+echo "> cat logfiles"
+cat tap.log
+cat tap.errlog
+cat fwd.log
+echo "> OK"
+exit 0
