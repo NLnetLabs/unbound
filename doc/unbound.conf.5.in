@@ -1,4 +1,4 @@
-.TH "unbound.conf" "5" "@date@" "NLnet Labs" "unbound @version@"
+.TH "unbound.conf" "5" "Oct 17, 2024" "NLnet Labs" "unbound 1.22.0"
 .\"
 .\" unbound.conf.5 -- unbound.conf manual
 .\"
@@ -1258,6 +1258,11 @@ The python module can be listed in different places, it then processes the
 output of the module it is just before. The dynlib module can be listed pretty
 much anywhere, it is only a very thin wrapper that allows dynamic libraries to
 run in its place.
+.IP
+When the server is built with ipset support and has is run with the \fICAP_NET_ADMIN\fR
+capability, the ipset module can be utilised. Example configuration for this is
+"\fIipset iterator\fR". I can easily be combined with any other module without
+any issues.
 .TP
 .B trust\-anchor\-file: \fI<filename>
 File with trusted keys for validation. Both DS and DNSKEY entries can appear
@@ -1507,7 +1512,7 @@ Configure a local zone. The type determines the answer to give if
 there is no match from local\-data. The types are deny, refuse, static,
 transparent, redirect, nodefault, typetransparent, inform, inform_deny,
 inform_redirect, always_transparent, block_a, always_refuse, always_nxdomain,
-always_null, noview, and are explained below. After that the default settings
+always_null, noview, ipset, and are explained below. After that the default settings
 are listed. Use local\-data: to enter data into the local zone. Answers for
 local zones are authoritative DNS answers. By default the zones are class IN.
 .IP
@@ -1620,6 +1625,30 @@ also turn off default contents for the zone. The 'nodefault' option
 has no other effect than turning off default contents for the
 given zone.  Use \fInodefault\fR if you use exactly that zone, if you want to
 use a subzone, use \fItransparent\fR.
+.TP 10
+\h'5'\fInodefault\fR
+Used to specify an ipset to insert resolved addresses into. If the deprecated
+global \fIipset\fR block is used, then it can be referenced using the form
+.nf
+server:
+    lcoal\-zone: "example.com." ipset
+ipset:
+    name\-v4: <ipset name>
+.fi
+However, per-rule declarations are also supported where delineation of
+addresses is required. This is done via the form:
+.nf
+local\-zone: "example.net." ipset <protocol> <ipset name> <tll | no\-ttl>
+.fi
+Here you can specify the \fIprotocol\fR as \fIipv4\fR or \fIipv6\fR, the
+name of the ipset and finally whether to use the DNS record TTL as an
+auto-expiry on the inserted ipset entry. Note that on a BSD distribution,
+where the server is compiled with the packet filter framework, there is
+no support for TTLs to be set on individual table entries. The only support
+that pf provides is invoking manual expiry of table entries past a delta of
+\fIn\fR seconds via the \fIpfctl -t <table> -T expire <seconds>\fR flag.
+See \fIpftcl\fR(8) Thus no support is added there for TTLs and a suitable warning
+is raised from the parser when the config is checked.
 .P
 The default zones are localhost, reverse 127.0.0.1 and ::1, the home.arpa,
 the onion, test, invalid and the AS112 zones. The AS112 zones are reverse
