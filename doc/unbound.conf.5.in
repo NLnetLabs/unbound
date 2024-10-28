@@ -2622,6 +2622,16 @@ the client query). If enabled, the address check is skipped when the client
 query contains an ECS record. And the lookup in the regular cache is skipped.
 Default is no.
 .TP
+.B client\-subnet\-address\-override\-ipv4: \fI<IPv4 subnet>\fR
+Override client source address in queries to the provided IPv4 subnet. Only
+applies if the query includes the ECS option and the ECS address family is IPv4.
+Default is to use the actual IPv4 subnet of the original client query.
+.TP
+.B client\-subnet\-address\-override\-ipv6: \fI<IPv6 subnet>\fR
+Override client source address in queries to the provided IPv6 subnet. Only
+applies if the query includes the ECS option and the ECS address family is IPv6.
+Default is to use the actual IPv6 subnet of the original client query.
+.TP
 .B max\-client\-subnet\-ipv6: \fI<number>\fR
 Specifies the maximum prefix length of the client source address we are willing
 to expose to third parties for IPv6.  Defaults to 56.
