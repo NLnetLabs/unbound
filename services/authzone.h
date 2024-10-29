@@ -184,7 +184,7 @@ struct auth_rrset {
 
 /**
  * Authoritative zone transfer structure.
- * Create and destroy needs the auth_zones* biglock.
+ * Create and destroy operations are not thread-safe.
  * The structure consists of different tasks.  Each can be unowned (-1) or
  * owner by a worker (worker-num).  A worker can pick up a task and then do
  * it.  This means the events (timeouts, sockets) are for that worker.
@@ -200,9 +200,8 @@ struct auth_xfer {
 	rbnode_type node;
 
 	/** lock on this structure, and on the workernum elements of the
-	 * tasks.  First hold the tree-lock in auth_zones, find the auth_xfer,
-	 * lock this lock.  Then a worker can reassign itself to fill up
-	 * one of the tasks. 
+	 * tasks.  First lock this lock, then a worker can reassign itself
+	 * to fill up one of the tasks.
 	 * Once it has the task assigned to it, the worker can access the
 	 * other elements of the task structure without a lock, because that
 	 * is necessary for the eventloop and callbacks from that. */
@@ -570,8 +569,8 @@ struct auth_zone* auth_zone_find(struct auth_zones* az, uint8_t* nm,
 struct auth_xfer* auth_xfer_find(struct auth_zones* az, uint8_t* nm,
 	size_t nmlen, uint16_t dclass);
 
-/** create an auth zone. returns wrlocked zone. caller must have wrlock
- * on az. returns NULL on malloc failure */
+/** create an auth zone. returns wrlocked zone, it is not thread-safe.
+ * returns NULL on malloc failure */
 struct auth_zone* auth_zone_create(struct auth_zones* az, uint8_t* nm,
 	size_t nmlen, uint16_t dclass);
 
@@ -648,8 +647,7 @@ int auth_data_cmp(const void* z1, const void* z2);
 /** compare auth_xfer for sorted rbtree */
 int auth_xfer_cmp(const void* z1, const void* z2);
 
-/** Create auth_xfer structure.
- * Caller must have wrlock on az. Returns locked xfer zone.
+/** Create auth_xfer structure. Note that it is not thread-safe.
  * @param az: zones structure.
  * @param z: zone with name and class
  * @return xfer zone or NULL
