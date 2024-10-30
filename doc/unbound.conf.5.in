@@ -902,9 +902,8 @@ outside of the chroot directory.
 Additionally, Unbound may need to access /dev/urandom (for entropy)
 from inside the chroot.
 .IP
-If given a chroot is done to the given directory. By default chroot is
-enabled and the default is "@UNBOUND_CHROOT_DIR@". If you give "" no
-chroot is performed.
+If given a chroot is done to the given directory. The chroot is by default 
+set to "@UNBOUND_CHROOT_DIR@". If you give "" no chroot is performed.
 .TP
 .B username: \fI<name>
 If given, after binding the port the user privileges are dropped. Default is
