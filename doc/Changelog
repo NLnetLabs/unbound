@@ -2,6 +2,8 @@
 	- Merge #1159: Stats for discard-timeout and wait-limit.
 	- Add test case for #1159.
 	- Some clean up for stat_values.test.
+	- Merge #1170 from Melroy van den Berg, Fix chroot manpage
+	  description.
 
 25 October 2024: Yorgos
 	- Fix #1163: Typos in unbound.conf documentation.
