@@ -4,6 +4,8 @@
 	- Some clean up for stat_values.test.
 	- Merge #1170 from Melroy van den Berg, Fix chroot manpage
 	  description.
+	- Merge #1157 from Liang Zhu, Fix heap corruption when calling
+	  ub_ctx_delete in Windows.
 
 25 October 2024: Yorgos
 	- Fix #1163: Typos in unbound.conf documentation.
