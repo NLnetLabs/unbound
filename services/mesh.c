@@ -214,6 +214,8 @@ mesh_create(struct module_stack* stack, struct module_env* env)
 	mesh->stats_dropped = 0;
 	mesh->ans_expired = 0;
 	mesh->ans_cachedb = 0;
+	mesh->num_queries_discard_timeout = 0;
+	mesh->num_queries_wait_limit = 0;
 	mesh->max_reply_states = env->cfg->num_queries_per_thread;
 	mesh->max_forever_states = (mesh->max_reply_states+1)/2;
 #ifndef S_SPLINT_S
@@ -424,7 +426,7 @@ void mesh_new_client(struct mesh_area* mesh, struct query_info* qinfo,
 		verbose(VERB_ALGO, "Too many queries waiting from the IP. "
 			"dropping incoming query.");
 		comm_point_drop_reply(rep);
-		mesh->stats_dropped++;
+		mesh->num_queries_wait_limit++;
 		return;
 	}
 	if(!unique)
@@ -1540,7 +1542,7 @@ void mesh_query_done(struct mesh_state* mstate)
 				http2_stream_remove_mesh_state(r->h2_stream);
 			comm_point_drop_reply(&r->query_reply);
 			mstate->reply_list = reply_list;
-			mstate->s.env->mesh->stats_dropped++;
+			mstate->s.env->mesh->num_queries_discard_timeout++;
 			continue;
 		}
 
@@ -2042,6 +2044,8 @@ mesh_stats_clear(struct mesh_area* mesh)
 	memset(&mesh->ans_rcode[0], 0, sizeof(size_t)*UB_STATS_RCODE_NUM);
 	memset(&mesh->rpz_action[0], 0, sizeof(size_t)*UB_STATS_RPZ_ACTION_NUM);
 	mesh->ans_nodata = 0;
+	mesh->num_queries_discard_timeout = 0;
+	mesh->num_queries_wait_limit = 0;
 }
 
 size_t
@@ -2270,7 +2274,7 @@ mesh_serve_expired_callback(void* arg)
 				http2_stream_remove_mesh_state(r->h2_stream);
 			comm_point_drop_reply(&r->query_reply);
 			mstate->reply_list = reply_list;
-			mstate->s.env->mesh->stats_dropped++;
+			mstate->s.env->mesh->num_queries_discard_timeout++;
 			continue;
 		}
 

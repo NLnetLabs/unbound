@@ -281,6 +281,10 @@ server_stats_compile(struct worker* worker, struct ub_stats_info* s, int reset)
 		s->svr.rpz_action[i] += (long long)worker->env.mesh->rpz_action[i];
 	timehist_export(worker->env.mesh->histogram, s->svr.hist,
 		NUM_BUCKETS_HIST);
+	s->svr.num_queries_discard_timeout +=
+		(long long)worker->env.mesh->num_queries_discard_timeout;
+	s->svr.num_queries_wait_limit +=
+		(long long)worker->env.mesh->num_queries_wait_limit;
 	/* values from outside network */
 	s->svr.unwanted_replies = (long long)worker->back->unwanted_replies;
 	s->svr.qtcp_outgoing = (long long)worker->back->num_tcp_outgoing;
@@ -451,6 +455,9 @@ void server_stats_add(struct ub_stats_info* total, struct ub_stats_info* a)
 	total->svr.num_queries_cookie_valid += a->svr.num_queries_cookie_valid;
 	total->svr.num_queries_cookie_client += a->svr.num_queries_cookie_client;
 	total->svr.num_queries_cookie_invalid += a->svr.num_queries_cookie_invalid;
+	total->svr.num_queries_discard_timeout +=
+		a->svr.num_queries_discard_timeout;
+	total->svr.num_queries_wait_limit += a->svr.num_queries_wait_limit;
 	total->svr.num_queries_missed_cache += a->svr.num_queries_missed_cache;
 	total->svr.num_queries_prefetch += a->svr.num_queries_prefetch;
 	total->svr.num_queries_timed_out += a->svr.num_queries_timed_out;

@@ -422,6 +422,12 @@ number of queries with a client part only DNS Cookie by thread
 .I threadX.num.queries_cookie_invalid
 number of queries with an invalid DNS Cookie by thread
 .TP
+.I threadX.num.queries_discard_timeout
+number of queries removed due to discard-timeout by thread
+.TP
+.I threadX.num.queries_wait_limit
+number of queries removed due to wait-limit by thread
+.TP
 .I threadX.num.cachehits
 number of queries that were successfully answered using a cache lookup
 .TP
@@ -509,6 +515,12 @@ summed over threads.
 summed over threads.
 .TP
 .I total.num.queries_cookie_invalid
+summed over threads.
+.TP
+.I total.num.queries_discard_timeout
+summed over threads.
+.TP
+.I total.num.queries_wait_limit
 summed over threads.
 .TP
 .I total.num.cachehits
