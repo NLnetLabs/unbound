@@ -2,6 +2,8 @@
 	- Fix redis that during a reload it does not fail if the redis
 	  server does not connect or does not respond. It still logs the
 	  errors and if the server is up checks expiration features.
+	- Merge #1167: Makefile.in: fix occasional parallel build failures
+	  around bison rule.
 
 1 November 2024: Yorgos
 	- Merge #1159: Stats for discard-timeout and wait-limit.
