@@ -168,7 +168,7 @@ static int add_to_ipset(filter_dev dev, const char *setname, const void *ipaddr,
 	nlh->nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK;
     if (ttl >= 0) {
         // Replace if we a TTL to extend the entry time
-        nlh->nlmsg_flags |= NLM_F_REPLACE;
+        nlh->nlmsg_flags |= NLM_F_REPLACE | NLM_F_CREATE;
     } else {
         // Don't replace if we have no TTL since entry doesn't expire
         nlh->nlmsg_flags |= NLM_F_EXCL;
