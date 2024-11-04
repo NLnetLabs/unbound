@@ -509,9 +509,14 @@ util/configlexer.c:  $(srcdir)/util/configlexer.lex util/configparser.h
 	fi
 	@if test ! -f $@; then echo "No $@ : need flex and bison to compile from source repository"; exit 1; fi
 
-util/configparser.c util/configparser.h:  $(srcdir)/util/configparser.y
+# Builds both util/configparser.c and util/configparser.h.
+# To avoid double-building we split one target out.
+util/configparser.c:  $(srcdir)/util/configparser.y
 	@-if test ! -d util; then $(INSTALL) -d util; fi
 	$(YACC) -d -o util/configparser.c $(srcdir)/util/configparser.y
+
+util/configparser.h: util/configparser.c
+	touch $@
 
 clean:
 	rm -f *.o *.d *.lo *~ tags
