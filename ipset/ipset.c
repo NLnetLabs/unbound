@@ -163,10 +163,11 @@ static int add_to_ipset(filter_dev dev, const char *setname, const void *ipaddr,
 		return -1;
 	}
 
+    const bool set_ttl = ttl >= 0;
 	nlh = mnl_nlmsg_put_header(buffer);
 	nlh->nlmsg_type = IPSET_CMD_ADD | (NFNL_SUBSYS_IPSET << 8);
 	nlh->nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK;
-    if (ttl >= 0) {
+    if (set_ttl) {
         // Replace if we a TTL to extend the entry time
         nlh->nlmsg_flags |= NLM_F_REPLACE | NLM_F_CREATE;
     } else {
@@ -187,7 +188,7 @@ static int add_to_ipset(filter_dev dev, const char *setname, const void *ipaddr,
 	mnl_attr_put(nlh, (af == AF_INET ? IPSET_ATTR_IPADDR_IPV4 : IPSET_ATTR_IPADDR_IPV6)
 			| NLA_F_NET_BYTEORDER, (af == AF_INET ? sizeof(struct in_addr) : sizeof(struct in6_addr)), ipaddr);
 	mnl_attr_nest_end(nlh, nested[1]);
-    if (ttl >= 0) {
+    if (set_ttl) {
         mnl_attr_put_u32(nlh, IPSET_ATTR_TIMEOUT | NLA_F_NET_BYTEORDER, ttl);
     }
 	mnl_attr_nest_end(nlh, nested[0]);
@@ -210,6 +211,12 @@ static int add_to_ipset(filter_dev dev, const char *setname, const void *ipaddr,
             return -1;
         }
         result = mnl_cb_run(recv_buffer, result, seq, port_id, NULL, NULL);
+        if (set_ttl && errno == IPSET_ERR_EXIST) {
+            // If we have no TTL, then we don't replace entries.
+			// This error indicates we already have an entry, so we
+			// can ignore it and move on.
+            break;
+        }
         if (result < 0) {
             log_err("ipset: netlink response had error: %s", strerror(errno));
             free(recv_buffer);
