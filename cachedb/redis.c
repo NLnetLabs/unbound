@@ -182,13 +182,16 @@ redis_init(struct module_env* env, struct cachedb_env* cachedb_env)
 	for(i = 0; i < moddata->numctxs; i++) {
 		redisContext* ctx = redis_connect(moddata);
 		if(!ctx) {
-			log_err("redis_init: failed to init redis");
-			goto fail;
+			log_err("redis_init: failed to init redis "
+				"(for thread %d)", i);
+			/* And continue, the context can be established
+			 * later, just like after a disconnect. */
 		}
 		moddata->ctxs[i] = ctx;
 	}
 	cachedb_env->backend_data = moddata;
-	if(env->cfg->redis_expire_records) {
+	if(env->cfg->redis_expire_records &&
+		moddata->ctxs[env->alloc->thread_num] != NULL) {
 		redisReply* rep = NULL;
 		int redis_reply_type = 0;
 		/** check if setex command is supported */
@@ -199,7 +202,6 @@ redis_init(struct module_env* env, struct cachedb_env* cachedb_env)
 			log_err("redis_init: failed to init redis, the "
 				"redis-expire-records option requires the SETEX command "
 				"(redis >= 2.0.0)");
-			goto fail;
 		}
 		redis_reply_type = rep->type;
 		freeReplyObject(rep);
@@ -211,7 +213,6 @@ redis_init(struct module_env* env, struct cachedb_env* cachedb_env)
 			log_err("redis_init: failed to init redis, the "
 				"redis-expire-records option requires the SETEX command "
 				"(redis >= 2.0.0)");
-			goto fail;
 		}
 	}
 	return 1;
