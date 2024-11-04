@@ -211,7 +211,7 @@ static int add_to_ipset(filter_dev dev, const char *setname, const void *ipaddr,
             return -1;
         }
         result = mnl_cb_run(recv_buffer, result, seq, port_id, NULL, NULL);
-        if (set_ttl && errno == IPSET_ERR_EXIST) {
+        if (!set_ttl && errno == IPSET_ERR_EXIST) {
             // If we have no TTL, then we don't replace entries.
 			// This error indicates we already have an entry, so we
 			// can ignore it and move on.
