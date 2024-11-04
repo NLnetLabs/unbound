@@ -189,7 +189,19 @@ static int add_to_ipset(filter_dev dev, const char *setname, const void *ipaddr,
 			| NLA_F_NET_BYTEORDER, (af == AF_INET ? sizeof(struct in_addr) : sizeof(struct in6_addr)), ipaddr);
 	mnl_attr_nest_end(nlh, nested[1]);
     if (set_ttl) {
-        mnl_attr_put_u32(nlh, IPSET_ATTR_TIMEOUT | NLA_F_NET_BYTEORDER, ttl);
+        // Netlink packets are packed based on a pointer and data size
+		// to memcpy into an appropriately sized buffer within the packet
+		// data section. Thus we need to ensure that the TTL is in a u32
+		// sized variable, otherwise we would end up copying the upper
+		// 32 bits of a 64 bit integer.
+		const uint32_t entry_ttl = (uint32_t) ttl > UINT32_MAX ? UINT32_MAX : ttl;
+        mnl_attr_put_u32(
+            nlh,
+            IPSET_ATTR_TIMEOUT | NLA_F_NET_BYTEORDER,
+            // Expecting net byte order, we should convert from host order
+            // into net byte order
+            htonl(entry_ttl)
+        );
     }
 	mnl_attr_nest_end(nlh, nested[0]);
 

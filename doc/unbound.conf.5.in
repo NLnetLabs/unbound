@@ -1642,13 +1642,15 @@ local\-zone: "example.net." ipset <protocol> <ipset name> <tll | no\-ttl>
 .fi
 Here you can specify the \fIprotocol\fR as \fIipv4\fR or \fIipv6\fR, the
 name of the ipset and finally whether to use the DNS record TTL as an
-auto-expiry on the inserted ipset entry. Note that on a BSD distribution,
-where the server is compiled with the packet filter framework, there is
-no support for TTLs to be set on individual table entries. The only support
-that pf provides is invoking manual expiry of table entries past a delta of
-\fIn\fR seconds via the \fIpfctl -t <table> -T expire <seconds>\fR flag.
-See \fIpftcl\fR(8) Thus no support is added there for TTLs and a suitable warning
-is raised from the parser when the config is checked.
+auto-expiry on the inserted ipset entry. When declaring a local-zone with
+TTL support, the associated ipset must be created with \fIIPSET_EXT_TIMEOUT\fR,
+or with the \fIipset\fR CLI, using the \fItimeout <seconds>\fR option.
+Note that on a BSD distribution, where the server is compiled with the packet
+filter framework, there is no support for TTLs to be set on individual table
+entries. The only support that pf provides is invoking manual expiry of table
+entries past a delta of \fIn\fR seconds via the \fIpfctl -t <table> -T expire <seconds>\fR
+flag. See \fIpftcl\fR(8) Thus no support is added there for TTLs and a suitable
+warning is raised from the parser when the config is checked.
 .P
 The default zones are localhost, reverse 127.0.0.1 and ::1, the home.arpa,
 the onion, test, invalid and the AS112 zones. The AS112 zones are reverse
