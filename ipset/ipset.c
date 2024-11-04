@@ -150,7 +150,7 @@ static int add_to_ipset(filter_dev dev, const char *setname, const void *ipaddr,
     unsigned int port_id;
 	struct nlmsghdr *nlh;
 	struct nfgenmsg *nfg;
-	struct nlattr *nested[3];
+	struct nlattr *nested[2];
     char* recv_buffer;
 	static char buffer[BUFF_LEN];
 
@@ -165,7 +165,14 @@ static int add_to_ipset(filter_dev dev, const char *setname, const void *ipaddr,
 
 	nlh = mnl_nlmsg_put_header(buffer);
 	nlh->nlmsg_type = IPSET_CMD_ADD | (NFNL_SUBSYS_IPSET << 8);
-	nlh->nlmsg_flags = NLM_F_REQUEST|NLM_F_ACK|NLM_F_EXCL;
+	nlh->nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK;
+    if (ttl >= 0) {
+        // Replace if we a TTL to extend the entry time
+        nlh->nlmsg_flags |= NLM_F_REPLACE;
+    } else {
+        // Don't replace if we have no TTL since entry doesn't expire
+        nlh->nlmsg_flags |= NLM_F_EXCL;
+    }
     nlh->nlmsg_seq = seq = time(NULL);
 
 	nfg = mnl_nlmsg_put_extra_header(nlh, sizeof(struct nfgenmsg));
@@ -181,9 +188,7 @@ static int add_to_ipset(filter_dev dev, const char *setname, const void *ipaddr,
 			| NLA_F_NET_BYTEORDER, (af == AF_INET ? sizeof(struct in_addr) : sizeof(struct in6_addr)), ipaddr);
 	mnl_attr_nest_end(nlh, nested[1]);
     if (ttl >= 0) {
-        nested[2] = mnl_attr_nest_start(nlh, IPSET_ATTR_TIMEOUT);
-        mnl_attr_put(nlh, NLA_F_NET_BYTEORDER, sizeof(time_t), &ttl);
-        mnl_attr_nest_end(nlh, nested[2]);
+        mnl_attr_put_u32(nlh, IPSET_ATTR_TIMEOUT | NLA_F_NET_BYTEORDER, ttl);
     }
 	mnl_attr_nest_end(nlh, nested[0]);
 
