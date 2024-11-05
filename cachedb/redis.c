@@ -61,6 +61,7 @@ struct redis_moddata {
 	struct timeval command_timeout;	 /* timeout for commands */
 	struct timeval connect_timeout;	 /* timeout for connect */
 	int logical_db;		/* the redis logical database to use */
+	int setex_available;    /* if the SETEX command is supported */
 };
 
 static redisReply* redis_command(struct module_env*, struct cachedb_env*,
@@ -199,9 +200,7 @@ redis_init(struct module_env* env, struct cachedb_env* cachedb_env)
 			"SETEX __UNBOUND_REDIS_CHECK__ 1 none", NULL, 0);
 		if(!rep) {
 			/** init failed, no response from redis server*/
-			log_err("redis_init: failed to init redis, the "
-				"redis-expire-records option requires the SETEX command "
-				"(redis >= 2.0.0)");
+			goto setex_fail;
 		}
 		redis_reply_type = rep->type;
 		freeReplyObject(rep);
@@ -210,13 +209,17 @@ redis_init(struct module_env* env, struct cachedb_env* cachedb_env)
 			break;
 		default:
 			/** init failed, setex command not supported */
-			log_err("redis_init: failed to init redis, the "
-				"redis-expire-records option requires the SETEX command "
-				"(redis >= 2.0.0)");
+			goto setex_fail;
 		}
+		moddata->setex_available = 1;
 	}
 	return 1;
 
+setex_fail:
+	log_err("redis_init: failure during redis_init, the "
+		"redis-expire-records option requires the SETEX command "
+		"(redis >= 2.0.0)");
+	return 1;
 fail:
 	moddata_clean(&moddata);
 	return 0;
@@ -347,7 +350,10 @@ redis_store(struct module_env* env, struct cachedb_env* cachedb_env,
 {
 	redisReply* rep;
 	int n;
-	int set_ttl = (env->cfg->redis_expire_records &&
+	struct redis_moddata* moddata = (struct redis_moddata*)
+		cachedb_env->backend_data;
+	int set_ttl = (moddata->setex_available &&
+		env->cfg->redis_expire_records &&
 		(!env->cfg->serve_expired || env->cfg->serve_expired_ttl > 0));
 	/* Supported commands:
 	 * - "SET " + key + " %b"
