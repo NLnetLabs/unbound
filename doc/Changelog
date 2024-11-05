@@ -4,6 +4,7 @@
 	  current delegation and validation recursion information to be
 	  updated, but as a consequence no longer has certain expired
 	  information around for later dnssec valid expired responses.
+	- Fix to log redis timeout error string on failure.
 
 4 November 2024: Wouter
 	- Fix redis that during a reload it does not fail if the redis

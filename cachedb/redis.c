@@ -102,7 +102,7 @@ redis_connect(const struct redis_moddata* moddata)
 		goto fail;
 	}
 	if(redisSetTimeout(ctx, moddata->command_timeout) != REDIS_OK) {
-		log_err("failed to set redis timeout");
+		log_err("failed to set redis timeout, %s", ctx->errstr);
 		goto fail;
 	}
 	if(moddata->server_password && moddata->server_password[0]!=0) {
