@@ -6,6 +6,9 @@
 	  information around for later dnssec valid expired responses.
 	- Fix to log redis timeout error string on failure.
 
+5 November 2024: Yorgos
+	- Fix SETEX check during Redis (re)initialization.
+
 4 November 2024: Wouter
 	- Fix redis that during a reload it does not fail if the redis
 	  server does not connect or does not respond. It still logs the
