@@ -1,3 +1,10 @@
+5 November 2024: Wouter
+	- Fix for the serve expired DNSSEC information fix, it would not allow
+	  current delegation information be updated in cache. The fix allows
+	  current delegation and validation recursion information to be
+	  updated, but as a consequence no longer has certain expired
+	  information around for later dnssec valid expired responses.
+
 4 November 2024: Wouter
 	- Fix redis that during a reload it does not fail if the redis
 	  server does not connect or does not respond. It still logs the

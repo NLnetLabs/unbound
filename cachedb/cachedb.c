@@ -755,7 +755,8 @@ cachedb_intcache_store(struct module_qstate* qstate, int msg_expired)
 	}
 	(void)dns_cache_store(qstate->env, &qstate->qinfo,
 		qstate->return_msg->rep, 0, qstate->prefetch_leeway, 0,
-		qstate->region, store_flags, qstate->qstarttime);
+		qstate->region, store_flags, qstate->qstarttime,
+		qstate->is_valrec);
 	if(serve_expired && msg_expired) {
 		if(qstate->env->cfg->serve_expired_client_timeout) {
 			/* No expired response from the query state, the

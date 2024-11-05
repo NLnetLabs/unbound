@@ -2563,7 +2563,7 @@ processFinished(struct module_qstate* qstate, struct val_qstate* vq,
 			if(!dns_cache_store(qstate->env, &vq->orig_msg->qinfo,
 				vq->orig_msg->rep, 0, qstate->prefetch_leeway,
 				0, qstate->region, qstate->query_flags,
-				qstate->qstarttime)) {
+				qstate->qstarttime, qstate->is_valrec)) {
 				log_err("out of memory caching validator results");
 			}
 		}
@@ -2572,7 +2572,8 @@ processFinished(struct module_qstate* qstate, struct val_qstate* vq,
 		/* and this does not get prefetched, so no leeway */
 		if(!dns_cache_store(qstate->env, &vq->orig_msg->qinfo,
 			vq->orig_msg->rep, 1, 0, 0, qstate->region,
-			qstate->query_flags, qstate->qstarttime)) {
+			qstate->query_flags, qstate->qstarttime,
+			qstate->is_valrec)) {
 			log_err("out of memory caching validator results");
 		}
 	}

@@ -1057,7 +1057,8 @@ dns_cache_lookup(struct module_env* env,
 int
 dns_cache_store(struct module_env* env, struct query_info* msgqinf,
         struct reply_info* msgrep, int is_referral, time_t leeway, int pside,
-	struct regional* region, uint32_t flags, time_t qstarttime)
+	struct regional* region, uint32_t flags, time_t qstarttime,
+	int is_valrec)
 {
 	struct reply_info* rep = NULL;
 	if(SERVE_EXPIRED) {
@@ -1079,7 +1080,8 @@ dns_cache_store(struct module_env* env, struct query_info* msgqinf,
 				 * one and let the validator manage caching. */
 				&& cached->security != sec_status_bogus
 				&& (env->need_to_validate &&
-				msgrep->security == sec_status_unchecked)) {
+				msgrep->security == sec_status_unchecked)
+				&& !is_valrec) {
 				verbose(VERB_ALGO, "a validated expired entry "
 					"could be overwritten, skip caching "
 					"the new message at this stage");

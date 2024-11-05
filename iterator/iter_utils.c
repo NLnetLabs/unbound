@@ -693,10 +693,11 @@ dns_copy_msg(struct dns_msg* from, struct regional* region)
 void
 iter_dns_store(struct module_env* env, struct query_info* msgqinf,
 	struct reply_info* msgrep, int is_referral, time_t leeway, int pside,
-	struct regional* region, uint16_t flags, time_t qstarttime)
+	struct regional* region, uint16_t flags, time_t qstarttime,
+	int is_valrec)
 {
 	if(!dns_cache_store(env, msgqinf, msgrep, is_referral, leeway,
-		pside, region, flags, qstarttime))
+		pside, region, flags, qstarttime, is_valrec))
 		log_err("out of memory: cannot store data in cache");
 }
 
@@ -1605,4 +1606,13 @@ limit_nsec_ttl(struct dns_msg* msg)
 			}
 		}
 	}
+}
+
+void
+iter_make_minimal(struct reply_info* rep)
+{
+	size_t rem = rep->ns_numrrsets + rep->ar_numrrsets;
+	rep->ns_numrrsets = 0;
+	rep->ar_numrrsets = 0;
+	rep->rrset_count -= rem;
 }
