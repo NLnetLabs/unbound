@@ -194,7 +194,7 @@ server:
 	# iter-scrub-cname: 11
 
 	# Limit on upstream queries for an incoming query and its recursion.
-	# max-global-quota: 128
+	# max-global-quota: 200
 
 	# msec for waiting for an unknown server to reply.  Increase if you
 	# are behind a slow satellite link, to eg. 1128.

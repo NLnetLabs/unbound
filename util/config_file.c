@@ -416,7 +416,7 @@ config_create(void)
 	cfg->ede = 0;
 	cfg->iter_scrub_ns = 20;
 	cfg->iter_scrub_cname = 11;
-	cfg->max_global_quota = 128;
+	cfg->max_global_quota = 200;
 	return cfg;
 error_exit:
 	config_delete(cfg);

@@ -1,3 +1,8 @@
+6 November 2024: Yorgos
+	- Increase the default of max-global-quota to 200 from 128 after
+	  operational feedback. Still keeping the possible amplification
+	  factor (CAMP related issues) in the hundreds.
+
 5 November 2024: Wouter
 	- Fix for the serve expired DNSSEC information fix, it would not allow
 	  current delegation information be updated in cache. The fix allows

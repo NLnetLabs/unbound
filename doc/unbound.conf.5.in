@@ -1997,7 +1997,7 @@ Default is 11.
 Limit on the number of upstream queries sent out for an incoming query and
 its subqueries from recursion. It is not reset during the resolution. When
 it is exceeded the query is failed and the lookup process stops.
-Default is 128.
+Default is 200.
 .TP 5
 .B fast\-server\-permil: \fI<number>
 Specify how many times out of 1000 to pick from the set of fastest servers.
