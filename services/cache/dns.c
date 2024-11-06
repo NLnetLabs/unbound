@@ -1056,7 +1056,7 @@ dns_cache_lookup(struct module_env* env,
 
 int
 dns_cache_store(struct module_env* env, struct query_info* msgqinf,
-        struct reply_info* msgrep, int is_referral, time_t leeway, int pside,
+	struct reply_info* msgrep, int is_referral, time_t leeway, int pside,
 	struct regional* region, uint32_t flags, time_t qstarttime,
 	int is_valrec)
 {
@@ -1066,7 +1066,7 @@ dns_cache_store(struct module_env* env, struct query_info* msgqinf,
 		 * useful expired record exists. */
 		struct msgreply_entry* e = msg_cache_lookup(env,
 			msgqinf->qname, msgqinf->qname_len, msgqinf->qtype,
-			msgqinf->qclass, flags, 0, 0);
+			msgqinf->qclass, flags, 0, 1);
 		if(e) {
 			struct reply_info* cached = e->entry.data;
 			if(cached->ttl < *env->now
@@ -1090,6 +1090,33 @@ dns_cache_store(struct module_env* env, struct query_info* msgqinf,
 				 *   validated. */
 				&& !is_valrec
 				&& msgqinf->qtype != LDNS_RR_TYPE_RRSIG) {
+				if((int)FLAGS_GET_RCODE(msgrep->flags) !=
+					LDNS_RCODE_NOERROR &&
+					(int)FLAGS_GET_RCODE(msgrep->flags) !=
+					LDNS_RCODE_NXDOMAIN) {
+					/* The current response has an
+					 * erroneous rcode. Adjust norec time
+					 * so that additional lookups are not
+					 * performed for some time. */
+					verbose(VERB_ALGO, "set "
+						"serve-expired-norec-ttl for "
+						"response in cache");
+					cached->serve_expired_norec_ttl =
+						NORR_TTL + *env->now;
+					if(env->cfg->serve_expired_ttl_reset &&
+					    cached->serve_expired_ttl
+					    < *env->now +
+					    env->cfg->serve_expired_ttl) {
+						/* Reset serve-expired-ttl for
+						 * valid response in cache. */
+						verbose(VERB_ALGO, "reset "
+							"serve-expired-ttl "
+							"for response in cache");
+						cached->serve_expired_ttl =
+						    *env->now +
+						    env->cfg->serve_expired_ttl;
+					}
+				}
 				verbose(VERB_ALGO, "a validated expired entry "
 					"could be overwritten, skip caching "
 					"the new message at this stage");
