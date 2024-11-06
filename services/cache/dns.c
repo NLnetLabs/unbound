@@ -1081,7 +1081,15 @@ dns_cache_store(struct module_env* env, struct query_info* msgqinf,
 				&& cached->security != sec_status_bogus
 				&& (env->need_to_validate &&
 				msgrep->security == sec_status_unchecked)
-				&& !is_valrec) {
+				/* Exceptions to that rule are:
+				 * o recursions that don't need validation but
+				 *   need to update the cache for coherence
+				 *   (delegation information while iterating,
+				 *   DNSKEY and DS lookups from validator)
+				 * o explicit RRSIG queries that are not
+				 *   validated. */
+				&& !is_valrec
+				&& msgqinf->qtype != LDNS_RR_TYPE_RRSIG) {
 				verbose(VERB_ALGO, "a validated expired entry "
 					"could be overwritten, skip caching "
 					"the new message at this stage");
