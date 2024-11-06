@@ -16,9 +16,9 @@ SCENARIO_BEGIN Serve expired ttl with reset on forwarder with a timeout on upstr
 ; - Send query again
 ; - Upstream timeouts
 ; - Error response from iterator SERVFAIL, resets expired-ttl on cache and sets norec_ttl blocking recursion
-; - Check we are getting the cached response because it was expired-ttl-reset.
+; - Check we are getting the cached response because it was expired-ttl-reset
 ; - Query again
-; - Check we are getting the expired answer; prefetching is blocked by
+; - Check we are getting the expired answer; prefetching is blocked by norec_ttl
 ; - If there was prefetching the test would fail with the pending upstream query
 
 STEP 1 QUERY
