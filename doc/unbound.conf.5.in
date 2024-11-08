@@ -1106,10 +1106,23 @@ to increase the max depth that is checked to.
 .TP
 .B harden\-algo\-downgrade: \fI<yes or no>
 Harden against algorithm downgrade when multiple algorithms are
-advertised in the DS record.  If no, allows the weakest algorithm to
-validate the zone.  Default is no.  Zone signers must produce zones
-that allow this feature to work, but sometimes they do not, and turning
-this option off avoids that validation failure.
+advertised in the DS record.
+This works by first choosing only the strongest DS digest type as per RFC 4509
+(Unbound treats the highest algorithm as the strongest) and then
+expecting signatures from all the advertised signing algorithms from the chosen
+DS(es) to be present.
+If no, allows any algorithm to validate the zone.
+Default is no.
+RFC 6840 mandates that zone signers must produce zones signed with all
+advertised algorithms, but sometimes they do not.
+RFC 6840 also clarifies that this requirement is not for validators and
+validators should accept any single valid path.
+It should thus be explicitly noted that this option violates RFC 6840 for
+DNSSEC validation and should only be used to perform a signature
+completeness test to support troubleshooting.
+Using this option may break DNSSEC resolution with non-RFC6840-conforming
+signers and/or in multi-signer configurations that don't send all the
+advertised signatures.
 .TP
 .B harden\-unknown\-additional: \fI<yes or no>
 Harden against unknown records in the authority section and additional

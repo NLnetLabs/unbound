@@ -1,3 +1,6 @@
+8 November 2024: Yorgos
+	- More descriptive text for 'harden-algo-downgrade'.
+
 6 November 2024: Yorgos
 	- Increase the default of max-global-quota to 200 from 128 after
 	  operational feedback. Still keeping the possible amplification
