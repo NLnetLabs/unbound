@@ -71,7 +71,7 @@
 #include "sldns/sbuffer.h"
 
 /* number of packets */
-int MAX_GLOBAL_QUOTA = 128;
+int MAX_GLOBAL_QUOTA = 200;
 /* in msec */
 int UNKNOWN_SERVER_NICENESS = 376;
 /* in msec */
