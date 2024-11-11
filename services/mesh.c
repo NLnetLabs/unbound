@@ -1263,7 +1263,7 @@ mesh_do_callback(struct mesh_state* m, int rcode, struct reply_info* rep,
 			!reply_info_answer_encode(&m->s.qinfo, rep, r->qid,
 			r->qflags, r->buf, 0, 1,
 			m->s.env->scratch, udp_size, &r->edns,
-			(int)(r->edns.bits & EDNS_DO), secure))
+			(int)(r->edns.bits & EDNS_DO), secure, 0))
 		{
 			fptr_ok(fptr_whitelist_mesh_cb(r->cb));
 			(*r->cb)(r->cb_arg, LDNS_RCODE_SERVFAIL, r->buf,
@@ -1451,7 +1451,7 @@ mesh_send_reply(struct mesh_state* m, int rcode, struct reply_info* rep,
 			!reply_info_answer_encode(&m->s.qinfo, rep, r->qid,
 			r->qflags, r_buffer, 0, 1, m->s.env->scratch,
 			udp_size, &r->edns, (int)(r->edns.bits & EDNS_DO),
-			secure))
+			secure, 0))
 		{
 			if(!inplace_cb_reply_servfail_call(m->s.env, &m->s.qinfo, &m->s,
 			rep, LDNS_RCODE_SERVFAIL, &r->edns, &r->query_reply, m->s.region, &r->start_time))

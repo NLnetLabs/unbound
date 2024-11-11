@@ -564,7 +564,7 @@ answer_norec_from_cache(struct worker* worker, struct query_info* qinfo,
 	}
 	if(!reply_info_answer_encode(&msg->qinfo, msg->rep, id, flags,
 		repinfo->c->buffer, 0, 1, worker->scratchpad,
-		udpsize, edns, (int)(edns->bits & EDNS_DO), secure)) {
+		udpsize, edns, (int)(edns->bits & EDNS_DO), secure, 1)) {
 		if(!inplace_cb_reply_servfail_call(&worker->env, qinfo, NULL, NULL,
 			LDNS_RCODE_SERVFAIL, edns, repinfo, worker->scratchpad,
 			worker->env.now_tv))
@@ -802,7 +802,7 @@ answer_from_cache(struct worker* worker, struct query_info* qinfo,
 		if(!reply_info_answer_encode(qinfo, encode_rep, id, flags,
 			repinfo->c->buffer, timenow, 1, worker->scratchpad,
 			udpsize, edns, (int)(edns->bits & EDNS_DO),
-			*is_secure_answer)) {
+			*is_secure_answer, 1)) {
 			if(!inplace_cb_reply_servfail_call(&worker->env, qinfo,
 				NULL, NULL, LDNS_RCODE_SERVFAIL, edns, repinfo,
 				worker->scratchpad, worker->env.now_tv))
