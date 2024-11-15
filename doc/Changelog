@@ -1,6 +1,7 @@
 15 November 2024: Wouter
 	- Fix #1183: the data being used is released in method
 	  nsec3_hash_test_entry.
+	- Fix for #1183: release nsec3 hashes per test file.
 
 8 November 2024: Yorgos
 	- More descriptive text for 'harden-algo-downgrade'.
