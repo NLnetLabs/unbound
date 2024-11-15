@@ -458,6 +458,7 @@ nsec3_hash_test_entry(struct entry* e, rbtree_type* ct,
 
 	reply_info_parsedelete(rep, alloc);
 	query_info_clear(&qinfo);
+	rbtree_init(ct, &nsec3_hash_cmp); /* remove refs freed by parsedelete */
 }
 
 
