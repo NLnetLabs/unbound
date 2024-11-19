@@ -90,6 +90,11 @@ struct mesh_area {
 	/** rbtree of all current queries (mesh_state.node)*/
 	rbtree_type all;
 
+	/** number of queries for unbound's auth_zones, upstream query */
+	size_t num_query_authzone_up;
+	/** number of queries for unbound's auth_zones, downstream answers */
+	size_t num_query_authzone_down;
+
 	/** count of the total number of mesh_reply entries */
 	size_t num_reply_addrs;
 	/** count of the number of mesh_states that have mesh_replies 

@@ -2031,6 +2031,8 @@ mesh_stats_clear(struct mesh_area* mesh)
 {
 	if(!mesh)
 		return;
+	mesh->num_query_authzone_up = 0;
+	mesh->num_query_authzone_down = 0;
 	mesh->replies_sent = 0;
 	mesh->replies_sum_wait.tv_sec = 0;
 	mesh->replies_sum_wait.tv_usec = 0;

@@ -3610,9 +3610,7 @@ int auth_zones_answer(struct auth_zones* az, struct module_env* env,
 			return 0;
 		}
 		lock_rw_unlock(&z->lock);
-		lock_rw_wrlock(&az->lock);
-		az->num_query_down++;
-		lock_rw_unlock(&az->lock);
+		env->mesh->num_query_authzone_down++;
 		auth_error_encode(qinfo, env, edns, repinfo, buf, temp,
 			LDNS_RCODE_SERVFAIL);
 		return 1;
@@ -3625,9 +3623,7 @@ int auth_zones_answer(struct auth_zones* az, struct module_env* env,
 		/* fallback to regular answering (recursive) */
 		return 0;
 	}
-	lock_rw_wrlock(&az->lock);
-	az->num_query_down++;
-	lock_rw_unlock(&az->lock);
+	env->mesh->num_query_authzone_down++;
 
 	/* encode answer */
 	if(!r)
