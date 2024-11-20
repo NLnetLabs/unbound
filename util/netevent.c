@@ -2845,6 +2845,7 @@ static int
 doq_lookup_conn_stream(struct comm_reply* repinfo, struct comm_point* c,
 	struct doq_conn** conn, struct doq_stream** stream)
 {
+	log_assert(c->doq_socket);
 	if(c->doq_socket->current_conn) {
 		*conn = c->doq_socket->current_conn;
 	} else {
@@ -6747,7 +6748,7 @@ comm_point_drop_reply(struct comm_reply* repinfo)
 		reclaim_http_handler(repinfo->c);
 		return;
 #ifdef HAVE_NGTCP2
-	} else if(repinfo->c->type == comm_doq) {
+	} else if(repinfo->c->doq_socket) {
 		doq_socket_drop_reply(repinfo);
 		return;
 #endif

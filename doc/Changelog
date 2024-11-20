@@ -1,3 +1,6 @@
+20 November 2024: Yorgos
+	- Fix comparison to help static analyzer.
+
 19 November 2024: Yorgos
 	- Merge #1169 from Sergey Kacheev, fix: lock-free counters for
 	  auth_zone up/down queries.
