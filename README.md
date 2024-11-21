@@ -5,6 +5,7 @@
 [![Fuzzing Status](https://oss-fuzz-build-logs.storage.googleapis.com/badges/unbound.svg)](https://bugs.chromium.org/p/oss-fuzz/issues/list?sort=-opened&can=1&q=proj:unbound)
 [![Documentation Status](https://readthedocs.org/projects/unbound/badge/?version=latest)](https://unbound.readthedocs.io/en/latest/?badge=latest)
 [![Mastodon Follow](https://img.shields.io/mastodon/follow/109262826617293067?domain=https%3A%2F%2Ffosstodon.org&style=social)](https://fosstodon.org/@nlnetlabs)
+[![Gurubase](https://img.shields.io/badge/Gurubase-Ask%20Unbound%20Guru-006BFF)](https://gurubase.io/g/unbound)
 
 Unbound is a validating, recursive, caching DNS resolver. It is designed to be
 fast and lean and incorporates modern features based on open standards. If you
