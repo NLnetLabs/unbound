@@ -1523,9 +1523,9 @@ listen_create(struct comm_base* base, struct listen_port* ports,
 	size_t bufsize, int tcp_accept_count, int tcp_idle_timeout,
 	int harden_large_queries, uint32_t http_max_streams,
 	char* http_endpoint, int http_notls, struct tcl_list* tcp_conn_limit,
-	void* sslctx, struct dt_env* dtenv, struct doq_table* doq_table,
-	struct ub_randstate* rnd, const char* ssl_service_key,
-	const char* ssl_service_pem, struct config_file* cfg,
+	void* sslctx, void* quic_sslctx, struct dt_env* dtenv,
+	struct doq_table* doq_table,
+	struct ub_randstate* rnd,struct config_file* cfg,
 	comm_point_callback_type* cb, void *cb_arg)
 {
 	struct listen_dnsport* front = (struct listen_dnsport*)
@@ -1558,8 +1558,7 @@ listen_create(struct comm_base* base, struct listen_port* ports,
 #endif
 			cp = comm_point_create_doq(base, ports->fd,
 				front->udp_buff, cb, cb_arg, ports->socket,
-				doq_table, rnd, ssl_service_key,
-				ssl_service_pem, cfg);
+				doq_table, rnd, quic_sslctx, cfg);
 		} else if(ports->ftype == listen_type_tcp ||
 				ports->ftype == listen_type_tcp_dnscrypt) {
 			cp = comm_point_create_tcp(base, ports->fd,
@@ -1620,10 +1619,13 @@ listen_create(struct comm_base* base, struct listen_port* ports,
 			(ports->ftype == listen_type_udpancil) ||
 			(ports->ftype == listen_type_tcp_dnscrypt) ||
 			(ports->ftype == listen_type_udp_dnscrypt) ||
-			(ports->ftype == listen_type_udpancil_dnscrypt))
+			(ports->ftype == listen_type_udpancil_dnscrypt)) {
 			cp->ssl = NULL;
-		else
+		} else if(ports->ftype == listen_type_doq) {
+			cp->ssl = quic_sslctx;
+		} else {
 			cp->ssl = sslctx;
+		}
 		cp->dtenv = dtenv;
 		cp->do_not_close = 1;
 #ifdef USE_DNSCRYPT
@@ -4598,10 +4600,9 @@ doq_alpn_select_cb(SSL* ATTR_UNUSED(ssl), const unsigned char** out,
 	return SSL_TLSEXT_ERR_ALERT_FATAL;
 }
 
-/** create new tls session for server doq connection */
-static SSL_CTX*
-doq_ctx_server_setup(struct doq_server_socket* doq_socket)
+void* quic_sslctx_create(char* key, char* pem, char* verifypem)
 {
+#ifdef HAVE_NGHTTP2
 	char* sid_ctx = "unbound server";
 #ifndef HAVE_NGTCP2_CRYPTO_QUICTLS_CONFIGURE_SERVER_CONTEXT
 	SSL_QUIC_METHOD* quic_method;
@@ -4609,6 +4610,16 @@ doq_ctx_server_setup(struct doq_server_socket* doq_socket)
 	SSL_CTX* ctx = SSL_CTX_new(TLS_server_method());
 	if(!ctx) {
 		log_crypto_err("Could not SSL_CTX_new");
+		return NULL;
+	}
+	if(!key || key[0] == 0) {
+		log_err("doq: error, no tls-service-key file specified");
+		SSL_CTX_free(ctx);
+		return NULL;
+	}
+	if(!pem || pem[0] == 0) {
+		log_err("doq: error, no tls-service-pem file specified");
+		SSL_CTX_free(ctx);
 		return NULL;
 	}
 	SSL_CTX_set_options(ctx,
@@ -4623,43 +4634,37 @@ doq_ctx_server_setup(struct doq_server_socket* doq_socket)
 	SSL_CTX_set_alpn_select_cb(ctx, doq_alpn_select_cb, NULL);
 #endif
 	SSL_CTX_set_default_verify_paths(ctx);
-	if(!SSL_CTX_use_certificate_chain_file(ctx,
-		doq_socket->ssl_service_pem)) {
-		log_err("doq: error for cert file: %s",
-			doq_socket->ssl_service_pem);
+	if(!SSL_CTX_use_certificate_chain_file(ctx, pem)) {
+		log_err("doq: error for cert file: %s", pem);
 		log_crypto_err("doq: error in "
 			"SSL_CTX_use_certificate_chain_file");
 		SSL_CTX_free(ctx);
 		return NULL;
 	}
-	if(!SSL_CTX_use_PrivateKey_file(ctx, doq_socket->ssl_service_key,
-		SSL_FILETYPE_PEM)) {
-		log_err("doq: error for private key file: %s",
-			doq_socket->ssl_service_key);
+	if(!SSL_CTX_use_PrivateKey_file(ctx, key, SSL_FILETYPE_PEM)) {
+		log_err("doq: error for private key file: %s", key);
 		log_crypto_err("doq: error in SSL_CTX_use_PrivateKey_file");
 		SSL_CTX_free(ctx);
 		return NULL;
 	}
 	if(!SSL_CTX_check_private_key(ctx)) {
-		log_err("doq: error for key file: %s",
-			doq_socket->ssl_service_key);
+		log_err("doq: error for key file: %s", key);
 		log_crypto_err("doq: error in SSL_CTX_check_private_key");
 		SSL_CTX_free(ctx);
 		return NULL;
 	}
 	SSL_CTX_set_session_id_context(ctx, (void*)sid_ctx, strlen(sid_ctx));
-	if(doq_socket->ssl_verify_pem && doq_socket->ssl_verify_pem[0]) {
-		if(!SSL_CTX_load_verify_locations(ctx,
-			doq_socket->ssl_verify_pem, NULL)) {
+	if(verifypem && verifypem[0]) {
+		if(!SSL_CTX_load_verify_locations(ctx, verifypem, NULL)) {
 			log_err("doq: error for verify pem file: %s",
-				doq_socket->ssl_verify_pem);
+				verifypem);
 			log_crypto_err("doq: error in "
 				"SSL_CTX_load_verify_locations");
 			SSL_CTX_free(ctx);
 			return NULL;
 		}
 		SSL_CTX_set_client_CA_list(ctx, SSL_load_client_CA_file(
-			doq_socket->ssl_verify_pem));
+			verifypem));
 		SSL_CTX_set_verify(ctx, SSL_VERIFY_PEER|
 			SSL_VERIFY_CLIENT_ONCE|
 			SSL_VERIFY_FAIL_IF_NO_PEER_CERT, NULL);
@@ -4672,7 +4677,7 @@ doq_ctx_server_setup(struct doq_server_socket* doq_socket)
 		SSL_CTX_free(ctx);
 		return NULL;
 	}
-#else
+#else /* HAVE_NGTCP2_CRYPTO_QUICTLS_CONFIGURE_SERVER_CONTEXT */
 	/* The quic_method needs to remain valid during the SSL_CTX
 	 * lifetime, so we allocate it. It is freed with the
 	 * doq_server_socket. */
@@ -4690,6 +4695,10 @@ doq_ctx_server_setup(struct doq_server_socket* doq_socket)
 	SSL_CTX_set_quic_method(ctx, doq_socket->quic_method);
 #endif
 	return ctx;
+#else /* HAVE_NGHTTP2 */
+	(void)key; (void)pem; (void)verifypem;
+	return NULL;
+#endif /* HAVE_NGHTTP2 */
 }
 
 /** Get the ngtcp2_conn from ssl userdata of type ngtcp2_conn_ref */
@@ -4718,16 +4727,6 @@ doq_ssl_server_setup(SSL_CTX* ctx, struct doq_conn* conn)
 	SSL_set_accept_state(ssl);
 	SSL_set_quic_early_data_enabled(ssl, 1);
 	return ssl;
-}
-
-/** setup the doq_socket server tls context */
-int
-doq_socket_setup_ctx(struct doq_server_socket* doq_socket)
-{
-	doq_socket->ctx = doq_ctx_server_setup(doq_socket);
-	if(!doq_socket->ctx)
-		return 0;
-	return 1;
 }
 
 int

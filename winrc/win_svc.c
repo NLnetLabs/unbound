@@ -366,6 +366,11 @@ service_init(int r, struct daemon** d, struct config_file** c)
 		if(!(daemon->listen_sslctx = listen_sslctx_create(
 			cfg->ssl_service_key, cfg->ssl_service_pem, NULL)))
 			fatal_exit("could not set up listen SSL_CTX");
+#ifdef HAVE_NGTCP2
+		if(!(daemon->quic_sslctx = quic_sslctx_create(
+			cfg->ssl_service_key, cfg->ssl_service_pem, NULL)))
+			fatal_exit("could not set up quic SSL_CTX");
+#endif /* HAVE_NGTCP2 */
 	}
 	if(!(daemon->connect_sslctx = connect_sslctx_create(NULL, NULL,
 		cfg->tls_cert_bundle, cfg->tls_win_cert)))

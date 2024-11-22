@@ -488,7 +488,7 @@ int listen_sslctx_setup(void* ctxt);
  */
 void listen_sslctx_setup_2(void* ctxt);
 
-/** 
+/**
  * create SSL listen context
  * @param key: private key file.
  * @param pem: public key cert.

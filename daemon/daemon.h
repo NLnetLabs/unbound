@@ -99,6 +99,8 @@ struct daemon {
 	struct daemon_remote* rc;
 	/** ssl context for listening to dnstcp over ssl, and connecting ssl */
 	void* listen_sslctx, *connect_sslctx;
+	/** ssl context for listening to quic */
+	void* quic_sslctx;
 	/** num threads allocated */
 	int num;
 	/** num threads allocated in the previous config or 0 at first */
