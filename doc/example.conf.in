@@ -731,7 +731,8 @@ server:
 	# disable-edns-do: no
 
 	# Serve expired responses from cache, with serve-expired-reply-ttl in
-	# the response, and then attempt to fetch the data afresh.
+	# the response. By default it first tries to refresh an expired answer.
+	# Can be configured with serve-expired-client-timeout.
 	# serve-expired: no
 	#
 	# Limit serving of expired responses to configured seconds after
@@ -749,10 +750,9 @@ server:
 	#
 	# Time in milliseconds before replying to the client with expired data.
 	# This essentially enables the serve-stale behavior as specified in
-	# RFC 8767 that first tries to resolve before
-	# immediately responding with expired data.  0 disables this behavior.
-	# A recommended value is 1800.
-	# serve-expired-client-timeout: 0
+	# RFC 8767 that first tries to resolve before immediately responding
+	# with expired data.  0 disables this behavior.
+	# serve-expired-client-timeout: 1800
 
 	# Return the original TTL as received from the upstream name server rather
 	# than the decrementing TTL as stored in the cache.  Enabling this feature

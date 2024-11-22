@@ -1,3 +1,8 @@
+22 November 2024: Yorgos
+	- Fix #1175: serve-expired does not adhere to secure-by-default
+	  principle. The default value of serve-expired-client-timeout
+	  is set to 1800 as suggested by RFC8767.
+
 20 November 2024: Yorgos
 	- Fix comparison to help static analyzer.
 

@@ -283,7 +283,7 @@ config_create(void)
 	cfg->serve_expired_ttl = 0;
 	cfg->serve_expired_ttl_reset = 0;
 	cfg->serve_expired_reply_ttl = 30;
-	cfg->serve_expired_client_timeout = 0;
+	cfg->serve_expired_client_timeout = 1800;
 	cfg->ede_serve_expired = 0;
 	cfg->serve_original_ttl = 0;
 	cfg->zonemd_permissive_mode = 0;
