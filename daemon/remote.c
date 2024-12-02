@@ -2141,7 +2141,7 @@ static int
 ssl_print_name_dp(RES* ssl, const char* str, uint8_t* nm, uint16_t dclass,
 	struct delegpt* dp)
 {
-	char buf[257];
+	char buf[LDNS_MAX_DOMAINLEN];
 	struct delegpt_ns* ns;
 	struct delegpt_addr* a;
 	int f = 0;
@@ -2509,7 +2509,7 @@ do_insecure_remove(RES* ssl, struct worker* worker, char* arg)
 static void
 do_insecure_list(RES* ssl, struct worker* worker)
 {
-	char buf[257];
+	char buf[LDNS_MAX_DOMAINLEN];
 	struct trust_anchor* a;
 	if(worker->env.anchors) {
 		RBTREE_FOR(a, struct trust_anchor*, worker->env.anchors->tree) {
@@ -2606,7 +2606,7 @@ get_mesh_status(struct mesh_area* mesh, struct mesh_state* m,
 		}
 	} else if(s == module_wait_subquery) {
 		/* look in subs from mesh state to see what */
-		char nm[257];
+		char nm[LDNS_MAX_DOMAINLEN];
 		struct mesh_state_ref* sub;
 		snprintf(buf, len, "%s wants", modname);
 		l = strlen(buf);
@@ -2636,7 +2636,7 @@ do_dump_requestlist(RES* ssl, struct worker* worker)
 	struct mesh_area* mesh;
 	struct mesh_state* m;
 	int num = 0;
-	char buf[257];
+	char buf[LDNS_MAX_DOMAINLEN];
 	char timebuf[32];
 	char statbuf[10240];
 	if(!ssl_printf(ssl, "thread #%d\n", worker->thread_num))
@@ -2686,7 +2686,7 @@ dump_infra_host(struct lruhash_entry* e, void* arg)
 	struct infra_key* k = (struct infra_key*)e->key;
 	struct infra_data* d = (struct infra_data*)e->data;
 	char ip_str[1024];
-	char name[257];
+	char name[LDNS_MAX_DOMAINLEN];
 	int port;
 	if(a->ssl_failed)
 		return;
@@ -2953,7 +2953,7 @@ static void
 do_list_auth_zones(RES* ssl, struct auth_zones* az)
 {
 	struct auth_zone* z;
-	char buf[257], buf2[256];
+	char buf[LDNS_MAX_DOMAINLEN], buf2[256];
 	lock_rw_rdlock(&az->lock);
 	RBTREE_FOR(z, struct auth_zone*, &az->ztree) {
 		lock_rw_rdlock(&z->lock);
@@ -2983,7 +2983,7 @@ static void
 do_list_local_zones(RES* ssl, struct local_zones* zones)
 {
 	struct local_zone* z;
-	char buf[257];
+	char buf[LDNS_MAX_DOMAINLEN];
 	lock_rw_rdlock(&zones->lock);
 	RBTREE_FOR(z, struct local_zone*, &zones->ztree) {
 		lock_rw_rdlock(&z->lock);
@@ -3094,7 +3094,7 @@ rate_list(struct lruhash_entry* e, void* arg)
 	struct ratelimit_list_arg* a = (struct ratelimit_list_arg*)arg;
 	struct rate_key* k = (struct rate_key*)e->key;
 	struct rate_data* d = (struct rate_data*)e->data;
-	char buf[257];
+	char buf[LDNS_MAX_DOMAINLEN];
 	int lim = infra_find_ratelimit(a->infra, k->name, k->namelen);
 	int max = infra_rate_max(d, a->now, a->backoff);
 	if(a->all == 0) {

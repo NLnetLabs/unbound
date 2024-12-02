@@ -967,13 +967,9 @@ log_reply_info(enum verbosity_value v, struct query_info *qinf,
 	int cached, struct sldns_buffer *rmsg, struct sockaddr_storage* daddr,
 	enum comm_point_type tp)
 {
-	char qname_buf[LDNS_MAX_DOMAINLEN+1];
 	char clientip_buf[128];
 	char rcode_buf[16];
-	char type_buf[16];
-	char class_buf[16];
 	char dest_buf[160];
-	size_t pktlen;
 	uint16_t rcode = FLAGS_GET_RCODE(sldns_buffer_read_u16_at(rmsg, 2));
 
 	if(verbosity < v)
@@ -1022,6 +1018,10 @@ log_reply_info(enum verbosity_value v, struct query_info *qinf,
 		else	log_info("%s - - - %s - - -%s", clientip_buf,
 				rcode_buf, dest_buf);
 	} else {
+		char qname_buf[LDNS_MAX_DOMAINLEN];
+		char type_buf[16];
+		char class_buf[16];
+		size_t pktlen;
 		if(qinf->qname)
 			dname_str(qinf->qname, qname_buf);
 		else	snprintf(qname_buf, sizeof(qname_buf), "null");

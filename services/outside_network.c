@@ -1054,7 +1054,7 @@ reuse_move_writewait_away(struct outside_network* outnet,
 		if(verbosity >= VERB_CLIENT && pend->query->pkt_len > 12+2+2 &&
 			LDNS_QDCOUNT(pend->query->pkt) > 0 &&
 			dname_valid(pend->query->pkt+12, pend->query->pkt_len-12)) {
-			char buf[LDNS_MAX_DOMAINLEN+1];
+			char buf[LDNS_MAX_DOMAINLEN];
 			dname_str(pend->query->pkt+12, buf);
 			verbose(VERB_CLIENT, "reuse_move_writewait_away current %s %d bytes were written",
 				buf, (int)pend->c->tcp_write_byte_count);
@@ -1079,7 +1079,7 @@ reuse_move_writewait_away(struct outside_network* outnet,
 		if(verbosity >= VERB_CLIENT && w->pkt_len > 12+2+2 &&
 			LDNS_QDCOUNT(w->pkt) > 0 &&
 			dname_valid(w->pkt+12, w->pkt_len-12)) {
-			char buf[LDNS_MAX_DOMAINLEN+1];
+			char buf[LDNS_MAX_DOMAINLEN];
 			dname_str(w->pkt+12, buf);
 			verbose(VERB_CLIENT, "reuse_move_writewait_away item %s", buf);
 		}
@@ -2825,7 +2825,7 @@ serviced_perturb_qname(struct ub_randstate* rnd, uint8_t* qbuf, size_t len)
 		lablen = *d++;
 	}
 	if(verbosity >= VERB_ALGO) {
-		char buf[LDNS_MAX_DOMAINLEN+1];
+		char buf[LDNS_MAX_DOMAINLEN];
 		dname_str(qbuf+10, buf);
 		verbose(VERB_ALGO, "qname perturbed to %s", buf);
 	}

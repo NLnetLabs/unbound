@@ -1092,7 +1092,7 @@ auth_zone_delegpt(struct module_qstate* qstate, struct iter_qstate* iq,
 			/* cache is blacklisted and fallback, and we
 			 * already have an auth_zone dp */
 			if(verbosity>=VERB_ALGO) {
-				char buf[255+1];
+				char buf[LDNS_MAX_DOMAINLEN];
 				dname_str(z->name, buf);
 				verbose(VERB_ALGO, "auth_zone %s "
 				  "fallback because cache blacklisted",
@@ -1109,7 +1109,7 @@ auth_zone_delegpt(struct module_qstate* qstate, struct iter_qstate* iq,
 				 * validation failure, and the zone allows
 				 * fallback to the internet, query there. */
 				if(verbosity>=VERB_ALGO) {
-					char buf[255+1];
+					char buf[LDNS_MAX_DOMAINLEN];
 					dname_str(z->name, buf);
 					verbose(VERB_ALGO, "auth_zone %s "
 					  "fallback because cache blacklisted",
@@ -2033,7 +2033,7 @@ query_for_targets(struct module_qstate* qstate, struct iter_qstate* iq,
 		return 1;
 	if(iq->depth > 0 && iq->target_count &&
 		iq->target_count[TARGET_COUNT_QUERIES] > MAX_TARGET_COUNT) {
-		char s[LDNS_MAX_DOMAINLEN+1];
+		char s[LDNS_MAX_DOMAINLEN];
 		dname_str(qstate->qinfo.qname, s);
 		verbose(VERB_QUERY, "request %s has exceeded the maximum "
 			"number of glue fetches %d", s,
@@ -2041,7 +2041,7 @@ query_for_targets(struct module_qstate* qstate, struct iter_qstate* iq,
 		return 2;
 	}
 	if(iq->dp_target_count > MAX_DP_TARGET_COUNT) {
-		char s[LDNS_MAX_DOMAINLEN+1];
+		char s[LDNS_MAX_DOMAINLEN];
 		dname_str(qstate->qinfo.qname, s);
 		verbose(VERB_QUERY, "request %s has exceeded the maximum "
 			"number of glue fetches %d to a single delegation point",
@@ -2252,7 +2252,7 @@ processLastResort(struct module_qstate* qstate, struct iter_qstate* iq,
 	}
 	if(iq->depth > 0 && iq->target_count &&
 		iq->target_count[TARGET_COUNT_QUERIES] > MAX_TARGET_COUNT) {
-		char s[LDNS_MAX_DOMAINLEN+1];
+		char s[LDNS_MAX_DOMAINLEN];
 		dname_str(qstate->qinfo.qname, s);
 		verbose(VERB_QUERY, "request %s has exceeded the maximum "
 			"number of glue fetches %d", s,
@@ -3044,7 +3044,7 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 	target_count_increase_global_quota(iq, 1);
 	if(iq->target_count && iq->target_count[TARGET_COUNT_GLOBAL_QUOTA]
 		> MAX_GLOBAL_QUOTA) {
-		char s[LDNS_MAX_DOMAINLEN+1];
+		char s[LDNS_MAX_DOMAINLEN];
 		dname_str(qstate->qinfo.qname, s);
 		verbose(VERB_QUERY, "request %s has exceeded the maximum "
 			"global quota on number of upstream queries %d", s,

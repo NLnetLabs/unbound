@@ -1082,7 +1082,7 @@ answer_notify(struct worker* w, struct query_info* qinfo,
 
 	if(verbosity >= VERB_DETAIL) {
 		char buf[380];
-		char zname[255+1];
+		char zname[LDNS_MAX_DOMAINLEN];
 		char sr[25];
 		dname_str(qinfo->qname, zname);
 		sr[0]=0;
@@ -1413,7 +1413,7 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 		return 0;
 	}
 	if(c->dnscrypt && !repinfo->is_dnscrypted) {
-		char buf[LDNS_MAX_DOMAINLEN+1];
+		char buf[LDNS_MAX_DOMAINLEN];
 		/* Check if this is unencrypted and asking for certs */
 		worker_check_request(c->buffer, worker, &check_result);
 		if(check_result.value != 0) {

@@ -1081,7 +1081,8 @@ int infra_ratelimit_inc(struct infra_cache* infra, uint8_t* name,
 		lock_rw_unlock(&entry->lock);
 
 		if(premax <= lim && max > lim) {
-			char buf[257], qnm[257], ts[12], cs[12], ip[128];
+			char buf[LDNS_MAX_DOMAINLEN], qnm[LDNS_MAX_DOMAINLEN];
+			char ts[12], cs[12], ip[128];
 			dname_str(name, buf);
 			dname_str(qinfo->qname, qnm);
 			sldns_wire2str_type_buf(qinfo->qtype, ts, sizeof(ts));
