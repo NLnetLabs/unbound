@@ -4,6 +4,8 @@
 	- Merge #1197: dname_str() fixes.
 	- For #1175, the default value of serve-expired-ttl is set to 86400
 	  (1 day) as suggested by RFC8767.
+	- Merge #1198: Fix log-servfail with serve expired and no useful cache
+	  contents.
 
 22 November 2024: Yorgos
 	- Fix #1175: serve-expired does not adhere to secure-by-default
