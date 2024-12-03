@@ -4602,7 +4602,7 @@ doq_alpn_select_cb(SSL* ATTR_UNUSED(ssl), const unsigned char** out,
 
 void* quic_sslctx_create(char* key, char* pem, char* verifypem)
 {
-#ifdef HAVE_NGHTTP2
+#ifdef HAVE_NGTCP2
 	char* sid_ctx = "unbound server";
 #ifndef HAVE_NGTCP2_CRYPTO_QUICTLS_CONFIGURE_SERVER_CONTEXT
 	SSL_QUIC_METHOD* quic_method;
@@ -4695,10 +4695,10 @@ void* quic_sslctx_create(char* key, char* pem, char* verifypem)
 	SSL_CTX_set_quic_method(ctx, doq_socket->quic_method);
 #endif
 	return ctx;
-#else /* HAVE_NGHTTP2 */
+#else /* HAVE_NGTCP2 */
 	(void)key; (void)pem; (void)verifypem;
 	return NULL;
-#endif /* HAVE_NGHTTP2 */
+#endif /* HAVE_NGTCP2 */
 }
 
 /** Get the ngtcp2_conn from ssl userdata of type ngtcp2_conn_ref */
