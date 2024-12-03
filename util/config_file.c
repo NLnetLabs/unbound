@@ -280,7 +280,7 @@ config_create(void)
 	cfg->ignore_cd = 0;
 	cfg->disable_edns_do = 0;
 	cfg->serve_expired = 0;
-	cfg->serve_expired_ttl = 0;
+	cfg->serve_expired_ttl = 86400;
 	cfg->serve_expired_ttl_reset = 0;
 	cfg->serve_expired_reply_ttl = 30;
 	cfg->serve_expired_client_timeout = 1800;

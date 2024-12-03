@@ -737,7 +737,7 @@ server:
 	#
 	# Limit serving of expired responses to configured seconds after
 	# expiration. 0 disables the limit.
-	# serve-expired-ttl: 0
+	# serve-expired-ttl: 86400
 	#
 	# Set the TTL of expired records to the serve-expired-ttl value after a
 	# failed attempt to retrieve the record from upstream. This makes sure

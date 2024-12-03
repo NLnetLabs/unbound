@@ -66,7 +66,7 @@ time_t MIN_NEG_TTL = 0;
 /** If we serve expired entries and prefetch them */
 int SERVE_EXPIRED = 0;
 /** Time to serve records after expiration */
-time_t SERVE_EXPIRED_TTL = 0;
+time_t SERVE_EXPIRED_TTL = 86400;
 /** Reset serve expired TTL after failed update attempt */
 time_t SERVE_EXPIRED_TTL_RESET = 0;
 /** TTL to use for expired records */

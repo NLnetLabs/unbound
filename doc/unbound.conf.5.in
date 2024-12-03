@@ -1408,10 +1408,11 @@ out or is taking more than serve\-expired\-client\-timeout to resolve.
 Default is "no".
 .TP
 .B serve\-expired\-ttl: \fI<seconds>
-Limit serving of expired responses to configured seconds after expiration. 0
-disables the limit.  This option only applies when \fBserve\-expired\fR is
-enabled.  A suggested value per RFC 8767 is between
-86400 (1 day) and 259200 (3 days).  The default is 0.
+Limit serving of expired responses to configured seconds after expiration.
+0 disables the limit.
+This option only applies when \fBserve\-expired\fR is enabled.
+A suggested value per RFC 8767 is between 86400 (1 day) and 259200 (3 days).
+The default is 86400.
 .TP
 .B serve\-expired\-ttl\-reset: \fI<yes or no>
 Set the TTL of expired records to the \fBserve\-expired\-ttl\fR value after a
