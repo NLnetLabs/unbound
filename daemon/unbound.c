@@ -494,8 +494,9 @@ perform_setup(struct daemon* daemon, struct config_file* cfg, int debug_mode,
 		fatal_exit("could not set up remote-control");
 	if(cfg->ssl_service_key && cfg->ssl_service_key[0]) {
 		if(!(daemon->listen_sslctx = listen_sslctx_create(
-			cfg->ssl_service_key, cfg->ssl_service_pem, NULL)))
+			cfg->ssl_service_key, cfg->ssl_service_pem, NULL))) {
 			fatal_exit("could not set up listen SSL_CTX");
+		}
 		if(cfg->tls_ciphers && cfg->tls_ciphers[0]) {
 			if (!SSL_CTX_set_cipher_list(daemon->listen_sslctx, cfg->tls_ciphers)) {
 				fatal_exit("failed to set tls-cipher %s", cfg->tls_ciphers);
@@ -507,18 +508,24 @@ perform_setup(struct daemon* daemon, struct config_file* cfg, int debug_mode,
 				fatal_exit("failed to set tls-ciphersuites %s", cfg->tls_ciphersuites);
 			}
 		}
-#endif
+#endif /* HAVE_SSL_CTX_SET_CIPHERSUITES */
 		if(cfg->tls_session_ticket_keys.first &&
 			cfg->tls_session_ticket_keys.first->str[0] != 0) {
 			if(!listen_sslctx_setup_ticket_keys(daemon->listen_sslctx, cfg->tls_session_ticket_keys.first)) {
 				fatal_exit("could not set session ticket SSL_CTX");
 			}
 		}
+#ifdef HAVE_NGTCP2
+		if(!(daemon->quic_sslctx = quic_sslctx_create(
+			cfg->ssl_service_key, cfg->ssl_service_pem, NULL))) {
+			fatal_exit("could not set up quic SSL_CTX");
+		}
+#endif /* HAVE_NGTCP2 */
 	}
 	if(!(daemon->connect_sslctx = connect_sslctx_create(NULL, NULL,
 		cfg->tls_cert_bundle, cfg->tls_win_cert)))
 		fatal_exit("could not set up connect SSL_CTX");
-#endif
+#endif /* HAVE_SSL */
 
 	/* init syslog (as root) if needed, before daemonize, otherwise
 	 * a fork error could not be printed since daemonize closed stderr.*/

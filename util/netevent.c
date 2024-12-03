@@ -2687,8 +2687,8 @@ comm_point_doq_callback(int fd, short event, void* arg)
 /** create new doq server socket structure */
 static struct doq_server_socket*
 doq_server_socket_create(struct doq_table* table, struct ub_randstate* rnd,
-	const char* ssl_service_key, const char* ssl_service_pem,
-	struct comm_point* c, struct comm_base* base, struct config_file* cfg)
+	const void* quic_sslctx, struct comm_point* c, struct comm_base* base,
+	struct config_file* cfg)
 {
 	size_t doq_buffer_size = 4096; /* bytes buffer size, for one packet. */
 	struct doq_server_socket* doq_socket;
@@ -2699,69 +2699,29 @@ doq_server_socket_create(struct doq_table* table, struct ub_randstate* rnd,
 	doq_socket->table = table;
 	doq_socket->rnd = rnd;
 	doq_socket->validate_addr = 1;
-	if(ssl_service_key == NULL || ssl_service_key[0]==0) {
-		log_err("doq server socket create: no tls-service-key");
-		free(doq_socket);
-		return NULL;
-	}
-	if(ssl_service_pem == NULL || ssl_service_pem[0]==0) {
-		log_err("doq server socket create: no tls-service-pem");
-		free(doq_socket);
-		return NULL;
-	}
-	doq_socket->ssl_service_key = strdup(ssl_service_key);
-	if(!doq_socket->ssl_service_key) {
-		free(doq_socket);
-		return NULL;
-	}
-	doq_socket->ssl_service_pem = strdup(ssl_service_pem);
-	if(!doq_socket->ssl_service_pem) {
-		free(doq_socket->ssl_service_key);
-		free(doq_socket);
-		return NULL;
-	}
-	doq_socket->ssl_verify_pem = NULL;
 	/* the doq_socket has its own copy of the static secret, as
 	 * well as other config values, so that they do not need table.lock */
 	doq_socket->static_secret_len = table->static_secret_len;
 	doq_socket->static_secret = memdup(table->static_secret,
 		table->static_secret_len);
 	if(!doq_socket->static_secret) {
-		free(doq_socket->ssl_service_key);
-		free(doq_socket->ssl_service_pem);
-		free(doq_socket->ssl_verify_pem);
 		free(doq_socket);
 		return NULL;
 	}
-	if(!doq_socket_setup_ctx(doq_socket)) {
-		free(doq_socket->ssl_service_key);
-		free(doq_socket->ssl_service_pem);
-		free(doq_socket->ssl_verify_pem);
-		free(doq_socket->static_secret);
-		free(doq_socket);
-		return NULL;
-	}
+	doq_socket->ctx = (SSL_CTX*)quic_sslctx;
 	doq_socket->idle_timeout = table->idle_timeout;
 	doq_socket->sv_scidlen = table->sv_scidlen;
 	doq_socket->cp = c;
 	doq_socket->pkt_buf = sldns_buffer_new(doq_buffer_size);
 	if(!doq_socket->pkt_buf) {
-		free(doq_socket->ssl_service_key);
-		free(doq_socket->ssl_service_pem);
-		free(doq_socket->ssl_verify_pem);
 		free(doq_socket->static_secret);
-		SSL_CTX_free(doq_socket->ctx);
 		free(doq_socket);
 		return NULL;
 	}
 	doq_socket->blocked_pkt = sldns_buffer_new(
 		sldns_buffer_capacity(doq_socket->pkt_buf));
 	if(!doq_socket->pkt_buf) {
-		free(doq_socket->ssl_service_key);
-		free(doq_socket->ssl_service_pem);
-		free(doq_socket->ssl_verify_pem);
 		free(doq_socket->static_secret);
-		SSL_CTX_free(doq_socket->ctx);
 		sldns_buffer_free(doq_socket->pkt_buf);
 		free(doq_socket);
 		return NULL;
@@ -2769,11 +2729,7 @@ doq_server_socket_create(struct doq_table* table, struct ub_randstate* rnd,
 	doq_socket->blocked_paddr = calloc(1,
 		sizeof(*doq_socket->blocked_paddr));
 	if(!doq_socket->blocked_paddr) {
-		free(doq_socket->ssl_service_key);
-		free(doq_socket->ssl_service_pem);
-		free(doq_socket->ssl_verify_pem);
 		free(doq_socket->static_secret);
-		SSL_CTX_free(doq_socket->ctx);
 		sldns_buffer_free(doq_socket->pkt_buf);
 		sldns_buffer_free(doq_socket->blocked_pkt);
 		free(doq_socket);
@@ -2781,11 +2737,7 @@ doq_server_socket_create(struct doq_table* table, struct ub_randstate* rnd,
 	}
 	doq_socket->timer = comm_timer_create(base, doq_timer_cb, doq_socket);
 	if(!doq_socket->timer) {
-		free(doq_socket->ssl_service_key);
-		free(doq_socket->ssl_service_pem);
-		free(doq_socket->ssl_verify_pem);
 		free(doq_socket->static_secret);
-		SSL_CTX_free(doq_socket->ctx);
 		sldns_buffer_free(doq_socket->pkt_buf);
 		sldns_buffer_free(doq_socket->blocked_pkt);
 		free(doq_socket->blocked_paddr);
@@ -2805,13 +2757,9 @@ doq_server_socket_delete(struct doq_server_socket* doq_socket)
 	if(!doq_socket)
 		return;
 	free(doq_socket->static_secret);
-	SSL_CTX_free(doq_socket->ctx);
 #ifndef HAVE_NGTCP2_CRYPTO_QUICTLS_CONFIGURE_SERVER_CONTEXT
 	free(doq_socket->quic_method);
 #endif
-	free(doq_socket->ssl_service_key);
-	free(doq_socket->ssl_service_pem);
-	free(doq_socket->ssl_verify_pem);
 	sldns_buffer_free(doq_socket->pkt_buf);
 	sldns_buffer_free(doq_socket->blocked_pkt);
 	free(doq_socket->blocked_paddr);
@@ -5862,8 +5810,8 @@ struct comm_point*
 comm_point_create_doq(struct comm_base *base, int fd, sldns_buffer* buffer,
 	comm_point_callback_type* callback, void* callback_arg,
 	struct unbound_socket* socket, struct doq_table* table,
-	struct ub_randstate* rnd, const char* ssl_service_key,
-	const char* ssl_service_pem, struct config_file* cfg)
+	struct ub_randstate* rnd, const void* quic_sslctx,
+	struct config_file* cfg)
 {
 #ifdef HAVE_NGTCP2
 	struct comm_point* c = (struct comm_point*)calloc(1,
@@ -5900,15 +5848,13 @@ comm_point_create_doq(struct comm_base *base, int fd, sldns_buffer* buffer,
 	c->dnscrypt = 0;
 	c->dnscrypt_buffer = NULL;
 #endif
-#ifdef HAVE_NGTCP2
-	c->doq_socket = doq_server_socket_create(table, rnd, ssl_service_key,
-		ssl_service_pem, c, base, cfg);
+	c->doq_socket = doq_server_socket_create(table, rnd, quic_sslctx, c,
+		base, cfg);
 	if(!c->doq_socket) {
 		log_err("could not create doq comm_point");
 		comm_point_delete(c);
 		return NULL;
 	}
-#endif
 	c->inuse = 0;
 	c->callback = callback;
 	c->cb_arg = callback_arg;
@@ -5940,8 +5886,7 @@ comm_point_create_doq(struct comm_base *base, int fd, sldns_buffer* buffer,
 	(void)socket;
 	(void)rnd;
 	(void)table;
-	(void)ssl_service_key;
-	(void)ssl_service_pem;
+	(void)quic_sslctx;
 	(void)cfg;
 	sock_close(fd);
 	return NULL;

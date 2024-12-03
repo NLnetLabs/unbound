@@ -602,6 +602,12 @@ void listen_desetup_locks(void)
 }
 
 #ifdef HAVE_NGTCP2
+void* quic_sslctx_create(char* ATTR_UNUSED(key), char* ATTR_UNUSED(pem),
+	char* ATTR_UNUSED(verifypem))
+{
+    return NULL;
+}
+
 void comm_point_doq_callback(int ATTR_UNUSED(fd), short ATTR_UNUSED(event),
 	void* ATTR_UNUSED(arg))
 {

@@ -957,6 +957,9 @@ daemon_delete(struct daemon* daemon)
 	SSL_CTX_free((SSL_CTX*)daemon->listen_sslctx);
 	SSL_CTX_free((SSL_CTX*)daemon->connect_sslctx);
 #endif
+#ifdef HAVE_NGTCP2
+	SSL_CTX_free((SSL_CTX*)daemon->quic_sslctx);
+#endif
 	free(daemon);
 	/* lex cleanup */
 	ub_c_lex_destroy();
