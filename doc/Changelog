@@ -9,6 +9,7 @@
 	- Safeguard alias loop while looking in the cache for expired answers.
 	- Merge #1187: Create the SSL_CTX for QUIC before chroot and privilege
 	  drop.
+	- Fix typo in log_servfail.tdir test.
 
 22 November 2024: Yorgos
 	- Fix #1175: serve-expired does not adhere to secure-by-default

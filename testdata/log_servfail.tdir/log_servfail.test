@@ -1,4 +1,4 @@
-# #-- cookie_file.test --#
+# #-- log_servfail.test --#
 # source the master var file when it's there
 [ -f ../.tpkg.var.master ] && source ../.tpkg.var.master
 # use .tpkg.var.test for in test variable passing
