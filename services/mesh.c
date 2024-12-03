@@ -2183,7 +2183,7 @@ mesh_serve_expired_callback(void* arg)
 	struct timeval tv = {0, 0};
 	int must_validate = (!(qstate->query_flags&BIT_CD)
 		|| qstate->env->cfg->ignore_cd) && qstate->env->need_to_validate;
-	int i = 0;
+	int i = 0, for_count;
 	int is_expired;
 	if(!qstate->serve_expired_data) return;
 	verbose(VERB_ALGO, "Serve expired: Trying to reply with expired data");
@@ -2196,9 +2196,10 @@ mesh_serve_expired_callback(void* arg)
 			"Serve expired: Not allowed to look into cache for stale");
 		return;
 	}
-	/* The following while is used instead of the `goto lookup_cache`
-	 * like in the worker. */
-	while(1) {
+	/* The following for is used instead of the `goto lookup_cache`
+	 * like in the worker. This loop should get max 2 passes if we need to
+	 * do any aliasing. */
+	for(for_count = 0; for_count < 2; for_count++) {
 		fptr_ok(fptr_whitelist_serve_expired_lookup(
 			qstate->serve_expired_data->get_cached_answer));
 		msg = (*qstate->serve_expired_data->get_cached_answer)(qstate,
