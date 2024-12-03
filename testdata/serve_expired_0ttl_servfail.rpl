@@ -5,7 +5,6 @@ server:
 	minimal-responses: no
 	serve-expired: yes
 	serve-expired-client-timeout: 0
-	log-servfail: yes
 	ede: yes
 	ede-serve-expired: yes
 

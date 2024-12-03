@@ -2203,8 +2203,13 @@ mesh_serve_expired_callback(void* arg)
 			qstate->serve_expired_data->get_cached_answer));
 		msg = (*qstate->serve_expired_data->get_cached_answer)(qstate,
 			lookup_qinfo, &is_expired);
-		if(!msg)
+		if(!msg || (FLAGS_GET_RCODE(msg->rep->flags) != LDNS_RCODE_NOERROR
+			&& FLAGS_GET_RCODE(msg->rep->flags) != LDNS_RCODE_NXDOMAIN
+			&& FLAGS_GET_RCODE(msg->rep->flags) != LDNS_RCODE_YXDOMAIN)) {
+			/* We don't care for cached failure answers at this
+			 * stage. */
 			return;
+		}
 		/* Reset these in case we pass a second time from here. */
 		encode_rep = msg->rep;
 		memset(&actinfo, 0, sizeof(actinfo));
