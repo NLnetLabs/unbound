@@ -423,7 +423,7 @@ int libworker_bg(struct ub_ctx* ctx)
 static int
 fill_canon(struct ub_result* res, uint8_t* s)
 {
-	char buf[255+2];
+	char buf[LDNS_MAX_DOMAINLEN];
 	dname_str(s, buf);
 	res->canonname = strdup(buf);
 	return res->canonname != 0;

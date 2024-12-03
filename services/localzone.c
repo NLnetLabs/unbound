@@ -223,7 +223,7 @@ lz_enter_zone_dname(struct local_zones* zones, uint8_t* nm, size_t len,
 	lock_rw_wrlock(&z->lock);
 	if(!rbtree_insert(&zones->ztree, &z->node)) {
 		struct local_zone* oldz;
-		char str[256];
+		char str[LDNS_MAX_DOMAINLEN];
 		dname_str(nm, str);
 		log_warn("duplicate local-zone %s", str);
 		lock_rw_unlock(&z->lock);
@@ -1765,7 +1765,7 @@ lz_inform_print(struct local_zone* z, struct query_info* qinfo,
 	struct sockaddr_storage* addr, socklen_t addrlen)
 {
 	char ip[128], txt[512];
-	char zname[LDNS_MAX_DOMAINLEN+1];
+	char zname[LDNS_MAX_DOMAINLEN];
 	uint16_t port = ntohs(((struct sockaddr_in*)addr)->sin_port);
 	dname_str(z->name, zname);
 	addr_to_str(addr, addrlen, ip, sizeof(ip));
@@ -1875,7 +1875,7 @@ local_zones_answer(struct local_zones* zones, struct module_env* env,
 			return 0;
 		}
 		if(z && verbosity >= VERB_ALGO) {
-			char zname[255+1];
+			char zname[LDNS_MAX_DOMAINLEN];
 			dname_str(z->name, zname);
 			verbose(VERB_ALGO, "using localzone %s %s from view %s", 
 				zname, local_zone_type2str(lzt), view->name);
@@ -1897,7 +1897,7 @@ local_zones_answer(struct local_zones* zones, struct module_env* env,
 			z->override_tree, &tag, tagname, num_tags);
 		lock_rw_unlock(&zones->lock);
 		if(z && verbosity >= VERB_ALGO) {
-			char zname[255+1];
+			char zname[LDNS_MAX_DOMAINLEN];
 			dname_str(z->name, zname);
 			verbose(VERB_ALGO, "using localzone %s %s", zname,
 				local_zone_type2str(lzt));

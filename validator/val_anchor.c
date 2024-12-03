@@ -1018,7 +1018,7 @@ anchors_assemble_rrsets(struct val_anchors* anchors)
 				ta->name, LDNS_RR_TYPE_DNSKEY, ta->dclass);
 		}
 		if(nods == ta->numDS && nokey == ta->numDNSKEY) {
-			char b[257];
+			char b[LDNS_MAX_DOMAINLEN];
 			dname_str(ta->name, b);
 			log_warn("trust anchor %s has no supported algorithms,"
 				" the anchor is ignored (check if you need to"

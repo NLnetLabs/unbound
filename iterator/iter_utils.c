@@ -1492,8 +1492,8 @@ iter_stub_fwd_no_cache(struct module_qstate *qstate, struct query_info *qinf,
 		int stub_no_cache = stub->dp->no_cache;
 		lock_rw_unlock(&qstate->env->fwds->lock);
 		if(stub_no_cache) {
-			char qname[255+1];
-			char dpname[255+1];
+			char qname[LDNS_MAX_DOMAINLEN];
+			char dpname[LDNS_MAX_DOMAINLEN];
 			dname_str(qinf->qname, qname);
 			dname_str(stub->dp->name, dpname);
 			verbose(VERB_ALGO, "stub for %s %s has no_cache", qname, dpname);
@@ -1520,8 +1520,8 @@ iter_stub_fwd_no_cache(struct module_qstate *qstate, struct query_info *qinf,
 		int dp_no_cache = dp->no_cache;
 		lock_rw_unlock(&qstate->env->hints->lock);
 		if(dp_no_cache) {
-			char qname[255+1];
-			char dpname[255+1];
+			char qname[LDNS_MAX_DOMAINLEN];
+			char dpname[LDNS_MAX_DOMAINLEN];
 			dname_str(qinf->qname, qname);
 			dname_str(dp->name, dpname);
 			verbose(VERB_ALGO, "forward for %s %s has no_cache", qname, dpname);

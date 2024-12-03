@@ -544,7 +544,7 @@ void
 log_nametypeclass(enum verbosity_value v, const char* str, uint8_t* name, 
 	uint16_t type, uint16_t dclass)
 {
-	char buf[LDNS_MAX_DOMAINLEN+1];
+	char buf[LDNS_MAX_DOMAINLEN];
 	char t[12], c[12];
 	const char *ts, *cs; 
 	if(verbosity < v)
@@ -575,7 +575,7 @@ log_nametypeclass(enum verbosity_value v, const char* str, uint8_t* name,
 void
 log_query_in(const char* str, uint8_t* name, uint16_t type, uint16_t dclass)
 {
-	char buf[LDNS_MAX_DOMAINLEN+1];
+	char buf[LDNS_MAX_DOMAINLEN];
 	char t[12], c[12];
 	const char *ts, *cs; 
 	dname_str(name, buf);
@@ -608,7 +608,7 @@ void log_name_addr(enum verbosity_value v, const char* str, uint8_t* zone,
 {
 	uint16_t port;
 	const char* family = "unknown_family ";
-	char namebuf[LDNS_MAX_DOMAINLEN+1];
+	char namebuf[LDNS_MAX_DOMAINLEN];
 	char dest[100];
 	int af = (int)((struct sockaddr_in*)addr)->sin_family;
 	void* sinaddr = &((struct sockaddr_in*)addr)->sin_addr;

@@ -129,7 +129,7 @@ forwards_insert_data(struct iter_forwards* fwd, uint16_t c, uint8_t* nm,
 	node->namelabs = nmlabs;
 	node->dp = dp;
 	if(!rbtree_insert(fwd->tree, &node->node)) {
-		char buf[257];
+		char buf[LDNS_MAX_DOMAINLEN];
 		dname_str(nm, buf);
 		log_err("duplicate forward zone %s ignored.", buf);
 		delegpt_free_mlc(dp);

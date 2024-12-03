@@ -836,7 +836,7 @@ int print_deleg_lookup(RES* ssl, struct worker* worker, uint8_t* nm,
 	struct delegpt* dp;
 	struct dns_msg* msg;
 	struct regional* region = worker->scratchpad;
-	char b[260];
+	char b[LDNS_MAX_DOMAINLEN];
 	struct query_info qinfo;
 	struct iter_hints_stub* stub;
 	int nolock = 0;

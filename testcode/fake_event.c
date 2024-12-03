@@ -1264,7 +1264,7 @@ struct serviced_query* outnet_serviced_query(struct outside_network* outnet,
 	struct replay_runtime* runtime = (struct replay_runtime*)outnet->base;
 	struct fake_pending* pend = (struct fake_pending*)calloc(1,
 		sizeof(struct fake_pending));
-	char z[256];
+	char z[LDNS_MAX_DOMAINLEN];
 	log_assert(pend);
 	log_nametypeclass(VERB_OPS, "pending serviced query",
 		qinfo->qname, qinfo->qtype, qinfo->qclass);
