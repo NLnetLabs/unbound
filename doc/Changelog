@@ -1,3 +1,8 @@
+3 December 2024: Yorgos
+	- Merge #1189: Fix the dname_str method to cause conversion errors
+	  when the domain name length is 255.
+	- Merge #1197: dname_str() fixes.
+
 22 November 2024: Yorgos
 	- Fix #1175: serve-expired does not adhere to secure-by-default
 	  principle. The default value of serve-expired-client-timeout
