@@ -7,6 +7,8 @@
 	- Merge #1198: Fix log-servfail with serve expired and no useful cache
 	  contents.
 	- Safeguard alias loop while looking in the cache for expired answers.
+	- Merge #1187: Create the SSL_CTX for QUIC before chroot and privilege
+	  drop.
 
 22 November 2024: Yorgos
 	- Fix #1175: serve-expired does not adhere to secure-by-default
