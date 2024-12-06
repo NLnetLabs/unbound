@@ -1466,7 +1466,7 @@ mesh_send_reply(struct mesh_state* m, int rcode, struct reply_info* rep,
 		 * Need to explicitly check for rep->security otherwise failed
 		 * validation paths may attach to a secure answer. */
 		if(m->s.env->cfg->ede && rep &&
-			(rep->security <= sec_status_bogus || rep->security == sec_status_insecure ||
+			(rep->security <= sec_status_bogus ||
 			rep->security == sec_status_secure_sentinel_fail)) {
 			mesh_find_and_attach_ede_and_reason(m, rep, r);
 		}
