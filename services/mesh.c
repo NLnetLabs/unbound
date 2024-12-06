@@ -43,6 +43,8 @@
  * send back to clients.
  */
 #include "config.h"
+#include "iterator/iter_hints.h"
+#include "iterator/iter_fwd.h"
 #include "services/mesh.h"
 #include "services/outbound_list.h"
 #include "services/cache/dns.h"
@@ -275,37 +277,60 @@ mesh_delete_all(struct mesh_area* mesh)
 int mesh_make_new_space(struct mesh_area* mesh, sldns_buffer* qbuf)
 {
 	struct mesh_state* m = mesh->jostle_first;
-	/* free space is available */
-	if(mesh->num_reply_states < mesh->max_reply_states)
+	if(mesh->num_reply_states < mesh->max_reply_states) {
+		/* free space is available */
 		return 1;
+	}
 	/* try to kick out a jostle-list item */
 	if(m && m->reply_list && m->list_select == mesh_jostle_list) {
-		/* how old is it? */
 		struct timeval age;
+		struct iter_hints_stub* stub = NULL;
+		struct delegpt* fwd = NULL;
+		/* how old is it? */
 		timeval_subtract(&age, mesh->env->now_tv,
 			&m->reply_list->start_time);
-		if(timeval_smaller(&mesh->jostle_max, &age)) {
-			/* its a goner */
-			log_nametypeclass(VERB_ALGO, "query jostled out to "
-				"make space for a new one",
-				m->s.qinfo.qname, m->s.qinfo.qtype,
-				m->s.qinfo.qclass);
-			/* backup the query */
-			if(qbuf) sldns_buffer_copy(mesh->qbuf_bak, qbuf);
-			/* notify supers */
-			if(m->super_set.count > 0) {
-				verbose(VERB_ALGO, "notify supers of failure");
-				m->s.return_msg = NULL;
-				m->s.return_rcode = LDNS_RCODE_SERVFAIL;
-				mesh_walk_supers(mesh, m);
-			}
-			mesh->stats_jostled ++;
-			mesh_state_delete(&m->s);
-			/* restore the query - note that the qinfo ptr to
-			 * the querybuffer is then correct again. */
-			if(qbuf) sldns_buffer_copy(qbuf, mesh->qbuf_bak);
-			return 1;
+		if(!timeval_smaller(&mesh->jostle_max, &age)
+			|| m->has_configured_upstream) {
+			/* can't jostle out; still fresh or has configured
+			 * upstreams */
+			return 0;
 		}
+		if((stub=hints_lookup_stub(mesh->env->hints,
+			m->s.qinfo.qname, m->s.qinfo.qclass, NULL, 0))
+			|| (fwd=forwards_find(mesh->env->fwds,
+			m->s.qinfo.qname, m->s.qinfo.qclass, 0))) {
+			/* can't jostle out; there is a configured upstream
+			 * for this */
+			m->has_configured_upstream = 1;
+			if(stub) {
+				lock_rw_unlock(&mesh->env->hints->lock);
+			}
+			if(fwd) {
+				lock_rw_unlock(&mesh->env->fwds->lock);
+			}
+			return 0;
+		}
+		/* its a goner; older than jostle-timeout and there are no
+		 * configured upstreams that could give it 'persistence' */
+		log_nametypeclass(VERB_ALGO, "query jostled out to "
+			"make space for a new one",
+			m->s.qinfo.qname, m->s.qinfo.qtype,
+			m->s.qinfo.qclass);
+		/* backup the query */
+		if(qbuf) sldns_buffer_copy(mesh->qbuf_bak, qbuf);
+		/* notify supers */
+		if(m->super_set.count > 0) {
+			verbose(VERB_ALGO, "notify supers of failure");
+			m->s.return_msg = NULL;
+			m->s.return_rcode = LDNS_RCODE_SERVFAIL;
+			mesh_walk_supers(mesh, m);
+		}
+		mesh->stats_jostled ++;
+		mesh_state_delete(&m->s);
+		/* restore the query - note that the qinfo ptr to
+		 * the querybuffer is then correct again. */
+		if(qbuf) sldns_buffer_copy(qbuf, mesh->qbuf_bak);
+		return 1;
 	}
 	/* no space for new item */
 	return 0;
@@ -1441,7 +1466,7 @@ mesh_send_reply(struct mesh_state* m, int rcode, struct reply_info* rep,
 		 * Need to explicitly check for rep->security otherwise failed
 		 * validation paths may attach to a secure answer. */
 		if(m->s.env->cfg->ede && rep &&
-			(rep->security <= sec_status_bogus ||
+			(rep->security <= sec_status_bogus || rep->security == sec_status_insecure ||
 			rep->security == sec_status_secure_sentinel_fail)) {
 			mesh_find_and_attach_ede_and_reason(m, rep, r);
 		}

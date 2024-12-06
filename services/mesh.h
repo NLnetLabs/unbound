@@ -206,6 +206,12 @@ struct mesh_state {
 	/** pointer to this state for uniqueness or NULL */
 	struct mesh_state* unique;
 
+	/** if the qname of this mesh state will go out to one of the
+	 *  configured upstreams (stub-zone or forward-zone).
+	 *  Only used when trying to make space (jostle) for new client
+	 *  queries. */
+	int has_configured_upstream;
+
 	/** true if replies have been sent out (at end for alignment) */
 	uint8_t replies_sent;
 };
