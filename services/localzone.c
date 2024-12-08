@@ -1688,8 +1688,8 @@ local_zones_zone_answer(struct local_zone* z, struct module_env* env,
 		|| lz_type == local_zone_always_transparent) {
 		/* no NODATA or NXDOMAINS for this zone type */
 		return 0;
-	} else if(lz_type == local_zone_block_a) {
-		/* Return NODATA for all A queries */
+	} else if(lz_type == local_zone_block_a && !(edns->bits &= EDNS_DO)) {
+		/* Return NODATA for all A queries, unless query contains DO */
 		if(qinfo->qtype == LDNS_RR_TYPE_A) {
 			local_error_encode(qinfo, env, edns, repinfo, buf, temp,
 				LDNS_RCODE_NOERROR, (LDNS_RCODE_NOERROR|BIT_AA),
