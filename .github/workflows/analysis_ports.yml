@@ -193,6 +193,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: false
+          persist-credentials: false
       - name: test_windows
         if: ${{ matrix.test_windows == 'yes' }}
         shell: bash
