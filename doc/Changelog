@@ -1,3 +1,7 @@
+13 December 2024: Yorgos
+	- Merge #1204: ci: set persist-credentials: false for actions/checkout
+	  per zizmor suggestion.
+
 3 December 2024: Yorgos
 	- Merge #1189: Fix the dname_str method to cause conversion errors
 	  when the domain name length is 255.
