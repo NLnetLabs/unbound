@@ -1807,7 +1807,7 @@ rpz_local_encode(struct module_env* env, struct query_info* qinfo,
 		repinfo, temp, env->now_tv) ||
 	  !reply_info_answer_encode(qinfo, &rep,
 		*(uint16_t*)sldns_buffer_begin(buf), sldns_buffer_read_u16_at(buf, 2),
-		buf, 0, 0, temp, udpsize, edns, (int)(edns->bits&EDNS_DO), 0)) {
+		buf, 0, 0, temp, udpsize, edns, (int)(edns->bits&EDNS_DO), 0, 0)) {
 		error_encode(buf, (LDNS_RCODE_SERVFAIL|BIT_AA), qinfo,
 			*(uint16_t*)sldns_buffer_begin(buf),
 			sldns_buffer_read_u16_at(buf, 2), edns);
