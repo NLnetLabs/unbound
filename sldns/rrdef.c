@@ -617,6 +617,12 @@ static sldns_rr_descriptor rdata_field_descriptors[] = {
 {(enum sldns_enum_rr_type)0, "TYPE258", 1, 1, type_0_wireformat, LDNS_RDF_TYPE_NONE, LDNS_RR_NO_COMPRESS, 0 },
 #endif
 
+{(enum sldns_enum_rr_type)0, "TYPE259", 1, 1, type_0_wireformat, LDNS_RDF_TYPE_NONE, LDNS_RR_NO_COMPRESS, 0 },
+{(enum sldns_enum_rr_type)0, "TYPE260", 1, 1, type_0_wireformat, LDNS_RDF_TYPE_NONE, LDNS_RR_NO_COMPRESS, 0 },
+
+	/* 261 */
+	{LDNS_RR_TYPE_RESINFO,  "RESINFO", 1, 0, NULL, LDNS_RDF_TYPE_STR, LDNS_RR_NO_COMPRESS, 0 },
+
 /* split in array, no longer contiguous */
 
 #ifdef DRAFT_RRTYPES

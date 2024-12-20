@@ -1,3 +1,7 @@
+20 December 2024: Yorgos
+	- For #1207: [FR] Support for RESINFO RRType 261 (RFC9606), add
+	  LDNS_RR_TYPE_RESINFO similar to LDNS_RR_TYPE_TXT.
+
 13 December 2024: Yorgos
 	- Merge #1204: ci: set persist-credentials: false for actions/checkout
 	  per zizmor suggestion.
