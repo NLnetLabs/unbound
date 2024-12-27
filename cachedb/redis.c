@@ -173,13 +173,9 @@ fail:
 static void
 set_timeout(struct timeval* timeout, int value, int explicit_value)
 {
-	if(explicit_value != 0) {
-		timeout->tv_sec = explicit_value / 1000;
-		timeout->tv_usec = (explicit_value % 1000) * 1000;
-	} else {
-		timeout->tv_sec = value / 1000;
-		timeout->tv_usec = (value % 1000) * 1000;
-	}
+	int v = explicit_value != 0 ? explicit_value : value;
+	timeout->tv_sec = v / 1000;
+	timeout->tv_usec = (v % 1000) * 1000;
 }
 
 static int
