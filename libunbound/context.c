@@ -53,6 +53,8 @@
 #include "util/storage/slabhash.h"
 #include "util/edns.h"
 #include "sldns/sbuffer.h"
+#include "iterator/iter_fwd.h"
+#include "iterator/iter_hints.h"
 
 int 
 context_finalize(struct ub_ctx* ctx)
@@ -73,7 +75,9 @@ context_finalize(struct ub_ctx* ctx)
 	ctx->pipe_pid = getpid();
 	cfg_apply_local_port_policy(cfg, 65536);
 	config_apply(cfg);
-	if(!modstack_setup(&ctx->mods, cfg->module_conf, ctx->env))
+	if(!modstack_call_startup(&ctx->mods, cfg->module_conf, ctx->env))
+		return UB_INITFAIL;
+	if(!modstack_call_init(&ctx->mods, cfg->module_conf, ctx->env))
 		return UB_INITFAIL;
 	listen_setup_locks();
 	log_edns_known_options(VERB_ALGO, ctx->env);
@@ -84,6 +88,12 @@ context_finalize(struct ub_ctx* ctx)
 		return UB_INITFAIL;
 	if(!auth_zones_apply_cfg(ctx->env->auth_zones, cfg, 1, &is_rpz,
 		ctx->env, &ctx->mods))
+		return UB_INITFAIL;
+	if(!(ctx->env->fwds = forwards_create()) ||
+		!forwards_apply_cfg(ctx->env->fwds, cfg))
+		return UB_INITFAIL;
+	if(!(ctx->env->hints = hints_create()) ||
+		!hints_apply_cfg(ctx->env->hints, cfg))
 		return UB_INITFAIL;
 	if(!edns_strings_apply_cfg(ctx->env->edns_strings, cfg))
 		return UB_INITFAIL;
@@ -385,7 +395,7 @@ context_serialize_cancel(struct ctx_query* q, uint32_t* len)
 	/* format of cancel:
 	 * 	o uint32 cmd
 	 * 	o uint32 async-id */
-	uint8_t* p = (uint8_t*)reallocarray(NULL, sizeof(uint32_t), 2);
+	uint8_t* p = (uint8_t*)reallocarray(NULL, 2, sizeof(uint32_t));
 	if(!p) return NULL;
 	*len = 2*sizeof(uint32_t);
 	sldns_write_uint32(p, UB_LIBCMD_CANCEL);

@@ -551,17 +551,6 @@ acl_list_apply_cfg(struct acl_list* acl, struct config_file* cfg,
 	return 1;
 }
 
-int
-acl_interface_compare(const void* k1, const void* k2)
-{
-	struct addr_tree_node* n1 = (struct addr_tree_node*)k1;
-	struct addr_tree_node* n2 = (struct addr_tree_node*)k2;
-	return sockaddr_cmp(&n1->addr, n1->addrlen, &n2->addr,
-		n2->addrlen);
-	/* We don't care about comparing node->net. All addresses in the
-	 * acl_interface tree have either 32 (ipv4) or 128 (ipv6). */
-}
-
 void
 acl_interface_init(struct acl_list* acl_interface)
 {

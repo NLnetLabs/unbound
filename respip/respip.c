@@ -961,7 +961,7 @@ respip_rewrite_reply(const struct query_info* qinfo,
 						struct sockaddr_storage ss;
 						socklen_t ss_len = 0;
 						char nm[256], ip[256];
-						char qn[255+1];
+						char qn[LDNS_MAX_DOMAINLEN];
 						if(!rdata2sockaddr(rep->rrsets[rrset_id]->entry.data, ntohs(rep->rrsets[rrset_id]->rk.type), rr_id, &ss, &ss_len))
 							snprintf(ip, sizeof(ip), "invalidRRdata");
 						else
@@ -1259,8 +1259,8 @@ respip_get_mem(struct module_env* env, int id)
  */
 static struct module_func_block respip_block = {
 	"respip",
-	&respip_init, &respip_deinit, &respip_operate, &respip_inform_super,
-	&respip_clear, &respip_get_mem
+	NULL, NULL, &respip_init, &respip_deinit, &respip_operate,
+	&respip_inform_super, &respip_clear, &respip_get_mem
 };
 
 struct module_func_block*

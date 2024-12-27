@@ -69,12 +69,17 @@ struct redis_moddata {
 	/* server's AUTH password, or "", NULL if unused */
 	const char* server_password;
 	const char* replica_server_password;
-	/* timeout for connection setup and commands */
-	struct timeval timeout;
-	struct timeval replica_timeout;
+	/* timeout for commands */
+	struct timeval command_timeout;
+	struct timeval replica_command_timeout;
+	/* timeout for connection setup */
+	struct timeval connect_timeout;
+	struct timeval replica_connect_timeout;
 	/* the redis logical database to use */
 	int logical_db;
 	int replica_logical_db;
+	/* if the SETEX command is supported */
+	int setex_available;
 };
 
 static redisReply* redis_command(struct module_env*, struct cachedb_env*,
@@ -106,14 +111,16 @@ moddata_clean(struct redis_moddata** moddata) {
 
 static redisContext*
 redis_connect(const char* host, int port, const char* path,
-	const char* password, int logical_db, const struct timeval timeout)
+	const char* password, int logical_db,
+	const struct timeval connect_timeout,
+	const struct timeval command_timeout)
 {
 	redisContext* ctx;
 
 	if(path && path[0]!=0) {
-		ctx = redisConnectUnixWithTimeout(path, timeout);
+		ctx = redisConnectUnixWithTimeout(path, connect_timeout);
 	} else {
-		ctx = redisConnectWithTimeout(host, port, timeout);
+		ctx = redisConnectWithTimeout(host, port, connect_timeout);
 	}
 	if(!ctx || ctx->err) {
 		const char *errstr = "out of memory";
@@ -122,8 +129,8 @@ redis_connect(const char* host, int port, const char* path,
 		log_err("failed to connect to redis server: %s", errstr);
 		goto fail;
 	}
-	if(redisSetTimeout(ctx, timeout) != REDIS_OK) {
-		log_err("failed to set redis timeout");
+	if(redisSetTimeout(ctx, command_timeout) != REDIS_OK) {
+		log_err("failed to set redis timeout, %s", ctx->errstr);
 		goto fail;
 	}
 	if(password && password[0]!=0) {
@@ -163,6 +170,18 @@ fail:
 	return NULL;
 }
 
+static void
+set_timeout(struct timeval* timeout, int value, int explicit_value)
+{
+	if(explicit_value != 0) {
+		timeout->tv_sec = explicit_value / 1000;
+		timeout->tv_usec = (explicit_value % 1000) * 1000;
+	} else {
+		timeout->tv_sec = value / 1000;
+		timeout->tv_usec = (value % 1000) * 1000;
+	}
+}
+
 static int
 redis_init(struct module_env* env, struct cachedb_env* cachedb_env)
 {
@@ -182,16 +201,29 @@ redis_init(struct module_env* env, struct cachedb_env* cachedb_env)
 	 * in this module. */
 	moddata->server_host = env->cfg->redis_server_host;
 	moddata->replica_server_host = env->cfg->redis_replica_server_host;
+
 	moddata->server_port = env->cfg->redis_server_port;
 	moddata->replica_server_port = env->cfg->redis_replica_server_port;
+
 	moddata->server_path = env->cfg->redis_server_path;
 	moddata->replica_server_path = env->cfg->redis_replica_server_path;
+
 	moddata->server_password = env->cfg->redis_server_password;
 	moddata->replica_server_password = env->cfg->redis_replica_server_password;
-	moddata->timeout.tv_sec = env->cfg->redis_timeout / 1000;
-	moddata->timeout.tv_usec = (env->cfg->redis_timeout % 1000) * 1000;
-	moddata->replica_timeout.tv_sec = env->cfg->redis_replica_timeout / 1000;
-	moddata->replica_timeout.tv_usec = (env->cfg->redis_replica_timeout % 1000) * 1000;
+
+	set_timeout(&moddata->command_timeout,
+		env->cfg->redis_timeout,
+		env->cfg->redis_command_timeout);
+	set_timeout(&moddata->replica_command_timeout,
+		env->cfg->redis_replica_timeout,
+		env->cfg->redis_replica_command_timeout);
+	set_timeout(&moddata->connect_timeout,
+		env->cfg->redis_timeout,
+		env->cfg->redis_connect_timeout);
+	set_timeout(&moddata->replica_connect_timeout,
+		env->cfg->redis_replica_timeout,
+		env->cfg->redis_replica_connect_timeout);
+
 	moddata->logical_db = env->cfg->redis_logical_db;
 	moddata->replica_logical_db = env->cfg->redis_replica_logical_db;
 
@@ -216,10 +248,13 @@ redis_init(struct module_env* env, struct cachedb_env* cachedb_env)
 			moddata->server_path,
 			moddata->server_password,
 			moddata->logical_db,
-			moddata->timeout);
+			moddata->connect_timeout,
+			moddata->command_timeout);
 		if(!ctx) {
-			log_err("redis_init: failed to init redis");
-			goto fail;
+			log_err("redis_init: failed to init redis "
+				"(for thread %d)", i);
+			/* And continue, the context can be established
+			 * later, just like after a disconnect. */
 		}
 		moddata->ctxs[i] = ctx;
 	}
@@ -231,16 +266,20 @@ redis_init(struct module_env* env, struct cachedb_env* cachedb_env)
 				moddata->replica_server_path,
 				moddata->replica_server_password,
 				moddata->replica_logical_db,
-				moddata->replica_timeout);
+				moddata->replica_connect_timeout,
+				moddata->replica_command_timeout);
 			if(!ctx) {
-				log_err("redis_init: failed to init redis");
-				goto fail;
+				log_err("redis_init: failed to init redis "
+					"replica (for thread %d)", i);
+				/* And continue, the context can be established
+				* later, just like after a disconnect. */
 			}
 			moddata->replica_ctxs[i] = ctx;
 		}
 	}
 	cachedb_env->backend_data = moddata;
-	if(env->cfg->redis_expire_records) {
+	if(env->cfg->redis_expire_records &&
+		moddata->ctxs[env->alloc->thread_num] != NULL) {
 		redisReply* rep = NULL;
 		int redis_reply_type = 0;
 		/** check if setex command is supported */
@@ -248,10 +287,7 @@ redis_init(struct module_env* env, struct cachedb_env* cachedb_env)
 			"SETEX __UNBOUND_REDIS_CHECK__ 1 none", NULL, 0, 1);
 		if(!rep) {
 			/** init failed, no response from redis server*/
-			log_err("redis_init: failed to init redis, the "
-				"redis-expire-records option requires the SETEX command "
-				"(redis >= 2.0.0)");
-			goto fail;
+			goto setex_fail;
 		}
 		redis_reply_type = rep->type;
 		freeReplyObject(rep);
@@ -260,14 +296,17 @@ redis_init(struct module_env* env, struct cachedb_env* cachedb_env)
 			break;
 		default:
 			/** init failed, setex command not supported */
-			log_err("redis_init: failed to init redis, the "
-				"redis-expire-records option requires the SETEX command "
-				"(redis >= 2.0.0)");
-			goto fail;
+			goto setex_fail;
 		}
+		moddata->setex_available = 1;
 	}
 	return 1;
 
+setex_fail:
+	log_err("redis_init: failure during redis_init, the "
+		"redis-expire-records option requires the SETEX command "
+		"(redis >= 2.0.0)");
+	return 1;
 fail:
 	moddata_clean(&moddata);
 	return 0;
@@ -328,7 +367,8 @@ redis_command(struct module_env* env, struct cachedb_env* cachedb_env,
 				d->replica_server_path,
 				d->replica_server_password,
 				d->replica_logical_db,
-				d->replica_timeout);
+				d->replica_connect_timeout,
+				d->replica_command_timeout);
 		} else {
 			ctx = redis_connect(
 				d->server_host,
@@ -336,7 +376,8 @@ redis_command(struct module_env* env, struct cachedb_env* cachedb_env,
 				d->server_path,
 				d->server_password,
 				d->logical_db,
-				d->timeout);
+				d->connect_timeout,
+				d->command_timeout);
 		}
 		ctx_selector[env->alloc->thread_num] = ctx;
 	}
@@ -417,7 +458,10 @@ redis_store(struct module_env* env, struct cachedb_env* cachedb_env,
 {
 	redisReply* rep;
 	int n;
-	int set_ttl = (env->cfg->redis_expire_records &&
+	struct redis_moddata* moddata = (struct redis_moddata*)
+		cachedb_env->backend_data;
+	int set_ttl = (moddata->setex_available &&
+		env->cfg->redis_expire_records &&
 		(!env->cfg->serve_expired || env->cfg->serve_expired_ttl > 0));
 	/* Supported commands:
 	 * - "SET " + key + " %b"

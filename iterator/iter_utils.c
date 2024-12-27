@@ -279,9 +279,10 @@ iter_filter_unsuitable(struct iter_env* iter_env, struct module_env* env,
 		name, namelen, qtype, &lame, &dnsseclame, &reclame,
 		&rtt, now)) {
 		log_addr(VERB_ALGO, "servselect", &a->addr, a->addrlen);
-		verbose(VERB_ALGO, "   rtt=%d%s%s%s%s", rtt,
+		verbose(VERB_ALGO, "   rtt=%d%s%s%s%s%s", rtt,
 			lame?" LAME":"",
 			dnsseclame?" DNSSEC_LAME":"",
+			a->dnsseclame?" ADDR_DNSSEC_LAME":"",
 			reclame?" REC_LAME":"",
 			a->lame?" ADDR_LAME":"");
 		if(lame)
@@ -692,10 +693,11 @@ dns_copy_msg(struct dns_msg* from, struct regional* region)
 void
 iter_dns_store(struct module_env* env, struct query_info* msgqinf,
 	struct reply_info* msgrep, int is_referral, time_t leeway, int pside,
-	struct regional* region, uint16_t flags, time_t qstarttime)
+	struct regional* region, uint16_t flags, time_t qstarttime,
+	int is_valrec)
 {
 	if(!dns_cache_store(env, msgqinf, msgrep, is_referral, leeway,
-		pside, region, flags, qstarttime))
+		pside, region, flags, qstarttime, is_valrec))
 		log_err("out of memory: cannot store data in cache");
 }
 
@@ -1284,8 +1286,17 @@ iter_get_next_root(struct iter_hints* hints, struct iter_forwards* fwd,
 	uint16_t* c)
 {
 	uint16_t c1 = *c, c2 = *c;
-	int r1 = hints_next_root(hints, &c1);
-	int r2 = forwards_next_root(fwd, &c2);
+	int r1, r2;
+	int nolock = 1;
+
+	/* prelock both forwards and hints for atomic read. */
+	lock_rw_rdlock(&fwd->lock);
+	lock_rw_rdlock(&hints->lock);
+	r1 = hints_next_root(hints, &c1, nolock);
+	r2 = forwards_next_root(fwd, &c2, nolock);
+	lock_rw_unlock(&fwd->lock);
+	lock_rw_unlock(&hints->lock);
+
 	if(!r1 && !r2) /* got none, end of list */
 		return 0;
 	else if(!r1) /* got one, return that */
@@ -1450,15 +1461,21 @@ int iter_dp_cangodown(struct query_info* qinfo, struct delegpt* dp)
 
 int
 iter_stub_fwd_no_cache(struct module_qstate *qstate, struct query_info *qinf,
-	uint8_t** retdpname, size_t* retdpnamelen)
+	uint8_t** retdpname, size_t* retdpnamelen, uint8_t* dpname_storage,
+	size_t dpname_storage_len)
 {
 	struct iter_hints_stub *stub;
 	struct delegpt *dp;
+	int nolock = 1;
 
 	/* Check for stub. */
+	/* Lock both forwards and hints for atomic read. */
+	lock_rw_rdlock(&qstate->env->fwds->lock);
+	lock_rw_rdlock(&qstate->env->hints->lock);
 	stub = hints_lookup_stub(qstate->env->hints, qinf->qname,
-	    qinf->qclass, NULL);
-	dp = forwards_lookup(qstate->env->fwds, qinf->qname, qinf->qclass);
+	    qinf->qclass, NULL, nolock);
+	dp = forwards_lookup(qstate->env->fwds, qinf->qname, qinf->qclass,
+		nolock);
 
 	/* see if forward or stub is more pertinent */
 	if(stub && stub->dp && dp) {
@@ -1472,35 +1489,60 @@ iter_stub_fwd_no_cache(struct module_qstate *qstate, struct query_info *qinf,
 
 	/* check stub */
 	if (stub != NULL && stub->dp != NULL) {
-		if(stub->dp->no_cache) {
-			char qname[255+1];
-			char dpname[255+1];
+		int stub_no_cache = stub->dp->no_cache;
+		lock_rw_unlock(&qstate->env->fwds->lock);
+		if(stub_no_cache) {
+			char qname[LDNS_MAX_DOMAINLEN];
+			char dpname[LDNS_MAX_DOMAINLEN];
 			dname_str(qinf->qname, qname);
 			dname_str(stub->dp->name, dpname);
 			verbose(VERB_ALGO, "stub for %s %s has no_cache", qname, dpname);
 		}
 		if(retdpname) {
-			*retdpname = stub->dp->name;
+			if(stub->dp->namelen > dpname_storage_len) {
+				verbose(VERB_ALGO, "no cache stub dpname too long");
+				lock_rw_unlock(&qstate->env->hints->lock);
+				*retdpname = NULL;
+				*retdpnamelen = 0;
+				return stub_no_cache;
+			}
+			memmove(dpname_storage, stub->dp->name,
+				stub->dp->namelen);
+			*retdpname = dpname_storage;
 			*retdpnamelen = stub->dp->namelen;
 		}
-		return (stub->dp->no_cache);
+		lock_rw_unlock(&qstate->env->hints->lock);
+		return stub_no_cache;
 	}
 
 	/* Check for forward. */
 	if (dp) {
-		if(dp->no_cache) {
-			char qname[255+1];
-			char dpname[255+1];
+		int dp_no_cache = dp->no_cache;
+		lock_rw_unlock(&qstate->env->hints->lock);
+		if(dp_no_cache) {
+			char qname[LDNS_MAX_DOMAINLEN];
+			char dpname[LDNS_MAX_DOMAINLEN];
 			dname_str(qinf->qname, qname);
 			dname_str(dp->name, dpname);
 			verbose(VERB_ALGO, "forward for %s %s has no_cache", qname, dpname);
 		}
 		if(retdpname) {
-			*retdpname = dp->name;
+			if(dp->namelen > dpname_storage_len) {
+				verbose(VERB_ALGO, "no cache dpname too long");
+				lock_rw_unlock(&qstate->env->fwds->lock);
+				*retdpname = NULL;
+				*retdpnamelen = 0;
+				return dp_no_cache;
+			}
+			memmove(dpname_storage, dp->name, dp->namelen);
+			*retdpname = dpname_storage;
 			*retdpnamelen = dp->namelen;
 		}
-		return (dp->no_cache);
+		lock_rw_unlock(&qstate->env->fwds->lock);
+		return dp_no_cache;
 	}
+	lock_rw_unlock(&qstate->env->fwds->lock);
+	lock_rw_unlock(&qstate->env->hints->lock);
 	if(retdpname) {
 		*retdpname = NULL;
 		*retdpnamelen = 0;
@@ -1522,4 +1564,55 @@ void iterator_set_ip46_support(struct module_stack* mods,
 		ie->supports_ipv4 = 0;
 	if(outnet->num_ip6 == 0)
 		ie->supports_ipv6 = 0;
+}
+
+void
+limit_nsec_ttl(struct dns_msg* msg)
+{
+	/* Limit NSEC and NSEC3 TTL in response, RFC9077 */
+	size_t i;
+	int found = 0;
+	time_t soa_ttl = 0;
+	/* Limit the NSEC and NSEC3 TTL values to the SOA TTL and SOA minimum
+	 * TTL. That has already been applied to the SOA record ttl. */
+	for(i=0; i<msg->rep->rrset_count; i++) {
+		struct ub_packed_rrset_key* s = msg->rep->rrsets[i];
+		if(ntohs(s->rk.type) == LDNS_RR_TYPE_SOA) {
+			struct packed_rrset_data* soadata = (struct packed_rrset_data*)s->entry.data;
+			found = 1;
+			soa_ttl = soadata->ttl;
+			break;
+		}
+	}
+	if(!found)
+		return;
+	for(i=0; i<msg->rep->rrset_count; i++) {
+		struct ub_packed_rrset_key* s = msg->rep->rrsets[i];
+		if(ntohs(s->rk.type) == LDNS_RR_TYPE_NSEC ||
+			ntohs(s->rk.type) == LDNS_RR_TYPE_NSEC3) {
+			struct packed_rrset_data* data = (struct packed_rrset_data*)s->entry.data;
+			/* Limit the negative TTL. */
+			if(data->ttl > soa_ttl) {
+				if(verbosity >= VERB_ALGO) {
+					char buf[256];
+					snprintf(buf, sizeof(buf),
+						"limiting TTL %d of %s record to the SOA TTL of %d for",
+						(int)data->ttl, ((ntohs(s->rk.type) == LDNS_RR_TYPE_NSEC)?"NSEC":"NSEC3"), (int)soa_ttl);
+					log_nametypeclass(VERB_ALGO, buf,
+						s->rk.dname, ntohs(s->rk.type),
+						ntohs(s->rk.rrset_class));
+				}
+				data->ttl = soa_ttl;
+			}
+		}
+	}
+}
+
+void
+iter_make_minimal(struct reply_info* rep)
+{
+	size_t rem = rep->ns_numrrsets + rep->ar_numrrsets;
+	rep->ns_numrrsets = 0;
+	rep->ar_numrrsets = 0;
+	rep->rrset_count -= rem;
 }

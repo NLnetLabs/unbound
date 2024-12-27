@@ -1009,7 +1009,7 @@ use_free_buffer(struct outside_network* outnet)
 			sldns_buffer tmp;
 			sldns_buffer_init_frm_data(&tmp, w->pkt, w->pkt_len);
 			dt_msg_send_outside_query(outnet->dtenv, &w->sq->addr,
-				&pend_tcp->pi->addr, comm_tcp, w->sq->zone,
+				&pend_tcp->pi->addr, comm_tcp, NULL, w->sq->zone,
 				w->sq->zonelen, &tmp);
 		}
 #endif
@@ -1054,7 +1054,7 @@ reuse_move_writewait_away(struct outside_network* outnet,
 		if(verbosity >= VERB_CLIENT && pend->query->pkt_len > 12+2+2 &&
 			LDNS_QDCOUNT(pend->query->pkt) > 0 &&
 			dname_valid(pend->query->pkt+12, pend->query->pkt_len-12)) {
-			char buf[LDNS_MAX_DOMAINLEN+1];
+			char buf[LDNS_MAX_DOMAINLEN];
 			dname_str(pend->query->pkt+12, buf);
 			verbose(VERB_CLIENT, "reuse_move_writewait_away current %s %d bytes were written",
 				buf, (int)pend->c->tcp_write_byte_count);
@@ -1079,7 +1079,7 @@ reuse_move_writewait_away(struct outside_network* outnet,
 		if(verbosity >= VERB_CLIENT && w->pkt_len > 12+2+2 &&
 			LDNS_QDCOUNT(w->pkt) > 0 &&
 			dname_valid(w->pkt+12, w->pkt_len-12)) {
-			char buf[LDNS_MAX_DOMAINLEN+1];
+			char buf[LDNS_MAX_DOMAINLEN];
 			dname_str(w->pkt+12, buf);
 			verbose(VERB_CLIENT, "reuse_move_writewait_away item %s", buf);
 		}
@@ -2051,7 +2051,8 @@ select_id(struct outside_network* outnet, struct pending* pend,
 }
 
 /** return true is UDP connect error needs to be logged */
-static int udp_connect_needs_log(int err)
+static int udp_connect_needs_log(int err, struct sockaddr_storage* addr,
+	socklen_t addrlen)
 {
 	switch(err) {
 	case ECONNREFUSED:
@@ -2075,6 +2076,15 @@ static int udp_connect_needs_log(int err)
 		if(verbosity >= VERB_ALGO)
 			return 1;
 		return 0;
+	case EINVAL:
+		/* Stop 'Invalid argument for fe80::/10' addresses appearing
+		 * in the logs, at low verbosity. They cannot be sent to. */
+		if(addr_is_ip6linklocal(addr, addrlen)) {
+			if(verbosity >= VERB_ALGO)
+				return 1;
+			return 0;
+		}
+		break;
 	default:
 		break;
 	}
@@ -2141,7 +2151,8 @@ select_ifport(struct outside_network* outnet, struct pending* pend,
 				/* connect() to the destination */
 				if(connect(fd, (struct sockaddr*)&pend->addr,
 					pend->addrlen) < 0) {
-					if(udp_connect_needs_log(errno)) {
+					if(udp_connect_needs_log(errno,
+						&pend->addr, pend->addrlen)) {
 						log_err_addr("udp connect failed",
 							strerror(errno), &pend->addr,
 							pend->addrlen);
@@ -2237,7 +2248,7 @@ randomize_and_send_udp(struct pending* pend, sldns_buffer* packet, int timeout)
 		outnet->dtenv->log_forwarder_query_messages)) {
 			log_addr(VERB_ALGO, "from local addr", &pend->pc->pif->addr, pend->pc->pif->addrlen);
 			log_addr(VERB_ALGO, "request to upstream", &pend->addr, pend->addrlen);
-			dt_msg_send_outside_query(outnet->dtenv, &pend->addr, &pend->pc->pif->addr, comm_udp,
+			dt_msg_send_outside_query(outnet->dtenv, &pend->addr, &pend->pc->pif->addr, comm_udp, NULL,
 				pend->sq->zone, pend->sq->zonelen, packet);
 	}
 #endif
@@ -2517,7 +2528,7 @@ pending_tcp_query(struct serviced_query* sq, sldns_buffer* packet,
 			sldns_buffer tmp;
 			sldns_buffer_init_frm_data(&tmp, w->pkt, w->pkt_len);
 			dt_msg_send_outside_query(sq->outnet->dtenv, &sq->addr,
-				&pend->pi->addr, comm_tcp, sq->zone,
+				&pend->pi->addr, comm_tcp, NULL, sq->zone,
 				sq->zonelen, &tmp);
 		}
 #endif
@@ -2814,10 +2825,29 @@ serviced_perturb_qname(struct ub_randstate* rnd, uint8_t* qbuf, size_t len)
 		lablen = *d++;
 	}
 	if(verbosity >= VERB_ALGO) {
-		char buf[LDNS_MAX_DOMAINLEN+1];
+		char buf[LDNS_MAX_DOMAINLEN];
 		dname_str(qbuf+10, buf);
 		verbose(VERB_ALGO, "qname perturbed to %s", buf);
 	}
+}
+
+static uint16_t
+serviced_query_udp_size(struct serviced_query* sq, enum serviced_query_status status) {
+	uint16_t udp_size;
+	if(status == serviced_query_UDP_EDNS_FRAG) {
+		if(addr_is_ip6(&sq->addr, sq->addrlen)) {
+			if(EDNS_FRAG_SIZE_IP6 < EDNS_ADVERTISED_SIZE)
+				udp_size = EDNS_FRAG_SIZE_IP6;
+			else	udp_size = EDNS_ADVERTISED_SIZE;
+		} else {
+			if(EDNS_FRAG_SIZE_IP4 < EDNS_ADVERTISED_SIZE)
+				udp_size = EDNS_FRAG_SIZE_IP4;
+			else	udp_size = EDNS_ADVERTISED_SIZE;
+		}
+	} else {
+		udp_size = EDNS_ADVERTISED_SIZE;
+	}
+	return udp_size;
 }
 
 /** put serviced query into a buffer */
@@ -2843,19 +2873,7 @@ serviced_encode(struct serviced_query* sq, sldns_buffer* buff, int with_edns)
 		edns.opt_list_in = NULL;
 		edns.opt_list_out = sq->opt_list;
 		edns.opt_list_inplace_cb_out = NULL;
-		if(sq->status == serviced_query_UDP_EDNS_FRAG) {
-			if(addr_is_ip6(&sq->addr, sq->addrlen)) {
-				if(EDNS_FRAG_SIZE_IP6 < EDNS_ADVERTISED_SIZE)
-					edns.udp_size = EDNS_FRAG_SIZE_IP6;
-				else	edns.udp_size = EDNS_ADVERTISED_SIZE;
-			} else {
-				if(EDNS_FRAG_SIZE_IP4 < EDNS_ADVERTISED_SIZE)
-					edns.udp_size = EDNS_FRAG_SIZE_IP4;
-				else	edns.udp_size = EDNS_ADVERTISED_SIZE;
-			}
-		} else {
-			edns.udp_size = EDNS_ADVERTISED_SIZE;
-		}
+		edns.udp_size = serviced_query_udp_size(sq, sq->status);
 		edns.bits = 0;
 		if(sq->dnssec & EDNS_DO)
 			edns.bits = EDNS_DO;
@@ -3083,7 +3101,7 @@ serviced_tcp_callback(struct comm_point* c, void* arg, int error,
 		log_addr(VERB_ALGO, "response from upstream", &sq->addr, sq->addrlen);
 		log_addr(VERB_ALGO, "to local addr", &pi->addr, pi->addrlen);
 		dt_msg_send_outside_response(sq->outnet->dtenv, &sq->addr,
-			&pi->addr, c->type, sq->zone, sq->zonelen, sq->qbuf,
+			&pi->addr, c->type, c->ssl, sq->zone, sq->zonelen, sq->qbuf,
 			sq->qbuflen, &sq->last_sent_time, sq->outnet->now_tv,
 			c->buffer);
 	}
@@ -3252,7 +3270,8 @@ serviced_udp_callback(struct comm_point* c, void* arg, int error,
 
 	sq->pending = NULL; /* removed after callback */
 	if(error == NETEVENT_TIMEOUT) {
-		if(sq->status == serviced_query_UDP_EDNS && sq->last_rtt < 5000) {
+		if(sq->status == serviced_query_UDP_EDNS && sq->last_rtt < 5000 &&
+		   (serviced_query_udp_size(sq, serviced_query_UDP_EDNS_FRAG) < serviced_query_udp_size(sq, serviced_query_UDP_EDNS))) {
 			/* fallback to 1480/1280 */
 			sq->status = serviced_query_UDP_EDNS_FRAG;
 			log_name_addr(VERB_ALGO, "try edns1xx0", sq->qbuf+10,
@@ -3296,7 +3315,7 @@ serviced_udp_callback(struct comm_point* c, void* arg, int error,
 		log_addr(VERB_ALGO, "to local addr", &p->pc->pif->addr,
 			p->pc->pif->addrlen);
 		dt_msg_send_outside_response(outnet->dtenv, &sq->addr,
-			&p->pc->pif->addr, c->type, sq->zone, sq->zonelen,
+			&p->pc->pif->addr, c->type, c->ssl, sq->zone, sq->zonelen,
 			sq->qbuf, sq->qbuflen, &sq->last_sent_time,
 			sq->outnet->now_tv, c->buffer);
 	}
@@ -3447,7 +3466,10 @@ outnet_serviced_query(struct outside_network* outnet,
 			timenow = *env->now;
 			if(!infra_ratelimit_inc(env->infra_cache, zone,
 				zonelen, timenow, env->cfg->ratelimit_backoff,
-				&qstate->qinfo, qstate->reply)) {
+				&qstate->qinfo,
+				qstate->mesh_info->reply_list
+					?&qstate->mesh_info->reply_list->query_reply
+					:NULL)) {
 				/* Can we pass through with slip factor? */
 				if(env->cfg->ratelimit_factor == 0 ||
 					ub_random_max(env->rnd,

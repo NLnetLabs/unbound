@@ -39,6 +39,7 @@
 
 #ifdef USE_DNSTAP
 
+#include "util/locks.h"
 struct config_file;
 struct sldns_buffer;
 struct dt_msg_queue;
@@ -75,6 +76,13 @@ struct dt_env {
 	unsigned log_forwarder_query_messages : 1;
 	/** whether to log Message/FORWARDER_RESPONSE */
 	unsigned log_forwarder_response_messages : 1;
+
+	/** lock on sample count */
+	lock_basic_type sample_lock;
+	/** rate limit value from config, samples 1/N messages */
+	unsigned int sample_rate;
+	/** rate limit counter */
+	unsigned int sample_rate_count;
 };
 
 /**
@@ -133,6 +141,7 @@ dt_msg_send_client_query(struct dt_env *env,
 			 struct sockaddr_storage *qsock,
 			 struct sockaddr_storage *rsock,
 			 enum comm_point_type cptype,
+			 void *cpssl,
 			 struct sldns_buffer *qmsg,
 			 struct timeval* tstamp);
 
@@ -149,6 +158,7 @@ dt_msg_send_client_response(struct dt_env *env,
 			    struct sockaddr_storage *qsock,
 			    struct sockaddr_storage *rsock,
 			    enum comm_point_type cptype,
+			    void *cpssl,
 			    struct sldns_buffer *rmsg);
 
 /**
@@ -168,6 +178,7 @@ dt_msg_send_outside_query(struct dt_env *env,
 			  struct sockaddr_storage *rsock,
 			  struct sockaddr_storage *qsock,
 			  enum comm_point_type cptype,
+			  void *cpssl,
 			  uint8_t *zone, size_t zone_len,
 			  struct sldns_buffer *qmsg);
 
@@ -192,6 +203,7 @@ dt_msg_send_outside_response(struct dt_env *env,
 			     struct sockaddr_storage *rsock,
 			     struct sockaddr_storage *qsock,
 			     enum comm_point_type cptype,
+			     void *cpssl,
 			     uint8_t *zone, size_t zone_len,
 			     uint8_t *qbuf, size_t qbuf_len,
 			     const struct timeval *qtime,

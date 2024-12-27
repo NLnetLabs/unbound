@@ -32,12 +32,12 @@ jobs:
           - name: OS X
             os: macos-latest
             install_expat: "yes"
-            config: "--enable-debug --disable-flto --with-ssl=/usr/local/opt/openssl --with-libexpat=/usr/local/opt/expat"
+            config: "--enable-debug --disable-flto --with-ssl=/opt/homebrew/opt/openssl --with-libexpat=/opt/homebrew/opt/expat"
             make_test: "yes"
           - name: Clang on OS X
             os: macos-latest
             install_expat: "yes"
-            config: "CC=clang --enable-debug --disable-flto --with-ssl=/usr/local/opt/openssl --with-libexpat=/usr/local/opt/expat --disable-static"
+            config: "CC=clang --enable-debug --disable-flto --with-ssl=/opt/homebrew/opt/openssl --with-libexpat=/opt/homebrew/opt/expat --disable-static"
             make_test: "yes"
             clang_analysis: "yes"
           - name: ubsan (gcc undefined behaviour sanitizer)
@@ -161,11 +161,39 @@ jobs:
             test_windows: "yes"
             config: "no"
             make: "no"
+          - name: FreeBSD
+            os: ubuntu-latest
+            config: "no"
+            make: "no"
+            with_cross_platform_action: "yes"
+            cross_platform_os: "freebsd"
+            cross_platform_arch: "x86-64"
+            cross_platform_version: "14.1"
+            cross_platform_config: "--enable-debug --disable-flto --with-libevent --disable-static"
+          - name: OpenBSD
+            os: ubuntu-latest
+            config: "no"
+            make: "no"
+            with_cross_platform_action: "yes"
+            cross_platform_os: "openbsd"
+            cross_platform_arch: "x86-64"
+            cross_platform_version: "7.5"
+            cross_platform_config: "--enable-debug --disable-flto --with-libevent --disable-static"
+          - name: NetBSD
+            os: ubuntu-latest
+            config: "no"
+            make: "no"
+            with_cross_platform_action: "yes"
+            cross_platform_os: "netbsd"
+            cross_platform_arch: "x86-64"
+            cross_platform_version: "10.0"
+            cross_platform_config: "--enable-debug --disable-flto --with-libevent --disable-static"
  
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           submodules: false
+          persist-credentials: false
       - name: test_windows
         if: ${{ matrix.test_windows == 'yes' }}
         shell: bash
@@ -181,21 +209,20 @@ jobs:
           export LEX="win_flex"
           echo 'YACC="win_bison -y"'
           export YACC="win_bison -y"
-          #echo "curl cpanm"
-          #curl -L -k -s -S -o cpanm https://cpanmin.us/
-          #echo "perl cpanm Pod::Usage"
-          #perl cpanm Pod::Usage
           mkdir openssl
           echo "curl openssl"
-          curl -L -k -s -S -o openssl-1.1.1j.tar.gz https://www.openssl.org/source/openssl-1.1.1j.tar.gz
-          tar xzf openssl-1.1.1j.tar.gz
-          cd openssl-1.1.1j
+          curl -L -k -s -S -o openssl-3.2.0.tar.gz https://www.openssl.org/source/openssl-3.2.0.tar.gz
+          tar xzf openssl-3.2.0.tar.gz
+          cd openssl-3.2.0
           # remove pod::Usage because we do not need -help or -man output
-          # from the Configure script
-          echo "Fixup ./Configure by removing use Pod::Usage require"
-          sed -e 's/use Pod::Usage//' < Configure > Configure.fix
-          echo "./Configure.fix no-shared no-asm -DOPENSSL_NO_CAPIENG mingw64 --prefix=\""$prepath/openssl\"""
-          ./Configure.fix no-shared no-asm -DOPENSSL_NO_CAPIENG mingw64 --prefix="$prepath/openssl"
+          # from the Configure script, this fixes it for openssl 1.1.1
+          #echo "Fixup ./Configure by removing use Pod::Usage require"
+          #sed -e 's/use Pod::Usage//' < Configure > Configure.fix
+          # ./Configure.fix no-shared no-asm -DOPENSSL_NO_CAPIENG mingw64 --prefix="$prepath/openssl"
+          # pacman is used to install for msys2, with
+          # C:/msys64/usr/bin/pacman -S perl
+          echo "C:/msys64/usr/bin/perl ./Configure no-shared no-asm -DOPENSSL_NO_CAPIENG mingw64 --prefix=\""$prepath/openssl"\" PERL=\"C:/msys64/usr/bin/perl\""
+          C:/msys64/usr/bin/perl ./Configure no-shared no-asm -DOPENSSL_NO_CAPIENG mingw64 --prefix="$prepath/openssl" PERL="C:/msys64/usr/bin/perl"
           # make the libs only, build faster
           echo "make build_libs"
           #make
@@ -332,6 +359,33 @@ jobs:
           echo "::group::make install"
           make install
           echo "::endgroup::"
+      - name: cross-platform-action on ${{ matrix.cross_platform_os }} ${{ matrix.cross_platform_version }}
+        if: ${{ matrix.with_cross_platform_action == 'yes' }}
+        uses: cross-platform-actions/action@v0.25.0
+        env:
+          CROSS_PLATFORM_OS: ${{ matrix.cross_platform_os }}
+        with:
+          environment_variables: CROSS_PLATFORM_OS
+          operating_system: ${{ matrix.cross_platform_os }}
+          architecture: ${{ matrix.cross_platform_arch }}
+          version: ${{ matrix.cross_platform_version }}
+          shell: bash
+          memory: 4G
+          cpu_count: 2
+          run: |
+            set -e -x
+            if test "$CROSS_PLATFORM_OS" = "freebsd"; then sudo pkg install -y openssl libevent expat; fi
+            if test "$CROSS_PLATFORM_OS" = "openbsd"; then sudo pkg_add libevent; fi
+            if test "$CROSS_PLATFORM_OS" = "netbsd"; then sudo pkgin -y install libevent; fi
+            echo "::group::configure"
+            ./configure ${{ matrix.cross_platform_config }}
+            echo "::endgroup::"
+            echo "::group::make"
+            make
+            echo "::endgroup::"
+            echo "::group::make test"
+            make test
+            echo "::endgroup::"
       - name: install libevent
         if: ${{ matrix.install_libevent == 'yes' }}
         run: sudo apt-get install libevent-dev

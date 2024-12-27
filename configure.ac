@@ -4,13 +4,13 @@ AC_PREREQ([2.56])
 sinclude(acx_nlnetlabs.m4)
 sinclude(ax_pthread.m4)
 sinclude(acx_python.m4)
-sinclude(ac_pkg_swig.m4)
+sinclude(ax_pkg_swig.m4)
 sinclude(dnstap/dnstap.m4)
 sinclude(dnscrypt/dnscrypt.m4)
 
 # must be numbers. ac_defun because of later processing
 m4_define([VERSION_MAJOR],[1])
-m4_define([VERSION_MINOR],[19])
+m4_define([VERSION_MINOR],[22])
 m4_define([VERSION_MICRO],[1])
 AC_INIT([unbound],m4_defn([VERSION_MAJOR]).m4_defn([VERSION_MINOR]).m4_defn([VERSION_MICRO]),[unbound-bugs@nlnetlabs.nl or https://github.com/NLnetLabs/unbound/issues],[unbound])
 AC_SUBST(UNBOUND_VERSION_MAJOR, [VERSION_MAJOR])
@@ -18,7 +18,7 @@ AC_SUBST(UNBOUND_VERSION_MINOR, [VERSION_MINOR])
 AC_SUBST(UNBOUND_VERSION_MICRO, [VERSION_MICRO])
 
 LIBUNBOUND_CURRENT=9
-LIBUNBOUND_REVISION=24
+LIBUNBOUND_REVISION=31
 LIBUNBOUND_AGE=1
 # 1.0.0 had 0:12:0
 # 1.0.1 had 0:13:0
@@ -110,6 +110,13 @@ LIBUNBOUND_AGE=1
 # 1.18.0 had 9:22:1
 # 1.19.0 had 9:23:1
 # 1.19.1 had 9:24:1
+# 1.19.2 had 9:25:1
+# 1.19.3 had 9:26:1
+# 1.20.0 had 9:27:1
+# 1.21.0 had 9:28:1
+# 1.21.1 had 9:29:1
+# 1.22.0 had 9:30:1
+# 1.22.1 had 9:31:1
 
 #   Current  -- the number of the binary API that we're implementing
 #   Revision -- which iteration of the implementation of the binary
@@ -271,6 +278,9 @@ AC_DEFINE(WINVER, 0x0502, [the version of the windows API enabled])
 ACX_RSRC_VERSION(wnvs)
 AC_DEFINE_UNQUOTED(RSRC_PACKAGE_VERSION, [$wnvs], [version number for resource files])
 
+# Check for 'grep -e' program, here, since ACX_CHECK_FLTO needs that.
+AC_PROG_GREP
+
 # Checks for typedefs, structures, and compiler characteristics.
 AC_C_CONST
 AC_LANG([C])
@@ -332,6 +342,8 @@ AC_MSG_RESULT($ac_cv_c_weak_attribute)
 if test $ac_cv_c_weak_attribute = yes; then
   AC_DEFINE(HAVE_ATTR_WEAK, 1, [Whether the C compiler accepts the "weak" attribute])
   AC_DEFINE(ATTR_WEAK, [__attribute__((weak))], [apply the weak attribute to a symbol])
+else
+  AC_DEFINE(ATTR_WEAK,[], [apply the weak attribute to a symbol])
 fi
 ])dnl End of CHECK_WEAK_ATTRIBUTE
 
@@ -353,10 +365,53 @@ AC_MSG_RESULT($ac_cv_c_noreturn_attribute)
 if test $ac_cv_c_noreturn_attribute = yes; then
   AC_DEFINE(HAVE_ATTR_NORETURN, 1, [Whether the C compiler accepts the "noreturn" attribute])
   AC_DEFINE(ATTR_NORETURN, [__attribute__((__noreturn__))], [apply the noreturn attribute to a function that exits the program])
+else
+  AC_DEFINE(ATTR_NORETURN,[], [apply the noreturn attribute to a function that exits the program])
 fi
 ])dnl End of CHECK_NORETURN_ATTRIBUTE
 
 CHECK_NORETURN_ATTRIBUTE
+
+AC_DEFUN([CHECK_FALLTHROUGH_ATTRIBUTE],
+[AC_REQUIRE([AC_PROG_CC])
+AC_MSG_CHECKING(whether the C compiler (${CC-cc}) accepts the "fallthrough" attribute)
+BAKCFLAGS="$CFLAGS"
+CFLAGS="$CFLAGS -Werror"
+AC_CACHE_VAL(ac_cv_c_fallthrough_attribute,
+[ac_cv_c_fallthrough_attribute=no
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[ #include <stdio.h>
+void f(int x) {
+	int y = 0;
+	switch(x) {
+	case 1:
+		y = 1;
+		__attribute__((fallthrough));
+		/* fallthrough */
+	case 2:
+		y++;
+		break;
+	case 3:
+		y = 3;
+		break;
+	}
+	printf("%d", y);
+}
+]], [[
+   f(1);
+]])],[ac_cv_c_fallthrough_attribute="yes"],[ac_cv_c_fallthrough_attribute="no"])
+])
+CFLAGS="$BAKCFLAGS"
+
+AC_MSG_RESULT($ac_cv_c_fallthrough_attribute)
+if test $ac_cv_c_fallthrough_attribute = yes; then
+  AC_DEFINE(HAVE_ATTR_FALLTHROUGH, 1, [Whether the C compiler accepts the "fallthrough" attribute])
+  AC_DEFINE(ATTR_FALLTHROUGH, [__attribute__((fallthrough));], [apply the fallthrough attribute.])
+else
+  AC_DEFINE(ATTR_FALLTHROUGH,[], [apply the fallthrough attribute.])
+fi
+])dnl End of CHECK_FALLTHROUGH_ATTRIBUTE
+
+CHECK_FALLTHROUGH_ATTRIBUTE
 
 if test "$srcdir" != "."; then
 	CPPFLAGS="$CPPFLAGS -I$srcdir"
@@ -407,7 +462,7 @@ AC_CHECK_TOOL(STRIP, strip)
 ACX_LIBTOOL_C_ONLY
 
 # pkg-config is only needed for these options, do not require it otherwise
-if test "$enable_systemd" = "yes" -o "$with_pyunbound" = "yes" -o "$with_pythonmod" = "yes"; then
+if test "$enable_systemd" = "yes" -o "$enable_dnstap" = "yes" -o "$with_pyunbound" = "yes" -o "$with_pythonmod" = "yes"; then
 PKG_PROG_PKG_CONFIG
 fi
 
@@ -793,9 +848,9 @@ if test x_$ub_test_python != x_no; then
       ub_have_swig=no
       AC_ARG_ENABLE(swig-version-check, AS_HELP_STRING([--disable-swig-version-check],[Disable swig version check to build python modules with older swig even though that is unreliable]))
       if test "$enable_swig_version_check" = "yes"; then
-      	AC_PROG_SWIG(2.0.1)
+      	AX_PKG_SWIG(2.0.1)
       else
-      	AC_PROG_SWIG
+      	AX_PKG_SWIG
       fi
       AC_MSG_CHECKING(SWIG)
       if test ! -x "$SWIG"; then
@@ -937,7 +992,7 @@ else
 	AC_MSG_RESULT([no])
 fi
 AC_CHECK_HEADERS([openssl/conf.h openssl/engine.h openssl/bn.h openssl/dh.h openssl/dsa.h openssl/rsa.h openssl/core_names.h openssl/param_build.h],,, [AC_INCLUDES_DEFAULT])
-AC_CHECK_FUNCS([OPENSSL_config EVP_sha1 EVP_sha256 EVP_sha512 FIPS_mode EVP_default_properties_is_fips_enabled EVP_MD_CTX_new OpenSSL_add_all_digests OPENSSL_init_crypto EVP_cleanup ENGINE_cleanup ERR_load_crypto_strings CRYPTO_cleanup_all_ex_data ERR_free_strings RAND_cleanup DSA_SIG_set0 EVP_dss1 EVP_DigestVerify EVP_aes_256_cbc EVP_EncryptInit_ex HMAC_Init_ex CRYPTO_THREADID_set_callback EVP_MAC_CTX_set_params OSSL_PARAM_BLD_new BIO_set_callback_ex])
+AC_CHECK_FUNCS([OPENSSL_config EVP_sha1 EVP_sha256 EVP_sha512 FIPS_mode EVP_default_properties_is_fips_enabled EVP_MD_CTX_new OpenSSL_add_all_digests OPENSSL_init_crypto EVP_cleanup ENGINE_cleanup ERR_load_crypto_strings CRYPTO_cleanup_all_ex_data ERR_free_strings RAND_cleanup DSA_SIG_set0 EVP_dss1 EVP_DigestVerify EVP_aes_256_cbc EVP_EncryptInit_ex HMAC_Init_ex CRYPTO_THREADID_set_callback EVP_MAC_CTX_set_params OSSL_PARAM_BLD_new BIO_set_callback_ex SSL_CTX_set_tmp_ecdh])
 
 # these check_funcs need -lssl
 BAKLIBS="$LIBS"
@@ -1174,8 +1229,17 @@ case "$enable_ecdsa" in
       ;;
     *)
       if test $USE_NSS = "no" -a $USE_NETTLE = "no"; then
-	      AC_CHECK_FUNC(ECDSA_sign, [], [AC_MSG_ERROR([OpenSSL does not support ECDSA: please upgrade or rerun with --disable-ecdsa])])
-	      AC_CHECK_FUNC(SHA384_Init, [], [AC_MSG_ERROR([OpenSSL does not support SHA384: please upgrade or rerun with --disable-ecdsa])])
+	      AC_CHECK_FUNC(EVP_PKEY_fromdata, [
+	          # with EVP_PKEY_fromdata, check if EC is not disabled
+	          AC_CHECK_DECL([OPENSSL_NO_EC], [AC_MSG_ERROR([OpenSSL does not support ECDSA: please upgrade or rerun with --disable-ecdsa])
+		  ], [], [AC_INCLUDES_DEFAULT
+#include <openssl/evp.h>
+		  ])
+		], [
+		  # without EVP_PKEY_fromdata, older openssl, check for support
+		  AC_CHECK_FUNC(ECDSA_sign, [], [AC_MSG_ERROR([OpenSSL does not support ECDSA: please upgrade or rerun with --disable-ecdsa])])
+		  AC_CHECK_FUNC(SHA384_Init, [], [AC_MSG_ERROR([OpenSSL does not support SHA384: please upgrade or rerun with --disable-ecdsa])])
+		])
 	      AC_CHECK_DECLS([NID_X9_62_prime256v1, NID_secp384r1], [], [AC_MSG_ERROR([OpenSSL does not support the ECDSA curves: please upgrade or rerun with --disable-ecdsa])], [AC_INCLUDES_DEFAULT
 #include <openssl/evp.h>
 	      ])
@@ -1516,6 +1580,64 @@ if test x_$withval = x_yes -o x_$withval != x_no; then
     ])
 fi
 
+# ngtcp2
+AC_ARG_WITH(libngtcp2, AS_HELP_STRING([--with-libngtcp2=path],[specify explicit path for libngtcp2, for QUIC.]),
+    [ ],[ withval="no" ])
+found_libngtcp2="no"
+if test x_$withval = x_yes -o x_$withval != x_no; then
+   AC_MSG_CHECKING(for libngtcp2)
+   if test x_$withval = x_ -o x_$withval = x_yes; then
+            withval="/usr/local /opt/local /usr/lib /usr/pkg /usr/sfw /usr"
+   fi
+   for dir in $withval ; do
+            if test -f "$dir/include/ngtcp2/ngtcp2.h"; then
+		found_libngtcp2="yes"
+		dnl assume /usr is in default path.
+		if test "$dir" != "/usr"; then
+                    CPPFLAGS="$CPPFLAGS -I$dir/include"
+		    LDFLAGS="$LDFLAGS -L$dir/lib"
+		fi
+		AC_MSG_RESULT(found in $dir)
+		AC_DEFINE([HAVE_NGTCP2], [1], [Define this to use ngtcp2.])
+		LIBS="$LIBS -lngtcp2"
+                break;
+            fi
+    done
+    if test x_$found_libngtcp2 != x_yes; then
+	AC_MSG_ERROR([Could not find libngtcp2, ngtcp2.h])
+    fi
+    AC_CHECK_HEADERS([ngtcp2/ngtcp2.h ngtcp2/ngtcp2_crypto_openssl.h ngtcp2/ngtcp2_crypto_quictls.h],,, [AC_INCLUDES_DEFAULT])
+    AC_CHECK_DECLS([ngtcp2_conn_server_new], [], [], [AC_INCLUDES_DEFAULT
+    #include <ngtcp2/ngtcp2.h>
+    ])
+    AC_CHECK_DECLS([ngtcp2_crypto_encrypt_cb], [], [], [AC_INCLUDES_DEFAULT
+    #include <ngtcp2/ngtcp2_crypto.h>
+    ])
+    AC_CHECK_LIB([ngtcp2_crypto_openssl], [ngtcp2_crypto_encrypt_cb], [ LIBS="$LIBS -lngtcp2_crypto_openssl" ])
+    AC_CHECK_LIB([ngtcp2_crypto_quictls], [ngtcp2_crypto_encrypt_cb], [ LIBS="$LIBS -lngtcp2_crypto_quictls" ])
+    AC_CHECK_FUNCS([ngtcp2_crypto_encrypt_cb ngtcp2_ccerr_default ngtcp2_conn_in_closing_period ngtcp2_conn_in_draining_period ngtcp2_conn_get_max_local_streams_uni ngtcp2_crypto_quictls_from_ossl_encryption_level ngtcp2_crypto_quictls_configure_server_context ngtcp2_crypto_quictls_configure_client_context ngtcp2_conn_get_num_scid ngtcp2_conn_tls_early_data_rejected ngtcp2_conn_encode_0rtt_transport_params])
+    AC_CHECK_FUNCS([SSL_is_quic], [], [AC_MSG_ERROR([No QUIC support detected in OpenSSL. Need OpenSSL version with QUIC support to enable DNS over QUIC with libngtcp2.])])
+    AC_CHECK_TYPES([struct ngtcp2_version_cid, ngtcp2_encryption_level],,,[AC_INCLUDES_DEFAULT
+    #include <ngtcp2/ngtcp2.h>
+    ])
+    AC_CHECK_MEMBERS([struct ngtcp2_pkt_hd.tokenlen, struct ngtcp2_settings.tokenlen, struct ngtcp2_settings.max_tx_udp_payload_size, struct ngtcp2_transport_params.original_dcid_present],,,[AC_INCLUDES_DEFAULT
+    #include <ngtcp2/ngtcp2.h>
+    ])
+
+    AC_MSG_CHECKING([whether ngtcp2_conn_shutdown_stream has 4 arguments])
+    AC_COMPILE_IFELSE([AC_LANG_PROGRAM([AC_INCLUDES_DEFAULT
+#include <ngtcp2/ngtcp2.h>
+    ],[
+	(void)ngtcp2_conn_shutdown_stream(NULL, 0, 0, 0);
+    ])],[
+	AC_MSG_RESULT(yes)
+	AC_DEFINE(HAVE_NGTCP2_CONN_SHUTDOWN_STREAM4, 1, [Define if ngtcp2_conn_shutdown_stream has 4 arguments.])
+    ],[
+	AC_MSG_RESULT(no)
+    ])
+
+fi
+
 # set static linking for uninstalled libraries if requested
 AC_SUBST(staticexe)
 staticexe=""
@@ -1526,13 +1648,17 @@ if test x_$enable_static_exe = x_yes; then
 	if test "$on_mingw" = yes; then
 		staticexe="-all-static"
 		# for static compile, include gdi32 and zlib here.
-		if echo $LIBS | grep 'lgdi32' >/dev/null; then
+		if echo "$LIBS" | grep 'lgdi32' >/dev/null; then
 			:
 		else
 			LIBS="$LIBS -lgdi32"
 		fi
 		AC_CHECK_LIB([z], [compress], [ LIBS="$LIBS -lz" ])
-		LIBS="$LIBS -l:libssp.a"
+		if echo "$LIBS" | grep -e "libssp.a" -e "lssp" >/dev/null; then
+			:
+		else
+			LIBS="$LIBS -l:libssp.a"
+		fi
 	fi
 fi
 
@@ -1549,7 +1675,11 @@ if test x_$enable_fully_static = x_yes; then
 			LIBS="$LIBS -lgdi32"
 		fi
 		AC_CHECK_LIB([z], [compress], [ LIBS="$LIBS -lz" ])
-		LIBS="$LIBS -l:libssp.a"
+		if echo "$LIBS" | grep -e "libssp.a" -e "lssp" >/dev/null; then
+			:
+		else
+			LIBS="$LIBS -l:libssp.a"
+		fi
 	fi
 fi
 
@@ -1569,7 +1699,11 @@ if test "$USE_WINSOCK" = 1; then
 #include <windows.h>
 	])
 	AC_CHECK_TOOL(WINDRES, windres)
-	LIBS="$LIBS -liphlpapi -lcrypt32"
+	if echo "$LIBS" | grep crypt32 >/dev/null; then
+		LIBS="$LIBS -liphlpapi"
+	else
+		LIBS="$LIBS -liphlpapi -lcrypt32"
+	fi
 	WINAPPS="unbound-service-install.exe unbound-service-remove.exe anchor-update.exe"
 	AC_SUBST(WINAPPS)
 	WIN_DAEMON_SRC="winrc/win_svc.c winrc/w_inst.c"
@@ -1819,10 +1953,12 @@ if test x_$enable_lock_checks = x_yes; then
 	UBSYMS="-export-symbols clubsyms.def"
 	cp ${srcdir}/libunbound/ubsyms.def clubsyms.def
 	echo lock_protect >> clubsyms.def
+	echo lock_protect_place >> clubsyms.def
 	echo lock_unprotect >> clubsyms.def
 	echo lock_get_mem >> clubsyms.def
 	echo checklock_start >> clubsyms.def
 	echo checklock_stop >> clubsyms.def
+	echo checklock_set_output_name >> clubsyms.def
 	echo checklock_lock >> clubsyms.def
 	echo checklock_unlock >> clubsyms.def
 	echo checklock_init >> clubsyms.def
@@ -1903,15 +2039,17 @@ case "$enable_ipset" in
 		IPSET_OBJ="ipset.lo"
 		AC_SUBST(IPSET_OBJ)
 
-		# mnl
-		AC_ARG_WITH(libmnl, AS_HELP_STRING([--with-libmnl=path],[specify explicit path for libmnl.]),
+		# BSD's pf
+		AC_CHECK_HEADERS([net/pfvar.h], [], [
+		    # mnl
+		    AC_ARG_WITH(libmnl, AS_HELP_STRING([--with-libmnl=path],[specify explicit path for libmnl.]),
 			[ ],[ withval="yes" ])
-		found_libmnl="no"
-		AC_MSG_CHECKING(for libmnl)
-		if test x_$withval = x_ -o x_$withval = x_yes; then
+		    found_libmnl="no"
+		    AC_MSG_CHECKING(for libmnl)
+		    if test x_$withval = x_ -o x_$withval = x_yes; then
 			withval="/usr/local /opt/local /usr/lib /usr/pkg /usr/sfw /usr"
-		fi
-		for dir in $withval ; do
+		    fi
+		    for dir in $withval ; do
 			if test -f "$dir/include/libmnl/libmnl.h" -o -f "$dir/include/libmnl/libmnl/libmnl.h"; then
 				found_libmnl="yes"
 				dnl assume /usr is in default path.
@@ -1929,10 +2067,14 @@ case "$enable_ipset" in
 				LIBS="$LIBS -lmnl"
 				break;
 			fi
-		done
-		if test x_$found_libmnl != x_yes; then
-			AC_MSG_ERROR([Could not find libmnl, libmnl.h])
-		fi
+		    done
+		    if test x_$found_libmnl != x_yes; then
+			  AC_MSG_ERROR([Could not find libmnl, libmnl.h])
+		    fi
+		], [
+		  #include <netinet/in.h>
+		  #include <net/if.h>
+		])
 		;;
     no|*)
     	# nothing
@@ -2250,6 +2392,10 @@ struct sockaddr_storage;
 #  define calloc(n,s) unbound_stat_calloc_log(n, s, __FILE__, __LINE__, __func__)
 #  define free(p) unbound_stat_free_log(p, __FILE__, __LINE__, __func__)
 #  define realloc(p,s) unbound_stat_realloc_log(p, s, __FILE__, __LINE__, __func__)
+#  define strdup(s) unbound_stat_strdup_log(s, __FILE__, __LINE__, __func__)
+#ifdef HAVE_REALLOCARRAY
+#  define reallocarray(p,n,s) unbound_stat_reallocarray_log(p, n, s, __FILE__, __LINE__, __func__)
+#endif
 void *unbound_stat_malloc(size_t size);
 void *unbound_stat_calloc(size_t nmemb, size_t size);
 void unbound_stat_free(void *ptr);
@@ -2262,6 +2408,10 @@ void unbound_stat_free_log(void *ptr, const char* file, int line,
 	const char* func);
 void *unbound_stat_realloc_log(void *ptr, size_t size, const char* file,
 	int line, const char* func);
+void *unbound_stat_reallocarray_log(void *ptr, size_t nmemb, size_t size,
+	const char* file, int line, const char* func);
+char *unbound_stat_strdup_log(const char *s, const char* file, int line,
+	const char* func);
 #elif defined(UNBOUND_ALLOC_LITE)
 #  include "util/alloc.h"
 #endif /* UNBOUND_ALLOC_LITE and UNBOUND_ALLOC_STATS */
@@ -2272,6 +2422,8 @@ void *unbound_stat_realloc_log(void *ptr, size_t size, const char* file,
 #define UNBOUND_DNS_OVER_TLS_PORT 853
 /** default port for DNS over HTTPS traffic. */
 #define UNBOUND_DNS_OVER_HTTPS_PORT 443
+/** default port for DNS over QUIC traffic. */
+#define UNBOUND_DNS_OVER_QUIC_PORT 853
 /** default port for unbound control traffic, registered port with IANA,
     ub-dns-control  8953/tcp    unbound dns nameserver control */
 #define UNBOUND_CONTROL_PORT 8953

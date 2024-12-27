@@ -4,7 +4,7 @@ server:
 	qname-minimisation: "no"
 	minimal-responses: no
 	serve-expired: yes
-	log-servfail: yes
+	serve-expired-client-timeout: 0
 	ede: yes
 	ede-serve-expired: yes
 
@@ -46,7 +46,7 @@ RANGE_BEGIN 30 100
 		ADJUST copy_id
 		REPLY QR NOERROR
 		SECTION QUESTION
-			example.com. 10 IN NS
+			example.com. IN NS
 		SECTION ANSWER
 			example.com. 10 IN NS ns.example.com.
 		SECTION ADDITIONAL

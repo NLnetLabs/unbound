@@ -45,20 +45,24 @@ usage () {
 Usage $0: [-h] [-s] [-u git_url] [-b git_branch] [-w ...args...]
 Generate a distribution tar file for unbound.
 
-    -h           This usage information.
-    -s           Build a snapshot distribution file.  The current date is
-                 automatically appended to the current unbound version number.
-    -rc <nr>     Build a release candidate, the given string will be added
-                 to the version number 
-                 (which will then be unbound-<version>rc<number>)
-    -u git_url   Retrieve the source from the specified repository url.
-                 Detected from the working copy if not specified.
-    -b git_branch Retrieve the the specified branch or tag.
-                 Detected from the working copy if not specified.
+    -h                  This usage information.
+    -s                  Build a snapshot distribution file.  The current date is
+                        automatically appended to the current unbound version number.
+    -rc <nr>            Build a release candidate, the given string will be added
+                        to the version number
+                        (which will then be unbound-<version>rc<number>)
+    -u git_url          Retrieve the source from the specified repository url.
+                        Detected from the working copy if not specified.
+    -b git_branch       Retrieve the specified branch or tag.
+                        Detected from the working copy if not specified.
     -wssl openssl.xx.tar.gz Also build openssl from tarball for windows dist.
     -wxp expat.xx.tar.gz Also build expat from tarball for windows dist.
-    -w32	 32bit windows compile.
-    -w ...       Build windows binary dist. last args passed to configure.
+    -wdir directory     Build openssl and expat in a persistent directory for
+                        windows dist. If builds are already in that directory
+                        they are used right away. Useful when debuggin windows
+                        builds.
+    -w32                32bit windows compile.
+    -w ...              Build windows binary dist. last args passed to configure.
 EOF
     exit 1
 }
@@ -143,6 +147,16 @@ create_temp_dir () {
     cd $temp_dir
 }
 
+activate_windebug_dir () {
+    info "Activating persistent directory for windows build."
+    if test ! -d "$WINDIR"; then
+        mkdir -p "$WINDIR"
+        info "Created $WINDIR persistent directory."
+    fi
+    cd "$WINDIR"
+    WINDIR="`pwd`"
+}
+
 # pass filename as $1 arg.
 # creates file.sha1 and file.sha256
 storehash () {
@@ -187,7 +201,9 @@ DOWIN="no"
 W64="yes"
 WINSSL=""
 WINEXPAT=""
-MINJ=""
+WINDIR=""
+# Use environment if set otherwise null
+MINJ="${MINJ:+$MINJ}"
 
 # Parse the command line arguments.
 while [ "$1" ]; do
@@ -212,6 +228,10 @@ while [ "$1" ]; do
 	    ;;
         "-wxp")
 	    WINEXPAT="$2"
+	    shift
+	    ;;
+        "-wdir")
+	    WINDIR="$2"
 	    shift
 	    ;;
 	"-w32")
@@ -253,8 +273,27 @@ if [ "$DOWIN" = "yes" ]; then
 	shared_cross_flag=""
 
 	check_git_repo
-	create_temp_dir
 
+	if test -n "$WINDIR"; then
+		activate_windebug_dir
+	else
+		create_temp_dir
+	fi
+
+	if test -n "$WINSSL" \
+		-a -n "$WINDIR" \
+		-a -d "$WINDIR" \
+		-a -d "${WINDIR}/sslinstall" \
+		-a -d "${WINDIR}/openssl_shared" \
+		-a -d "${WINDIR}/sslsharedinstall"; then
+		info "Found already compiled openssl at $WINDIR/sslinstall; using that."
+		WINSSL=""
+		# Variables needed later on.
+		sslinstall="${WINDIR}/sslinstall"
+		cross_flag="$cross_flag --with-ssl=$sslinstall"
+		sslsharedinstall="${WINDIR}/sslsharedinstall"
+		shared_cross_flag="$shared_cross_flag --with-ssl=$sslsharedinstall"
+	fi
 	# crosscompile openssl for windows.
 	if test -n "$WINSSL"; then
 		info "Cross compile $WINSSL"
@@ -267,10 +306,10 @@ if [ "$DOWIN" = "yes" ]; then
 		# cross-compilation and it is not used anyway
 		# before 1.0.1i need --cross-compile-prefix=i686-w64-mingw32-
 		if test "$mw64" = "mingw64"; then
-			sslflags="no-asm -DOPENSSL_NO_CAPIENG mingw64"
+			sslflags="no-asm no-tests -DOPENSSL_NO_CAPIENG mingw64"
 			sspdll="/usr/x86_64-w64-mingw32/sys-root/mingw/bin/libssp-0.dll"
 		else
-			sslflags="no-asm -DOPENSSL_NO_CAPIENG mingw"
+			sslflags="no-asm no-tests -DOPENSSL_NO_CAPIENG mingw"
 			sspdll="/usr/i686-w64-mingw32/sys-root/mingw/bin/libssp-0.dll"
 		fi
 		if test -f "$sspdll"; then
@@ -282,9 +321,18 @@ if [ "$DOWIN" = "yes" ]; then
 			SSPLIB=""
 		fi
 		info "winssl: Configure no-shared $sslflags"
-		set -x # echo the configure command
-		__CNF_LDLIBS=$SSPLIB CC=${warch}-w64-mingw32-gcc AR=${warch}-w64-mingw32-ar RANLIB=${warch}-w64-mingw32-ranlib WINDRES=${warch}-w64-mingw32-windres ./Configure --prefix="$sslinstall" no-shared $sslflags || error_cleanup "OpenSSL Configure failed"
-		set +x
+		if test "$W64" = "no"; then
+			# Disable stack-protector for 32-bit windows builds.
+			# mingw passes an LDFLAGS, so there is something
+			# passed in the LDFLAGS to stop -lssp passed in it.
+			set -x # echo the configure command
+			__CNF_LDLIBS=$SSPLIB __CNF_LDFLAGS="-fno-stack-protector" CC=${warch}-w64-mingw32-gcc AR=${warch}-w64-mingw32-ar RANLIB=${warch}-w64-mingw32-ranlib WINDRES=${warch}-w64-mingw32-windres ./Configure --prefix="$sslinstall" no-shared $sslflags || error_cleanup "OpenSSL Configure failed"
+			set +x
+		else
+			set -x # echo the configure command
+			__CNF_LDLIBS=$SSPLIB CC=${warch}-w64-mingw32-gcc AR=${warch}-w64-mingw32-ar RANLIB=${warch}-w64-mingw32-ranlib WINDRES=${warch}-w64-mingw32-windres ./Configure --prefix="$sslinstall" no-shared $sslflags || error_cleanup "OpenSSL Configure failed"
+			set +x
+		fi
 		info "winssl: make"
 		make $MINJ || error_cleanup "OpenSSL crosscompile failed"
 		# only install sw not docs, which take a long time.
@@ -297,9 +345,15 @@ if [ "$DOWIN" = "yes" ]; then
 		sslsharedinstall="`pwd`/sslsharedinstall"
 		cd openssl_shared
 		info "winssl: Configure shared $sslflags"
-		set -x # echo the configure command
-		__CNF_LDLIBS=$SSPLIB CC=${warch}-w64-mingw32-gcc AR=${warch}-w64-mingw32-ar RANLIB=${warch}-w64-mingw32-ranlib WINDRES=${warch}-w64-mingw32-windres ./Configure --prefix="$sslsharedinstall" shared $sslflags || error_cleanup "OpenSSL Configure failed"
-		set +x
+		if test "$W64" = "no"; then
+			set -x # echo the configure command
+			__CNF_LDLIBS=$SSPLIB __CNF_LDFLAGS="-fno-stack-protector" CC=${warch}-w64-mingw32-gcc AR=${warch}-w64-mingw32-ar RANLIB=${warch}-w64-mingw32-ranlib WINDRES=${warch}-w64-mingw32-windres ./Configure --prefix="$sslsharedinstall" shared $sslflags || error_cleanup "OpenSSL Configure failed"
+			set +x
+		else
+			set -x # echo the configure command
+			__CNF_LDLIBS=$SSPLIB CC=${warch}-w64-mingw32-gcc AR=${warch}-w64-mingw32-ar RANLIB=${warch}-w64-mingw32-ranlib WINDRES=${warch}-w64-mingw32-windres ./Configure --prefix="$sslsharedinstall" shared $sslflags || error_cleanup "OpenSSL Configure failed"
+			set +x
+		fi
 		info "winssl: make"
 		make $MINJ || error_cleanup "OpenSSL crosscompile failed"
 		info "winssl: make install_sw"
@@ -308,6 +362,17 @@ if [ "$DOWIN" = "yes" ]; then
 		cd ..
 	fi
 
+	if test -n "$WINEXPAT" \
+		-a -n "$WINDIR" \
+		-a -d "$WINDIR" \
+		-a -d "${WINDIR}/wxpinstall"; then
+		info "Found already compiled expat at $WINDIR/wxpinstall; using that."
+		WINEXPAT=""
+		# Variables needed later on.
+		wxpinstall="${WINDIR}/wxpinstall"
+		cross_flag="$cross_flag --with-libexpat=$wxpinstall"
+		shared_cross_flag="$shared_cross_flag --with-libexpat=$wxpinstall"
+	fi
 	if test -n "$WINEXPAT"; then
 		info "Cross compile $WINEXPAT"
 		info "wxp: tar unpack"
@@ -315,7 +380,16 @@ if [ "$DOWIN" = "yes" ]; then
 		wxpinstall="`pwd`/wxpinstall"
 		cd expat-* || error_cleanup "no expat-X dir in tarball"
 		info "wxp: configure"
-		$configure --prefix="$wxpinstall" --exec-prefix="$wxpinstall" --bindir="$wxpinstall/bin" --includedir="$wxpinstall/include" --mandir="$wxpinstall/man" --libdir="$wxpinstall/lib"  || error_cleanup "libexpat configure failed"
+		if test "$W64" = "no"; then
+			# Disable stack-protector for 32-bit windows builds.
+			set -x # echo the configure command
+			$configure --prefix="$wxpinstall" --exec-prefix="$wxpinstall" --bindir="$wxpinstall/bin" --includedir="$wxpinstall/include" --mandir="$wxpinstall/man" --libdir="$wxpinstall/lib" LDFLAGS="-fno-stack-protector" || error_cleanup "libexpat configure failed"
+			set +x
+		else
+			set -x # echo the configure command
+			$configure --prefix="$wxpinstall" --exec-prefix="$wxpinstall" --bindir="$wxpinstall/bin" --includedir="$wxpinstall/include" --mandir="$wxpinstall/man" --libdir="$wxpinstall/lib"  || error_cleanup "libexpat configure failed"
+			set +x
+		fi
 		info "wxp: make"
 		make $MINJ || error_cleanup "libexpat crosscompile failed"
 		info "wxp: make install"
@@ -325,8 +399,12 @@ if [ "$DOWIN" = "yes" ]; then
 		cd ..
 	fi
 
-        info "GITREPO   is $GITREPO"
-        info "GITBRANCH is $GITBRANCH"
+	if test -n "$WINDIR"; then
+		cd "$cwd"
+		create_temp_dir
+	fi
+	info "GITREPO   is $GITREPO"
+	info "GITBRANCH is $GITBRANCH"
 	info "Exporting source from git."
 	info "git clone --depth=1 --no-tags -b $GITBRANCH $GITREPO unbound"
 	git clone --depth=1 --no-tags -b $GITBRANCH $GITREPO unbound || error_cleanup "git clone failed"
@@ -361,10 +439,14 @@ if [ "$DOWIN" = "yes" ]; then
 	autoconf -f || error_cleanup "Autoconf failed."
 	autoheader -f || error_cleanup "Autoheader failed."
     	rm -r autom4te* || echo "ignored"
+	rm -f config.h.in~ || echo "ignore absence of config.h.in~ file."
     fi
 
     if test "`uname`" = "Linux"; then 
-	    (cd ..; cp -r unbound unbound_shared)
+	    cd ..
+	    cp -r unbound unbound_shared
+	    unbound_shared="`pwd`/unbound_shared"
+	    cd unbound
     fi
 
     # procedure for making unbound installer on mingw. 
@@ -378,13 +460,15 @@ if [ "$DOWIN" = "yes" ]; then
     fi
     if test "$W64" = "no"; then
 		# Disable stack-protector for 32-bit windows builds.
-		echo "$configure"' --enable-debug --enable-static-exe --disable-flto --disable-gost '"$* $cross_flag" "$file_flag" "$file2_flag" "$file3_flag" CFLAGS='-O2 -g -fno-stack-protector'
-		$configure --enable-debug --enable-static-exe --disable-flto --disable-gost $* $cross_flag "$file_flag" "$file2_flag" "$file3_flag" CFLAGS='-O2 -g -fno-stack-protector'\
+		set -x
+		$configure --enable-debug --enable-static-exe --disable-flto --disable-gost $* $cross_flag "$file_flag" "$file2_flag" "$file3_flag" CFLAGS='-O2 -g -fno-stack-protector' LDFLAGS="-fno-stack-protector" \
 		|| error_cleanup "Could not configure"
+		set +x
     else
-		echo "$configure"' --enable-debug --enable-static-exe --disable-flto --disable-gost '"$* $cross_flag"
+		set -x
 		$configure --enable-debug --enable-static-exe --disable-flto --disable-gost $* $cross_flag \
 		|| error_cleanup "Could not configure"
+		set +x
     fi
     info "Calling make"
 	make $MINJ || error_cleanup "Could not make"
@@ -392,16 +476,18 @@ if [ "$DOWIN" = "yes" ]; then
 
     if test "`uname`" = "Linux"; then 
     info "Make DLL"
-    cd ../unbound_shared
+    cd $unbound_shared
     if test "$W64" = "no"; then
 	# Disable stack-protector for 32-bit windows builds.
-		echo "$configure"' --enable-debug --disable-flto --disable-gost '"$* $shared_cross_flag" "$file_flag" "$file2_flag" "$file3_flag" CFLAGS='-O2 -g -fno-stack-protector'
-		$configure --enable-debug --disable-flto --disable-gost $* $shared_cross_flag "$file_flag" "$file2_flag" "$file3_flag" CFLAGS='-O2 -g -fno-stack-protector'\
+		set -x
+		$configure --enable-debug --disable-flto --disable-gost $* $shared_cross_flag "$file_flag" "$file2_flag" "$file3_flag" CFLAGS='-O2 -g -fno-stack-protector' LDFLAGS="-fno-stack-protector" \
 		|| error_cleanup "Could not configure"
+		set +x
     else
-		echo "$configure"' --enable-debug --disable-flto --disable-gost '"$* $shared_cross_flag"
-        $configure --enable-debug --disable-flto --disable-gost $* $shared_cross_flag \
+		set -x
+		$configure --enable-debug --disable-flto --disable-gost $* $shared_cross_flag \
 		|| error_cleanup "Could not configure"
+		set +x
     fi
     info "Calling make for DLL"
 	make $MINJ || error_cleanup "Could not make DLL"
@@ -430,17 +516,26 @@ if [ "$DOWIN" = "yes" ]; then
     cp ../unbound.exe ../unbound-anchor.exe ../unbound-host.exe ../unbound-control.exe ../unbound-checkconf.exe ../unbound-service-install.exe ../unbound-service-remove.exe ../LICENSE ../winrc/unbound-control-setup.cmd ../winrc/unbound-website.url ../winrc/service.conf ../winrc/README.txt ../contrib/create_unbound_ad_servers.cmd ../contrib/warmup.cmd ../contrib/unbound_cache.cmd .
     mkdir libunbound
     # test to see if lib or lib64 (for openssl 3.0.0) needs to be used
-    if test -f ../../sslsharedinstall/lib/libcrypto.dll.a; then
-	cp ../../sslsharedinstall/lib/libcrypto.dll.a libunbound/.
+    if test -f $sslsharedinstall/lib/libcrypto.dll.a; then
+	cp $sslsharedinstall/lib/libcrypto.dll.a libunbound/.
     else
-	cp ../../sslsharedinstall/lib64/libcrypto.dll.a libunbound/.
+	cp $sslsharedinstall/lib64/libcrypto.dll.a libunbound/.
     fi
-    if test -f ../../sslsharedinstall/lib/libssl.dll.a; then
-	cp ../../sslsharedinstall/lib/libssl.dll.a libunbound/.
+    if test -f $sslsharedinstall/lib/libssl.dll.a; then
+	cp $sslsharedinstall/lib/libssl.dll.a libunbound/.
     else
-	cp ../../sslsharedinstall/lib64/libssl.dll.a libunbound/.
+	cp $sslsharedinstall/lib64/libssl.dll.a libunbound/.
     fi
-    cp ../../unbound_shared/unbound.h ../../unbound_shared/.libs/libunbound*.dll ../../unbound_shared/.libs/libunbound.dll.a ../../unbound_shared/.libs/libunbound.a ../../unbound_shared/.libs/libunbound*.def ../../sslsharedinstall/bin/libcrypto*.dll ../../sslsharedinstall/bin/libssl*.dll ../../wxpinstall/bin/libexpat*.dll ../../wxpinstall/lib/libexpat.dll.a libunbound/.
+    cp $unbound_shared/unbound.h               \
+	$unbound_shared/.libs/libunbound*.dll  \
+	$unbound_shared/.libs/libunbound.dll.a \
+	$unbound_shared/.libs/libunbound.a     \
+	$unbound_shared/.libs/libunbound*.def  \
+	$sslsharedinstall/bin/libcrypto*.dll   \
+	$sslsharedinstall/bin/libssl*.dll      \
+	$wxpinstall/bin/libexpat*.dll          \
+	$wxpinstall/lib/libexpat.dll.a         \
+	libunbound/.
     if test -f "$sspdll"; then
 	    cp "$sspdll" libunbound/.
     fi
@@ -470,6 +565,11 @@ if [ "$DOWIN" = "yes" ]; then
     storehash unbound-$version.zip
     ls -lG unbound_setup_$version.exe
     ls -lG unbound-$version.zip
+
+    echo "create signed versions with:"
+    echo "  gpg --armor --detach-sign --digest-algo SHA256 unbound_setup_$version.exe"
+    echo "  gpg --armor --detach-sign --digest-algo SHA256 unbound-$version.zip"
+
     info "Done"
     exit 0
 fi
@@ -514,6 +614,7 @@ info "Building configure script (autoreconf)."
 autoreconf -f || error_cleanup "Autoconf failed."
 
 rm -r autom4te* || error_cleanup "Failed to remove autoconf cache directory."
+rm -f config.h.in~ || echo "ignore absence of config.h.in~ file."
 
 info "Building lexer and parser."
 echo "#include \"config.h\"" > util/configlexer.c || error_cleanup "Failed to create configlexer"
@@ -558,6 +659,7 @@ if [ "$RECONFIGURE" = "yes" ]; then
     info "Rebuilding configure script (autoconf) snapshot."
     autoreconf -f || error_cleanup "Autoconf failed."
     rm -r autom4te* || error_cleanup "Failed to remove autoconf cache directory."
+    rm -f config.h.in~ || echo "ignore absence of config.h.in~ file."
 fi
 
 replace_all doc/README

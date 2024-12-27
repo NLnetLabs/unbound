@@ -10,6 +10,9 @@
 /config.status
 /dnstap/dnstap_config.h
 /dnscrypt/dnscrypt_config.h
+/util/configlexer.c
+/util/configparser.c
+/util/configparser.h
 /clubsyms.def
 /doc/example.conf
 /doc/libunbound.3
@@ -33,6 +36,7 @@
 /asynclook
 /delayer
 /dohclient
+/doqclient
 /lock-verify
 /memstats
 /perf
@@ -55,6 +59,7 @@
 /pythonmod/unboundmodule.py
 /testdata/result.*
 /testdata/.done-*
+/testdata/.skip-*
 /testdata/.perfstats.txt
 /doc/html
 /doc/xml

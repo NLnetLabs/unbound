@@ -7,11 +7,6 @@
 PRE="../.."
 # do the test
 
-# Convenient function to exit the test.
-# $1: exit value
-end () {
-}
-
 # Check number of keys in the db
 # $1: socket to connect to
 # $2: expected number of keys

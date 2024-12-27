@@ -68,6 +68,19 @@ static struct thr_check* thread_infos[THRDEBUG_MAX_THREADS];
 int check_locking_order = 1;
 /** the pid of this runset, reasonably unique. */
 static pid_t check_lock_pid;
+/** the name of the output file */
+static const char* output_name = "ublocktrace";
+/**
+ * Should checklocks print a trace of the lock and unlock calls.
+ * It uses fprintf for that because the log function uses a lock and that
+ * would loop otherwise.
+ */
+static int verbose_locking = 0;
+/**
+ * Assume lock 0 0 (create_thread, create_instance), is the log lock and
+ * do not print for that. Otherwise the output is full of log lock accesses.
+ */
+static int verbose_locking_not_loglock = 1;
 
 /** print all possible debug info on the state of the system */
 static void total_debug_info(void);
@@ -131,7 +144,8 @@ acquire_locklock(struct checked_lock* lock,
 
 /** add protected region */
 void 
-lock_protect(void *p, void* area, size_t size)
+lock_protect_place(void* p, void* area, size_t size, const char* def_func,
+	const char* def_file, int def_line, const char* def_area)
 {
 	struct checked_lock* lock = *(struct checked_lock**)p;
 	struct protected_area* e = (struct protected_area*)malloc(
@@ -140,6 +154,10 @@ lock_protect(void *p, void* area, size_t size)
 		fatal_exit("lock_protect: out of memory");
 	e->region = area;
 	e->size = size;
+	e->def_func = def_func;
+	e->def_file = def_file;
+	e->def_line = def_line;
+	e->def_area = def_area;
 	e->hold = malloc(size);
 	if(!e->hold)
 		fatal_exit("lock_protect: out of memory");
@@ -192,6 +210,9 @@ prot_check(struct checked_lock* lock,
 		if(memcmp(p->hold, p->region, p->size) != 0) {
 			log_hex("memory prev", p->hold, p->size);
 			log_hex("memory here", p->region, p->size);
+			log_err("lock_protect on %s %s:%d %s failed",
+				p->def_func, p->def_file, p->def_line,
+				p->def_area);
 			lock_error(lock, func, file, line, 
 				"protected area modified");
 		}
@@ -508,6 +529,9 @@ checklock_rdlock(enum check_lock_type type, struct checked_lock* lock,
 	if(key_deleted)
 		return;
 
+	if(verbose_locking && !(verbose_locking_not_loglock &&
+		lock->create_thread == 0 && lock->create_instance == 0))
+		fprintf(stderr, "checklock_rdlock lock %d %d %s:%d at %s:%d\n", lock->create_thread, lock->create_instance, lock->create_file, lock->create_line, file, line);
 	log_assert(type == check_lock_rwlock);
 	checklock_lockit(type, lock, func, file, line,
 		try_rd, timed_rd, &lock->u.rwlock, 0, 0);
@@ -528,6 +552,9 @@ checklock_wrlock(enum check_lock_type type, struct checked_lock* lock,
 	if(key_deleted)
 		return;
 	log_assert(type == check_lock_rwlock);
+	if(verbose_locking && !(verbose_locking_not_loglock &&
+		lock->create_thread == 0 && lock->create_instance == 0))
+		fprintf(stderr, "checklock_wrlock lock %d %d %s:%d at %s:%d\n", lock->create_thread, lock->create_instance, lock->create_file, lock->create_line, file, line);
 	checklock_lockit(type, lock, func, file, line,
 		try_wr, timed_wr, &lock->u.rwlock, 0, 1);
 }
@@ -565,6 +592,9 @@ checklock_lock(enum check_lock_type type, struct checked_lock* lock,
 	if(key_deleted)
 		return;
 	log_assert(type != check_lock_rwlock);
+	if(verbose_locking && !(verbose_locking_not_loglock &&
+		lock->create_thread == 0 && lock->create_instance == 0))
+		fprintf(stderr, "checklock_lock lock %d %d %s:%d at %s:%d\n", lock->create_thread, lock->create_instance, lock->create_file, lock->create_line, file, line);
 	switch(type) {
 		case check_lock_mutex:
 			checklock_lockit(type, lock, func, file, line,
@@ -601,6 +631,10 @@ checklock_unlock(enum check_lock_type type, struct checked_lock* lock,
 	}
 	if(lock->hold_count <= 0)
 		lock_error(lock, func, file, line, "too many unlocks");
+
+	if(verbose_locking && !(verbose_locking_not_loglock &&
+		lock->create_thread == 0 && lock->create_instance == 0))
+		fprintf(stderr, "checklock_unlock lock %d %d %s:%d at %s:%d\n", lock->create_thread, lock->create_instance, lock->create_file, lock->create_line, file, line);
 
 	/* store this point as last touched by */
 	lock->holder = thr;
@@ -651,13 +685,19 @@ checklock_unlock(enum check_lock_type type, struct checked_lock* lock,
 	}
 }
 
+void
+checklock_set_output_name(const char* name)
+{
+	output_name = name;
+}
+
 /** open order info debug file, thr->num must be valid */
 static void 
 open_lockorder(struct thr_check* thr)
 {
 	char buf[24];
 	time_t t;
-	snprintf(buf, sizeof(buf), "ublocktrace.%d", thr->num);
+	snprintf(buf, sizeof(buf), "%s.%d", output_name, thr->num);
 	thr->order_info = fopen(buf, "w");
 	if(!thr->order_info)
 		fatal_exit("could not open %s: %s", buf, strerror(errno));

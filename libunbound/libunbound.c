@@ -66,6 +66,8 @@
 #include "services/authzone.h"
 #include "services/listen_dnsport.h"
 #include "sldns/sbuffer.h"
+#include "iterator/iter_fwd.h"
+#include "iterator/iter_hints.h"
 #ifdef HAVE_PTHREAD
 #include <signal.h>
 #endif
@@ -171,6 +173,7 @@ static struct ub_ctx* ub_ctx_create_nopipe(void)
 	ctx->env->worker = NULL;
 	ctx->env->need_to_validate = 0;
 	modstack_init(&ctx->mods);
+	ctx->env->modstack = &ctx->mods;
 	rbtree_init(&ctx->queries, &context_query_cmp);
 	return ctx;
 }
@@ -185,7 +188,9 @@ ub_ctx_create(void)
 		int e = errno;
 		ub_randfree(ctx->seed_rnd);
 		config_delete(ctx->env->cfg);
-		modstack_desetup(&ctx->mods, ctx->env);
+		modstack_call_deinit(&ctx->mods, ctx->env);
+		modstack_call_destartup(&ctx->mods, ctx->env);
+		modstack_free(&ctx->mods);
 		listen_desetup_locks();
 		edns_known_options_delete(ctx->env);
 		edns_strings_delete(ctx->env->edns_strings);
@@ -199,7 +204,9 @@ ub_ctx_create(void)
 		tube_delete(ctx->qq_pipe);
 		ub_randfree(ctx->seed_rnd);
 		config_delete(ctx->env->cfg);
-		modstack_desetup(&ctx->mods, ctx->env);
+		modstack_call_deinit(&ctx->mods, ctx->env);
+		modstack_call_destartup(&ctx->mods, ctx->env);
+		modstack_free(&ctx->mods);
 		listen_desetup_locks();
 		edns_known_options_delete(ctx->env);
 		edns_strings_delete(ctx->env->edns_strings);
@@ -357,7 +364,9 @@ ub_ctx_delete(struct ub_ctx* ctx)
 	}
 	libworker_delete_event(ctx->event_worker);
 
-	modstack_desetup(&ctx->mods, ctx->env);
+	modstack_call_deinit(&ctx->mods, ctx->env);
+	modstack_call_destartup(&ctx->mods, ctx->env);
+	modstack_free(&ctx->mods);
 	a = ctx->alloc_list;
 	while(a) {
 		na = a->super;
@@ -379,6 +388,8 @@ ub_ctx_delete(struct ub_ctx* ctx)
 		config_delete(ctx->env->cfg);
 		edns_known_options_delete(ctx->env);
 		edns_strings_delete(ctx->env->edns_strings);
+		forwards_delete(ctx->env->fwds);
+		hints_delete(ctx->env->hints);
 		auth_zones_delete(ctx->env->auth_zones);
 		free(ctx->env);
 	}
@@ -976,7 +987,8 @@ ub_ctx_set_fwd(struct ub_ctx* ctx, const char* addr)
 	if(!addr) {
 		/* disable fwd mode - the root stub should be first. */
 		if(ctx->env->cfg->forwards &&
-			strcmp(ctx->env->cfg->forwards->name, ".") == 0) {
+			(ctx->env->cfg->forwards->name &&
+			strcmp(ctx->env->cfg->forwards->name, ".") == 0)) {
 			s = ctx->env->cfg->forwards;
 			ctx->env->cfg->forwards = s->next;
 			s->next = NULL;
@@ -996,7 +1008,8 @@ ub_ctx_set_fwd(struct ub_ctx* ctx, const char* addr)
 	/* it parses, add root stub in front of list */
 	lock_basic_lock(&ctx->cfglock);
 	if(!ctx->env->cfg->forwards ||
-		strcmp(ctx->env->cfg->forwards->name, ".") != 0) {
+		(ctx->env->cfg->forwards->name &&
+		strcmp(ctx->env->cfg->forwards->name, ".") != 0)) {
 		s = calloc(1, sizeof(*s));
 		if(!s) {
 			lock_basic_unlock(&ctx->cfglock);
@@ -1014,6 +1027,7 @@ ub_ctx_set_fwd(struct ub_ctx* ctx, const char* addr)
 		ctx->env->cfg->forwards = s;
 	} else {
 		log_assert(ctx->env->cfg->forwards);
+		log_assert(ctx->env->cfg->forwards->name);
 		s = ctx->env->cfg->forwards;
 	}
 	dupl = strdup(addr);

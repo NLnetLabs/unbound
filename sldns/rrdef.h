@@ -229,6 +229,8 @@ enum sldns_enum_rr_type
 	LDNS_RR_TYPE_CAA = 257, /* RFC 6844 */
 	LDNS_RR_TYPE_AVC = 258,
 
+	LDNS_RR_TYPE_RESINFO = 261, /* RFC 9606 */
+
 	/** DNSSEC Trust Authorities */
 	LDNS_RR_TYPE_TA = 32768,
 	/* RFC 4431, 5074, DNSSEC Lookaside Validation */
@@ -470,6 +472,11 @@ enum sldns_enum_ede_code
 	LDNS_EDE_NO_REACHABLE_AUTHORITY = 22,
 	LDNS_EDE_NETWORK_ERROR = 23,
 	LDNS_EDE_INVALID_DATA = 24,
+	LDNS_EDE_SIGNATURE_EXPIRED_BEFORE_VALID = 25,
+	LDNS_EDE_TOO_EARLY = 26,
+	LDNS_EDE_UNSUPPORTED_NSEC3_ITERATIONS = 27,
+	LDNS_EDE_BADPROXYPOLICY = 28,
+	LDNS_EDE_SYNTHESIZED = 29
 };
 typedef enum sldns_enum_ede_code sldns_ede_code;
 

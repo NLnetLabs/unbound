@@ -147,9 +147,6 @@ acl_interface_insert(struct acl_list* acl_interface,
 int acl_list_apply_cfg(struct acl_list* acl, struct config_file* cfg,
 	struct views* v);
 
-/** compare ACL interface "addr_tree" nodes (+port) */
-int acl_interface_compare(const void* k1, const void* k2);
-
 /**
  * Initialise (also clean) the acl_interface struct.
  * @param acl_interface: where to store.
