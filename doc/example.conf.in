@@ -1328,6 +1328,11 @@ remote-control:
 #     redis-replica-server-password: ""
 #     # timeout (in ms) for communication with the redis replica server
 #     redis-replica-timeout: 100
+#     # timeout (in ms) for redis replica commands, if 0, uses redis-replica-timeout.
+#     redis-command-timeout: 0
+#     # timeout (in ms) for redis replica connection set up, if 0, uses redis-replica-timeout.
+#     redis-connect-timeout: 0
+#     # set timeout on redis records based on DNS response TTL
 #     # redis logical database to use for the replica server, 0 is the default database.
 #     redis-replica-logical-db: 0
 

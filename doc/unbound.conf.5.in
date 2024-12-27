@@ -2848,12 +2848,14 @@ re-establish a new connection later.
 This option defaults to 100 milliseconds.
 .TP
 .B redis-command-timeout: \fI<msec>\fR
-The timeout to use for redis commands, in milliseconds. If 0, it uses the
-redis\-timeout value. The default is 0.
+The timeout to use for Redis commands, in milliseconds.
+If 0, it uses the \fBredis\-timeout\fR value.
+The default is 0.
 .TP
 .B redis-connect-timeout: \fI<msec>\fR
-The timeout to use for redis connection set up, in milliseconds. If 0, it
-uses the redis\-timeout value. The default is 0.
+The timeout to use for Redis connection set up, in milliseconds.
+If 0, it uses the \fBredis\-timeout\fR value.
+The default is 0.
 .TP
 .B redis-expire-records: \fI<yes or no>
 If Redis record expiration is enabled.  If yes, Unbound sets timeout for Redis
@@ -2905,6 +2907,16 @@ If this timeout expires Unbound closes the connection, treats it as
 if the Redis replica server does not have the requested data, and will try to
 re-establish a new connection later.
 This option defaults to 100 milliseconds.
+.TP
+.B redis-replica-command-timeout: \fI<msec>\fR
+The timeout to use for Redis replica commands, in milliseconds.
+If 0, it uses the \fBredis\-replica\-timeout\fR value.
+The default is 0.
+.TP
+.B redis-replica-connect-timeout: \fI<msec>\fR
+The timeout to use for Redis replica connection set up, in milliseconds.
+If 0, it uses the \fBredis\-replica\-timeout\fR value.
+The default is 0.
 .TP
 .B redis-replica-logical-db: \fI<logical database index>
 Same as \fBredis-logical-db\fR but for the Redis replica server.
