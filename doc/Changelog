@@ -1,3 +1,9 @@
+31 December 2024: Yorgos
+	- Merge #1174: Serve expired cache update fixes. Fixes a regression bug
+	  with serve-expired that appeared in 1.22.0 and would not allow the
+	  iterator to update the cache with not-yet-validated entries resulting
+	  in increased outgoing traffic.
+
 20 December 2024: Yorgos
 	- For #1207: [FR] Support for RESINFO RRType 261 (RFC9606), add
 	  LDNS_RR_TYPE_RESINFO similar to LDNS_RR_TYPE_TXT.
