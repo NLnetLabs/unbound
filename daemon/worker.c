@@ -1845,10 +1845,10 @@ lookup_cache:
 				 * its qname must be that used for cache
 				 * lookup. */
 				if((worker->env.cfg->prefetch &&
-					*worker->env.now >= rep->prefetch_ttl) ||
+					rep->prefetch_ttl <= *worker->env.now) ||
 					(worker->env.cfg->serve_expired &&
-					*worker->env.now > rep->ttl)) {
-
+					rep->ttl < *worker->env.now  &&
+					!(*worker->env.now < rep->serve_expired_norec_ttl))) {
 					time_t leeway = rep->ttl - *worker->env.now;
 					if(rep->ttl < *worker->env.now)
 						leeway = 0;

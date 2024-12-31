@@ -1512,8 +1512,10 @@ void mesh_query_done(struct mesh_state* mstate)
 	}
 	if(mstate->s.return_rcode == LDNS_RCODE_SERVFAIL ||
 		(rep && FLAGS_GET_RCODE(rep->flags) == LDNS_RCODE_SERVFAIL)) {
-		/* we are SERVFAILing; check for expired answer here */
-		mesh_serve_expired_callback(mstate);
+		if(mstate->s.env->cfg->serve_expired) {
+			/* we are SERVFAILing; check for expired answer here */
+			mesh_respond_serve_expired(mstate);
+		}
 		if((mstate->reply_list || mstate->cb_list)
 		&& mstate->s.env->cfg->log_servfail
 		&& !mstate->s.env->cfg->val_log_squelch) {
