@@ -2796,6 +2796,26 @@ int cfg_has_https(struct config_file* cfg)
 	return 0;
 }
 
+/** see if interface is ssl, its port number == the ssl port number */
+int
+if_is_ssl(const char* ifname, const char* port, int ssl_port,
+	struct config_strlist* tls_additional_port)
+{
+	struct config_strlist* s;
+	char* p = strchr(ifname, '@');
+	if(!p && atoi(port) == ssl_port)
+		return 1;
+	if(p && atoi(p+1) == ssl_port)
+		return 1;
+	for(s = tls_additional_port; s; s = s->next) {
+		if(p && atoi(p+1) == atoi(s->str))
+			return 1;
+		if(!p && atoi(port) == atoi(s->str))
+			return 1;
+	}
+	return 0;
+}
+
 /** see if interface is PROXYv2, its port number == the proxy port number */
 int
 if_is_pp2(const char* ifname, const char* port,

@@ -1938,7 +1938,8 @@ int comm_point_send_udp_msg(struct comm_point *c, sldns_buffer* packet,
 }
 
 int outnet_get_tcp_fd(struct sockaddr_storage* ATTR_UNUSED(addr),
-	socklen_t ATTR_UNUSED(addrlen), int ATTR_UNUSED(tcp_mss), int ATTR_UNUSED(dscp))
+	socklen_t ATTR_UNUSED(addrlen), int ATTR_UNUSED(tcp_mss),
+	int ATTR_UNUSED(dscp), int ATTR_UNUSED(nodelay))
 {
 	log_assert(0);
 	return -1;

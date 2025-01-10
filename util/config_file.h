@@ -1405,6 +1405,10 @@ int if_is_https(const char* ifname, const char* port, int https_port);
  */
 int cfg_has_https(struct config_file* cfg);
 
+/** see if interface is ssl, its port number == the ssl port number */
+int if_is_ssl(const char* ifname, const char* port, int ssl_port,
+	struct config_strlist* tls_additional_port);
+
 /** see if interface is PROXYv2, its port number == the proxy port number */
 int if_is_pp2(const char* ifname, const char* port,
 	struct config_strlist* proxy_protocol_port);
