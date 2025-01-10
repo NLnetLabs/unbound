@@ -703,7 +703,10 @@ create_tcp_accept_sock(struct addrinfo *addr, int v6only, int* noproto,
 {
 	int s = -1;
 	char* err;
-#if defined(SO_REUSEADDR) || defined(SO_REUSEPORT) || defined(IPV6_V6ONLY) || defined(IP_TRANSPARENT) || defined(IP_BINDANY) || defined(IP_FREEBIND) || defined(SO_BINDANY)
+#if defined(SO_REUSEADDR) || defined(SO_REUSEPORT)		\
+	|| defined(IPV6_V6ONLY) || defined(IP_TRANSPARENT)	\
+	|| defined(IP_BINDANY) || defined(IP_FREEBIND)		\
+	|| defined(SO_BINDANY) || defined(TCP_NODELAY)
 	int on = 1;
 #endif
 #ifdef HAVE_SYSTEMD
@@ -1237,26 +1240,6 @@ set_recvpktinfo(int s, int family)
 	return 1;
 }
 
-/** see if interface is ssl, its port number == the ssl port number */
-static int
-if_is_ssl(const char* ifname, const char* port, int ssl_port,
-	struct config_strlist* tls_additional_port)
-{
-	struct config_strlist* s;
-	char* p = strchr(ifname, '@');
-	if(!p && atoi(port) == ssl_port)
-		return 1;
-	if(p && atoi(p+1) == ssl_port)
-		return 1;
-	for(s = tls_additional_port; s; s = s->next) {
-		if(p && atoi(p+1) == atoi(s->str))
-			return 1;
-		if(!p && atoi(port) == atoi(s->str))
-			return 1;
-	}
-	return 0;
-}
-
 /**
  * Helper for ports_open. Creates one interface (or NULL for default).
  * @param ifname: The interface ip address.
@@ -1300,10 +1283,16 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 	int quic_port, int http_notls_downstream, int sock_queue_timeout)
 {
 	int s, noip6=0;
+	int is_ssl = if_is_ssl(ifname, port, ssl_port, tls_additional_port);
 	int is_https = if_is_https(ifname, port, https_port);
 	int is_dnscrypt = if_is_dnscrypt(ifname, port, dnscrypt_port);
 	int is_pp2 = if_is_pp2(ifname, port, proxy_protocol_port);
-	int nodelay = is_https && http2_nodelay;
+	/* Always set TCP_NODELAY on TLS connection as it speeds up the TLS
+	 * handshake. DoH had already such option so we respect it.
+	 * Otherwise the server waits before sending more handshake data for
+	 * the client ACK (Nagle's algorithm), which is delayed because the
+	 * client waits for more data before ACKing (delayed ACK). */
+	int nodelay = is_https?http2_nodelay:is_ssl; 
 	struct unbound_socket* ub_sock;
 	int is_doq = if_is_quic(ifname, port, quic_port);
 	const char* add = NULL;
