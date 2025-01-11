@@ -1110,7 +1110,7 @@ static void edns_ede_encode_encodedecode(struct query_info* qinfo,
 	/* encode */
 	unit_assert(
 		reply_info_answer_encode(qinfo, rep, 1, rep->flags, pkt,
-		0, 0, region, 65535, edns, 0, 0));
+		0, 0, region, 65535, edns, 0, 0, 0));
 	/* buffer ready for reading; skip after the question section */
 	sldns_buffer_skip(pkt, LDNS_HEADER_SIZE);
 	(void)query_dname_len(pkt);
