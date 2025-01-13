@@ -1,3 +1,7 @@
+13 January 2025: Yorgos
+	- Fix #1213: Misleading error message on default access control causing
+	  refuse.
+
 10 January 2025: Yorgos
 	- Merge #1214: Use TCP_NODELAY on TLS sockets to speed up the TLS
 	  handshake.

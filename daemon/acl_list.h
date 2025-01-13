@@ -107,6 +107,8 @@ struct acl_addr {
 	struct config_strlist** tag_datas;
 	/** size of the tag_datas array */
 	size_t tag_datas_size;
+	/* If the acl node is for an interface */
+	int is_inteface;
 	/* view element, NULL if none */
 	struct view* view;
 };
