@@ -222,7 +222,7 @@ acl_interface_insert(struct acl_list* acl_interface,
 	enum acl_access control)
 {
 	struct acl_addr* node = acl_find_or_create(acl_interface, addr, addrlen, control);
-	node->is_inteface = 1;
+	node->is_interface = 1;
 	return node;
 }
 
@@ -809,7 +809,7 @@ log_acl_action(const char* action, struct sockaddr_storage* addr,
 		verbose(VERB_ALGO, "%s query from %s port %d because of "
 			"%s/%d %s%s", action, a, (int)port, n,
 			acladdr->node.net,
-			acladdr->is_inteface?"(ACL on interface IP) ":"",
+			acladdr->is_interface?"(ACL on interface IP) ":"",
 			acl_access_to_str(acl));
 	} else {
 		verbose(VERB_ALGO, "%s query from %s port %d", action, a,
