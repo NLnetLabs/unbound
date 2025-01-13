@@ -726,6 +726,10 @@ run_daemon(const char* cfgfile, int cmdline_verbose, int debug_mode, int need_pi
 		apply_settings(daemon, cfg, cmdline_verbose, debug_mode);
 		if(!done_setup)
 			config_lookup_uid(cfg);
+		else if(!connect_sslctx_update(daemon->connect_sslctx,
+			cfg->tls_cert_bundle, cfg->tls_win_cert)) {
+			log_err("could not update SSL_CTX");
+		}
 	
 		/* prepare */
 		if(!daemon_open_shared_ports(daemon))
