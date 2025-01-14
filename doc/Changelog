@@ -1,3 +1,7 @@
+14 January 2025: Yorgos
+	- Add resolver.arpa and service.arpa to the default locally served
+	  zones.
+
 13 January 2025: Yorgos
 	- Fix #1213: Misleading error message on default access control causing
 	  refuse.

@@ -943,6 +943,16 @@ int local_zone_enter_defaults(struct local_zones* zones, struct config_file* cfg
 		log_err("out of memory adding default zone");
 		return 0;
 	}
+	/* resolver.arpa. zone (RFC 9462) */
+	if(!add_empty_default(zones, cfg, "resolver.arpa.")) {
+		log_err("out of memory adding default zone");
+		return 0;
+	}
+	/* service.arpa. zone (draft-ietf-dnssd-srp-25) */
+	if(!add_empty_default(zones, cfg, "service.arpa.")) {
+		log_err("out of memory adding default zone");
+		return 0;
+	}
 	/* onion. zone (RFC 7686) */
 	if(!add_empty_default(zones, cfg, "onion.")) {
 		log_err("out of memory adding default zone");

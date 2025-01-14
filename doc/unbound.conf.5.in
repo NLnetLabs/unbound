@@ -1638,6 +1638,7 @@ given zone.  Use \fInodefault\fR if you use exactly that zone, if you want to
 use a subzone, use \fItransparent\fR.
 .P
 The default zones are localhost, reverse 127.0.0.1 and ::1, the home.arpa,
+the resolver.arpa, the service.arpa,
 the onion, test, invalid and the AS112 zones. The AS112 zones are reverse
 DNS zones for private use and reserved IP addresses for which the servers
 on the internet cannot provide correct answers. They are configured by
@@ -1690,6 +1691,24 @@ Default content:
 local\-zone: "home.arpa." static
 local\-data: "home.arpa. 10800 IN NS localhost."
 local\-data: "home.arpa. 10800 IN
+    SOA localhost. nobody.invalid. 1 3600 1200 604800 10800"
+.fi
+.TP 10
+\h'5'\fIresolver.arpa (RFC 8375)\fR
+Default content:
+.nf
+local\-zone: "resolver.arpa." static
+local\-data: "resolver.arpa. 10800 IN NS localhost."
+local\-data: "resolver.arpa. 10800 IN
+    SOA localhost. nobody.invalid. 1 3600 1200 604800 10800"
+.fi
+.TP 10
+\h'5'\fIservice.arpa (draft-ietf-dnssd-srp-25)\fR
+Default content:
+.nf
+local\-zone: "service.arpa." static
+local\-data: "service.arpa. 10800 IN NS localhost."
+local\-data: "service.arpa. 10800 IN
     SOA localhost. nobody.invalid. 1 3600 1200 604800 10800"
 .fi
 .TP 10
