@@ -1694,7 +1694,7 @@ local\-data: "home.arpa. 10800 IN
     SOA localhost. nobody.invalid. 1 3600 1200 604800 10800"
 .fi
 .TP 10
-\h'5'\fIresolver.arpa (RFC 8375)\fR
+\h'5'\fIresolver.arpa (RFC 9462)\fR
 Default content:
 .nf
 local\-zone: "resolver.arpa." static
