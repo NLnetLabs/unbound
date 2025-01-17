@@ -2618,11 +2618,11 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 
 
         iq->dp->namelen = delnamelen;
-        iq->qchase.qtype = 64;
+        iq->qchase.qtype = LDNS_RR_TYPE_IDELEG;
 		iq->qchase.qname = delname;
         iq->qchase.qname_len = delnamelen;
 
-        iq->qinfo_out.qtype = 64;
+        iq->qinfo_out.qtype = LDNS_RR_TYPE_IDELEG;
         iq->qinfo_out.qname = delname;
         iq->qinfo_out.qname_len = delnamelen;
     } else if (root_len > 0 && iq->deleg_state == 2) { //in this state create deleg prime query
@@ -2640,11 +2640,11 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
         memcpy(delname, deleg_wireformat, deleg_len);
         memcpy(delname+deleg_len, iq->qchase.qname, iq->qchase.qname_len); 
 
-        iq->qchase.qtype = 64;
+        iq->qchase.qtype = LDNS_RR_TYPE_IDELEG;
 		iq->qchase.qname = delname;
         iq->qchase.qname_len = delnamelen;
 
-        iq->qinfo_out.qtype = 64;
+        iq->qinfo_out.qtype = LDNS_RR_TYPE_IDELEG;
         iq->qinfo_out.qname = delname;
         iq->qinfo_out.qname_len = delnamelen;
     }
@@ -3302,7 +3302,7 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 	//         make sure you identify those answers correclty and treat
 	//         them the same way as referrals below.
 	/* handle each of the type cases */
-    uint16_t SVCB_QTYPE = 64;
+    // uint16_t SVCB_QTYPE = LDNS_RR_TYPE_IDELEG;
 
     //check wether it was a deleg query
     uint8_t deleg_wireformat[] = {6, 95, 100, 101, 108, 101, 103}; //{06}_deleg
