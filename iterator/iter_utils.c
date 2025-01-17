@@ -1489,14 +1489,15 @@ iter_stub_fwd_no_cache(struct module_qstate *qstate, struct query_info *qinf,
 
 	/* check stub */
 	if (stub != NULL && stub->dp != NULL) {
+		enum verbosity_value level = VERB_ALGO;
 		int stub_no_cache = stub->dp->no_cache;
 		lock_rw_unlock(&qstate->env->fwds->lock);
-		if(stub_no_cache) {
+		if(verbosity >= level && stub_no_cache) {
 			char qname[LDNS_MAX_DOMAINLEN];
 			char dpname[LDNS_MAX_DOMAINLEN];
 			dname_str(qinf->qname, qname);
 			dname_str(stub->dp->name, dpname);
-			verbose(VERB_ALGO, "stub for %s %s has no_cache", qname, dpname);
+			verbose(level, "stub for %s %s has no_cache", qname, dpname);
 		}
 		if(retdpname) {
 			if(stub->dp->namelen > dpname_storage_len) {
@@ -1517,14 +1518,15 @@ iter_stub_fwd_no_cache(struct module_qstate *qstate, struct query_info *qinf,
 
 	/* Check for forward. */
 	if (dp) {
+		enum verbosity_value level = VERB_ALGO;
 		int dp_no_cache = dp->no_cache;
 		lock_rw_unlock(&qstate->env->hints->lock);
-		if(dp_no_cache) {
+		if(verbosity >= level && dp_no_cache) {
 			char qname[LDNS_MAX_DOMAINLEN];
 			char dpname[LDNS_MAX_DOMAINLEN];
 			dname_str(qinf->qname, qname);
 			dname_str(dp->name, dpname);
-			verbose(VERB_ALGO, "forward for %s %s has no_cache", qname, dpname);
+			verbose(level, "forward for %s %s has no_cache", qname, dpname);
 		}
 		if(retdpname) {
 			if(dp->namelen > dpname_storage_len) {

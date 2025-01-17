@@ -331,6 +331,30 @@ make_stub_holes(struct iter_forwards* fwd, struct config_file* cfg)
 	return 1;
 }
 
+/** make NULL entries for auths */
+static int
+make_auth_holes(struct iter_forwards* fwd, struct config_file* cfg)
+{
+	struct config_auth* a;
+	uint8_t* dname;
+	size_t dname_len;
+	for(a = cfg->auths; a; a = a->next) {
+		if(!a->name) continue;
+		dname = sldns_str2wire_dname(a->name, &dname_len);
+		if(!dname) {
+			log_err("cannot parse auth name '%s'", a->name);
+			return 0;
+		}
+		if(!fwd_add_stub_hole(fwd, LDNS_RR_CLASS_IN, dname)) {
+			free(dname);
+			log_err("out of memory");
+			return 0;
+		}
+		free(dname);
+	}
+	return 1;
+}
+
 int 
 forwards_apply_cfg(struct iter_forwards* fwd, struct config_file* cfg)
 {
@@ -350,6 +374,16 @@ forwards_apply_cfg(struct iter_forwards* fwd, struct config_file* cfg)
 		return 0;
 	}
 	if(!make_stub_holes(fwd, cfg)) {
+		lock_rw_unlock(&fwd->lock);
+		return 0;
+	}
+	/* TODO: Now we punch holes for auth zones as well so that in
+	 *       iterator:forward_request() we see the configured
+	 *       delegation point, but code flow/naming is hard to follow.
+	 *       Consider having a single tree with configured
+	 *       delegation points for all categories
+	 *       (stubs, forwards, auths). */
+	if(!make_auth_holes(fwd, cfg)) {
 		lock_rw_unlock(&fwd->lock);
 		return 0;
 	}
