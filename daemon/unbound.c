@@ -499,7 +499,11 @@ setup_sslctxs(struct daemon* daemon, struct config_file* cfg)
 			}
 		}
 		(void)setup_listen_sslctx(&daemon->listen_dot_sslctx, 1, 0, cfg);
-		(void)setup_listen_sslctx(&daemon->listen_doh_sslctx, 0, 1, cfg);
+#ifdef HAVE_NGHTTP2_NGHTTP2_H
+		if(cfg_has_https(cfg)) {
+			(void)setup_listen_sslctx(&daemon->listen_doh_sslctx, 0, 1, cfg);
+		}
+#endif
 #ifdef HAVE_NGTCP2
 		if(!(daemon->listen_quic_sslctx = quic_sslctx_create(
 			cfg->ssl_service_key, cfg->ssl_service_pem, NULL))) {
