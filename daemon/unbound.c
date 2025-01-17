@@ -500,13 +500,13 @@ setup_sslctxs(struct daemon* daemon, struct config_file* cfg)
 		}
 		(void)setup_listen_sslctx(&daemon->listen_dot_sslctx, 1, 0, cfg);
 		(void)setup_listen_sslctx(&daemon->listen_doh_sslctx, 0, 1, cfg);
-	}
 #ifdef HAVE_NGTCP2
-	if(!(daemon->listen_quic_sslctx = quic_sslctx_create(
-		cfg->ssl_service_key, cfg->ssl_service_pem, NULL))) {
-		fatal_exit("could not set up quic SSL_CTX");
-	}
+		if(!(daemon->listen_quic_sslctx = quic_sslctx_create(
+			cfg->ssl_service_key, cfg->ssl_service_pem, NULL))) {
+			fatal_exit("could not set up quic SSL_CTX");
+		}
 #endif /* HAVE_NGTCP2 */
+	}
 	if(!(daemon->connect_dot_sslctx = connect_sslctx_create(NULL, NULL,
 		cfg->tls_cert_bundle, cfg->tls_win_cert)))
 		fatal_exit("could not set up connect SSL_CTX");
