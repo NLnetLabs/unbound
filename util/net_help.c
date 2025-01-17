@@ -1170,7 +1170,14 @@ dot_alpn_select_cb(SSL* ATTR_UNUSED(ssl), const unsigned char** out,
 {
 	static const unsigned char alpns[] = { 3, 'd', 'o', 't' };
 	unsigned char* tmp_out;
-	SSL_select_next_proto(&tmp_out, outlen, alpns, sizeof(alpns), in, inlen);
+	int ret;
+	ret = SSL_select_next_proto(&tmp_out, outlen, alpns, sizeof(alpns), in, inlen);
+	if(ret == OPENSSL_NPN_NO_OVERLAP) {
+		/* Client sent ALPN but no overlap. Should have been error,
+		 * but for privacy we continue without ALPN (e.g., if certain
+		 * ALPNs are blocked) */
+		return SSL_TLSEXT_ERR_NOACK;
+	}
 	*out = tmp_out;
 	return SSL_TLSEXT_ERR_OK;
 }
