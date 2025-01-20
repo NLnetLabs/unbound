@@ -2866,3 +2866,22 @@ if_is_quic(const char* ifname, const char* port, int quic_port)
 	return 0;
 #endif
 }
+
+/** see if config contains quic turned on */
+int
+cfg_has_quic(struct config_file* cfg)
+{
+#ifndef HAVE_NGTCP2
+	(void)cfg;
+	return 0;
+#else
+	int i;
+	char portbuf[32];
+	snprintf(portbuf, sizeof(portbuf), "%d", cfg->port);
+	for(i = 0; i<cfg->num_ifs; i++) {
+		if(if_is_quic(cfg->ifs[i], portbuf, cfg->quic_port))
+			return 1;
+	}
+	return 0;
+#endif
+}

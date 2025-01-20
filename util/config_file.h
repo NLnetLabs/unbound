@@ -1419,6 +1419,13 @@ int if_is_dnscrypt(const char* ifname, const char* port, int dnscrypt_port);
 /** see if interface is quic, its port number == the quic port number */
 int if_is_quic(const char* ifname, const char* port, int quic_port);
 
+/**
+ * Return true if the config contains settings that enable quic.
+ * @param cfg: config information.
+ * @return true if quic ports are used for server.
+ */
+int cfg_has_quic(struct config_file* cfg);
+
 #ifdef USE_LINUX_IP_LOCAL_PORT_RANGE
 #define LINUX_IP_LOCAL_PORT_RANGE_PATH "/proc/sys/net/ipv4/ip_local_port_range"
 #endif
