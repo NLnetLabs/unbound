@@ -954,11 +954,12 @@ daemon_delete(struct daemon* daemon)
 	free(daemon->env);
 #ifdef HAVE_SSL
 	listen_sslctx_delete_ticket_keys();
-	SSL_CTX_free((SSL_CTX*)daemon->listen_sslctx);
-	SSL_CTX_free((SSL_CTX*)daemon->connect_sslctx);
+	SSL_CTX_free((SSL_CTX*)daemon->listen_dot_sslctx);
+	SSL_CTX_free((SSL_CTX*)daemon->listen_doh_sslctx);
+	SSL_CTX_free((SSL_CTX*)daemon->connect_dot_sslctx);
 #endif
 #ifdef HAVE_NGTCP2
-	SSL_CTX_free((SSL_CTX*)daemon->quic_sslctx);
+	SSL_CTX_free((SSL_CTX*)daemon->listen_quic_sslctx);
 #endif
 	free(daemon);
 	/* lex cleanup */

@@ -194,7 +194,8 @@ int resolve_interface_names(char** ifs, int num_ifs,
  * @param http_endpoint: HTTP endpoint to service queries on
  * @param http_notls: no TLS for http downstream
  * @param tcp_conn_limit: TCP connection limit info.
- * @param sslctx: nonNULL if ssl context.
+ * @param dot_sslctx: nonNULL if dot ssl context.
+ * @param doh_sslctx: nonNULL if doh ssl context.
  * @param quic_sslctx: nonNULL if quic ssl context.
  * @param dtenv: nonNULL if dnstap enabled.
  * @param doq_table: the doq connection table, with shared information.
@@ -210,7 +211,8 @@ listen_create(struct comm_base* base, struct listen_port* ports,
 	size_t bufsize, int tcp_accept_count, int tcp_idle_timeout,
 	int harden_large_queries, uint32_t http_max_streams,
 	char* http_endpoint, int http_notls, struct tcl_list* tcp_conn_limit,
-	void* sslctx, void* quic_sslctx, struct dt_env* dtenv,
+	void* dot_sslctx, void* doh_sslctx, void* quic_sslctx,
+	struct dt_env* dtenv,
 	struct doq_table* doq_table,
 	struct ub_randstate* rnd,struct config_file* cfg,
 	comm_point_callback_type* cb, void *cb_arg);

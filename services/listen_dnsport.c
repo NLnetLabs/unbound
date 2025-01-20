@@ -1512,7 +1512,8 @@ listen_create(struct comm_base* base, struct listen_port* ports,
 	size_t bufsize, int tcp_accept_count, int tcp_idle_timeout,
 	int harden_large_queries, uint32_t http_max_streams,
 	char* http_endpoint, int http_notls, struct tcl_list* tcp_conn_limit,
-	void* sslctx, void* quic_sslctx, struct dt_env* dtenv,
+	void* dot_sslctx, void* doh_sslctx, void* quic_sslctx,
+	struct dt_env* dtenv,
 	struct doq_table* doq_table,
 	struct ub_randstate* rnd,struct config_file* cfg,
 	comm_point_callback_type* cb, void *cb_arg)
@@ -1566,7 +1567,7 @@ listen_create(struct comm_base* base, struct listen_port* ports,
 				ports->ftype, ports->pp2_enabled, cb, cb_arg,
 				ports->socket);
 			if(ports->ftype == listen_type_http) {
-				if(!sslctx && !http_notls) {
+				if(!doh_sslctx && !http_notls) {
 					log_warn("HTTPS port configured, but "
 						"no TLS tls-service-key or "
 						"tls-service-pem set");
@@ -1612,8 +1613,10 @@ listen_create(struct comm_base* base, struct listen_port* ports,
 			cp->ssl = NULL;
 		} else if(ports->ftype == listen_type_doq) {
 			cp->ssl = quic_sslctx;
+		} else if(ports->ftype == listen_type_http) {
+			cp->ssl = doh_sslctx;
 		} else {
-			cp->ssl = sslctx;
+			cp->ssl = dot_sslctx;
 		}
 		cp->dtenv = dtenv;
 		cp->do_not_close = 1;

@@ -97,10 +97,14 @@ struct daemon {
 	struct listen_port* rc_ports;
 	/** remote control connections management (for first worker) */
 	struct daemon_remote* rc;
-	/** ssl context for listening to dnstcp over ssl, and connecting ssl */
-	void* listen_sslctx, *connect_sslctx;
+	/** ssl context for listening to dnstcp over ssl */
+	void* listen_dot_sslctx;
+	/** ssl context for connecting to dnstcp over ssl */
+	void* connect_dot_sslctx;
+	/** ssl context for listening to DoH */
+	void* listen_doh_sslctx;
 	/** ssl context for listening to quic */
-	void* quic_sslctx;
+	void* listen_quic_sslctx;
 	/** num threads allocated */
 	int num;
 	/** num threads allocated in the previous config or 0 at first */
