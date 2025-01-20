@@ -1,3 +1,7 @@
+20 January 2025: Yorgos
+	- Merge #1222: Unique DoT and DoH SSL contexts to allow for different
+	  ALPN.
+
 15 January 2025: Yorgos
 	- Merge #1221: Consider auth zones when checking for forwarders.
 
