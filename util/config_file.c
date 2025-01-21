@@ -2817,7 +2817,7 @@ if_is_dnscrypt(const char* ifname, int default_port, int dnscrypt_port)
 	return if_listens_on(ifname, default_port, dnscrypt_port, NULL);
 #else
 	(void)ifname;
-	(void)port;
+	(void)default_port;
 	(void)dnscrypt_port;
 	return 0;
 #endif
@@ -2830,7 +2830,7 @@ if_is_quic(const char* ifname, int default_port, int quic_port)
 	return if_listens_on(ifname, default_port, quic_port, NULL);
 #else
 	(void)ifname;
-	(void)port;
+	(void)default_port;
 	(void)quic_port;
 	return 0;
 #endif
