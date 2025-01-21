@@ -1314,6 +1314,12 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 		}
 	}
 
+	/* Check if both UDP and TCP ports should be open.
+	 * In the case of encrypted channels, probably an unencrypted channel
+	 * at the same port is not desired. */
+	if((is_ssl || is_https) && !is_doq) do_udp = do_auto = 0;
+	if((is_doq) && !(is_https || is_ssl)) do_tcp = 0;
+
 	if(do_auto) {
 		ub_sock = calloc(1, sizeof(struct unbound_socket));
 		if(!ub_sock)

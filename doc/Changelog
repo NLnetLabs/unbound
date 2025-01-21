@@ -2,6 +2,8 @@
 	- Use the same interface listening port discovery code for all needed
 	  protocols.
 	- Port to string only when needed before getaddrinfo().
+	- Do not open unencrypted channels next to encrypted ones on the same
+	  port.
 
 21 January 2025: Wouter
 	- Fix compile of interface check code when dnscrypt or quic is
