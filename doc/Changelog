@@ -10,6 +10,7 @@
 	  disabled.
 	- Fix encoding of RR type ATMA.
 	- Fix to check length in ATMA string to wire.
+	- Merge #1229: check before use daemon->shm_info.
 
 20 January 2025: Yorgos
 	- Merge #1222: Unique DoT and DoH SSL contexts to allow for different
