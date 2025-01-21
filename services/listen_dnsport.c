@@ -1034,7 +1034,7 @@ err:
  * Create socket from getaddrinfo results
  */
 static int
-make_sock(int stype, const char* ifname, const char* port,
+make_sock(int stype, const char* ifname, int port,
 	struct addrinfo *hints, int v6only, int* noip6, size_t rcv, size_t snd,
 	int* reuseport, int transparent, int tcp_mss, int nodelay, int freebind,
 	int use_systemd, int dscp, struct unbound_socket* ub_sock,
@@ -1042,9 +1042,11 @@ make_sock(int stype, const char* ifname, const char* port,
 {
 	struct addrinfo *res = NULL;
 	int r, s, inuse, noproto;
+	char portbuf[32];
+	snprintf(portbuf, sizeof(portbuf), "%d", port);
 	hints->ai_socktype = stype;
 	*noip6 = 0;
-	if((r=getaddrinfo(ifname, port, hints, &res)) != 0 || !res) {
+	if((r=getaddrinfo(ifname, portbuf, hints, &res)) != 0 || !res) {
 #ifdef USE_WINSOCK
 		if(r == EAI_NONAME && hints->ai_family == AF_INET6){
 			*noip6 = 1; /* 'Host not found' for IP6 on winXP */
@@ -1052,7 +1054,7 @@ make_sock(int stype, const char* ifname, const char* port,
 		}
 #endif
 		log_err("node %s:%s getaddrinfo: %s %s",
-			ifname?ifname:"default", port, gai_strerror(r),
+			ifname?ifname:"default", portbuf, gai_strerror(r),
 #ifdef EAI_SYSTEM
 			(r==EAI_SYSTEM?(char*)strerror(errno):"")
 #else
@@ -1106,7 +1108,7 @@ make_sock(int stype, const char* ifname, const char* port,
 
 /** make socket and first see if ifname contains port override info */
 static int
-make_sock_port(int stype, const char* ifname, const char* port,
+make_sock_port(int stype, const char* ifname, int port,
 	struct addrinfo *hints, int v6only, int* noip6, size_t rcv, size_t snd,
 	int* reuseport, int transparent, int tcp_mss, int nodelay, int freebind,
 	int use_systemd, int dscp, struct unbound_socket* ub_sock,
@@ -1115,23 +1117,22 @@ make_sock_port(int stype, const char* ifname, const char* port,
 	char* s = strchr(ifname, '@');
 	if(s) {
 		/* override port with ifspec@port */
-		char p[16];
+		int port;
 		char newif[128];
 		if((size_t)(s-ifname) >= sizeof(newif)) {
 			log_err("ifname too long: %s", ifname);
 			*noip6 = 0;
 			return -1;
 		}
-		if(strlen(s+1) >= sizeof(p)) {
-			log_err("portnumber too long: %s", ifname);
+		port = atoi(s+1);
+		if(port < 0 || 0 == port || port > 65535) {
+			log_err("invalid portnumber in interface: %s", ifname);
 			*noip6 = 0;
 			return -1;
 		}
 		(void)strlcpy(newif, ifname, sizeof(newif));
 		newif[s-ifname] = 0;
-		(void)strlcpy(p, s+1, sizeof(p));
-		p[strlen(s+1)]=0;
-		return make_sock(stype, newif, p, hints, v6only, noip6, rcv,
+		return make_sock(stype, newif, port, hints, v6only, noip6, rcv,
 			snd, reuseport, transparent, tcp_mss, nodelay, freebind,
 			use_systemd, dscp, ub_sock, additional);
 	}
@@ -1248,7 +1249,7 @@ set_recvpktinfo(int s, int family)
  * @param do_udp: if udp should be used.
  * @param do_tcp: if tcp should be used.
  * @param hints: for getaddrinfo. family and flags have to be set by caller.
- * @param port: Port number to use (as string).
+ * @param port: Port number to use.
  * @param list: list of open ports, appended to, changed to point to list head.
  * @param rcv: receive buffer size for UDP
  * @param snd: send buffer size for UDP
@@ -1274,7 +1275,7 @@ set_recvpktinfo(int s, int family)
  */
 static int
 ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
-	struct addrinfo *hints, const char* port, struct listen_port** list,
+	struct addrinfo *hints, int port, struct listen_port** list,
 	size_t rcv, size_t snd, int ssl_port,
 	struct config_strlist* tls_additional_port, int https_port,
 	struct config_strlist* proxy_protocol_port,
@@ -1287,6 +1288,7 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 	int is_https = if_is_https(ifname, port, https_port);
 	int is_dnscrypt = if_is_dnscrypt(ifname, port, dnscrypt_port);
 	int is_pp2 = if_is_pp2(ifname, port, proxy_protocol_port);
+	int is_doq = if_is_quic(ifname, port, quic_port);
 	/* Always set TCP_NODELAY on TLS connection as it speeds up the TLS
 	 * handshake. DoH had already such option so we respect it.
 	 * Otherwise the server waits before sending more handshake data for
@@ -1294,7 +1296,6 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 	 * client waits for more data before ACKing (delayed ACK). */
 	int nodelay = is_https?http2_nodelay:is_ssl; 
 	struct unbound_socket* ub_sock;
-	int is_doq = if_is_quic(ifname, port, quic_port);
 	const char* add = NULL;
 
 	if(!do_udp && !do_tcp)
@@ -1358,13 +1359,11 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 		} else if(is_doq) {
 			udp_port_type = listen_type_doq;
 			add = "doq";
-			if(((strchr(ifname, '@') &&
-				atoi(strchr(ifname, '@')+1) == 53) ||
-				(!strchr(ifname, '@') && atoi(port) == 53))) {
-				log_err("DNS over QUIC is not allowed on "
-					"port 53. Port 53 is for DNS "
-					"datagrams. Error for "
-					"interface '%s'.", ifname);
+			if(if_listens_on(ifname, port, 53, NULL)) {
+				log_err("DNS over QUIC is strictly not "
+					"allowed on port 53 as per RFC 9250. "
+					"Port 53 is for DNS datagrams. Error "
+					"for interface '%s'.", ifname);
 				free(ub_sock->addr);
 				free(ub_sock);
 				return 0;
@@ -1412,8 +1411,6 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 		}
 	}
 	if(do_tcp) {
-		int is_ssl = if_is_ssl(ifname, port, ssl_port,
-			tls_additional_port);
 		enum listen_type port_type;
 		ub_sock = calloc(1, sizeof(struct unbound_socket));
 		if(!ub_sock)
@@ -1881,8 +1878,6 @@ listening_ports_open(struct config_file* cfg, char** ifs, int num_ifs,
 	struct addrinfo hints;
 	int i, do_ip4, do_ip6;
 	int do_tcp, do_auto;
-	char portbuf[32];
-	snprintf(portbuf, sizeof(portbuf), "%d", cfg->port);
 	do_ip4 = cfg->do_ip4;
 	do_ip6 = cfg->do_ip6;
 	do_tcp = cfg->do_tcp;
@@ -1928,12 +1923,11 @@ listening_ports_open(struct config_file* cfg, char** ifs, int num_ifs,
 					return NULL;
 				}
 				now = after;
-				snprintf(portbuf, sizeof(portbuf), "%d", extraport);
 				if(do_ip6) {
 					hints.ai_family = AF_INET6;
 					if(!ports_create_if("::0",
 						do_auto, cfg->do_udp, do_tcp,
-						&hints, portbuf, &list,
+						&hints, extraport, &list,
 						cfg->so_rcvbuf, cfg->so_sndbuf,
 						cfg->ssl_port, cfg->tls_additional_port,
 						cfg->https_port,
@@ -1952,7 +1946,7 @@ listening_ports_open(struct config_file* cfg, char** ifs, int num_ifs,
 					hints.ai_family = AF_INET;
 					if(!ports_create_if("0.0.0.0",
 						do_auto, cfg->do_udp, do_tcp,
-						&hints, portbuf, &list,
+						&hints, extraport, &list,
 						cfg->so_rcvbuf, cfg->so_sndbuf,
 						cfg->ssl_port, cfg->tls_additional_port,
 						cfg->https_port,
@@ -1974,7 +1968,7 @@ listening_ports_open(struct config_file* cfg, char** ifs, int num_ifs,
 			hints.ai_family = AF_INET6;
 			if(!ports_create_if(do_auto?"::0":"::1",
 				do_auto, cfg->do_udp, do_tcp,
-				&hints, portbuf, &list,
+				&hints, cfg->port, &list,
 				cfg->so_rcvbuf, cfg->so_sndbuf,
 				cfg->ssl_port, cfg->tls_additional_port,
 				cfg->https_port, cfg->proxy_protocol_port,
@@ -1992,7 +1986,7 @@ listening_ports_open(struct config_file* cfg, char** ifs, int num_ifs,
 			hints.ai_family = AF_INET;
 			if(!ports_create_if(do_auto?"0.0.0.0":"127.0.0.1",
 				do_auto, cfg->do_udp, do_tcp,
-				&hints, portbuf, &list,
+				&hints, cfg->port, &list,
 				cfg->so_rcvbuf, cfg->so_sndbuf,
 				cfg->ssl_port, cfg->tls_additional_port,
 				cfg->https_port, cfg->proxy_protocol_port,
@@ -2012,7 +2006,7 @@ listening_ports_open(struct config_file* cfg, char** ifs, int num_ifs,
 				continue;
 			hints.ai_family = AF_INET6;
 			if(!ports_create_if(ifs[i], 0, cfg->do_udp,
-				do_tcp, &hints, portbuf, &list,
+				do_tcp, &hints, cfg->port, &list,
 				cfg->so_rcvbuf, cfg->so_sndbuf,
 				cfg->ssl_port, cfg->tls_additional_port,
 				cfg->https_port, cfg->proxy_protocol_port,
@@ -2030,7 +2024,7 @@ listening_ports_open(struct config_file* cfg, char** ifs, int num_ifs,
 				continue;
 			hints.ai_family = AF_INET;
 			if(!ports_create_if(ifs[i], 0, cfg->do_udp,
-				do_tcp, &hints, portbuf, &list,
+				do_tcp, &hints, cfg->port, &list,
 				cfg->so_rcvbuf, cfg->so_sndbuf,
 				cfg->ssl_port, cfg->tls_additional_port,
 				cfg->https_port, cfg->proxy_protocol_port,

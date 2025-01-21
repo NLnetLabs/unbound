@@ -1,3 +1,8 @@
+21 January 2025: Yorgos
+	- Use the same interface listening port discovery code for all needed
+	  protocols.
+	- Port to string only when needed before getaddrinfo().
+
 20 January 2025: Yorgos
 	- Merge #1222: Unique DoT and DoH SSL contexts to allow for different
 	  ALPN.

@@ -2771,75 +2771,50 @@ int options_remote_is_address(struct config_file* cfg)
 	return (cfg->control_ifs.first->str[0] != '/');
 }
 
-/** see if interface is https, its port number == the https port number */
 int
-if_is_https(const char* ifname, const char* port, int https_port)
+if_listens_on(const char* ifname, int default_port, int port,
+	struct config_strlist* additional_ports)
 {
+	struct config_strlist* s;
 	char* p = strchr(ifname, '@');
-	if(!p && atoi(port) == https_port)
-		return 1;
-	if(p && atoi(p+1) == https_port)
-		return 1;
-	return 0;
-}
+	int if_port;
+	if(p) if_port = atoi(p+1);
+	else  if_port = default_port;
 
-/** see if config contains https turned on */
-int cfg_has_https(struct config_file* cfg)
-{
-	int i;
-	char portbuf[32];
-	snprintf(portbuf, sizeof(portbuf), "%d", cfg->port);
-	for(i = 0; i<cfg->num_ifs; i++) {
-		if(if_is_https(cfg->ifs[i], portbuf, cfg->https_port))
-			return 1;
+	if(port && if_port == port) return 1;
+
+	for(s = additional_ports; s; s = s->next) {
+		if(if_port == atoi(s->str)) return 1;
 	}
 	return 0;
 }
 
-/** see if interface is ssl, its port number == the ssl port number */
 int
-if_is_ssl(const char* ifname, const char* port, int ssl_port,
+if_is_ssl(const char* ifname, int default_port, int ssl_port,
 	struct config_strlist* tls_additional_port)
 {
-	struct config_strlist* s;
-	char* p = strchr(ifname, '@');
-	if(!p && atoi(port) == ssl_port)
-		return 1;
-	if(p && atoi(p+1) == ssl_port)
-		return 1;
-	for(s = tls_additional_port; s; s = s->next) {
-		if(p && atoi(p+1) == atoi(s->str))
-			return 1;
-		if(!p && atoi(port) == atoi(s->str))
-			return 1;
-	}
-	return 0;
+	return if_listens_on(ifname, default_port, ssl_port,
+		tls_additional_port);
 }
 
-/** see if interface is PROXYv2, its port number == the proxy port number */
 int
-if_is_pp2(const char* ifname, const char* port,
+if_is_pp2(const char* ifname, int default_port,
 	struct config_strlist* proxy_protocol_port)
 {
-	struct config_strlist* s;
-	char* p = strchr(ifname, '@');
-	for(s = proxy_protocol_port; s; s = s->next) {
-		if(p && atoi(p+1) == atoi(s->str))
-			return 1;
-		if(!p && atoi(port) == atoi(s->str))
-			return 1;
-	}
-	return 0;
+	return if_listens_on(ifname, default_port, 0, proxy_protocol_port);
 }
 
-/** see if interface is DNSCRYPT, its port number == the dnscrypt port number */
 int
-if_is_dnscrypt(const char* ifname, const char* port, int dnscrypt_port)
+if_is_https(const char* ifname, int default_port, int https_port)
+{
+	return if_listens_on(ifname, default_port, https_port, NULL);
+}
+
+int
+if_is_dnscrypt(const char* ifname, int default_port, int dnscrypt_port)
 {
 #ifdef USE_DNSCRYPT
-	return ((strchr(ifname, '@') &&
-		atoi(strchr(ifname, '@')+1) == dnscrypt_port) ||
-		(!strchr(ifname, '@') && atoi(port) == dnscrypt_port));
+	return if_listens_on(ifname, default_port, dnscrypt_port, NULL);
 #else
 	(void)ifname;
 	(void)port;
@@ -2848,40 +2823,42 @@ if_is_dnscrypt(const char* ifname, const char* port, int dnscrypt_port)
 #endif
 }
 
-/** see if interface is quic, its port number == the quic port number */
 int
-if_is_quic(const char* ifname, const char* port, int quic_port)
+if_is_quic(const char* ifname, int default_port, int quic_port)
 {
-#ifndef HAVE_NGTCP2
+#ifdef HAVE_NGTCP2
+	return if_listens_on(ifname, default_port, quic_port, NULL);
+#else
 	(void)ifname;
 	(void)port;
 	(void)quic_port;
 	return 0;
-#else
-	char* p = strchr(ifname, '@');
-	if(!p && atoi(port) == quic_port)
-		return 1;
-	if(p && atoi(p+1) == quic_port)
-		return 1;
-	return 0;
 #endif
 }
 
-/** see if config contains quic turned on */
+int
+cfg_has_https(struct config_file* cfg)
+{
+	int i;
+	for(i = 0; i<cfg->num_ifs; i++) {
+		if(if_is_https(cfg->ifs[i], cfg->port, cfg->https_port))
+			return 1;
+	}
+	return 0;
+}
+
 int
 cfg_has_quic(struct config_file* cfg)
 {
-#ifndef HAVE_NGTCP2
-	(void)cfg;
-	return 0;
-#else
+#ifdef HAVE_NGTCP2
 	int i;
-	char portbuf[32];
-	snprintf(portbuf, sizeof(portbuf), "%d", cfg->port);
 	for(i = 0; i<cfg->num_ifs; i++) {
-		if(if_is_quic(cfg->ifs[i], portbuf, cfg->quic_port))
+		if(if_is_quic(cfg->ifs[i], cfg->port, cfg->quic_port))
 			return 1;
 	}
+	return 0;
+#else
+	(void)cfg;
 	return 0;
 #endif
 }

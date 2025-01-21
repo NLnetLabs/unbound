@@ -1395,8 +1395,39 @@ void w_config_adjust_directory(struct config_file* cfg);
 /** debug option for unit tests. */
 extern int fake_dsa, fake_sha1;
 
-/** see if interface is https, its port number == the https port number */
-int if_is_https(const char* ifname, const char* port, int https_port);
+/** Return true if interface will listen to specific port(s).
+ * @param ifname: the interface as configured in the configuration file.
+ * @param default_port: the default port to use as the interface port if ifname
+ *	does not include a port via the '@' notation.
+ * @param port: port to check for, if 0 it will not be checked.
+ * @param additional_ports: additional configured ports, if any (nonNULL) to
+ *	be checked against.
+ * @return true if one of (port, additional_ports) matches the interface port.
+ */
+int if_listens_on(const char* ifname, int default_port, int port,
+	struct config_strlist* additional_ports);
+
+/** see if interface will listen on https;
+ *  its port number == the https port number */
+int if_is_https(const char* ifname, int default_port, int https_port);
+
+/** see if interface will listen on ssl;
+ *  its port number == the ssl port number or any of the additional ports */
+int if_is_ssl(const char* ifname, int default_port, int ssl_port,
+	struct config_strlist* tls_additional_port);
+
+/** see if interface will listen on PROXYv2;
+ *  its port number == any of the proxy ports number */
+int if_is_pp2(const char* ifname, int default_port,
+	struct config_strlist* proxy_protocol_port);
+
+/** see if interface will listen on DNSCRYPT;
+ *  its port number == the dnscrypt port number */
+int if_is_dnscrypt(const char* ifname, int default_port, int dnscrypt_port);
+
+/** see if interface will listen on quic;
+ *  its port number == the quic port number */
+int if_is_quic(const char* ifname, int default_port, int quic_port);
 
 /**
  * Return true if the config contains settings that enable https.
@@ -1404,20 +1435,6 @@ int if_is_https(const char* ifname, const char* port, int https_port);
  * @return true if https ports are used for server.
  */
 int cfg_has_https(struct config_file* cfg);
-
-/** see if interface is ssl, its port number == the ssl port number */
-int if_is_ssl(const char* ifname, const char* port, int ssl_port,
-	struct config_strlist* tls_additional_port);
-
-/** see if interface is PROXYv2, its port number == the proxy port number */
-int if_is_pp2(const char* ifname, const char* port,
-	struct config_strlist* proxy_protocol_port);
-
-/** see if interface is DNSCRYPT, its port number == the dnscrypt port number */
-int if_is_dnscrypt(const char* ifname, const char* port, int dnscrypt_port);
-
-/** see if interface is quic, its port number == the quic port number */
-int if_is_quic(const char* ifname, const char* port, int quic_port);
 
 /**
  * Return true if the config contains settings that enable quic.
