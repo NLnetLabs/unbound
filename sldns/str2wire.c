@@ -2559,6 +2559,8 @@ int sldns_str2wire_atma_buf(const char* str, uint8_t* rd, size_t* len)
 
 	if(slen > LDNS_MAX_RDFLEN*2)
 		return LDNS_WIREPARSE_ERR_LABEL_OVERFLOW;
+	if(*len < 1)
+		return LDNS_WIREPARSE_ERR_BUFFER_TOO_SMALL;
 	if(*s == 0) {
 		/* empty string */
 		rd[0] = 0;
