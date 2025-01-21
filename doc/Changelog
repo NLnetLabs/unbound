@@ -4,6 +4,8 @@
 	- Port to string only when needed before getaddrinfo().
 	- Do not open unencrypted channels next to encrypted ones on the same
 	  port.
+	- Merge #1224 from Theo Buehler: Do not use DSA API unless USE_DSA is
+	  set.
 
 21 January 2025: Wouter
 	- Fix compile of interface check code when dnscrypt or quic is
