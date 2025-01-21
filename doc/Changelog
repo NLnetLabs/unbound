@@ -6,6 +6,7 @@
 21 January 2025: Wouter
 	- Fix compile of interface check code when dnscrypt or quic is
 	  disabled.
+	- Fix encoding of RR type ATMA.
 
 20 January 2025: Yorgos
 	- Merge #1222: Unique DoT and DoH SSL contexts to allow for different

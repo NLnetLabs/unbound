@@ -1870,7 +1870,33 @@ int sldns_wire2str_nsap_scan(uint8_t** d, size_t* dl, char** s, size_t* sl)
 
 int sldns_wire2str_atma_scan(uint8_t** d, size_t* dl, char** s, size_t* sl)
 {
-	return print_remainder_hex("", d, dl, s, sl);
+	uint8_t format;
+	int w = 0;
+	size_t i;
+
+	if(*dl < 1) return -1;
+	format = (*d)[0];
+	(*d)+=1;
+	(*dl)-=1;
+
+	if(format == 0) {
+		/* AESA format (ATM End System Address). */
+		return print_remainder_hex("", d, dl, s, sl);
+	} else if(format == 1) {
+		/* E.164 format. */
+		w += sldns_str_print(s, sl, "+");
+		for(i=0; i<*dl; i++) {
+			if((*d)[i] < '0' || (*d)[0] > '9')
+				return -1;
+			w += sldns_str_print(s, sl, "%c", (*d)[i]);
+		}
+		(*d) += *dl;
+		(*dl) = 0;
+	} else {
+		/* Unknown format. */
+		return -1;
+	}
+	return w;
 }
 
 /* internal scan routine that can modify arguments on failure */
