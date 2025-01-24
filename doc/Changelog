@@ -1,3 +1,7 @@
+24 January 2025: Yorgos
+	- Merge #1220 from Petr Menšík, Add unbound members group access to
+	  control key.
+
 21 January 2025: Yorgos
 	- Use the same interface listening port discovery code for all needed
 	  protocols.
