@@ -1,3 +1,9 @@
+29 January 2025: Yorgos
+	- Make the default value of module-config "validator iterator"
+	  regardless of compilation options. --enable-subnet would implicitly
+	  change the value to enable the subnetcache module by default in the
+	  past.
+
 24 January 2025: Yorgos
 	- Merge #1220 from Petr Menšík, Add unbound members group access to
 	  control key.

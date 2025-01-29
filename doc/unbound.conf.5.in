@@ -1260,9 +1260,6 @@ Adding \fIrespip\fR to the front will cause RPZ processing to be done on
 all queries.
 The default is "\fIvalidator iterator\fR".
 .IP
-When the server is built with
-EDNS client subnet support the default is "\fIsubnetcache validator
-iterator\fR".
 Most modules that need to be listed here have to be listed at the beginning
 of the line.  The subnetcachedb module has to be listed just before
 the iterator.
@@ -2511,8 +2508,8 @@ The dynamic library file to load. Repeat this option for every dynlib module
 instance added to the \fBmodule\-config:\fR option.
 .SS "DNS64 Module Options"
 .LP
-The dns64 module must be configured in the \fBmodule\-config:\fR "dns64
-validator iterator" directive and be compiled into the daemon to be
+The dns64 module must be configured in the \fBmodule\-config:\fR directive
+e.g., "dns64 validator iterator" and be compiled into the daemon to be
 enabled.  These settings go in the \fBserver:\fR section.
 .TP
 .B dns64\-prefix: \fI<IPv6 prefix>\fR
@@ -2612,8 +2609,8 @@ in the dnscrypt nonce cache.  Close to the number of cpus is
 a fairly good setting.
 .SS "EDNS Client Subnet Module Options"
 .LP
-The ECS module must be configured in the \fBmodule\-config:\fR "subnetcache
-validator iterator" directive and be compiled into the daemon to be
+The ECS module must be configured in the \fBmodule\-config:\fR directive e.g.,
+"subnetcache validator iterator" and be compiled into the daemon to be
 enabled.  These settings go in the \fBserver:\fR section.
 .LP
 If the destination address is allowed in the configuration Unbound will add the
@@ -2633,6 +2630,15 @@ The maximum size of the ECS cache is controlled by 'msg-cache-size' in the
 configuration file. On top of that, for each query only 100 different subnets
 are allowed to be stored for each address family. Exceeding that number, older
 entries will be purged from cache.
+.LP
+Note that due to the nature of how EDNS Client Subnet works, by segregating the
+client IP space in order to try and have tailored responses for prefixes of
+unknown sizes, resolution and cache response performance are impacted as a
+result.
+Usage of the subnetcache module should only be enabled in installations that
+require such functionality where the resolver and the clients belong to
+different networks.
+An example of that is an open resolver installation.
 .LP
 This module does not interact with the \fBserve\-expired*\fR and
 \fBprefetch:\fR options.
@@ -2684,8 +2690,8 @@ Specifies the maximum number of subnets ECS answers kept in the ECS radix tree.
 This number applies for each qname/qclass/qtype tuple. Defaults to 100.
 .SS "Opportunistic IPsec Support Module Options"
 .LP
-The IPsec module must be configured in the \fBmodule\-config:\fR "ipsecmod
-validator iterator" directive and be compiled into Unbound by using
+The IPsec module must be configured in the \fBmodule\-config:\fR directive
+e.g., "ipsecmod validator iterator" and be compiled into Unbound by using
 \fB\-\-enable\-ipsecmod\fR to be enabled.
 These settings go in the \fBserver:\fR section.
 .LP
@@ -2754,8 +2760,8 @@ not specified, all domains are treated as being allowed (default).
 Alternate syntax for \fBipsecmod\-allow\fR.
 .SS "Cache DB Module Options"
 .LP
-The Cache DB module must be configured in the \fBmodule\-config:\fR
-"validator cachedb iterator" directive and be compiled into the daemon
+The Cache DB module must be configured in the \fBmodule\-config:\fR directive
+e.g., "validator cachedb iterator" and be compiled into the daemon
 with \fB\-\-enable\-cachedb\fR.
 If this module is enabled and configured, the specified backend database
 works as a second level cache:
