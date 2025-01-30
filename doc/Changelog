@@ -1,3 +1,7 @@
+30 January 2025: Wouter
+	- Fix #986: Resolving sas.com with dnssec-validation fails though
+	  signed delegations seem to be (mostly) correct.
+
 29 January 2025: Yorgos
 	- Make the default value of module-config "validator iterator"
 	  regardless of compilation options. --enable-subnet would implicitly

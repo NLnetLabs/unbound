@@ -1111,7 +1111,7 @@ This works by first choosing only the strongest DS digest type as per RFC 4509
 (Unbound treats the highest algorithm as the strongest) and then
 expecting signatures from all the advertised signing algorithms from the chosen
 DS(es) to be present.
-If no, allows any algorithm to validate the zone.
+If no, allows any one supported algorithm to validate the zone, even if other advertised algorithms are broken.
 Default is no.
 RFC 6840 mandates that zone signers must produce zones signed with all
 advertised algorithms, but sometimes they do not.
