@@ -2354,6 +2354,7 @@ server_local_zone: VAR_LOCAL_ZONE STRING_ARG STRING_ARG
 		   && strcmp($3, "typetransparent")!=0
 		   && strcmp($3, "always_transparent")!=0
 		   && strcmp($3, "block_a")!=0
+		   && strcmp($3, "block_aaaa")!=0
 		   && strcmp($3, "always_refuse")!=0
 		   && strcmp($3, "always_nxdomain")!=0
 		   && strcmp($3, "always_nodata")!=0
