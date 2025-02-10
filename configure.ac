@@ -909,7 +909,7 @@ if test "`uname`" = "Linux"; then
 	GCC_DOCKER_LINTFLAGS='-syntax'
 	AC_SUBST(GCC_DOCKER_LINTFLAGS)
 fi
-CONFIG_DATE=`date +%Y%m%d`
+AX_BUILD_DATE_EPOCH(CONFIG_DATE, [%Y%m%d])
 AC_SUBST(CONFIG_DATE)
 
 # Checks for libraries.
@@ -2436,7 +2436,8 @@ char *unbound_stat_strdup_log(const char *s, const char* file, int line,
 dnl if we build from source tree, the man pages need @date@ and @version@
 dnl if this is a distro tarball, that was already done by makedist.sh
 AC_SUBST(version, [VERSION_MAJOR.VERSION_MINOR.VERSION_MICRO])
-AC_SUBST(date, [`date +'%b %e, %Y'`])
+AX_BUILD_DATE_EPOCH(date, [[%b %e, %Y]])
+AC_SUBST(date)
 
 AC_CONFIG_FILES([Makefile doc/example.conf doc/libunbound.3 doc/unbound.8 doc/unbound-anchor.8 doc/unbound-checkconf.8 doc/unbound.conf.5 doc/unbound-control.8 doc/unbound-host.1 smallapp/unbound-control-setup.sh dnstap/dnstap_config.h dnscrypt/dnscrypt_config.h contrib/libunbound.pc contrib/unbound.socket contrib/unbound.service contrib/unbound_portable.service])
 AC_CONFIG_HEADERS([config.h])
