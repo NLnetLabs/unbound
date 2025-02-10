@@ -19894,7 +19894,25 @@ if test "`uname`" = "Linux"; then
 	GCC_DOCKER_LINTFLAGS='-syntax'
 
 fi
-CONFIG_DATE=`date +%Y%m%d`
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for build time" >&5
+printf %s "checking for build time... " >&6; }
+ax_date_fmt="%Y%m%d"
+if test x"$SOURCE_DATE_EPOCH" = x
+then :
+  CONFIG_DATE=`date "+$ax_date_fmt"`
+else $as_nop
+  ax_build_date=`date -u -d "@$SOURCE_DATE_EPOCH" "+$ax_date_fmt" 2>/dev/null \
+                 || date -u -r "$SOURCE_DATE_EPOCH" "+$ax_date_fmt" 2>/dev/null`
+  if test x"$ax_build_date" = x
+then :
+  as_fn_error $? "malformed SOURCE_DATE_EPOCH" "$LINENO" 5
+else $as_nop
+  CONFIG_DATE=$ax_build_date
+fi
+fi
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $CONFIG_DATE" >&5
+printf "%s\n" "$CONFIG_DATE" >&6; }
+
 
 
 # Checks for libraries.
@@ -25000,7 +25018,25 @@ printf "%s\n" "#define MAXSYSLOGMSGLEN 10240" >>confdefs.h
 
 version=1.22.1
 
-date=`date +'%b %e, %Y'`
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for build time" >&5
+printf %s "checking for build time... " >&6; }
+ax_date_fmt="%b %e, %Y"
+if test x"$SOURCE_DATE_EPOCH" = x
+then :
+  date=`date "+$ax_date_fmt"`
+else $as_nop
+  ax_build_date=`date -u -d "@$SOURCE_DATE_EPOCH" "+$ax_date_fmt" 2>/dev/null \
+                 || date -u -r "$SOURCE_DATE_EPOCH" "+$ax_date_fmt" 2>/dev/null`
+  if test x"$ax_build_date" = x
+then :
+  as_fn_error $? "malformed SOURCE_DATE_EPOCH" "$LINENO" 5
+else $as_nop
+  date=$ax_build_date
+fi
+fi
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $date" >&5
+printf "%s\n" "$date" >&6; }
+
 
 
 ac_config_files="$ac_config_files Makefile doc/example.conf doc/libunbound.3 doc/unbound.8 doc/unbound-anchor.8 doc/unbound-checkconf.8 doc/unbound.conf.5 doc/unbound-control.8 doc/unbound-host.1 smallapp/unbound-control-setup.sh dnstap/dnstap_config.h dnscrypt/dnscrypt_config.h contrib/libunbound.pc contrib/unbound.socket contrib/unbound.service contrib/unbound_portable.service"
