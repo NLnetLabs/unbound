@@ -2,6 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 AC_PREREQ([2.56])
 sinclude(acx_nlnetlabs.m4)
+sinclude(ax_build_date_epoch.m4)
 sinclude(ax_pthread.m4)
 sinclude(acx_python.m4)
 sinclude(ax_pkg_swig.m4)
