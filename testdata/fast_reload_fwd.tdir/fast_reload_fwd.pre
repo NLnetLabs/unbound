@@ -24,7 +24,7 @@ NS1_PORT=$(($RND_PORT + 1))
 NS2_PORT=$(($RND_PORT + 2))
 echo "UNBOUND_PORT=$UNBOUND_PORT" >> .tpkg.var.test
 echo "NS1_PORT=$NS1_PORT" >> .tpkg.var.test
-echo "NS2=$NS2_PORT" >> .tpkg.var.test
+echo "NS2_PORT=$NS2_PORT" >> .tpkg.var.test
 
 # make config files
 CONTROL_PATH=/tmp
