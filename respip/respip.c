@@ -105,6 +105,7 @@ respip_sockaddr_find_or_create(struct respip_set* set, struct sockaddr_storage* 
 		socklen_t addrlen, int net, int create, const char* ipstr)
 {
 	struct resp_addr* node;
+	log_assert(set);
 	node = (struct resp_addr*)addr_tree_find(&set->ip_tree, addr, addrlen, net);
 	if(!node && create) {
 		node = regional_alloc_zero(set->region, sizeof(*node));
@@ -128,6 +129,7 @@ void
 respip_sockaddr_delete(struct respip_set* set, struct resp_addr* node)
 {
 	struct resp_addr* prev;
+	log_assert(set);
 	prev = (struct resp_addr*)rbtree_previous((struct rbnode_type*)node);	
 	lock_rw_destroy(&node->lock);
 	(void)rbtree_delete(&set->ip_tree, node);
@@ -146,6 +148,7 @@ respip_find_or_create(struct respip_set* set, const char* ipstr, int create)
 	struct sockaddr_storage addr;
 	int net;
 	socklen_t addrlen;
+	log_assert(set);
 
 	if(!netblockstrtoaddr(ipstr, 0, &addr, &addrlen, &net)) {
 		log_err("cannot parse netblock: '%s'", ipstr);
@@ -160,6 +163,7 @@ respip_tag_cfg(struct respip_set* set, const char* ipstr,
 	const uint8_t* taglist, size_t taglen)
 {
 	struct resp_addr* node;
+	log_assert(set);
 
 	if(!(node=respip_find_or_create(set, ipstr, 1)))
 		return 0;
@@ -183,6 +187,7 @@ respip_action_cfg(struct respip_set* set, const char* ipstr,
 {
 	struct resp_addr* node;
 	enum respip_action action;
+	log_assert(set);
 
 	if(!(node=respip_find_or_create(set, ipstr, 1)))
 		return 0;
@@ -325,6 +330,7 @@ static int
 respip_data_cfg(struct respip_set* set, const char* ipstr, const char* rrstr)
 {
 	struct resp_addr* node;
+	log_assert(set);
 
 	node=respip_find_or_create(set, ipstr, 0);
 	if(!node || node->action == respip_none) {
@@ -344,6 +350,7 @@ respip_set_apply_cfg(struct respip_set* set, char* const* tagname, int num_tags,
 	struct config_strbytelist* p;
 	struct config_str2list* pa;
 	struct config_str2list* pd;
+	log_assert(set);
 
 	set->tagname = tagname;
 	set->num_tags = num_tags;
@@ -609,6 +616,7 @@ respip_addr_lookup(const struct reply_info *rep, struct respip_set* rs,
 	struct resp_addr* ra;
 	struct sockaddr_storage ss;
 	socklen_t addrlen;
+	log_assert(rs);
 
 	lock_rw_rdlock(&rs->lock);
 	for(i=0; i<rep->an_numrrsets; i++) {
@@ -1343,7 +1351,9 @@ respip_inform_print(struct respip_action_info* respip_actinfo, uint8_t* qname,
 
 size_t respip_set_get_mem(struct respip_set* set)
 {
-	size_t m = sizeof(*set);
+	size_t m = 0;
+	if(!set) return m;
+	m = sizeof(*set);
 	lock_rw_rdlock(&set->lock);
 	m += regional_get_mem(set->region);
 	lock_rw_unlock(&set->lock);
