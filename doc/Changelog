@@ -1,3 +1,7 @@
+17 February 2025: Yorgos
+	- Consider reconfigurations when calculating the still_useful_timeout
+	  for servers in the infrastructure cache.
+
 30 January 2025: Wouter
 	- Fix #986: Resolving sas.com with dnssec-validation fails though
 	  signed delegations seem to be (mostly) correct.
