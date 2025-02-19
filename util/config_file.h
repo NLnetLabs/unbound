@@ -54,6 +54,9 @@ struct sock_list;
 struct ub_packed_rrset_key;
 struct regional;
 
+/** Default value for PROBE_MAXRTO */
+#define PROBE_MAXRTO_DEFAULT 12000
+
 /** List head for strlist processing, used for append operation. */
 struct config_strlist_head {
 	/** first in list of text items */
@@ -975,6 +978,10 @@ void config_delete(struct config_file* config);
  * @param config: to apply. Side effect: global constants change.
  */
 void config_apply(struct config_file* config);
+
+/** Apply the relevant changes that rely upon RTT_MAX_TIMEOUT;
+ *  exported for unit test */
+int config_apply_max_rtt(int max_rtt);
 
 /**
  * Find username, sets cfg_uid and cfg_gid.

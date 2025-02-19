@@ -78,6 +78,8 @@ int UNKNOWN_SERVER_NICENESS = 376;
 int USEFUL_SERVER_TOP_TIMEOUT = 120000;
 /* Equals USEFUL_SERVER_TOP_TIMEOUT*4 */
 int BLACKLIST_PENALTY = (120000*4);
+/** Timeout when only a single probe query per IP is allowed. */
+int PROBE_MAXRTO = PROBE_MAXRTO_DEFAULT; /* in msec */
 
 static void target_count_increase_nx(struct iter_qstate* iq, int num);
 

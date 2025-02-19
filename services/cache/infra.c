@@ -52,14 +52,6 @@
 #include "util/config_file.h"
 #include "iterator/iterator.h"
 
-/** Timeout when only a single probe query per IP is allowed. */
-#define PROBE_MAXRTO 12000 /* in msec */
-
-/** number of timeouts for a type when the domain can be blocked ;
- * even if another type has completely rtt maxed it, the different type
- * can do this number of packets (until those all timeout too) */
-#define TIMEOUT_COUNT_MAX 3
-
 /** ratelimit value for delegation point */
 int infra_dp_ratelimit = 0;
 
@@ -76,7 +68,8 @@ int infra_ip_ratelimit_cookie = 0;
  * blacklisted servers stay blacklisted if this is chosen.
  * If USEFUL_SERVER_TOP_TIMEOUT is below 1000 (configured via RTT_MAX_TIMEOUT,
  * infra-cache-max-rtt) change it to just above the RTT_BAND. */
-static int still_useful_timeout()
+int
+still_useful_timeout()
 {
 	return
 	USEFUL_SERVER_TOP_TIMEOUT < 1000 ||
