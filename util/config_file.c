@@ -498,6 +498,25 @@ struct config_file* config_create_forlib(void)
 #define S_STRLIST_APPEND(str, var) if(strcmp(opt, str)==0) \
 	{ return cfg_strlist_append(&cfg->var, strdup(val)); }
 
+/** Set PROBE_MAXRTO based on current RTT_MAX_TIMEOUT
+ *  (USEFUL_SERVER_TOP_TIMEOUT) configuration. */
+static int
+probe_maxrto(int useful_server_top_timeout) {
+	return
+	PROBE_MAXRTO > useful_server_top_timeout
+		?useful_server_top_timeout
+		:PROBE_MAXRTO_DEFAULT;
+}
+
+/** Apply the relevant changes that rely upon RTT_MAX_TIMEOUT */
+int config_apply_max_rtt(int max_rtt)
+{
+	USEFUL_SERVER_TOP_TIMEOUT = max_rtt;
+	BLACKLIST_PENALTY = max_rtt*4;
+	PROBE_MAXRTO = probe_maxrto(max_rtt);
+	return max_rtt;
+}
+
 int config_set_option(struct config_file* cfg, const char* opt,
 	const char* val)
 {
@@ -644,9 +663,7 @@ int config_set_option(struct config_file* cfg, const char* opt,
 	}
 	else if(strcmp(opt, "infra-cache-max-rtt:") == 0) {
 		IS_NUMBER_OR_ZERO; cfg->infra_cache_max_rtt = atoi(val);
-		RTT_MAX_TIMEOUT=cfg->infra_cache_max_rtt;
-		USEFUL_SERVER_TOP_TIMEOUT = RTT_MAX_TIMEOUT;
-		BLACKLIST_PENALTY = USEFUL_SERVER_TOP_TIMEOUT*4;
+		RTT_MAX_TIMEOUT=config_apply_max_rtt(cfg->infra_cache_max_rtt);
 	}
 	else S_YNO("infra-keep-probing:", infra_keep_probing)
 	else S_NUMBER_OR_ZERO("infra-host-ttl:", host_ttl)
@@ -2410,15 +2427,13 @@ config_apply(struct config_file* config)
 	MAX_NEG_TTL = (time_t)config->max_negative_ttl;
 	MIN_NEG_TTL = (time_t)config->min_negative_ttl;
 	RTT_MIN_TIMEOUT = config->infra_cache_min_rtt;
-	RTT_MAX_TIMEOUT = config->infra_cache_max_rtt;
+	RTT_MAX_TIMEOUT = config_apply_max_rtt(config->infra_cache_max_rtt);
 	EDNS_ADVERTISED_SIZE = (uint16_t)config->edns_buffer_size;
 	MINIMAL_RESPONSES = config->minimal_responses;
 	RRSET_ROUNDROBIN = config->rrset_roundrobin;
 	LOG_TAG_QUERYREPLY = config->log_tag_queryreply;
 	MAX_GLOBAL_QUOTA = config->max_global_quota;
 	UNKNOWN_SERVER_NICENESS = config->unknown_server_time_limit;
-	USEFUL_SERVER_TOP_TIMEOUT = RTT_MAX_TIMEOUT;
-	BLACKLIST_PENALTY = USEFUL_SERVER_TOP_TIMEOUT*4;
 	log_set_time_asc(config->log_time_ascii);
 	log_set_time_iso(config->log_time_iso);
 	autr_permit_small_holddown = config->permit_small_holddown;
