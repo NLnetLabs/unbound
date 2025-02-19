@@ -1,3 +1,7 @@
+19 February 2025: Yorgos
+	- Fix static analysis report about unhandled EOF on error conditions
+	  when reading anchor key files.
+
 17 February 2025: Yorgos
 	- Consider reconfigurations when calculating the still_useful_timeout
 	  for servers in the infrastructure cache.
