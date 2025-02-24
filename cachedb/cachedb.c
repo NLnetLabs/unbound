@@ -47,6 +47,7 @@
 #include "util/regional.h"
 #include "util/net_help.h"
 #include "util/config_file.h"
+#include "util/data/dname.h"
 #include "util/data/msgreply.h"
 #include "util/data/msgencode.h"
 #include "services/cache/dns.h"
@@ -341,6 +342,7 @@ calc_hash(struct query_info* qinfo, struct module_env* env, char* buf,
 	/* copy the hash info into the clear buffer */
 	if(clen + qinfo->qname_len < sizeof(clear)) {
 		memmove(clear+clen, qinfo->qname, qinfo->qname_len);
+		query_dname_tolower(clear+clen);
 		clen += qinfo->qname_len;
 	}
 	if(clen + 4 < sizeof(clear)) {
