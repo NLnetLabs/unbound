@@ -6697,6 +6697,8 @@ fr_send_cmd_to(struct fast_reload_thread* fr,
 		}
 		if(!outevent)
 			continue;
+		/* keep static analyzer happy; send(-1,..) */
+		log_assert(fr->commpair[0] >= 0);
 		ret = send(fr->commpair[0], ((char*)&cmd)+bcount,
 			sizeof(cmd)-bcount, 0);
 		if(ret == -1) {
@@ -7333,6 +7335,8 @@ fr_main_handle_cmd(struct fast_reload_thread* fr)
 {
 	enum fast_reload_notification status;
 	ssize_t ret;
+	/* keep static analyzer happy; recv(-1,..) */
+	log_assert(fr->commpair[0] >= 0);
 	ret = recv(fr->commpair[0],
 		((char*)&fr->service_read_cmd)+fr->service_read_cmd_count,
 		sizeof(fr->service_read_cmd)-fr->service_read_cmd_count, 0);
