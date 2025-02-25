@@ -919,6 +919,10 @@ mesh_copy_client_info(struct regional* region, struct respip_client_info* cinfo)
 		cinfo->taglen);
 	if(!client_info->taglist)
 		return NULL;
+	client_info->tag_actions = regional_alloc_init(region, cinfo->tag_actions,
+		cinfo->tag_actions_size);
+	if(!client_info->tag_actions)
+		return NULL;
 	client_info->tag_datas = regional_alloc_zero(region,
 		sizeof(struct config_strlist*)*cinfo->tag_datas_size);
 	if(!client_info->tag_datas)
