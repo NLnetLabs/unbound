@@ -1689,6 +1689,7 @@ config_delete(struct config_file* cfg)
 	config_del_strarray(cfg->tagname, cfg->num_tags);
 	config_del_strbytelist(cfg->local_zone_tags);
 	config_del_strbytelist(cfg->respip_tags);
+	config_deldblstrlist(cfg->respip_actions);
 	config_deldblstrlist(cfg->acl_view);
 	config_del_strbytelist(cfg->acl_tags);
 	config_deltrplstrlist(cfg->acl_tag_actions);
