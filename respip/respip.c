@@ -1351,8 +1351,8 @@ respip_inform_print(struct respip_action_info* respip_actinfo, uint8_t* qname,
 
 size_t respip_set_get_mem(struct respip_set* set)
 {
-	size_t m = 0;
-	if(!set) return m;
+	size_t m;
+	if(!set) return 0;
 	m = sizeof(*set);
 	lock_rw_rdlock(&set->lock);
 	m += regional_get_mem(set->region);

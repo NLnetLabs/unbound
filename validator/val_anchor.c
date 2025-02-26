@@ -1192,9 +1192,9 @@ anchors_get_mem(struct val_anchors* anchors)
 {
 	struct trust_anchor *ta;
 	struct ta_key *k;
-	size_t s = sizeof(*anchors);
-	if(!anchors)
-		return 0;
+	size_t s;
+	if(!anchors) return 0;
+	s = sizeof(*anchors);
 	lock_basic_lock(&anchors->lock);
 	RBTREE_FOR(ta, struct trust_anchor*, anchors->tree) {
 		lock_basic_lock(&ta->lock);
