@@ -712,6 +712,7 @@ SSLLIB
 HAVE_SSL
 PC_CRYPTO_DEPENDENCY
 CONFIG_DATE
+SOURCE_DATE_EPOCH
 GCC_DOCKER_LINTFLAGS
 NETBSD_LINTFLAGS
 PYUNBOUND_UNINSTALL
@@ -959,6 +960,7 @@ SYSTEMD_LIBS
 SYSTEMD_DAEMON_CFLAGS
 SYSTEMD_DAEMON_LIBS
 PYTHON_VERSION
+SOURCE_DATE_EPOCH
 PROTOBUFC_CFLAGS
 PROTOBUFC_LIBS'
 
@@ -1752,6 +1754,10 @@ Some influential environment variables:
               The installed Python version to use, for example '2.3'. This
               string will be appended to the Python interpreter canonical
               name.
+  SOURCE_DATE_EPOCH
+              If it is set, it uses the value of that variable instead of the
+              current time as the build timestamp. The format is a unix
+              timestamp. This enables reproducible build output.
   PROTOBUFC_CFLAGS
               C compiler flags for PROTOBUFC, overriding pkg-config
   PROTOBUFC_LIBS
@@ -19912,6 +19918,7 @@ fi
 fi
 { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $CONFIG_DATE" >&5
 printf "%s\n" "$CONFIG_DATE" >&6; }
+
 
 
 

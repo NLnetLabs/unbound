@@ -910,6 +910,7 @@ if test "`uname`" = "Linux"; then
 	AC_SUBST(GCC_DOCKER_LINTFLAGS)
 fi
 AX_BUILD_DATE_EPOCH(CONFIG_DATE, [%Y%m%d])
+AC_ARG_VAR(SOURCE_DATE_EPOCH, [If it is set, it uses the value of that variable instead of the current time as the build timestamp. The format is a unix timestamp. This enables reproducible build output.])
 AC_SUBST(CONFIG_DATE)
 
 # Checks for libraries.
