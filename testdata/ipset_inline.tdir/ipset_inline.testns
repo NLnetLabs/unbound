@@ -1,0 +1,43 @@
+; nameserver test file
+$ORIGIN example.net.
+$TTL 3600
+
+ENTRY_BEGIN
+MATCH opcode qtype qname
+REPLY QR AA NOERROR
+ADJUST copy_id
+SECTION QUESTION
+cname	IN	A
+SECTION ANSWER
+cname	IN	CNAME	target.example.net.
+ENTRY_END
+
+ENTRY_BEGIN
+MATCH opcode qtype qname
+REPLY QR AA NOERROR
+ADJUST copy_id
+SECTION QUESTION
+cname	IN	AAAA
+SECTION ANSWER
+cname	IN	CNAME	target.example.net.
+ENTRY_END
+
+ENTRY_BEGIN
+MATCH opcode qtype qname
+REPLY QR AA NOERROR
+ADJUST copy_id
+SECTION QUESTION
+target	IN	A
+SECTION ANSWER
+target	IN	A	1.1.1.1
+ENTRY_END
+
+ENTRY_BEGIN
+MATCH opcode qtype qname
+REPLY QR AA NOERROR
+ADJUST copy_id
+SECTION QUESTION
+target	IN	AAAA
+SECTION ANSWER
+target	IN	AAAA	::1
+ENTRY_END
