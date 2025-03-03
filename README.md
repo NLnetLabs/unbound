@@ -34,7 +34,7 @@ support.
 
 ## Unbound configuration
 
-All of Unbound's configuration options are described in the man pages, which
+All of Unbound's configuration options are described in the main pages, which
 will be installed and are available on the Unbound
 [documentation page](https://unbound.docs.nlnetlabs.nl/).
 
