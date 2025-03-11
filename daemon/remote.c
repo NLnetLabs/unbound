@@ -5002,7 +5002,7 @@ xfr_masterlist_equal(struct auth_master* list1, struct auth_master* list2)
 		p1 = p1->next;
 		p2 = p2->next;
 	}
-	if(!p2 && !p2)
+	if(!p1 && !p2)
 		return 1;
 	return 0;
 }
