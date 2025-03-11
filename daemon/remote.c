@@ -5076,8 +5076,8 @@ auth_zones_check_changes(struct fast_reload_thread* fr,
 			struct auth_xfer* old_xfr, *new_xfr;
 			lock_rw_rdlock(&new_z->lock);
 			lock_rw_rdlock(&old_z->lock);
-			new_xfr = auth_xfer_find(ct->auth_zones, old_z->name,
-				old_z->namelen, old_z->dclass);
+			new_xfr = auth_xfer_find(ct->auth_zones, new_z->name,
+				new_z->namelen, new_z->dclass);
 			old_xfr = auth_xfer_find(env->auth_zones, old_z->name,
 				old_z->namelen, old_z->dclass);
 			if(new_xfr) {
