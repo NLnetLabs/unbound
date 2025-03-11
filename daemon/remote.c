@@ -4501,7 +4501,8 @@ fr_check_compat_cfg(struct fast_reload_thread* fr, struct config_file* newcfg)
 		 * fast reload. */
 		if(!fr_output_printf(fr, "The config changes items that are "
 			"not compatible with fast_reload, perhaps do reload "
-			"or restart: %s\n", changed_str))
+			"or restart: %s", changed_str) ||
+			!fr_output_printf(fr, "\n"))
 			return 0;
 		fr_send_notification(fr, fast_reload_notification_printout);
 		return 0;
@@ -4614,7 +4615,8 @@ fr_check_nopause_cfg(struct fast_reload_thread* fr, struct config_file* newcfg)
 		 * to be able to update the variables. */
 		if(!fr_output_printf(fr, "The config changes items that need "
 			"the fast_reload +p option, for nopause, "
-			"disabled to be reloaded: %s\n", changed_str))
+			"disabled to be reloaded: %s", changed_str) ||
+			!fr_output_printf(fr, "\n"))
 			return 0;
 		fr_send_notification(fr, fast_reload_notification_printout);
 		return 0;
