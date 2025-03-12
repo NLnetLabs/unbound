@@ -6017,14 +6017,14 @@ fr_reload_config(struct fast_reload_thread* fr, struct config_file* newcfg,
 	lock_rw_unlock(&env->respip_set->lock);
 	lock_rw_unlock(&ct->local_zones->lock);
 	lock_rw_unlock(&daemon->local_zones->lock);
-	lock_rw_unlock(&env->auth_zones->lock);
 	lock_rw_unlock(&ct->auth_zones->lock);
-	lock_rw_unlock(&env->auth_zones->rpz_lock);
+	lock_rw_unlock(&env->auth_zones->lock);
 	lock_rw_unlock(&ct->auth_zones->rpz_lock);
-	lock_rw_unlock(&env->fwds->lock);
+	lock_rw_unlock(&env->auth_zones->rpz_lock);
 	lock_rw_unlock(&ct->fwds->lock);
-	lock_rw_unlock(&env->hints->lock);
+	lock_rw_unlock(&env->fwds->lock);
 	lock_rw_unlock(&ct->hints->lock);
+	lock_rw_unlock(&env->hints->lock);
 	if(ct->anchors) {
 		lock_basic_unlock(&ct->anchors->lock);
 		lock_basic_unlock(&env->anchors->lock);
