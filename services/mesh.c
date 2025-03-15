@@ -1516,14 +1516,9 @@ static void dns_error_reporting(struct module_qstate* qstate,
 	uint8_t* agent_domain;
 	size_t agent_domain_len;
 
-	reason_bogus = errinf_to_reason_bogus(qstate);
-	if(rep && ((reason_bogus == LDNS_EDE_DNSSEC_BOGUS &&
-		rep->reason_bogus != LDNS_EDE_NONE) ||
-		reason_bogus == LDNS_EDE_NONE)) {
-		reason_bogus = rep->reason_bogus;
-	}
-	if(reason_bogus == LDNS_EDE_NONE) return;
-
+	/* We need a valid reporting agent;
+	 * this is based on qstate->edns_opts_back_in that will probably have
+	 * the latest reporting agent we found while iterating */
 	opt = edns_opt_list_find(qstate->edns_opts_back_in,
 		LDNS_EDNS_REPORT_CHANNEL);
 	if(!opt) return;
@@ -1534,6 +1529,20 @@ static void dns_error_reporting(struct module_qstate* qstate,
 		 * root; from RFC9567. */
 		return;
 	}
+
+	/* Get the EDE generated from the mesh state, these are mostly
+	 * validator errors. If other errors are produced in the future (e.g.,
+	 * RPZ) we would not want them to result in error reports. */
+	reason_bogus = errinf_to_reason_bogus(qstate);
+	if(rep && ((reason_bogus == LDNS_EDE_DNSSEC_BOGUS &&
+		rep->reason_bogus != LDNS_EDE_NONE) ||
+		reason_bogus == LDNS_EDE_NONE)) {
+		reason_bogus = rep->reason_bogus;
+	}
+	if(reason_bogus == LDNS_EDE_NONE ||
+		/* other, does not make sense without the text that comes
+		 * with it */
+		reason_bogus == LDNS_EDE_OTHER) return;
 
 	/* Synthesize the error report query in the format:
 	 * "_er.$qtype.$qname.$ede._er.$reporting-agent-domain" */
