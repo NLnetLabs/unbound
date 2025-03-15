@@ -186,6 +186,10 @@ usage(void)
 	printf("  rpz_enable zone		Enable the RPZ zone if it had previously\n");
 	printf("  				been disabled\n");
 	printf("  rpz_disable zone		Disable the RPZ zone\n");
+	printf("  add_cookie_secret <secret>	add (or replace) a new cookie secret <secret>\n");
+	printf("  drop_cookie_secret		drop a staging cookie secret\n");
+	printf("  activate_cookie_secret	make a staging cookie secret active\n");
+	printf("  print_cookie_secrets		show all cookie secrets with their status\n");
 	printf("Version %s\n", PACKAGE_VERSION);
 	printf("BSD licensed, see LICENSE in source package for details.\n");
 	printf("Report bugs to %s\n", PACKAGE_BUGREPORT);
@@ -218,6 +222,9 @@ static void pr_stats(const char* nm, struct ub_stats_info* s)
 		s->svr.num_queries_cookie_client);
 	PR_UL_NM("num.queries_cookie_invalid",
 		s->svr.num_queries_cookie_invalid);
+	PR_UL_NM("num.queries_discard_timeout",
+		s->svr.num_queries_discard_timeout);
+	PR_UL_NM("num.queries_wait_limit", s->svr.num_queries_wait_limit);
 	PR_UL_NM("num.cachehits",
 		s->svr.num_queries - s->svr.num_queries_missed_cache);
 	PR_UL_NM("num.cachemiss", s->svr.num_queries_missed_cache);
@@ -289,6 +296,9 @@ static void print_mem(struct ub_shm_stat_info* shm_stat,
 	PR_LL("mem.streamwait", s->svr.mem_stream_wait);
 	PR_LL("mem.http.query_buffer", s->svr.mem_http2_query_buffer);
 	PR_LL("mem.http.response_buffer", s->svr.mem_http2_response_buffer);
+#ifdef HAVE_NGTCP2
+	PR_LL("mem.quic", s->svr.mem_quic);
+#endif
 }
 
 /** print histogram */
@@ -355,6 +365,9 @@ static void print_extended(struct ub_stats_info* s, int inhibit_zero)
 	PR_UL("num.query.tls_resume", s->svr.qtls_resume);
 	PR_UL("num.query.ipv6", s->svr.qipv6);
 	PR_UL("num.query.https", s->svr.qhttps);
+#ifdef HAVE_NGTCP2
+	PR_UL("num.query.quic", s->svr.qquic);
+#endif
 
 	/* flags */
 	PR_UL("num.query.flags.QR", s->svr.qbit_QR);

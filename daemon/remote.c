@@ -88,6 +88,7 @@
 #include "sldns/wire2str.h"
 #include "sldns/sbuffer.h"
 #include "util/timeval_func.h"
+#include "util/edns.h"
 #ifdef USE_CACHEDB
 #include "cachedb/cachedb.h"
 #endif
@@ -301,7 +302,7 @@ add_open(const char* ip, int nr, struct listen_port** list, int noproto_is_err,
 		/* open fd */
 		fd = create_tcp_accept_sock(res, 1, &noproto, 0,
 			cfg->ip_transparent, 0, 0, cfg->ip_freebind,
-			cfg->use_systemd, cfg->ip_dscp);
+			cfg->use_systemd, cfg->ip_dscp, "unbound-control");
 		freeaddrinfo(res);
 	}
 
@@ -706,6 +707,10 @@ print_stats(RES* ssl, const char* nm, struct ub_stats_info* s)
 		(unsigned long)s->svr.num_queries_cookie_client)) return 0;
 	if(!ssl_printf(ssl, "%s.num.queries_cookie_invalid"SQ"%lu\n", nm,
 		(unsigned long)s->svr.num_queries_cookie_invalid)) return 0;
+	if(!ssl_printf(ssl, "%s.num.queries_discard_timeout"SQ"%lu\n", nm,
+		(unsigned long)s->svr.num_queries_discard_timeout)) return 0;
+	if(!ssl_printf(ssl, "%s.num.queries_wait_limit"SQ"%lu\n", nm,
+		(unsigned long)s->svr.num_queries_wait_limit)) return 0;
 	if(!ssl_printf(ssl, "%s.num.cachehits"SQ"%lu\n", nm,
 		(unsigned long)(s->svr.num_queries
 			- s->svr.num_queries_missed_cache))) return 0;
@@ -865,6 +870,10 @@ print_mem(RES* ssl, struct worker* worker, struct daemon* daemon,
 	if(!print_longnum(ssl, "mem.http.response_buffer"SQ,
 		(size_t)s->svr.mem_http2_response_buffer))
 		return 0;
+#ifdef HAVE_NGTCP2
+	if(!print_longnum(ssl, "mem.quic"SQ, (size_t)s->svr.mem_quic))
+		return 0;
+#endif /* HAVE_NGTCP2 */
 	return 1;
 }
 
@@ -995,6 +1004,10 @@ print_ext(RES* ssl, struct ub_stats_info* s, int inhibit_zero)
 		(unsigned long)s->svr.qipv6)) return 0;
 	if(!ssl_printf(ssl, "num.query.https"SQ"%lu\n",
 		(unsigned long)s->svr.qhttps)) return 0;
+#ifdef HAVE_NGTCP2
+	if(!ssl_printf(ssl, "num.query.quic"SQ"%lu\n",
+		(unsigned long)s->svr.qquic)) return 0;
+#endif /* HAVE_NGTCP2 */
 	/* flags */
 	if(!ssl_printf(ssl, "num.query.flags.QR"SQ"%lu\n",
 		(unsigned long)s->svr.qbit_QR)) return 0;
@@ -1952,6 +1965,8 @@ bogus_del_msg(struct lruhash_entry* e, void* arg)
 	struct reply_info* d = (struct reply_info*)e->data;
 	if(d->security == sec_status_bogus) {
 		d->ttl = inf->expired;
+		d->prefetch_ttl = inf->expired;
+		d->serve_expired_ttl = inf->expired;
 		inf->num_msgs++;
 #ifdef USE_CACHEDB
 		if(inf->remcachedb && inf->worker->env.cachedb_enabled)
@@ -2034,6 +2049,8 @@ negative_del_msg(struct lruhash_entry* e, void* arg)
 	 * or NOERROR rcode with ANCOUNT==0: a NODATA answer */
 	if(FLAGS_GET_RCODE(d->flags) != 0 || d->an_numrrsets == 0) {
 		d->ttl = inf->expired;
+		d->prefetch_ttl = inf->expired;
+		d->serve_expired_ttl = inf->expired;
 		inf->num_msgs++;
 #ifdef USE_CACHEDB
 		if(inf->remcachedb && inf->worker->env.cachedb_enabled)
@@ -2124,7 +2141,7 @@ static int
 ssl_print_name_dp(RES* ssl, const char* str, uint8_t* nm, uint16_t dclass,
 	struct delegpt* dp)
 {
-	char buf[257];
+	char buf[LDNS_MAX_DOMAINLEN];
 	struct delegpt_ns* ns;
 	struct delegpt_addr* a;
 	int f = 0;
@@ -2492,7 +2509,7 @@ do_insecure_remove(RES* ssl, struct worker* worker, char* arg)
 static void
 do_insecure_list(RES* ssl, struct worker* worker)
 {
-	char buf[257];
+	char buf[LDNS_MAX_DOMAINLEN];
 	struct trust_anchor* a;
 	if(worker->env.anchors) {
 		RBTREE_FOR(a, struct trust_anchor*, worker->env.anchors->tree) {
@@ -2589,7 +2606,7 @@ get_mesh_status(struct mesh_area* mesh, struct mesh_state* m,
 		}
 	} else if(s == module_wait_subquery) {
 		/* look in subs from mesh state to see what */
-		char nm[257];
+		char nm[LDNS_MAX_DOMAINLEN];
 		struct mesh_state_ref* sub;
 		snprintf(buf, len, "%s wants", modname);
 		l = strlen(buf);
@@ -2619,7 +2636,7 @@ do_dump_requestlist(RES* ssl, struct worker* worker)
 	struct mesh_area* mesh;
 	struct mesh_state* m;
 	int num = 0;
-	char buf[257];
+	char buf[LDNS_MAX_DOMAINLEN];
 	char timebuf[32];
 	char statbuf[10240];
 	if(!ssl_printf(ssl, "thread #%d\n", worker->thread_num))
@@ -2669,7 +2686,7 @@ dump_infra_host(struct lruhash_entry* e, void* arg)
 	struct infra_key* k = (struct infra_key*)e->key;
 	struct infra_data* d = (struct infra_data*)e->data;
 	char ip_str[1024];
-	char name[257];
+	char name[LDNS_MAX_DOMAINLEN];
 	int port;
 	if(a->ssl_failed)
 		return;
@@ -2936,7 +2953,7 @@ static void
 do_list_auth_zones(RES* ssl, struct auth_zones* az)
 {
 	struct auth_zone* z;
-	char buf[257], buf2[256];
+	char buf[LDNS_MAX_DOMAINLEN], buf2[256];
 	lock_rw_rdlock(&az->lock);
 	RBTREE_FOR(z, struct auth_zone*, &az->ztree) {
 		lock_rw_rdlock(&z->lock);
@@ -2966,7 +2983,7 @@ static void
 do_list_local_zones(RES* ssl, struct local_zones* zones)
 {
 	struct local_zone* z;
-	char buf[257];
+	char buf[LDNS_MAX_DOMAINLEN];
 	lock_rw_rdlock(&zones->lock);
 	RBTREE_FOR(z, struct local_zone*, &zones->ztree) {
 		lock_rw_rdlock(&z->lock);
@@ -3077,7 +3094,7 @@ rate_list(struct lruhash_entry* e, void* arg)
 	struct ratelimit_list_arg* a = (struct ratelimit_list_arg*)arg;
 	struct rate_key* k = (struct rate_key*)e->key;
 	struct rate_data* d = (struct rate_data*)e->data;
-	char buf[257];
+	char buf[LDNS_MAX_DOMAINLEN];
 	int lim = infra_find_ratelimit(a->infra, k->name, k->namelen);
 	int max = infra_rate_max(d, a->now, a->backoff);
 	if(a->all == 0) {
@@ -3193,6 +3210,210 @@ static void
 do_rpz_disable(RES* ssl, struct worker* worker, char* arg)
 {
     do_rpz_enable_disable(ssl, worker, arg, 0);
+}
+
+/** Write the cookie secrets to file, returns `0` on failure.
+ * Caller has to hold the lock. */
+static int
+cookie_secret_file_dump(RES* ssl, struct worker* worker) {
+	char const* secret_file = worker->env.cfg->cookie_secret_file;
+	struct cookie_secrets* cookie_secrets = worker->daemon->cookie_secrets;
+	char secret_hex[UNBOUND_COOKIE_SECRET_SIZE * 2 + 1];
+	FILE* f;
+	size_t i;
+	if(secret_file == NULL || secret_file[0]==0) {
+		(void)ssl_printf(ssl, "error: no cookie secret file configured\n");
+		return 0;
+	}
+	log_assert( secret_file != NULL );
+
+	/* open write only and truncate */
+	if((f = fopen(secret_file, "w")) == NULL ) {
+		(void)ssl_printf(ssl, "unable to open cookie secret file %s: %s",
+		                 secret_file, strerror(errno));
+		return 0;
+	}
+	if(cookie_secrets == NULL) {
+		/* nothing to write */
+		fclose(f);
+		return 1;
+	}
+
+	for(i = 0; i < cookie_secrets->cookie_count; i++) {
+		struct cookie_secret const* cs = &cookie_secrets->
+			cookie_secrets[i];
+		ssize_t const len = hex_ntop(cs->cookie_secret,
+			UNBOUND_COOKIE_SECRET_SIZE, secret_hex,
+			sizeof(secret_hex));
+		(void)len; /* silence unused variable warning with -DNDEBUG */
+		log_assert( len == UNBOUND_COOKIE_SECRET_SIZE * 2 );
+		secret_hex[UNBOUND_COOKIE_SECRET_SIZE * 2] = '\0';
+		fprintf(f, "%s\n", secret_hex);
+	}
+	explicit_bzero(secret_hex, sizeof(secret_hex));
+	fclose(f);
+	return 1;
+}
+
+/** Activate cookie secret */
+static void
+do_activate_cookie_secret(RES* ssl, struct worker* worker) {
+	char const* secret_file = worker->env.cfg->cookie_secret_file;
+	struct cookie_secrets* cookie_secrets = worker->daemon->cookie_secrets;
+
+	if(secret_file == NULL || secret_file[0] == 0) {
+		(void)ssl_printf(ssl, "error: no cookie secret file configured\n");
+		return;
+	}
+	if(cookie_secrets == NULL) {
+		(void)ssl_printf(ssl, "error: there are no cookie_secrets.");
+		return;
+	}
+	lock_basic_lock(&cookie_secrets->lock);
+
+	if(cookie_secrets->cookie_count <= 1 ) {
+		lock_basic_unlock(&cookie_secrets->lock);
+		(void)ssl_printf(ssl, "error: no staging cookie secret to activate\n");
+		return;
+	}
+	/* Only the worker 0 writes to file, the others update state. */
+	if(worker->thread_num == 0 && !cookie_secret_file_dump(ssl, worker)) {
+		lock_basic_unlock(&cookie_secrets->lock);
+		(void)ssl_printf(ssl, "error: writing to cookie secret file: \"%s\"\n",
+				secret_file);
+		return;
+	}
+	activate_cookie_secret(cookie_secrets);
+	if(worker->thread_num == 0)
+		(void)cookie_secret_file_dump(ssl, worker);
+	lock_basic_unlock(&cookie_secrets->lock);
+	send_ok(ssl);
+}
+
+/** Drop cookie secret */
+static void
+do_drop_cookie_secret(RES* ssl, struct worker* worker) {
+	char const* secret_file = worker->env.cfg->cookie_secret_file;
+	struct cookie_secrets* cookie_secrets = worker->daemon->cookie_secrets;
+
+	if(secret_file == NULL || secret_file[0] == 0) {
+		(void)ssl_printf(ssl, "error: no cookie secret file configured\n");
+		return;
+	}
+	if(cookie_secrets == NULL) {
+		(void)ssl_printf(ssl, "error: there are no cookie_secrets.");
+		return;
+	}
+	lock_basic_lock(&cookie_secrets->lock);
+
+	if(cookie_secrets->cookie_count <= 1 ) {
+		lock_basic_unlock(&cookie_secrets->lock);
+		(void)ssl_printf(ssl, "error: can not drop the currently active cookie secret\n");
+		return;
+	}
+	/* Only the worker 0 writes to file, the others update state. */
+	if(worker->thread_num == 0 && !cookie_secret_file_dump(ssl, worker)) {
+		lock_basic_unlock(&cookie_secrets->lock);
+		(void)ssl_printf(ssl, "error: writing to cookie secret file: \"%s\"\n",
+				secret_file);
+		return;
+	}
+	drop_cookie_secret(cookie_secrets);
+	if(worker->thread_num == 0)
+		(void)cookie_secret_file_dump(ssl, worker);
+	lock_basic_unlock(&cookie_secrets->lock);
+	send_ok(ssl);
+}
+
+/** Add cookie secret */
+static void
+do_add_cookie_secret(RES* ssl, struct worker* worker, char* arg) {
+	uint8_t secret[UNBOUND_COOKIE_SECRET_SIZE];
+	char const* secret_file = worker->env.cfg->cookie_secret_file;
+	struct cookie_secrets* cookie_secrets = worker->daemon->cookie_secrets;
+
+	if(secret_file == NULL || secret_file[0] == 0) {
+		(void)ssl_printf(ssl, "error: no cookie secret file configured\n");
+		return;
+	}
+	if(cookie_secrets == NULL) {
+		worker->daemon->cookie_secrets = cookie_secrets_create();
+		if(!worker->daemon->cookie_secrets) {
+			(void)ssl_printf(ssl, "error: out of memory");
+			return;
+		}
+		cookie_secrets = worker->daemon->cookie_secrets;
+	}
+	lock_basic_lock(&cookie_secrets->lock);
+
+	if(*arg == '\0') {
+		lock_basic_unlock(&cookie_secrets->lock);
+		(void)ssl_printf(ssl, "error: missing argument (cookie_secret)\n");
+		return;
+	}
+	if(strlen(arg) != 32) {
+		lock_basic_unlock(&cookie_secrets->lock);
+		explicit_bzero(arg, strlen(arg));
+		(void)ssl_printf(ssl, "invalid cookie secret: invalid argument length\n");
+		(void)ssl_printf(ssl, "please provide a 128bit hex encoded secret\n");
+		return;
+	}
+	if(hex_pton(arg, secret, UNBOUND_COOKIE_SECRET_SIZE) !=
+		UNBOUND_COOKIE_SECRET_SIZE ) {
+		lock_basic_unlock(&cookie_secrets->lock);
+		explicit_bzero(secret, UNBOUND_COOKIE_SECRET_SIZE);
+		explicit_bzero(arg, strlen(arg));
+		(void)ssl_printf(ssl, "invalid cookie secret: parse error\n");
+		(void)ssl_printf(ssl, "please provide a 128bit hex encoded secret\n");
+		return;
+	}
+	/* Only the worker 0 writes to file, the others update state. */
+	if(worker->thread_num == 0 && !cookie_secret_file_dump(ssl, worker)) {
+		lock_basic_unlock(&cookie_secrets->lock);
+		explicit_bzero(secret, UNBOUND_COOKIE_SECRET_SIZE);
+		explicit_bzero(arg, strlen(arg));
+		(void)ssl_printf(ssl, "error: writing to cookie secret file: \"%s\"\n",
+				secret_file);
+		return;
+	}
+	add_cookie_secret(cookie_secrets, secret, UNBOUND_COOKIE_SECRET_SIZE);
+	explicit_bzero(secret, UNBOUND_COOKIE_SECRET_SIZE);
+	if(worker->thread_num == 0)
+		(void)cookie_secret_file_dump(ssl, worker);
+	lock_basic_unlock(&cookie_secrets->lock);
+	explicit_bzero(arg, strlen(arg));
+	send_ok(ssl);
+}
+
+/** Print cookie secrets */
+static void
+do_print_cookie_secrets(RES* ssl, struct worker* worker) {
+	struct cookie_secrets* cookie_secrets = worker->daemon->cookie_secrets;
+	char secret_hex[UNBOUND_COOKIE_SECRET_SIZE * 2 + 1];
+	int i;
+
+	if(!cookie_secrets)
+		return; /* Output is empty. */
+	lock_basic_lock(&cookie_secrets->lock);
+	for(i = 0; (size_t)i < cookie_secrets->cookie_count; i++) {
+		struct cookie_secret const* cs = &cookie_secrets->
+			cookie_secrets[i];
+		ssize_t const len = hex_ntop(cs->cookie_secret,
+			UNBOUND_COOKIE_SECRET_SIZE, secret_hex,
+			sizeof(secret_hex));
+		(void)len; /* silence unused variable warning with -DNDEBUG */
+		log_assert( len == UNBOUND_COOKIE_SECRET_SIZE * 2 );
+		secret_hex[UNBOUND_COOKIE_SECRET_SIZE * 2] = '\0';
+		if (i == 0)
+			(void)ssl_printf(ssl, "active : %s\n",  secret_hex);
+		else if (cookie_secrets->cookie_count == 2)
+			(void)ssl_printf(ssl, "staging: %s\n",  secret_hex);
+		else
+			(void)ssl_printf(ssl, "staging[%d]: %s\n", i,
+				secret_hex);
+	}
+	lock_basic_unlock(&cookie_secrets->lock);
+	explicit_bzero(secret_hex, sizeof(secret_hex));
 }
 
 /** check for name with end-of-string, space or tab after it */
@@ -3327,6 +3548,9 @@ execute_cmd(struct daemon_remote* rc, RES* ssl, char* cmd,
 	} else if(cmdcmp(p, "view_local_datas", 16)) {
 		do_view_datas_add(rc, ssl, worker, skipwhite(p+16));
 		return;
+	} else if(cmdcmp(p, "print_cookie_secrets", 20)) {
+		do_print_cookie_secrets(ssl, worker);
+		return;
 	}
 
 #ifdef THREADS_DISABLED
@@ -3391,6 +3615,12 @@ execute_cmd(struct daemon_remote* rc, RES* ssl, char* cmd,
 		do_rpz_enable(ssl, worker, skipwhite(p+10));
 	} else if(cmdcmp(p, "rpz_disable", 11)) {
 		do_rpz_disable(ssl, worker, skipwhite(p+11));
+	} else if(cmdcmp(p, "add_cookie_secret", 17)) {
+		do_add_cookie_secret(ssl, worker, skipwhite(p+17));
+	} else if(cmdcmp(p, "drop_cookie_secret", 18)) {
+		do_drop_cookie_secret(ssl, worker);
+	} else if(cmdcmp(p, "activate_cookie_secret", 22)) {
+		do_activate_cookie_secret(ssl, worker);
 	} else {
 		(void)ssl_printf(ssl, "error unknown command '%s'\n", p);
 	}

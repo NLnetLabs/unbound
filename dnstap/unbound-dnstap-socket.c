@@ -200,18 +200,25 @@ static void tap_data_list_try_to_free_tail(struct tap_data_list* list)
 }
 
 /** delete the tap structure */
-static void tap_data_free(struct tap_data* data)
+static void tap_data_free(struct tap_data* data, int free_tail)
 {
-	ub_event_del(data->ev);
-	ub_event_free(data->ev);
+	if(!data)
+		return;
+	if(data->ev) {
+		ub_event_del(data->ev);
+		ub_event_free(data->ev);
+	}
 #ifdef HAVE_SSL
 	SSL_free(data->ssl);
 #endif
-	close(data->fd);
+	sock_close(data->fd);
 	free(data->id);
 	free(data->frame);
-	data->data_list->d = NULL;
-	tap_data_list_try_to_free_tail(data->data_list);
+	if(data->data_list) {
+		data->data_list->d = NULL;
+		if(free_tail)
+			tap_data_list_try_to_free_tail(data->data_list);
+	}
 	free(data);
 }
 
@@ -237,7 +244,7 @@ static void tap_data_list_delete(struct tap_data_list* list)
 	while(e) {
 		next = e->next;
 		if(e->d) {
-			tap_data_free(e->d);
+			tap_data_free(e->d, 0);
 			e->d = NULL;
 		}
 		free(e);
@@ -260,7 +267,7 @@ static void tap_socket_close(struct tap_socket* s)
 {
 	if(!s) return;
 	if(s->fd == -1) return;
-	close(s->fd);
+	sock_close(s->fd);
 	s->fd = -1;
 }
 
@@ -339,7 +346,8 @@ static struct tap_socket* tap_socket_new_tlsaccept(char* ip,
 	s->fd = -1;
 	s->ev_cb = ev_cb;
 	s->data = data;
-	s->sslctx = listen_sslctx_create(server_key, server_cert, verifypem);
+	s->sslctx = listen_sslctx_create(server_key, server_cert, verifypem,
+		NULL, NULL, 0, 0, 0);
 	if(!s->sslctx) {
 		log_err("could not create ssl context");
 		free(s->ip);
@@ -822,7 +830,6 @@ static int reply_with_accept(struct tap_data* data)
 {
 #ifdef USE_DNSTAP
 	/* len includes the escape and framelength */
-	int r;
 	size_t len = 0;
 	void* acceptframe = fstrm_create_control_frame_accept(
 		DNSTAP_CONTENT_TYPE, &len);
@@ -833,6 +840,8 @@ static int reply_with_accept(struct tap_data* data)
 
 	fd_set_block(data->fd);
 	if(data->ssl) {
+#ifdef HAVE_SSL
+		int r;
 		if((r=SSL_write(data->ssl, acceptframe, len)) <= 0) {
 			int r2;
 			if((r2=SSL_get_error(data->ssl, r)) == SSL_ERROR_ZERO_RETURN)
@@ -843,6 +852,7 @@ static int reply_with_accept(struct tap_data* data)
 			free(acceptframe);
 			return 0;
 		}
+#endif
 	} else {
 		if(send(data->fd, acceptframe, len, 0) == -1) {
 			log_err("send failed: %s", sock_strerror(errno));
@@ -878,6 +888,7 @@ static int reply_with_finish(struct tap_data* data)
 
 	fd_set_block(data->fd);
 	if(data->ssl) {
+#ifdef HAVE_SSL
 		int r;
 		if((r=SSL_write(data->ssl, finishframe, len)) <= 0) {
 			int r2;
@@ -889,6 +900,7 @@ static int reply_with_finish(struct tap_data* data)
 			free(finishframe);
 			return 0;
 		}
+#endif
 	} else {
 		if(send(data->fd, finishframe, len, 0) == -1) {
 			log_err("send failed: %s", sock_strerror(errno));
@@ -988,7 +1000,7 @@ static int tap_handshake(struct tap_data* data)
 			return 0;
 		} else if(r == 0) {
 			/* closed */
-			tap_data_free(data);
+			tap_data_free(data, 1);
 			return 0;
 		} else if(want == SSL_ERROR_SYSCALL) {
 			/* SYSCALL and errno==0 means closed uncleanly */
@@ -1006,7 +1018,7 @@ static int tap_handshake(struct tap_data* data)
 			if(!silent)
 				log_err("SSL_handshake syscall: %s",
 					strerror(errno));
-			tap_data_free(data);
+			tap_data_free(data, 1);
 			return 0;
 		} else {
 			unsigned long err = ERR_get_error();
@@ -1016,7 +1028,7 @@ static int tap_handshake(struct tap_data* data)
 				verbose(VERB_OPS, "ssl handshake failed "
 					"from %s", data->id);
 			}
-			tap_data_free(data);
+			tap_data_free(data, 1);
 			return 0;
 		}
 	}
@@ -1024,7 +1036,7 @@ static int tap_handshake(struct tap_data* data)
 	data->ssl_handshake_done = 1;
 	if(!tap_check_peer(data)) {
 		/* closed */
-		tap_data_free(data);
+		tap_data_free(data, 1);
 		return 0;
 	}
 	return 1;
@@ -1050,7 +1062,7 @@ void dtio_tap_callback(int ATTR_UNUSED(fd), short ATTR_UNUSED(bits), void* arg)
 		if(verbosity>=4) log_info("s recv %d", (int)ret);
 		if(ret == 0) {
 			/* closed or error */
-			tap_data_free(data);
+			tap_data_free(data, 1);
 			return;
 		} else if(ret == -1) {
 			/* continue later */
@@ -1072,7 +1084,7 @@ void dtio_tap_callback(int ATTR_UNUSED(fd), short ATTR_UNUSED(bits), void* arg)
 			data->frame = calloc(1, data->len);
 			if(!data->frame) {
 				log_err("out of memory");
-				tap_data_free(data);
+				tap_data_free(data, 1);
 				return;
 			}
 		}
@@ -1085,7 +1097,7 @@ void dtio_tap_callback(int ATTR_UNUSED(fd), short ATTR_UNUSED(bits), void* arg)
 		if(verbosity>=4) log_info("f recv %d", (int)r);
 		if(r == 0) {
 			/* closed or error */
-			tap_data_free(data);
+			tap_data_free(data, 1);
 			return;
 		} else if(r == -1) {
 			/* continue later */
@@ -1110,13 +1122,13 @@ void dtio_tap_callback(int ATTR_UNUSED(fd), short ATTR_UNUSED(bits), void* arg)
 		data->is_bidirectional = 1;
 		if(verbosity) log_info("bidirectional stream");
 		if(!reply_with_accept(data)) {
-			tap_data_free(data);
+			tap_data_free(data, 1);
 			return;
 		}
 	} else if(data->len >= 4 && sldns_read_uint32(data->frame) ==
 		FSTRM_CONTROL_FRAME_STOP && data->is_bidirectional) {
 		if(!reply_with_finish(data)) {
-			tap_data_free(data);
+			tap_data_free(data, 1);
 			return;
 		}
 	}
@@ -1140,7 +1152,9 @@ void dtio_mainfdcallback(int fd, short ATTR_UNUSED(bits), void* arg)
 	char* id = NULL;
 	struct sockaddr_storage addr;
 	socklen_t addrlen = (socklen_t)sizeof(addr);
-	int s = accept(fd, (struct sockaddr*)&addr, &addrlen);
+	int s;
+	memset(&addr, 0, sizeof(addr));
+	s = accept(fd, (struct sockaddr*)&addr, &addrlen);
 	if(s == -1) {
 #ifndef USE_WINSOCK
 		/* EINTR is signal interrupt. others are closed connection. */
@@ -1396,6 +1410,41 @@ static int internal_unittest()
 	/* clean up */
 	tap_data_list_delete(socket->data_list);
 	free(socket);
+
+	/* Start again. Add two elements */
+	socket = calloc(1, sizeof(*socket));
+	log_assert(socket);
+	for(i=0; i<2; i++) {
+		datas[i] = calloc(1, sizeof(struct tap_data));
+		log_assert(datas[i]);
+		log_assert(tap_data_list_insert(&socket->data_list, datas[i]));
+	}
+	/* sanity base check */
+	list = socket->data_list;
+	for(i=0; list; i++) list = list->next;
+	log_assert(i==2);
+
+	/* Free the last data, tail cannot be erased */
+	list = socket->data_list;
+	while(list->next) list = list->next;
+	free(list->d);
+	list->d = NULL;
+	tap_data_list_try_to_free_tail(list);
+	list = socket->data_list;
+	for(i=0; list; i++) list = list->next;
+	log_assert(i==2);
+
+	/* clean up */
+	tap_data_list_delete(socket->data_list);
+	free(socket);
+
+	if(log_get_lock()) {
+		lock_basic_destroy((lock_basic_type*)log_get_lock());
+	}
+	checklock_stop();
+#ifdef USE_WINSOCK
+	WSACleanup();
+#endif
 	return 0;
 }
 
@@ -1497,8 +1546,8 @@ int main(int argc, char** argv)
 				usage(argv);
 		}
 	}
-	argc -= optind;
-	argv += optind;
+	/* argc -= optind; not using further arguments */
+	/* argv += optind; not using further arguments */
 
 	if(usessl) {
 #ifdef HAVE_SSL
@@ -1527,6 +1576,9 @@ int main(int argc, char** argv)
 	config_delstrlist(tcp_list.first);
 	config_delstrlist(tls_list.first);
 
+	if(log_get_lock()) {
+		lock_basic_destroy((lock_basic_type*)log_get_lock());
+	}
 	checklock_stop();
 #ifdef USE_WINSOCK
 	WSACleanup();
@@ -1734,3 +1786,19 @@ void remote_get_opt_ssl(char* ATTR_UNUSED(str), void* ATTR_UNUSED(arg))
 {
         log_assert(0);
 }
+
+#ifdef HAVE_NGTCP2
+void doq_client_event_cb(int ATTR_UNUSED(fd), short ATTR_UNUSED(ev),
+	void* ATTR_UNUSED(arg))
+{
+	log_assert(0);
+}
+#endif
+
+#ifdef HAVE_NGTCP2
+void doq_client_timer_cb(int ATTR_UNUSED(fd), short ATTR_UNUSED(ev),
+	void* ATTR_UNUSED(arg))
+{
+	log_assert(0);
+}
+#endif

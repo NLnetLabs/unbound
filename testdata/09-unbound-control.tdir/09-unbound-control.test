@@ -73,12 +73,53 @@ control_command () {
 	$PRE/unbound-control $@ > outfile
 }
 
+# Reload the server and check the reload has finished processing
+# when a lot of debug is enabled, a lot of log needs to be printed.
+control_reload () {
+	prelines=`wc -l unbound.log | awk '{print $1;}'`
+	cmd="$1"
+	if test -z "$cmd"; then cmd="reload"; fi
+	control_command -c ub.conf $cmd
+	expect_exit_value 0
+	# see if the reload has completed.
+	lines1=`wc -l unbound.log | awk '{print $1;}'`
+	count=0
+	lines2=`wc -l unbound.log | awk '{print $1;}'`
+	# See if the log finishes up without sleeping too long.
+	while test "$lines1" -ne "$lines2"; do
+		lines1=`wc -l unbound.log | awk '{print $1;}'`
+		# There is no sleep here. The add and compare are a
+		# brief wait.
+		count=`expr "$count" + 1`
+		if test "$count" -gt 30; then
+			break;
+		fi
+		lines2=`wc -l unbound.log | awk '{print $1;}'`
+	done
+	if test "$lines1" -ne "$lines2"; then
+		count=0
+		while test "$lines1" -ne "$lines2"; do
+			tail -1 unbound.log
+			lines1=`wc -l unbound.log | awk '{print $1;}'`
+			sleep 1
+			count=`expr "$count" + 1`
+			if test "$count" -gt 30; then
+				echo "reload is taking too long"
+				exit 1
+			fi
+			lines2=`wc -l unbound.log | awk '{print $1;}'`
+		done
+		if test "$count" -ne "0"; then
+			echo "reload done with $count sec"
+		fi
+	fi
+}
+
 # Reload the server for a clean state
 clean_reload () {
 	echo "> Reloading the server for a clean state"
 	cp main.conf ub.conf
-	control_command -c ub.conf reload
-	expect_exit_value 0
+	control_reload
 }
 
 # Reload the server for a clean state and populate the cache
@@ -175,8 +216,7 @@ expect_exit_value 1
 # local-data element in the server.
 teststep "reload the server"
 echo "server: local-data: 'afterreload. IN A 5.6.7.8'" >> ub.conf
-control_command -c ub.conf reload
-expect_exit_value 0
+control_reload
 query afterreload.
 expect_answer "5.6.7.8"
 
@@ -336,16 +376,14 @@ fi
 clean_reload_and_fill_cache
 
 teststep "reload and check cache - should be empty"
-control_command -c ub.conf reload
-expect_exit_value 0
+control_reload
 query www.example.com +nordflag
 fail_answer "10.20.30.40"
 
 clean_reload_and_fill_cache
 
 teststep "reload_keep_cache and check cache - should not be empty"
-control_command -c ub.conf reload_keep_cache
-expect_exit_value 0
+control_reload reload_keep_cache
 query www.example.com +nordflag
 expect_answer "10.20.30.40"
 
@@ -353,8 +391,7 @@ clean_reload_and_fill_cache
 
 teststep "change msg-cache-size and reload_keep_cache - should be empty"
 echo "server: msg-cache-size: 2m" >> ub.conf
-control_command -c ub.conf reload_keep_cache
-expect_exit_value 0
+control_reload reload_keep_cache
 query www.example.com +nordflag
 fail_answer "10.20.30.40"
 
@@ -362,8 +399,7 @@ clean_reload_and_fill_cache
 
 teststep "change rrset-cache-size and reload_keep_cache - should be empty"
 echo "server: rrset-cache-size: 2m" >> ub.conf
-control_command -c ub.conf reload_keep_cache
-expect_exit_value 0
+control_reload reload_keep_cache
 query www.example.com +nordflag
 fail_answer "10.20.30.40"
 
@@ -375,8 +411,7 @@ clean_reload_and_fill_cache
 
 teststep "change num-threads and reload_keep_cache - should be empty"
 echo "server: num-threads: 2" >> ub.conf
-control_command -c ub.conf reload_keep_cache
-expect_exit_value 0
+control_reload reload_keep_cache
 query www.example.com +nordflag
 fail_answer "10.20.30.40"
 
@@ -384,8 +419,7 @@ clean_reload_and_fill_cache
 
 teststep "change minimal-responses and reload_keep_cache - should not be empty"
 echo "server: minimal-responses: no" >> ub.conf
-control_command -c ub.conf reload_keep_cache
-expect_exit_value 0
+control_reload reload_keep_cache
 query www.example.com +nordflag
 expect_answer "10.20.30.40"
 

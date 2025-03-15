@@ -181,7 +181,7 @@ hints_insert(struct iter_hints* hints, uint16_t c, struct delegpt* dp,
 	node->noprime = (uint8_t)noprime;
 	if(!name_tree_insert(&hints->tree, &node->node, dp->name, dp->namelen,
 		dp->namelabs, c)) {
-		char buf[257];
+		char buf[LDNS_MAX_DOMAINLEN];
 		dname_str(dp->name, buf);
 		log_err("second hints for zone %s ignored.", buf);
 		delegpt_free_mlc(dp);

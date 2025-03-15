@@ -58,6 +58,8 @@ struct ub_randstate;
 struct daemon_remote;
 struct respip_set;
 struct shm_main_info;
+struct doq_table;
+struct cookie_secrets;
 
 #include "dnstap/dnstap_config.h"
 #ifdef USE_DNSTAP
@@ -95,8 +97,14 @@ struct daemon {
 	struct listen_port* rc_ports;
 	/** remote control connections management (for first worker) */
 	struct daemon_remote* rc;
-	/** ssl context for listening to dnstcp over ssl, and connecting ssl */
-	void* listen_sslctx, *connect_sslctx;
+	/** ssl context for listening to dnstcp over ssl */
+	void* listen_dot_sslctx;
+	/** ssl context for connecting to dnstcp over ssl */
+	void* connect_dot_sslctx;
+	/** ssl context for listening to DoH */
+	void* listen_doh_sslctx;
+	/** ssl context for listening to quic */
+	void* listen_quic_sslctx;
 	/** num threads allocated */
 	int num;
 	/** num threads allocated in the previous config or 0 at first */
@@ -146,8 +154,12 @@ struct daemon {
 	/** the dnscrypt environment */
 	struct dnsc_env* dnscenv;
 #endif
+	/** the doq connection table */
+	struct doq_table* doq_table;
 	/** reuse existing cache on reload if other conditions allow it. */
 	int reuse_cache;
+	/** the EDNS cookie secrets from the cookie-secret-file */
+	struct cookie_secrets* cookie_secrets;
 };
 
 /**

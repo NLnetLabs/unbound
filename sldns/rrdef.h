@@ -229,6 +229,8 @@ enum sldns_enum_rr_type
 	LDNS_RR_TYPE_CAA = 257, /* RFC 6844 */
 	LDNS_RR_TYPE_AVC = 258,
 
+	LDNS_RR_TYPE_RESINFO = 261, /* RFC 9606 */
+
 	/** DNSSEC Trust Authorities */
 	LDNS_RR_TYPE_TA = 32768,
 	/* RFC 4431, 5074, DNSSEC Lookaside Validation */

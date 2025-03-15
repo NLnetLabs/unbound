@@ -52,24 +52,6 @@
 #include "util/config_file.h"
 #include "iterator/iterator.h"
 
-/** Timeout when only a single probe query per IP is allowed. */
-#define PROBE_MAXRTO 12000 /* in msec */
-
-/** number of timeouts for a type when the domain can be blocked ;
- * even if another type has completely rtt maxed it, the different type
- * can do this number of packets (until those all timeout too) */
-#define TIMEOUT_COUNT_MAX 3
-
-/** Minus 1000 because that is outside of the RTTBAND, so
- * blacklisted servers stay blacklisted if this is chosen.
- * If USEFUL_SERVER_TOP_TIMEOUT is below 1000 (configured via RTT_MAX_TIMEOUT,
- * infra-cache-max-rtt) change it to just above the RTT_BAND. */
-#define STILL_USEFUL_TIMEOUT (				\
-	USEFUL_SERVER_TOP_TIMEOUT < 1000 ||		\
-	USEFUL_SERVER_TOP_TIMEOUT - 1000 <= RTT_BAND	\
-		?RTT_BAND + 1				\
-		:USEFUL_SERVER_TOP_TIMEOUT - 1000)
-
 /** ratelimit value for delegation point */
 int infra_dp_ratelimit = 0;
 
@@ -81,6 +63,20 @@ int infra_ip_ratelimit = 0;
  *  in queries per second.
  *  For clients with a valid DNS Cookie. */
 int infra_ip_ratelimit_cookie = 0;
+
+/** Minus 1000 because that is outside of the RTTBAND, so
+ * blacklisted servers stay blacklisted if this is chosen.
+ * If USEFUL_SERVER_TOP_TIMEOUT is below 1000 (configured via RTT_MAX_TIMEOUT,
+ * infra-cache-max-rtt) change it to just above the RTT_BAND. */
+int
+still_useful_timeout()
+{
+	return
+	USEFUL_SERVER_TOP_TIMEOUT < 1000 ||
+	USEFUL_SERVER_TOP_TIMEOUT - 1000 <= RTT_BAND
+		?RTT_BAND + 1
+		:USEFUL_SERVER_TOP_TIMEOUT - 1000;
+}
 
 size_t 
 infra_sizefunc(void* k, void* ATTR_UNUSED(d))
@@ -668,7 +664,7 @@ infra_update_tcp_works(struct infra_cache* infra,
 	if(data->rtt.rto >= RTT_MAX_TIMEOUT)
 		/* do not disqualify this server altogether, it is better
 		 * than nothing */
-		data->rtt.rto = STILL_USEFUL_TIMEOUT;
+		data->rtt.rto = still_useful_timeout();
 	lock_rw_unlock(&e->lock);
 }
 
@@ -808,7 +804,7 @@ infra_get_lame_rtt(struct infra_cache* infra,
 		&& infra->infra_keep_probing) {
 		/* single probe, keep probing */
 		if(*rtt >= USEFUL_SERVER_TOP_TIMEOUT)
-			*rtt = STILL_USEFUL_TIMEOUT;
+			*rtt = still_useful_timeout();
 	} else if(host->rtt.rto >= PROBE_MAXRTO && timenow < host->probedelay
 		&& rtt_notimeout(&host->rtt)*4 <= host->rtt.rto) {
 		/* single probe for this domain, and we are not probing */
@@ -816,15 +812,15 @@ infra_get_lame_rtt(struct infra_cache* infra,
 		if(qtype == LDNS_RR_TYPE_A) {
 			if(host->timeout_A >= TIMEOUT_COUNT_MAX)
 				*rtt = USEFUL_SERVER_TOP_TIMEOUT;
-			else	*rtt = STILL_USEFUL_TIMEOUT;
+			else	*rtt = still_useful_timeout();
 		} else if(qtype == LDNS_RR_TYPE_AAAA) {
 			if(host->timeout_AAAA >= TIMEOUT_COUNT_MAX)
 				*rtt = USEFUL_SERVER_TOP_TIMEOUT;
-			else	*rtt = STILL_USEFUL_TIMEOUT;
+			else	*rtt = still_useful_timeout();
 		} else {
 			if(host->timeout_other >= TIMEOUT_COUNT_MAX)
 				*rtt = USEFUL_SERVER_TOP_TIMEOUT;
-			else	*rtt = STILL_USEFUL_TIMEOUT;
+			else	*rtt = still_useful_timeout();
 		}
 	}
 	/* expired entry */
@@ -832,7 +828,7 @@ infra_get_lame_rtt(struct infra_cache* infra,
 		/* see if this can be a re-probe of an unresponsive server */
 		if(host->rtt.rto >= USEFUL_SERVER_TOP_TIMEOUT) {
 			lock_rw_unlock(&e->lock);
-			*rtt = STILL_USEFUL_TIMEOUT;
+			*rtt = still_useful_timeout();
 			*lame = 0;
 			*dnsseclame = 0;
 			*reclame = 0;
@@ -1081,7 +1077,8 @@ int infra_ratelimit_inc(struct infra_cache* infra, uint8_t* name,
 		lock_rw_unlock(&entry->lock);
 
 		if(premax <= lim && max > lim) {
-			char buf[257], qnm[257], ts[12], cs[12], ip[128];
+			char buf[LDNS_MAX_DOMAINLEN], qnm[LDNS_MAX_DOMAINLEN];
+			char ts[12], cs[12], ip[128];
 			dname_str(name, buf);
 			dname_str(qinfo->qname, qnm);
 			sldns_wire2str_type_buf(qinfo->qtype, ts, sizeof(ts));

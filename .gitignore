@@ -36,6 +36,7 @@
 /asynclook
 /delayer
 /dohclient
+/doqclient
 /lock-verify
 /memstats
 /perf
