@@ -45,6 +45,7 @@
 #include "config.h"
 #include "services/mesh.h"
 #include "services/outbound_list.h"
+#include "services/outside_network.h"
 #include "services/cache/dns.h"
 #include "services/cache/rrset.h"
 #include "services/cache/infra.h"
@@ -1522,6 +1523,26 @@ void mesh_query_done(struct mesh_state* mstate)
 			char* err = errinf_to_str_servfail(&mstate->s);
 			if(err) { log_err("%s", err); }
 		}
+	}
+	if(mstate->reply_list && rep) {
+		uint8_t data[8192];
+		struct sldns_buffer dest;
+		int i;
+
+		sldns_buffer_init_frm_data(&dest, data, sizeof(data));
+		reply_info_answer_encode(&mstate->s.qinfo, rep, 0 /* id */,
+				0 /* qflags */, &dest, 0 /* current time */,
+				1 /* cached */, mstate->s.env->scratch,
+				sizeof(data) /* udpsize */, NULL /* edns */,
+				1 /* dnssec */, 0 /* secure */);
+		log_err("Answer to be send to other unbounds, size: %d",
+				(int)sldns_buffer_limit(&dest));
+		for(i = 0; i < mstate->s.env->outnet->num_dist; i++) {
+			if(mstate->s.env->outnet->dist[i] != -1)
+				send(mstate->s.env->outnet->dist[i],
+					data, sldns_buffer_limit(&dest), 0);
+		}
+			
 	}
 	for(r = mstate->reply_list; r; r = r->next) {
 		struct timeval old;

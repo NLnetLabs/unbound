@@ -2253,7 +2253,7 @@ worker_init(struct worker* worker, struct config_file *cfg,
 		worker->daemon->connect_dot_sslctx, cfg->delay_close,
 		cfg->tls_use_sni, dtenv, cfg->udp_connect,
 		cfg->max_reuse_tcp_queries, cfg->tcp_reuse_timeout,
-		cfg->tcp_auth_query_timeout);
+		cfg->tcp_auth_query_timeout, cfg->dist, cfg->num_dist);
 	if(!worker->back) {
 		log_err("could not create outgoing sockets");
 		worker_delete(worker);

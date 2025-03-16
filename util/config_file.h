@@ -244,6 +244,11 @@ struct config_file {
 	/** interface description strings (IP addresses) */
 	char **ifs;
 
+	/** number of addresses to distribute new responses. */
+	int num_dist;
+	/** distribute description strings (IP addresses) */
+	char **dist;
+
 	/** number of outgoing interfaces to open.
 	 * If 0 default all interfaces. */
 	int num_out_ifs;

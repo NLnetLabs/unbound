@@ -217,6 +217,8 @@ config_create(void)
 	cfg->ip_dscp = 0;
 	cfg->num_ifs = 0;
 	cfg->ifs = NULL;
+	cfg->num_dist = 0;
+	cfg->dist = NULL;
 	cfg->num_out_ifs = 0;
 	cfg->out_ifs = NULL;
 	cfg->stubs = NULL;
@@ -1090,6 +1092,7 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_YNO(opt, "log-time-iso", log_time_iso)
 	else O_DEC(opt, "num-threads", num_threads)
 	else O_IFC(opt, "interface", num_ifs, ifs)
+	else O_IFC(opt, "distribute", num_dist, dist)
 	else O_IFC(opt, "outgoing-interface", num_out_ifs, out_ifs)
 	else O_YNO(opt, "interface-automatic", if_automatic)
 	else O_STR(opt, "interface-automatic-ports", if_automatic_ports)
@@ -1692,6 +1695,7 @@ config_delete(struct config_file* cfg)
 		free(cfg->log_identity);
 	}
 	config_del_strarray(cfg->ifs, cfg->num_ifs);
+	config_del_strarray(cfg->dist, cfg->num_dist);
 	config_del_strarray(cfg->out_ifs, cfg->num_out_ifs);
 	config_delstubs(cfg->stubs);
 	config_delstubs(cfg->forwards);

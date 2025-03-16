@@ -1678,7 +1678,7 @@ outside_network_create(struct comm_base *base, size_t bufsize,
 	void (*unwanted_action)(void*), void* unwanted_param, int do_udp,
 	void* sslctx, int delayclose, int tls_use_sni, struct dt_env* dtenv,
 	int udp_connect, int max_reuse_tcp_queries, int tcp_reuse_timeout,
-	int tcp_auth_query_timeout)
+	int tcp_auth_query_timeout, char** dist, int num_dist)
 {
 	struct outside_network* outnet = (struct outside_network*)
 		calloc(1, sizeof(struct outside_network));
@@ -1817,6 +1817,27 @@ outside_network_create(struct comm_base *base, size_t bufsize,
 				}
 				done_4++;
 			}
+		}
+	}
+	if (!(outnet->num_dist = num_dist))
+		outnet->dist = NULL;
+	else if ((outnet->dist = calloc(num_dist, sizeof(int)))) {
+		int i;
+
+		for(i = 0; i < num_dist; i++) {
+			struct sockaddr_storage addr;
+			socklen_t addrlen;
+			int s = -1;
+
+			if(!extstrtoaddr(dist[i], &addr, &addrlen, UNBOUND_DNS_PORT)
+			|| (s = socket(addr.ss_family, SOCK_DGRAM, 0)) == -1
+			|| !fd_set_nonblock(s)
+			|| connect(s, (struct sockaddr*)&addr, addrlen)) {
+				if(s != -1)
+					close(s);
+				s = -1;
+			}
+			outnet->dist[i] = s;
 		}
 	}
 	return outnet;
