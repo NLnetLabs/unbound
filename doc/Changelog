@@ -1,3 +1,7 @@
+16 March 2025: Yorgos
+	- Fix 'unbound-control flush_negative' when reporting removed data;
+	  reported by David 'eqvinox' Lamparter.
+
 28 February 2025: Wouter
 	- Merge #1238: Prefer SOURCE_DATE_EPOCH over actual time.
 	  Add --help output description for the SOURCE_DATE_EPOCH variable.

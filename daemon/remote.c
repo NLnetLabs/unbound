@@ -1950,7 +1950,7 @@ bogus_del_rrset(struct lruhash_entry* e, void* arg)
 	/* entry is locked */
 	struct del_info* inf = (struct del_info*)arg;
 	struct packed_rrset_data* d = (struct packed_rrset_data*)e->data;
-	if(d->security == sec_status_bogus) {
+	if(d->security == sec_status_bogus && d->ttl > inf->expired) {
 		d->ttl = inf->expired;
 		inf->num_rrsets++;
 	}
@@ -1963,7 +1963,7 @@ bogus_del_msg(struct lruhash_entry* e, void* arg)
 	/* entry is locked */
 	struct del_info* inf = (struct del_info*)arg;
 	struct reply_info* d = (struct reply_info*)e->data;
-	if(d->security == sec_status_bogus) {
+	if(d->security == sec_status_bogus && d->ttl > inf->expired) {
 		d->ttl = inf->expired;
 		d->prefetch_ttl = inf->expired;
 		d->serve_expired_ttl = inf->expired;
@@ -1983,7 +1983,7 @@ bogus_del_kcache(struct lruhash_entry* e, void* arg)
 	/* entry is locked */
 	struct del_info* inf = (struct del_info*)arg;
 	struct key_entry_data* d = (struct key_entry_data*)e->data;
-	if(d->isbad) {
+	if(d->isbad && d->ttl > inf->expired) {
 		d->ttl = inf->expired;
 		inf->num_keys++;
 	}
@@ -2032,7 +2032,8 @@ negative_del_rrset(struct lruhash_entry* e, void* arg)
 	/* delete the parentside negative cache rrsets,
 	 * these are nameserver rrsets that failed lookup, rdata empty */
 	if((k->rk.flags & PACKED_RRSET_PARENT_SIDE) && d->count == 1 &&
-		d->rrsig_count == 0 && d->rr_len[0] == 0) {
+		d->rrsig_count == 0 && d->rr_len[0] == 0 &&
+		d->ttl > inf->expired) {
 		d->ttl = inf->expired;
 		inf->num_rrsets++;
 	}
@@ -2047,7 +2048,8 @@ negative_del_msg(struct lruhash_entry* e, void* arg)
 	struct reply_info* d = (struct reply_info*)e->data;
 	/* rcode not NOERROR: NXDOMAIN, SERVFAIL, ..: an nxdomain or error
 	 * or NOERROR rcode with ANCOUNT==0: a NODATA answer */
-	if(FLAGS_GET_RCODE(d->flags) != 0 || d->an_numrrsets == 0) {
+	if((FLAGS_GET_RCODE(d->flags) != 0 || d->an_numrrsets == 0) &&
+		d->ttl > inf->expired) {
 		d->ttl = inf->expired;
 		d->prefetch_ttl = inf->expired;
 		d->serve_expired_ttl = inf->expired;
@@ -2069,7 +2071,7 @@ negative_del_kcache(struct lruhash_entry* e, void* arg)
 	struct key_entry_data* d = (struct key_entry_data*)e->data;
 	/* could be bad because of lookup failure on the DS, DNSKEY, which
 	 * was nxdomain or servfail, and thus a result of negative lookups */
-	if(d->isbad) {
+	if(d->isbad && d->ttl > inf->expired) {
 		d->ttl = inf->expired;
 		inf->num_keys++;
 	}
