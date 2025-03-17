@@ -43,6 +43,7 @@
 #include "util/log.h"
 #include "util/net_help.h"
 #include "util/random.h"
+#include "util/tsig.h"
 #include "daemon/worker.h"
 #include "daemon/daemon.h"
 #include "daemon/remote.h"
@@ -1519,7 +1520,13 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 	if (check_result.value == RESPONSE_MESSAGE) {
 		struct reply_info *rep = NULL;
 		int r;
+		const char* tsig_name = "\x19" "foobar-example-dyn-update\x00";
+		const size_t tsig_name_len = 27;
+		const char* tsig_secret =
+			"\x59\x2E\xD3\xD0\x84\xA8\x69\x5F\x8C\xCA\x07\xBE\x1B\xFC\x1E\x98\x74\xE7\xF6\x64\x30\x32\x10\xC6\x33\x09\x93\x94\x9D\xF1\x71\x74\x42\x27\xAB\xF5\x11\x59\x0D\x2E\x52\x2F\xBD\xA8\x7E\xD9\xEA\xD6\x8F\x3D\x6F\xD2\x60\x56\xD8\xD3\xCA\x02\xB7\x16\x1C\x43\x6D\xB8";
+		const size_t tsig_secret_len = 64;
 
+		log_err("RESPONSE received");
 		if (!worker_check_response(c->buffer, worker)) {
 			log_err("Not a suitable response to cache");
 			comm_point_drop_reply(repinfo);
@@ -1528,6 +1535,12 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 		if((r = reply_info_parse(c->buffer, worker->env.alloc, &qinfo,
 				&rep, worker->scratchpad, &edns))) {
 			log_err("bad response. Will not cache it (%d)", r);
+			comm_point_drop_reply(repinfo);
+			return 0;
+		}
+		if((r = tsig_verify(c->buffer, tsig_name, tsig_name_len,
+						tsig_secret, tsig_secret_len))) {
+			log_err("response had wrong TSIG. Will not cache it (%d)", r);
 			comm_point_drop_reply(repinfo);
 			return 0;
 		}
