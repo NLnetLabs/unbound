@@ -1,3 +1,7 @@
+17 March 2025: Wouter
+	- Fix representation of types GPOS and RESINFO, add rdf type for
+	  unquoted str.
+
 16 March 2025: Yorgos
 	- Fix 'unbound-control flush_negative' when reporting removed data;
 	  reported by David 'eqvinox' Lamparter.
