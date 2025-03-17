@@ -46,11 +46,12 @@
 #include "util/rbtree.h"
 #include "util/locks.h"
 #include "daemon/acl_list.h"
-#include <coap3/coap_resource.h>
 #ifdef HAVE_NGHTTP2_NGHTTP2_H
 #include <nghttp2/nghttp2.h>
 #endif
+#ifdef HAVE_COAP
 #include <coap3/coap.h>
+#endif	/* HAVE COAP */
 #ifdef HAVE_NGTCP2
 #include <ngtcp2/ngtcp2.h>
 #include <ngtcp2/ngtcp2_crypto.h>
@@ -93,13 +94,6 @@ struct listen_list {
 };
 
 
-enum CoAPSecurityMode {
-	CoAPSecurityMode_Unencrypted,
-	CoAPSecurityMode_DTLS,
-	CoAPSecurityMode_OSCORE,
-	CoAPSecuirtyMode_COAP_NOT_USED
-};
-
 /**
  * type of ports
  */
@@ -122,8 +116,10 @@ enum listen_type {
 	listen_type_http,
 	/** DNS over QUIC */
 	listen_type_doq,
-	/** COAP over UDP **/
-	listen_type_coap
+	/** DNS over CoAP over UDP */
+	listen_type_doc,
+	/** DNS over CoAP over DTLS over UDP */
+	listen_type_docs,
 };
 
 
@@ -141,6 +137,10 @@ struct unbound_socket {
 	int fam;
 	/** ACL on the socket (listening interface) */
 	struct acl_addr* acl;
+#ifdef HAVE_COAP
+	/** libcoap endpoint */
+	coap_endpoint_t* coap_ep;
+#endif	/* HAVE_COAP */
 };
 
 /**
@@ -159,8 +159,10 @@ struct listen_port {
 	/** fill in unbound_socket structure for every opened socket at
 	 * Unbound startup */
 	struct unbound_socket* socket;
-	/** coap context **/
-	coap_context_t* context;
+#ifdef HAVE_COAP
+	/** libcoap context */
+	coap_context_t* coap_context;
+#endif	/* HAVE_COAP */
 };
 
 void free_pdu_response_data(struct pdu_response_data* data);
@@ -299,8 +301,7 @@ void listen_start_accept(struct listen_dnsport* listen);
  */
 int create_udp_sock(int family, int socktype, struct sockaddr* addr, 
 	socklen_t addrlen, int v6only, int* inuse, int* noproto, int rcv,
-	int snd, int listen, int* reuseport, int transparent, int freebind, int use_systemd, int dscp,
-	coap_context_t* context, enum listen_type ftype, enum CoAPSecurityMode coap_sec_mode);
+	int snd, int listen, int* reuseport, int transparent, int freebind, int use_systemd, int dscp);
 
 /**
  * Create and bind TCP listening socket

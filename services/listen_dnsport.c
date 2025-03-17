@@ -39,7 +39,6 @@
  * This file has functions to get queries from clients.
  */
 #include "config.h"
-#include <string.h>
 #ifdef HAVE_SYS_TYPES_H
 #  include <sys/types.h>
 #endif
@@ -108,8 +107,10 @@
 #ifdef HAVE_LINUX_NET_TSTAMP_H
 #include <linux/net_tstamp.h>
 #endif
-#include "util/ub_event.h"
+
+#ifdef HAVE_COAP
 #include <coap3/coap.h>
+#endif	/* HAVE_COAP */
 
 /** number of queued TCP connections for listen() */
 #define TCP_BACKLOG 256
@@ -134,11 +135,6 @@ static int http2_query_buffer_lock_inited = 0;
 static size_t http2_response_buffer_count = 0;
 /** is the lock initialised for HTTP2 response buffers */
 static int http2_response_buffer_lock_inited = 0;
-
-static int
-setup_server_context(coap_context_t** context, const uint8_t* key, unsigned key_len, const char* hint);
-static void
-setup_endpoint(coap_context_t* context, coap_endpoint_t** endpoint, int port, coap_proto_t protocol_type);
 
 /**
  * Debug print of the getaddrinfo returned address.
@@ -251,7 +247,7 @@ int
 create_udp_sock(int family, int socktype, struct sockaddr* addr,
         socklen_t addrlen, int v6only, int* inuse, int* noproto,
 	int rcv, int snd, int listen, int* reuseport, int transparent,
-	int freebind, int use_systemd, int dscp, coap_context_t* context, enum listen_type ftype, enum CoAPSecurityMode coap_sec_mode)
+	int freebind, int use_systemd, int dscp)
 {
 	int s;
 	char* err;
@@ -286,40 +282,23 @@ create_udp_sock(int family, int socktype, struct sockaddr* addr,
 #else
 	(void)use_systemd;
 #endif
-	int port;
-	if (ftype == listen_type_udp) {
-		if((s = socket(family, socktype, 0)) == -1) {
-			*inuse = 0;
+	if((s = socket(family, socktype, 0)) == -1) {
+		*inuse = 0;
 #ifndef USE_WINSOCK
-			if(errno == EAFNOSUPPORT || errno == EPROTONOSUPPORT) {
-				*noproto = 1;
-				return -1;
-			}
-#else
-			if(WSAGetLastError() == WSAEAFNOSUPPORT ||
-					WSAGetLastError() == WSAEPROTONOSUPPORT) {
-				*noproto = 1;
-				return -1;
-			}
-#endif
-			log_err("can't create socket: %s", sock_strerror(errno));
-			*noproto = 0;
+		if(errno == EAFNOSUPPORT || errno == EPROTONOSUPPORT) {
+			*noproto = 1;
 			return -1;
 		}
-	} else if (ftype == listen_type_coap) {
-		struct sockaddr_in *addr_in = (struct sockaddr_in *)addr;
-		port = ntohs(addr_in->sin_port);
-
-		if(coap_sec_mode == CoAPSecurityMode_Unencrypted) {
-			coap_endpoint_t* endpoint_unencrypted;
-			setup_endpoint(context, &endpoint_unencrypted, port, COAP_PROTO_UDP);
-			s = coap_context_get_coap_fd(context);
-		} else if (coap_sec_mode == CoAPSecurityMode_DTLS) {
-			coap_endpoint_t* endpoint_dtls;
-			setup_endpoint(context, &endpoint_dtls, port, COAP_PROTO_DTLS);
-			s = coap_context_get_coap_fd(context);
+#else
+		if(WSAGetLastError() == WSAEAFNOSUPPORT ||
+			WSAGetLastError() == WSAEPROTONOSUPPORT) {
+			*noproto = 1;
+			return -1;
 		}
-		return s;
+#endif
+		log_err("can't create socket: %s", sock_strerror(errno));
+		*noproto = 0;
+		return -1;
 	}
 #ifdef HAVE_SYSTEMD
 	} else {
@@ -1066,19 +1045,12 @@ err:
 #endif
 }
 
-
-/**
- * Create socket from getaddrinfo results
- */
-static int
-make_sock(int stype, const char* ifname, int port,
-	struct addrinfo *hints, int v6only, int* noip6, size_t rcv, size_t snd,
-	int* reuseport, int transparent, int tcp_mss, int nodelay, int freebind,
-	int use_systemd, int dscp, struct unbound_socket* ub_sock,
-	const char *additional, coap_context_t* context, enum listen_type ftype, enum CoAPSecurityMode coap_sec_mode)
+static struct addrinfo*
+addrinfo_from_ifname_port(int stype, const char* ifname, int port,
+	struct addrinfo *hints, int *noip6)
 {
-	struct addrinfo *res = NULL;
-	int r, s, inuse, noproto;
+	struct addrinfo* res = NULL;
+	int r;
 	char portbuf[32];
 	snprintf(portbuf, sizeof(portbuf), "%d", port);
 	hints->ai_socktype = stype;
@@ -1087,7 +1059,7 @@ make_sock(int stype, const char* ifname, int port,
 #ifdef USE_WINSOCK
 		if(r == EAI_NONAME && hints->ai_family == AF_INET6){
 			*noip6 = 1; /* 'Host not found' for IP6 on winXP */
-			return -1;
+			return NULL;
 		}
 #endif
 		log_err("node %s:%s getaddrinfo: %s %s",
@@ -1098,30 +1070,58 @@ make_sock(int stype, const char* ifname, int port,
 			""
 #endif
 		);
+		return NULL;
+	}
+	if(!res->ai_addr) {
+		log_err("getaddrinfo returned no address");
+		freeaddrinfo(res);
+		return NULL;
+	}
+	return res;
+}
+
+static int
+init_sock(struct unbound_socket* ub_sock, struct addrinfo *ai, int sock_fd)
+{
+
+	ub_sock->addr = memdup(ai->ai_addr, ai->ai_addrlen);
+	if(!ub_sock->addr) {
+		return -1;
+	}
+	ub_sock->addrlen = ai->ai_addrlen;
+
+	ub_sock->s = sock_fd;
+	ub_sock->fam = ai->ai_family;
+	ub_sock->acl = NULL;
+	return 0;
+}
+
+/**
+ * Create socket from getaddrinfo results
+ */
+static int
+make_sock(int stype, const char* ifname, int port,
+	struct addrinfo *hints, int v6only, int* noip6, size_t rcv, size_t snd,
+	int* reuseport, int transparent, int tcp_mss, int nodelay, int freebind,
+	int use_systemd, int dscp, struct unbound_socket* ub_sock,
+	const char *additional)
+{
+	struct addrinfo* res = addrinfo_from_ifname_port(stype, ifname, port, hints, noip6);
+	int s, inuse, noproto;
+
+	if (res == NULL) {
 		return -1;
 	}
 	if(stype == SOCK_DGRAM) {
 		verbose_print_addr(res, additional);
-		if (ftype == listen_type_coap) {
-			s = create_udp_sock(res->ai_family, res->ai_socktype,
-				(struct sockaddr*)res->ai_addr, res->ai_addrlen,
-				v6only, &inuse, &noproto, (int)rcv, (int)snd, 1,
-				reuseport, transparent, freebind, use_systemd, dscp, context, listen_type_coap, coap_sec_mode);
-			if(s == -1 && inuse) {
-				log_err("bind: address already in use");
-			} else if(s == -1 && noproto && hints->ai_family == AF_INET6){
-				*noip6 = 1;
-			}
-		} else if (ftype == listen_type_udp) {
-			s = create_udp_sock(res->ai_family, res->ai_socktype,
-				(struct sockaddr*)res->ai_addr, res->ai_addrlen,
-				v6only, &inuse, &noproto, (int)rcv, (int)snd, 1,
-				reuseport, transparent, freebind, use_systemd, dscp, NULL, listen_type_udp, CoAPSecuirtyMode_COAP_NOT_USED);
-			if(s == -1 && inuse) {
-				log_err("bind: address already in use");
-			} else if(s == -1 && noproto && hints->ai_family == AF_INET6){
-				*noip6 = 1;
-			}
+		s = create_udp_sock(res->ai_family, res->ai_socktype,
+			(struct sockaddr*)res->ai_addr, res->ai_addrlen,
+			v6only, &inuse, &noproto, (int)rcv, (int)snd, 1,
+			reuseport, transparent, freebind, use_systemd, dscp);
+		if(s == -1 && inuse) {
+			log_err("bind: address already in use");
+		} else if(s == -1 && noproto && hints->ai_family == AF_INET6){
+			*noip6 = 1;
 		}
 	} else	{
 		s = create_tcp_accept_sock(res, v6only, &noproto, reuseport,
@@ -1132,15 +1132,7 @@ make_sock(int stype, const char* ifname, int port,
 		}
 	}
 
-	if(!res->ai_addr) {
-		log_err("getaddrinfo returned no address");
-		freeaddrinfo(res);
-		sock_close(s);
-		return -1;
-	}
-	ub_sock->addr = memdup(res->ai_addr, res->ai_addrlen);
-	ub_sock->addrlen = res->ai_addrlen;
-	if(!ub_sock->addr) {
+	if(init_sock(ub_sock, res, s) == -1) {
 		log_err("out of memory: allocate listening address");
 		freeaddrinfo(res);
 		sock_close(s);
@@ -1148,11 +1140,20 @@ make_sock(int stype, const char* ifname, int port,
 	}
 	freeaddrinfo(res);
 
-	ub_sock->s = s;
-	ub_sock->fam = hints->ai_family;
-	ub_sock->acl = NULL;
-
 	return s;
+}
+
+static int
+port_from_ifname(const char* ifname, const char* port_str, char *newif, size_t newif_size)
+{
+	int port;
+	port = atoi(port_str);
+	if(port < 0 || 0 == port || port > 65535) {
+		log_err("invalid portnumber in interface: %s", ifname);
+		return -1;
+	}
+	(void)strlcpy(newif, ifname, newif_size);
+	return port;
 }
 
 /** make socket and first see if ifname contains port override info */
@@ -1161,7 +1162,7 @@ make_sock_port(int stype, const char* ifname, int port,
 	struct addrinfo *hints, int v6only, int* noip6, size_t rcv, size_t snd,
 	int* reuseport, int transparent, int tcp_mss, int nodelay, int freebind,
 	int use_systemd, int dscp, struct unbound_socket* ub_sock,
-	const char* additional, coap_context_t* context, enum listen_type ftype, enum CoAPSecurityMode coap_sec_mode)
+	const char* additional)
 {
 	char* s = strchr(ifname, '@');
 	if(s) {
@@ -1173,22 +1174,308 @@ make_sock_port(int stype, const char* ifname, int port,
 			*noip6 = 0;
 			return -1;
 		}
-		port = atoi(s+1);
-		if(port < 0 || 0 == port || port > 65535) {
-			log_err("invalid portnumber in interface: %s", ifname);
+		if((port = port_from_ifname(ifname, s+1, newif, s-ifname+1)) < 0) {
 			*noip6 = 0;
 			return -1;
 		}
-		(void)strlcpy(newif, ifname, sizeof(newif));
-		newif[s-ifname] = 0;
 		return make_sock(stype, newif, port, hints, v6only, noip6, rcv,
 			snd, reuseport, transparent, tcp_mss, nodelay, freebind,
-			use_systemd, dscp, ub_sock, additional, context, ftype, coap_sec_mode);
+			use_systemd, dscp, ub_sock, additional);
 	}
 	return make_sock(stype, ifname, port, hints, v6only, noip6, rcv, snd,
 		reuseport, transparent, tcp_mss, nodelay, freebind, use_systemd,
-		dscp, ub_sock, additional, context, ftype, coap_sec_mode);
+		dscp, ub_sock, additional);
 }
+
+#ifdef HAVE_COAP
+/**
+ * Create endpoint and initialize values
+ */
+static coap_endpoint_t*
+setup_coap_endpoint(coap_context_t* coap_context,
+					struct sockaddr* sockaddr, socklen_t sockaddr_len,
+					coap_proto_t protocol_type) {
+	coap_endpoint_t* ep;
+	coap_address_t listen_addr;
+
+	coap_address_init(&listen_addr);
+	memcpy(&listen_addr.addr.sa, sockaddr, sizeof(listen_addr.addr.sa));
+	listen_addr.size = sockaddr_len;
+
+	ep = coap_new_endpoint(coap_context, &listen_addr, protocol_type);
+	return ep;
+}
+
+/**
+ * Create CoAP endpoint from getaddrinfo results
+ */
+static int
+make_coap_ep(int stype, const char* ifname, int port,
+	struct addrinfo *hints, int* noip6, struct unbound_socket* ub_sock,
+	coap_context_t* coap_context, int is_docs)
+{
+	struct addrinfo* res = addrinfo_from_ifname_port(stype, ifname, port, hints, noip6);
+	int s, inuse, noproto;
+
+	if (res == NULL) {
+		return -1;
+	}
+	if(stype == SOCK_DGRAM) {
+		struct sockaddr* sockaddr = (struct sockaddr*)res->ai_addr;
+		coap_endpoint_t* ep;
+
+		if(is_docs) {
+			ep = setup_coap_endpoint(coap_context, sockaddr, res->ai_addrlen, COAP_PROTO_DTLS);
+		} else {
+			ep = setup_coap_endpoint(coap_context, sockaddr, res->ai_addrlen, COAP_PROTO_UDP);
+		}
+		ub_sock->coap_ep = ep;
+		s = coap_context_get_coap_fd(coap_context);
+		if(s == -1 && inuse) {
+			log_err("bind: address already in use");
+		} else if(s == -1 && noproto && hints->ai_family == AF_INET6){
+			*noip6 = 1;
+		}
+	} else {
+		log_err("CoAP over TCP not yet supported");
+		freeaddrinfo(res);
+		sock_close(s);
+		return -1;
+	}
+
+	if(init_sock(ub_sock, res, s) == -1) {
+		log_err("out of memory: allocate listening address");
+		freeaddrinfo(res);
+		sock_close(s);
+		return -1;
+	}
+	freeaddrinfo(res);
+
+	return s;
+}
+
+/** make coap endpoint and first see if ifname contains port override info */
+static int
+make_coap_ep_port(int stype, const char* ifname, int port,
+	struct addrinfo *hints, int* noip6, struct unbound_socket* ub_sock,
+	coap_context_t* coap_context, int is_docs)
+{
+	char* s = strchr(ifname, '@');
+	if(s) {
+		/* override port with ifspec@port */
+		int port;
+		char newif[128];
+		if((size_t)(s-ifname) >= sizeof(newif)) {
+			log_err("ifname too long: %s", ifname);
+			*noip6 = 0;
+			return -1;
+		}
+		if((port = port_from_ifname(ifname, s+1, newif, s-ifname+1)) < 0) {
+			*noip6 = 0;
+			return -1;
+		}
+		return make_coap_ep(stype, newif, port, hints, noip6, ub_sock, coap_context, is_docs);
+	}
+	return make_coap_ep(stype, ifname, port, hints, noip6, ub_sock, coap_context, is_docs);
+}
+
+static uint8_t oscore_config[] =
+	"master_secret,hex,\"0102030405060708090a0b0c0d0e0f10\"\n"
+	"sender_id,ascii,\"server\"\n"
+	"recipient_id,ascii,\"client\"\n";
+static const char* oscore_seq_save_file = "server.seq";
+static FILE *oscore_seq_num_fp = NULL;
+
+static int
+doc_oscore_save_seq_num(uint64_t sender_seq_num, void *param COAP_UNUSED) {
+	if (oscore_seq_num_fp) {
+		rewind(oscore_seq_num_fp);
+		fprintf(oscore_seq_num_fp, "%lu\n", sender_seq_num);
+		fflush(oscore_seq_num_fp);
+	}
+	return 1;
+}
+
+static coap_context_t*
+doc_setup_server_context(const uint8_t* key, unsigned key_len, const char* hint) {
+	coap_address_t listen_addr;
+	coap_context_t* coap_context = coap_new_context(NULL);
+	coap_dtls_spsk_t dtls_psk;
+
+	coap_context_set_block_mode(coap_context,
+			COAP_BLOCK_USE_LIBCOAP | COAP_BLOCK_SINGLE_BODY);
+
+	/* setup dtls */
+	memset (&dtls_psk, 0, sizeof (dtls_psk));
+
+	dtls_psk.version				= COAP_DTLS_SPSK_SETUP_VERSION;
+	dtls_psk.psk_info.hint.s		= (const uint8_t*)hint;
+	dtls_psk.psk_info.hint.length	= hint ? strlen(hint) : 0;
+	dtls_psk.psk_info.key.s			= key;
+	dtls_psk.psk_info.key.length	= key_len;
+
+	coap_context_set_psk2(coap_context, &dtls_psk);
+
+	/* setup oscore */
+	uint64_t start_seq_num = 0;
+	if (oscore_seq_save_file) {
+		oscore_seq_num_fp = fopen(oscore_seq_save_file, "r+");
+		if (oscore_seq_num_fp == NULL) {
+			oscore_seq_num_fp = fopen(oscore_seq_save_file, "w+");
+			if (oscore_seq_num_fp == NULL) {
+				log_err("Unable to create or open OSCORE sequence number file.\n");
+				return NULL;
+			}
+		}
+		errno = 0;
+		if (fscanf(oscore_seq_num_fp, "%lu", &start_seq_num) == EOF) {
+			if (errno != 0) {
+				log_err("Failed to read OSCORE sequence number, %s", strerror(errno));
+				return NULL;
+			}
+		}
+	}
+	coap_str_const_t config = { sizeof(oscore_config) - 1, oscore_config };
+	coap_oscore_conf_t* oscore_conf = coap_new_oscore_conf(config, doc_oscore_save_seq_num, NULL, start_seq_num);
+	if (!oscore_conf) {
+		coap_free_context(coap_context);
+		return NULL;
+	}
+	coap_context_oscore_server(coap_context, oscore_conf);
+
+	return coap_context;
+}
+
+coap_bin_const_t* doc_copy_coap_bin_const_t(const coap_bin_const_t* original) {
+	if (original == NULL || original->s == NULL || original->length == 0) {
+		/* No valid data to copy */
+		return NULL;
+	}
+
+	coap_bin_const_t* copy = (coap_bin_const_t*)malloc(sizeof(coap_bin_const_t));
+	if (copy == NULL) {
+		return NULL;
+	}
+
+	uint8_t* s = (uint8_t*)malloc(original->length);
+	if (s == NULL) {
+		free(copy);
+		return NULL;
+	}
+
+	memcpy(s, original->s, original->length);
+	copy->s = s;
+	copy->length = original->length;
+
+	return copy;
+}
+
+static void
+doc_extract_pdu_info(const coap_pdu_t *pdu, struct pdu_response_data *data) {
+	if (!pdu || !data) return;
+
+	data->type = coap_pdu_get_type(pdu);
+	data->code = coap_pdu_get_code(pdu);
+
+	data->mid = coap_pdu_get_mid(pdu);
+
+	coap_bin_const_t original_token = coap_pdu_get_token(pdu);
+	coap_bin_const_t* token = doc_copy_coap_bin_const_t(&original_token);
+
+	data->token = token;
+
+	coap_opt_iterator_t opt_iter;
+	coap_option_iterator_init((coap_pdu_t*)pdu, &opt_iter, COAP_OPT_ALL);
+	coap_opt_t* option;
+	while ((option = coap_option_next(&opt_iter))) {
+		coap_insert_optlist(&data->options, coap_new_optlist(opt_iter.number, coap_opt_length(option), coap_opt_value(option)));
+	}
+}
+
+static void
+doc_handle_fetch(coap_resource_t *resource, coap_session_t *session,
+		const coap_pdu_t *request, const coap_string_t *query,
+		coap_pdu_t *response) {
+
+	struct comm_point* cp = coap_resource_get_userdata(resource);
+
+	size_t size;
+	const uint8_t* data;
+	struct comm_reply rep;
+	struct pdu_response_data* pdu_wrapper = (struct pdu_response_data*)malloc(sizeof(struct pdu_response_data));
+	rep.c = (struct comm_point*)cp;
+	rep.session = session;
+	rep.response = response;
+
+	struct sldns_buffer* buffer;
+
+	doc_extract_pdu_info(response, pdu_wrapper);
+
+	rep.pdu_wrapper = pdu_wrapper;
+
+	/* Get remote address for the CoAP session */
+	const coap_address_t* remote_addr = coap_session_get_addr_remote(session);
+
+	/* Ensure that remote IPv4 or IPv6 addresses are set */
+	if (remote_addr->addr.sa.sa_family == AF_INET) {
+		/* Copy IPv4 address */
+		memcpy(&rep.remote_addr, &remote_addr->addr.sin, sizeof(struct sockaddr_in));
+		rep.remote_addrlen = sizeof(struct sockaddr_in);
+		memcpy(&rep.client_addr, &remote_addr->addr.sin, sizeof(struct sockaddr_in));
+		rep.client_addrlen= sizeof(struct sockaddr_in);
+	} else if (remote_addr->addr.sa.sa_family == AF_INET6) {
+		/* Copy IPv6 address */
+		memcpy(&rep.remote_addr, &remote_addr->addr.sin6, sizeof(struct sockaddr_in6));
+		rep.remote_addrlen = sizeof(struct sockaddr_in6);
+		memcpy(&rep.client_addr, &remote_addr->addr.sin, sizeof(struct sockaddr_in6));
+		rep.client_addrlen= sizeof(struct sockaddr_in6);
+	}
+
+	if (!coap_get_data(request, &size, &data)) {
+		/* TODO error handling? */
+	}
+
+	/* Ensure that the buffer of the comm_point is large enough */
+	if (sldns_buffer_capacity(rep.c->buffer) < size) {
+		/* TODO expand buffer if necessary */
+	}
+
+	sldns_buffer_clear(rep.c->buffer);
+
+	rep.remote_addrlen = (socklen_t)sizeof(rep.remote_addr);
+
+	sldns_buffer_write(rep.c->buffer, data, size);
+	sldns_buffer_flip(rep.c->buffer);
+
+	rep.srctype = 0;
+	rep.is_proxied = 0;
+
+	fptr_ok(fptr_whitelist_comm_point(rep.c->callback));
+	if ((*rep.c->callback)(rep.c, rep.c->cb_arg, NETEVENT_NOERROR, &rep)) {
+		buffer = rep.c->buffer;
+		const uint8_t* buffer_data = sldns_buffer_begin(buffer);
+		size_t buffer_length =sldns_buffer_remaining(buffer);
+		coap_pdu_set_code(response, COAP_RESPONSE_CODE_CONTENT);
+
+		coap_add_data(response, buffer_length, (const uint8_t*)buffer_data);
+	}
+}
+
+static void
+doc_init_resources(coap_context_t* ctx, struct comm_point* cp) {
+	coap_resource_t* r;
+
+	log_info("Registering coap resource /");
+	r = coap_resource_init(coap_make_str_const(""),
+			COAP_RESOURCE_FLAGS_NOTIFY_CON);
+
+	coap_resource_set_userdata(r, cp);
+
+	coap_register_handler(r, COAP_REQUEST_FETCH, doc_handle_fetch);
+
+	coap_add_resource(ctx, r);
+}
+#endif  /* HAVE_COAP */
 
 /**
  * Add port to open ports list.
@@ -1197,24 +1484,26 @@ make_sock_port(int stype, const char* ifname, int port,
  * @param ftype: if fd is UDP.
  * @param pp2_enabled: if PROXYv2 is enabled for this port.
  * @param ub_sock: socket with address.
- * @return false on failure. list in unchanged then.
+ * @return NULL on failure. list is unchanged then. The inserted on success.
  */
-static int
+static struct listen_port*
 port_insert(struct listen_port** list, int s, enum listen_type ftype,
-	int pp2_enabled, struct unbound_socket* ub_sock, coap_context_t* context)
+	int pp2_enabled, struct unbound_socket* ub_sock)
 {
 	struct listen_port* item = (struct listen_port*)malloc(
 		sizeof(struct listen_port));
 	if(!item)
-		return 0;
+		return NULL;
 	item->next = *list;
 	item->fd = s;
 	item->ftype = ftype;
 	item->pp2_enabled = pp2_enabled;
 	item->socket = ub_sock;
-	item->context = context;
+#ifdef HAVE_COAP
+	item->coap_context = NULL;
+#endif  /* HAVE_COAP */
 	*list = item;
-	return 1;
+	return item;
 }
 
 /** set fd to receive software timestamps */
@@ -1345,7 +1634,7 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 	int quic_port, int coap_port, int coaps_port,
 	int http_notls_downstream, int sock_queue_timeout)
 {
-	int s, s_coap_unencrypted, s_coap_dtls, noip6=0;
+	int s, noip6=0;
 	int is_ssl = if_is_ssl(ifname, port, ssl_port, tls_additional_port);
 	int is_https = if_is_https(ifname, port, https_port);
 	int is_dnscrypt = if_is_dnscrypt(ifname, port, dnscrypt_port);
@@ -1362,16 +1651,16 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 	struct unbound_socket* ub_sock;
 	const char* add = NULL;
 
-	struct unbound_socket* ub_sock_coap_unencrypted;
-
-	struct unbound_socket* ub_sock_coap_dtls;
-
-	coap_context_t* context;
-
+#ifdef HAVE_COAP
 	static const uint8_t psk_key[] = "psk";
 	ssize_t psk_length = sizeof(psk_key) - 1;
 	static const char* hint = "client";
-	setup_server_context(&context, psk_key, psk_length, hint);
+	coap_context_t* coap_context = doc_setup_server_context(psk_key, psk_length, hint);
+
+	if (!coap_context) {
+		fatal_exit("Unable to get server context");
+	}
+#endif  /* HAVE_COAP */
 
 	if(!do_udp && !do_tcp)
 		return 0;
@@ -1389,9 +1678,11 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 		}
 	}
 
+#ifdef HAVE_COAP
 	if (is_doc) {
 		/* Check for OSCORE credentials and fail if they are not set */
 	}
+#endif  /* HAVE_COAP */
 
 	/* Check if both UDP and TCP ports should be open.
 	 * In the case of encrypted channels, probably an unencrypted channel
@@ -1407,8 +1698,7 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 		if((s = make_sock_port(SOCK_DGRAM, ifname, port, hints, 1,
 			&noip6, rcv, snd, reuseport, transparent,
 			tcp_mss, nodelay, freebind, use_systemd, dscp, ub_sock,
-			(is_dnscrypt?"udpancil_dnscrypt":"udpancil"),
-			NULL, listen_type_udp, CoAPSecuirtyMode_COAP_NOT_USED)) == -1) {
+			(is_dnscrypt?"udpancil_dnscrypt":"udpancil"))) == -1) {
 			free(ub_sock->addr);
 			free(ub_sock);
 			if(noip6) {
@@ -1429,27 +1719,18 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 		}
 		if(!port_insert(list, s, is_dnscrypt
 			?listen_type_udpancil_dnscrypt:listen_type_udpancil,
-			is_pp2, ub_sock, NULL)) {
+			is_pp2, ub_sock)) {
 			sock_close(s);
 			free(ub_sock->addr);
 			free(ub_sock);
 			return 0;
 		}
 	} else if(do_udp) {
+		struct listen_port* listen_port;
 		enum listen_type udp_port_type;
 		ub_sock = calloc(1, sizeof(struct unbound_socket));
 
-		ub_sock_coap_unencrypted = calloc(1, sizeof(struct unbound_socket));
-
-		ub_sock_coap_dtls = calloc(1, sizeof(struct unbound_socket));
-
 		if(!ub_sock)
-			return 0;
-
-		if(!ub_sock_coap_unencrypted)
-			return 0;
-
-		if(!ub_sock_coap_dtls)
 			return 0;
 
 		if(is_dnscrypt) {
@@ -1471,19 +1752,62 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 			udp_port_type = listen_type_udp;
 			add = NULL;
 		}
-		/* regular udp socket */
-		if((s = make_sock_port(SOCK_DGRAM, ifname, port, hints, 1,
-			&noip6, rcv, snd, reuseport, transparent,
-			tcp_mss, nodelay, freebind, use_systemd, dscp, ub_sock,
-			add, NULL, listen_type_udp, CoAPSecuirtyMode_COAP_NOT_USED)) == -1) {
-			free(ub_sock->addr);
-			free(ub_sock);
-			if(noip6) {
-				log_warn("IPv6 protocol not available");
-				return 1;
+#ifdef HAVE_COAP
+		if (is_doc) {
+			udp_port_type = listen_type_doc;
+
+			/* coap endpoint */
+			if((s = make_coap_ep_port(SOCK_DGRAM, ifname, port, hints,
+				&noip6, ub_sock, coap_context, 0)) == -1) {
+				free(ub_sock->addr);
+				if (ub_sock->coap_ep) {
+					coap_free_endpoint(ub_sock->coap_ep);
+				}
+				free(ub_sock);
+				if(noip6) {
+					log_warn("IPv6 protocol not available");
+					return 1;
+				}
+				return 0;
 			}
-			return 0;
 		}
+		else if (is_docs) {
+			udp_port_type = listen_type_doc;
+			udp_port_type = listen_type_docs;
+
+			/* coap endpoint */
+			if((s = make_coap_ep_port(SOCK_DGRAM, ifname, port, hints,
+				&noip6, ub_sock, coap_context, is_docs)) == -1) {
+				free(ub_sock->addr);
+				if (ub_sock->coap_ep) {
+					coap_free_endpoint(ub_sock->coap_ep);
+				}
+				free(ub_sock);
+				if(noip6) {
+					log_warn("IPv6 protocol not available");
+					return 1;
+				}
+				return 0;
+			}
+		}
+		else {
+#endif /* HAVE_COAP */
+			/* regular udp socket */
+			if((s = make_sock_port(SOCK_DGRAM, ifname, port, hints, 1,
+				&noip6, rcv, snd, reuseport, transparent,
+				tcp_mss, nodelay, freebind, use_systemd, dscp, ub_sock,
+				add)) == -1) {
+				free(ub_sock->addr);
+				free(ub_sock);
+				if(noip6) {
+					log_warn("IPv6 protocol not available");
+					return 1;
+				}
+				return 0;
+			}
+#ifdef HAVE_COAP
+		}
+#endif
 		if(udp_port_type == listen_type_doq) {
 			if(!set_recvpktinfo(s, hints->ai_family)) {
 				sock_close(s);
@@ -1491,32 +1815,6 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 				free(ub_sock);
 				return 0;
 			}
-		}
-		/* XXX check if s_coap_unencrypted and s_coap_dtls also need set_recvtimestamp handling */
-		/* regular udp socket (for coap) */
-		if((s_coap_unencrypted = make_sock_port(SOCK_DGRAM, ifname, COAP_DEFAULT_PORT, hints, 1,
-			&noip6, rcv, snd, reuseport, transparent,
-			tcp_mss, nodelay, freebind, use_systemd, dscp, ub_sock_coap_unencrypted,
-			add, context, listen_type_coap, CoAPSecurityMode_Unencrypted)) == -1) {
-			free(ub_sock_coap_unencrypted->addr);
-			free(ub_sock_coap_unencrypted);
-			if(noip6) {
-				log_warn("IPv6 protocol not available");
-				return 1;
-			}
-			return 0;
-		}
-		if((s_coap_dtls = make_sock_port(SOCK_DGRAM, ifname, COAPS_DEFAULT_PORT, hints, 1,
-			&noip6, rcv, snd, reuseport, transparent,
-			tcp_mss, nodelay, freebind, use_systemd, dscp, ub_sock_coap_dtls,
-			add, context, listen_type_coap, CoAPSecurityMode_DTLS)) == -1) {
-			free(ub_sock_coap_dtls->addr);
-			free(ub_sock_coap_dtls);
-			if(noip6) {
-				log_warn("IPv6 protocol not available");
-				return 1;
-			}
-			return 0;
 		}
 		if(udp_port_type == listen_type_udp && sock_queue_timeout)
 			udp_port_type = listen_type_udpancil;
@@ -1528,26 +1826,20 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 					udp_port_type = listen_type_udpancil;
 			}
 		}
-		if(!port_insert(list, s, udp_port_type, is_pp2, ub_sock, NULL)) {
+		if(!(listen_port = port_insert(list, s, udp_port_type, is_pp2, ub_sock))) {
 			sock_close(s);
 			free(ub_sock->addr);
+			if (ub_sock->coap_ep) {
+				coap_free_endpoint(ub_sock->coap_ep);
+			}
 			free(ub_sock);
 			return 0;
 		}
-		if(!port_insert(list, s_coap_unencrypted, listen_type_coap,
-			is_pp2, ub_sock_coap_unencrypted, context)) {
-			sock_close(s_coap_unencrypted);
-			free(ub_sock_coap_unencrypted->addr);
-			free(ub_sock_coap_unencrypted);
-			return 0;
+#ifdef HAVE_COAP
+		if (is_doc || is_docs) {
+			listen_port->coap_context = coap_context;
 		}
-		if(!port_insert(list, s_coap_dtls, listen_type_coap,
-			is_pp2, ub_sock_coap_dtls, context)) {
-			sock_close(s_coap_dtls);
-			free(ub_sock_coap_dtls->addr);
-			free(ub_sock_coap_dtls);
-			return 0;
-		}
+#endif
 	}
 	if(do_tcp) {
 		enum listen_type port_type;
@@ -1571,8 +1863,7 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 		}
 		if((s = make_sock_port(SOCK_STREAM, ifname, port, hints, 1,
 			&noip6, 0, 0, reuseport, transparent, tcp_mss, nodelay,
-			freebind, use_systemd, dscp, ub_sock,
-			add, NULL, listen_type_tcp, CoAPSecuirtyMode_COAP_NOT_USED)) == -1) {
+			freebind, use_systemd, dscp, ub_sock, add)) == -1) {
 			free(ub_sock->addr);
 			free(ub_sock);
 			if(noip6) {
@@ -1583,7 +1874,7 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 		}
 		if(is_ssl)
 			verbose(VERB_ALGO, "setup TCP for SSL service");
-		if(!port_insert(list, s, port_type, is_pp2, ub_sock, NULL)) {
+		if(!port_insert(list, s, port_type, is_pp2, ub_sock)) {
 			sock_close(s);
 			free(ub_sock->addr);
 			free(ub_sock);
@@ -1591,217 +1882,6 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 		}
 	}
 	return 1;
-}
-
-static uint8_t oscore_config[] =
-	"master_secret,hex,\"0102030405060708090a0b0c0d0e0f10\"\n"
-	"sender_id,ascii,\"server\"\n"
-	"recipient_id,ascii,\"client\"\n";
-static const char* oscore_seq_save_file = "server.seq";
-static FILE *oscore_seq_num_fp = NULL;
-
-static int
-oscore_save_seq_num(uint64_t sender_seq_num, void *param COAP_UNUSED) {
-	if (oscore_seq_num_fp) {
-		rewind(oscore_seq_num_fp);
-		fprintf(oscore_seq_num_fp, "%lu\n", sender_seq_num);
-		fflush(oscore_seq_num_fp);
-	}
-	return 1;
-}
-
-static int
-setup_server_context(coap_context_t** context, const uint8_t* key, unsigned key_len, const char* hint) {
-	coap_address_t listen_addr;
-	coap_context_t* new_context = coap_new_context(NULL);
-	coap_dtls_spsk_t dtls_psk;
-
-	coap_context_set_block_mode(new_context,
-			COAP_BLOCK_USE_LIBCOAP | COAP_BLOCK_SINGLE_BODY);
-
-	/* setup dtls */
-	memset (&dtls_psk, 0, sizeof (dtls_psk));
-
-	dtls_psk.version				= COAP_DTLS_SPSK_SETUP_VERSION;
-	dtls_psk.psk_info.hint.s		= (const uint8_t*)hint;
-	dtls_psk.psk_info.hint.length	= hint ? strlen(hint) : 0;
-	dtls_psk.psk_info.key.s			= key;
-	dtls_psk.psk_info.key.length	= key_len;
-
-	coap_context_set_psk2(new_context, &dtls_psk);
-
-	/* setup oscore */
-	uint64_t start_seq_num = 0;
-	if (oscore_seq_save_file) {
-		oscore_seq_num_fp = fopen(oscore_seq_save_file, "r+");
-		if (oscore_seq_num_fp == NULL) {
-			oscore_seq_num_fp = fopen(oscore_seq_save_file, "w+");
-			if (oscore_seq_num_fp == NULL) {
-				coap_log(LOG_CRIT, "Unable to create or open OSCORE sequence number file.\n");
-				return 0;
-			}
-		}
-		errno = 0;
-		if (fscanf(oscore_seq_num_fp, "%lu", &start_seq_num) == EOF) {
-			if (errno != 0) {
-				log_err("Failed to read OSCORE sequence number, %s", strerror(errno));
-				return 0;
-			}
-		}
-	}
-	coap_str_const_t config = { sizeof(oscore_config) - 1, oscore_config };
-	coap_oscore_conf_t* oscore_conf = coap_new_oscore_conf(config, oscore_save_seq_num, NULL, start_seq_num);
-	if (!oscore_conf) {
-		coap_free_context(new_context);
-		return 0;
-	}
-	coap_context_oscore_server(new_context, oscore_conf);
-
-	*context = new_context;
-
-	return 1;
-}
-
-static void
-setup_endpoint(coap_context_t* context, coap_endpoint_t** endpoint, int port, coap_proto_t protocol_type) {
-	coap_endpoint_t* new_endpoint;
-	coap_address_t listen_addr;
-
-	coap_address_init(&listen_addr);
-	listen_addr.addr.sa.sa_family = AF_INET;
-	listen_addr.addr.sin.sin_port = htons(port);
-
-	new_endpoint = coap_new_endpoint(context, &listen_addr, protocol_type);
-	*endpoint = new_endpoint;
-}
-
-coap_bin_const_t* copy_coap_bin_const_t(const coap_bin_const_t* original) {
-	if (original == NULL || original->s == NULL || original->length == 0) {
-		/* No valid data to copy */
-		return NULL;
-	}
-
-	coap_bin_const_t* copy = (coap_bin_const_t*)malloc(sizeof(coap_bin_const_t));
-	if (copy == NULL) {
-		return NULL;
-	}
-
-	uint8_t* s = (uint8_t*)malloc(original->length);
-	if (s == NULL) {
-		free(copy);
-		return NULL;
-	}
-
-	memcpy(s, original->s, original->length);
-	copy->s = s;
-	copy->length = original->length;
-
-	return copy;
-}
-
-static void
-extract_pdu_info(const coap_pdu_t *pdu, struct pdu_response_data *data) {
-	if (!pdu || !data) return;
-
-	data->type = coap_pdu_get_type(pdu);
-	data->code = coap_pdu_get_code(pdu);
-
-	data->mid = coap_pdu_get_mid(pdu);
-
-	coap_bin_const_t original_token = coap_pdu_get_token(pdu);
-	coap_bin_const_t* token = copy_coap_bin_const_t(&original_token);
-
-	data->token = token;
-
-	coap_opt_iterator_t opt_iter;
-	coap_option_iterator_init((coap_pdu_t*)pdu, &opt_iter, COAP_OPT_ALL);
-	coap_opt_t* option;
-	while ((option = coap_option_next(&opt_iter))) {
-		coap_insert_optlist(&data->options, coap_new_optlist(opt_iter.number, coap_opt_length(option), coap_opt_value(option)));
-	}
-}
-
-static void
-hnd_fetch_new_dns(coap_resource_t *resource, coap_session_t *session,
-		const coap_pdu_t *request, const coap_string_t *query,
-		coap_pdu_t *response) {
-
-	struct comm_point* cp = coap_resource_get_userdata(resource);
-
-	size_t size;
-	const uint8_t* data;
-	struct comm_reply rep;
-	struct pdu_response_data* pdu_wrapper = (struct pdu_response_data*)malloc(sizeof(struct pdu_response_data));
-	rep.c = (struct comm_point*)cp;
-	rep.session = session;
-	rep.response = response;
-
-	struct sldns_buffer* buffer;
-
-	extract_pdu_info(response, pdu_wrapper);
-
-	rep.pdu_wrapper = pdu_wrapper;
-
-	/* Get remote address for the CoAP session */
-	const coap_address_t* remote_addr = coap_session_get_addr_remote(session);
-
-	/* Ensure that remote IPv4 or IPv6 addresses are set */
-	if (remote_addr->addr.sa.sa_family == AF_INET) {
-		/* Copy IPv4 address */
-		memcpy(&rep.remote_addr, &remote_addr->addr.sin, sizeof(struct sockaddr_in));
-		rep.remote_addrlen = sizeof(struct sockaddr_in);
-		memcpy(&rep.client_addr, &remote_addr->addr.sin, sizeof(struct sockaddr_in));
-		rep.client_addrlen= sizeof(struct sockaddr_in);
-	} else if (remote_addr->addr.sa.sa_family == AF_INET6) {
-		/* Copy IPv6 address */
-		memcpy(&rep.remote_addr, &remote_addr->addr.sin6, sizeof(struct sockaddr_in6));
-		rep.remote_addrlen = sizeof(struct sockaddr_in6);
-		memcpy(&rep.client_addr, &remote_addr->addr.sin, sizeof(struct sockaddr_in6));
-		rep.client_addrlen= sizeof(struct sockaddr_in6);
-	}
-
-	if (!coap_get_data(request, &size, &data)) {
-		/* TODO error handling? */
-	}
-
-	/* Ensure that the buffer of the comm_point is large enough */
-	if (sldns_buffer_capacity(rep.c->buffer) < size) {
-		/* TODO expand buffer if necessary */
-	}
-
-	sldns_buffer_clear(rep.c->buffer);
-
-	rep.remote_addrlen = (socklen_t)sizeof(rep.remote_addr);
-
-	sldns_buffer_write(rep.c->buffer, data, size);
-	sldns_buffer_flip(rep.c->buffer);
-
-	rep.srctype = 0;
-	rep.is_proxied = 0;
-
-	fptr_ok(fptr_whitelist_comm_point(rep.c->callback));
-	if ((*rep.c->callback)(rep.c, rep.c->cb_arg, NETEVENT_NOERROR, &rep)) {
-		buffer = rep.c->buffer;
-		const uint8_t* buffer_data = sldns_buffer_begin(buffer);
-		size_t buffer_length =sldns_buffer_remaining(buffer);
-		coap_pdu_set_code(response, COAP_RESPONSE_CODE_CONTENT);
-
-		coap_add_data(response, buffer_length, (const uint8_t*)buffer_data);
-	}
-}
-
-static void
-init_resources(coap_context_t* ctx, struct comm_point* cp) {
-	coap_resource_t* r;
-
-	r = coap_resource_init(coap_make_str_const(""),
-			COAP_RESOURCE_FLAGS_NOTIFY_CON);
-
-	coap_resource_set_userdata(r, cp);
-
-	coap_register_handler(r, COAP_REQUEST_FETCH, hnd_fetch_new_dns);
-
-	coap_add_resource(ctx, r);
 }
 
 /**
@@ -1888,11 +1968,15 @@ listen_create(struct comm_base* base, struct listen_port* ports,
 			cp = comm_point_create_udp(base, ports->fd,
 				front->udp_buff, ports->pp2_enabled, cb,
 				cb_arg, ports->socket);
-		} else if(ports->ftype == listen_type_coap) {
-			cp = comm_point_create_coap(base, ports->fd,
+#ifdef HAVE_COAP
+		} else if(ports->ftype == listen_type_doc ||
+				  ports->ftype == listen_type_docs) {
+			cp = comm_point_create_doc(base, ports->fd,
 				front->udp_buff, ports->pp2_enabled, cb,
-				cb_arg, ports->socket, ports->ftype, ports->context);
-			init_resources(cp->context, cp);
+				cb_arg, ports->socket);
+			cp->coap_context = ports->coap_context;
+			doc_init_resources(cp->coap_context, cp);
+#endif	/* HAVE_COAP */
 		} else if(ports->ftype == listen_type_doq) {
 #ifndef HAVE_NGTCP2
 			log_warn("Unbound is not compiled with "

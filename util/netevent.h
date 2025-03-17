@@ -68,7 +68,9 @@
 #ifdef HAVE_NGTCP2
 #include <ngtcp2/ngtcp2.h>
 #endif
+#ifdef HAVE_COAP
 #include <coap3/coap.h>
+#endif	/* HAVE_COAP */
 
 struct sldns_buffer;
 struct comm_point;
@@ -134,13 +136,23 @@ struct comm_base {
 	void* cb_arg;
 };
 
+#ifdef HAVE_COAP
+/**
+ * CoAP response PDU data
+ */
 struct pdu_response_data {
+	/** CoAP message type */
 	coap_pdu_type_t type;
+	/** CoAP response code */
 	coap_pdu_code_t code;
+	/** message ID */
 	coap_mid_t mid;
+	/** response token */
 	struct coap_bin_const_t* token;
+	/** response options */
 	struct coap_optlist_t* options;
 };
+#endif	/* HAVE_COAP */
 
 /**
  * Reply information for a communication point.
@@ -198,11 +210,16 @@ struct comm_reply {
 	int doq_srcport;
 #endif /* HAVE_NGTCP2 */
 
+#ifdef HAVE_COAP
+	/** the CoAP session for the DNS reply */
 	coap_session_t* session;
 
+	/** the CoAP response for the DNS reply */
 	coap_pdu_t* response;
 
+	/** PDU information for the CoAP response */
 	struct pdu_response_data* pdu_wrapper;
+#endif	/* HAVE_COAP */
 };
 
 /**
@@ -313,6 +330,11 @@ struct comm_point {
 	struct doq_server_socket* doq_socket;
 #endif
 
+#ifdef HAVE_COAP
+	/** libcoap context */
+	coap_context_t* coap_context;
+#endif	/* HAVE_COAP */
+
 	/* -------- dnstap ------- */
 	/** the dnstap environment */
 	struct dt_env* dtenv;
@@ -329,6 +351,8 @@ struct comm_point {
 		comm_http,
 		/** DOQ handler socket */
 		comm_doq,
+		/** DoC handler socket */
+		comm_doc,
 		/** AF_UNIX socket - for internal commands. */
 		comm_local,
 		/** raw - not DNS format - for pipe readers and writers */
@@ -463,8 +487,6 @@ struct comm_point {
 	comm_point_callback_type* callback;
 	/** argument to pass to callback. */
 	void *cb_arg;
-
-	coap_context_t* context;
 };
 
 /**
@@ -592,11 +614,6 @@ struct comm_point* comm_point_create_udp(struct comm_base* base,
 	int fd, struct sldns_buffer* buffer, int pp2_enabled,
 	comm_point_callback_type* callback, void* callback_arg, struct unbound_socket* socket);
 
-struct comm_point* comm_point_create_coap(struct comm_base* base,
-	int fd, struct sldns_buffer* buffer, int pp2_enabled,
-	comm_point_callback_type* callback, void* callback_arg, struct unbound_socket* socket,
-	enum listen_type, coap_context_t* context);
-
 /**
  * Create an UDP with ancillary data comm point. Calls malloc.
  * Uses recvmsg instead of recv to get udp message.
@@ -637,6 +654,23 @@ struct comm_point* comm_point_create_doq(struct comm_base* base,
 	struct unbound_socket* socket, struct doq_table* table,
 	struct ub_randstate* rnd, const void* quic_sslctx,
 	struct config_file* cfg);
+
+/**
+ * Create a CoAP server comm point for DoC. Calls malloc.
+ * Setups the structure with parameters you provide.
+ * @param base: in which base to alloc the commpoint.
+ * @param fd: file descriptor of open UDP socket.
+ * @param buffer: shared buffer by UDP sockets from this thread.
+ * @param pp2_enabled: if the comm point will support PROXYv2.
+ * @param callback: callback function pointer.
+ * @param callback_arg: will be passed to your callback function.
+ * @param socket: and opened socket properties will be passed to your callback function.
+ * @return: returns the allocated communication point. NULL on error.
+ * Sets timeout to NULL. Turns off TCP options.
+ */
+struct comm_point* comm_point_create_doc(struct comm_base* base,
+	int fd, struct sldns_buffer* buffer, int pp2_enabled,
+	comm_point_callback_type* callback, void* callback_arg, struct unbound_socket* socket);
 
 /**
  * Create a TCP listener comm point. Calls malloc.
@@ -763,8 +797,24 @@ void comm_point_drop_reply(struct comm_reply* repinfo);
 int comm_point_send_udp_msg(struct comm_point* c, struct sldns_buffer* packet,
 	struct sockaddr* addr, socklen_t addrlen,int is_connected);
 
+#ifdef HAVE_COAP
+/**
+ * Send an coap message over a commpoint.
+ * @param c: commpoint to send it from.
+ * @param packet: what to send.
+ * @param addr: where to send it to.   If NULL, send is performed,
+ * 	for connected sockets, to the connected address.
+ * @param addrlen: length of addr.
+ * @param is_connected: if the UDP socket is connect()ed.
+ * @param session: a libcoap session
+ * @param response: the CoAP response to send
+ * @param pdu_wrapper: The PDU wrapper for the CoAP response
+ * @return: false on a failure.
+ */
 int comm_point_send_coap_msg(struct comm_point* c, struct sldns_buffer* packet,
-	struct sockaddr* addr, socklen_t addrlen,int is_connected, coap_session_t* session, coap_pdu_t* response, struct pdu_response_data* pdu_wrapper);
+	struct sockaddr* addr, socklen_t addrlen,int is_connected,
+	coap_session_t* session, coap_pdu_t* response, struct pdu_response_data* pdu_wrapper);
+#endif	/* HAVE_COAP */
 
 /**
  * Stop listening for input on the commpoint. No callbacks will happen.
@@ -900,8 +950,6 @@ int comm_point_perform_accept(struct comm_point* c,
  */
 void comm_point_udp_callback(int fd, short event, void* arg);
 
-void comm_point_oscore_callback(int fd, short event, void* arg);
-
 /**
  * This routine is published for checks and tests, and is only used internally.
  * handle libevent callback for udp ancillary data comm point.
@@ -921,6 +969,16 @@ void comm_point_udp_ancil_callback(int fd, short event, void* arg);
  * @param arg: the comm_point structure.
  */
 void comm_point_doq_callback(int fd, short event, void* arg);
+
+/**
+ * This routine is published for checks and tests, and is only used internally.
+ * handle libevent callback for udp comm point.
+ * @param fd: file descriptor.
+ * @param event: event bits from libevent:
+ *	EV_READ, EV_WRITE, EV_SIGNAL, EV_TIMEOUT.
+ * @param arg: the comm_point structure.
+ */
+void comm_point_doc_callback(int fd, short event, void* arg);
 
 /**
  * This routine is published for checks and tests, and is only used internally.

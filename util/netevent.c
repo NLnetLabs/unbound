@@ -589,10 +589,12 @@ create_pdu_from_response_data(coap_session_t* session, const struct pdu_response
 	return pdu;
 }
 
+#ifdef HAVE_COAP
 /* send a CoAP reply */
 int
 comm_point_send_coap_msg(struct comm_point *c, sldns_buffer* packet,
-	struct sockaddr* addr, socklen_t addrlen, int is_connected, coap_session_t* session, coap_pdu_t* response, struct pdu_response_data* pdu_wrapper)
+	struct sockaddr* addr, socklen_t addrlen, int is_connected,
+	coap_session_t* session, coap_pdu_t* response, struct pdu_response_data* pdu_wrapper)
 {
 	coap_address_t dst;
 
@@ -770,6 +772,7 @@ comm_point_send_coap_msg(struct comm_point *c, sldns_buffer* packet,
 	}
 	return 1;
 }
+#endif	/* HAVE_COAP */
 
 #if defined(AF_INET6) && defined(IPV6_PKTINFO) && (defined(HAVE_RECVMSG) || defined(HAVE_SENDMSG))
 /** print debug ancillary info */
@@ -1398,17 +1401,6 @@ comm_point_udp_callback(int fd, short event, void* arg)
 		if(!rep.c || rep.c->fd != fd) /* commpoint closed to -1 or reused for
 		another UDP port. Note rep.c cannot be reused with TCP fd. */
 			break;
-	}
-}
-
-void
-comm_point_oscore_callback(int fd, short event, void* arg)
-{
-	struct comm_point* cp = (struct comm_point*)arg;
-	struct comm_reply rep;
-
-	if (event & UB_EV_READ) {
-		int result = coap_io_process(cp->context, 0);
 	}
 }
 
@@ -6020,76 +6012,6 @@ comm_point_create_udp(struct comm_base *base, int fd, sldns_buffer* buffer,
 	return c;
 }
 
-struct comm_point*
-comm_point_create_coap(struct comm_base *base, int fd, sldns_buffer* buffer,
-		int pp2_enabled, comm_point_callback_type* callback,
-		void* callback_arg, struct unbound_socket* socket, enum listen_type port_type,
-		coap_context_t* context)
-{
-	struct comm_point* c = (struct comm_point*)calloc(1,
-			sizeof(struct comm_point));
-	short evbits;
-	if(!c)
-		return NULL;
-	c->ev = (struct internal_event*)calloc(1,
-			sizeof(struct internal_event));
-	if(!c->ev) {
-		free(c);
-		return NULL;
-	}
-	c->ev->base = base;
-	c->fd = fd;
-	c->buffer = buffer;
-	c->timeout = NULL;
-	c->tcp_is_reading = 0;
-	c->tcp_byte_count = 0;
-	c->tcp_parent = NULL;
-	c->max_tcp_count = 0;
-	c->cur_tcp_count = 0;
-	c->tcp_handlers = NULL;
-	c->tcp_free = NULL;
-	c->type = comm_udp;
-	c->tcp_do_close = 0;
-	c->do_not_close = 0;
-	c->tcp_do_toggle_rw = 0;
-	c->tcp_check_nb_connect = 0;
-#ifdef USE_MSG_FASTOPEN
-	c->tcp_do_fastopen = 0;
-#endif
-#ifdef USE_DNSCRYPT
-	c->dnscrypt = 0;
-	c->dnscrypt_buffer = buffer;
-#endif
-	c->inuse = 0;
-	c->callback = callback;
-	c->cb_arg = callback_arg;
-	c->socket = socket;
-	c->pp2_enabled = pp2_enabled;
-	c->pp2_header_state = pp2_header_none;
-	c->context = context;
-	evbits = UB_EV_READ | UB_EV_PERSIST;
-	if (port_type == listen_type_coap) {
-		c->ev->ev = ub_event_new(base->eb->base, c->fd, evbits,
-			comm_point_oscore_callback, c);
-	} else {
-		c->ev->ev = ub_event_new(base->eb->base, c->fd, evbits,
-			comm_point_udp_callback, c);
-	}
-
-	if(c->ev->ev == NULL) {
-		log_err("could not baseset udp event");
-		comm_point_delete(c);
-		return NULL;
-	}
-	if(fd!=-1 && ub_event_add(c->ev->ev, c->timeout) != 0 ) {
-		log_err("could not add udp event");
-		comm_point_delete(c);
-		return NULL;
-	}
-	c->event_added = 1;
-	return c;
-}
-
 #if defined(AF_INET6) && defined(IPV6_PKTINFO) && defined(HAVE_RECVMSG)
 struct comm_point*
 comm_point_create_udp_ancil(struct comm_base *base, int fd,
@@ -6242,6 +6164,96 @@ comm_point_create_doq(struct comm_base *base, int fd, sldns_buffer* buffer,
 	sock_close(fd);
 	return NULL;
 #endif /* HAVE_NGTCP2 */
+}
+
+void
+comm_point_doc_callback(int fd, short event, void* arg)
+{
+#ifdef HAVE_COAP
+	struct comm_point* cp = (struct comm_point*)arg;
+	struct comm_reply rep;
+
+	if (event & UB_EV_READ) {
+		int result = coap_io_process(cp->coap_context, 0);
+	}
+#else
+	(void)fd;
+	(void)event;
+	(void)arg;
+#endif	/* HAVE_COAP */
+}
+
+struct comm_point*
+comm_point_create_doc(struct comm_base *base, int fd, sldns_buffer* buffer,
+		int pp2_enabled, comm_point_callback_type* callback,
+		void* callback_arg, struct unbound_socket* socket)
+{
+#ifdef HAVE_COAP
+	struct comm_point* c = (struct comm_point*)calloc(1,
+			sizeof(struct comm_point));
+	short evbits;
+	if(!c)
+		return NULL;
+	c->ev = (struct internal_event*)calloc(1,
+			sizeof(struct internal_event));
+	if(!c->ev) {
+		free(c);
+		return NULL;
+	}
+	c->ev->base = base;
+	c->fd = fd;
+	c->buffer = buffer;
+	c->timeout = NULL;
+	c->tcp_is_reading = 0;
+	c->tcp_byte_count = 0;
+	c->tcp_parent = NULL;
+	c->max_tcp_count = 0;
+	c->cur_tcp_count = 0;
+	c->tcp_handlers = NULL;
+	c->tcp_free = NULL;
+	c->type = comm_doc;
+	c->tcp_do_close = 0;
+	c->do_not_close = 0;
+	c->tcp_do_toggle_rw = 0;
+	c->tcp_check_nb_connect = 0;
+#ifdef USE_MSG_FASTOPEN
+	c->tcp_do_fastopen = 0;
+#endif
+#ifdef USE_DNSCRYPT
+	c->dnscrypt = 0;
+	c->dnscrypt_buffer = buffer;
+#endif
+	c->inuse = 0;
+	c->callback = callback;
+	c->cb_arg = callback_arg;
+	c->socket = socket;
+	c->pp2_enabled = pp2_enabled;
+	c->pp2_header_state = pp2_header_none;
+	evbits = UB_EV_READ | UB_EV_PERSIST;
+	c->ev->ev = ub_event_new(base->eb->base, c->fd, evbits,
+		comm_point_doc_callback, c);
+
+	if(c->ev->ev == NULL) {
+		log_err("could not baseset doc event");
+		comm_point_delete(c);
+		return NULL;
+	}
+	if(fd!=-1 && ub_event_add(c->ev->ev, c->timeout) != 0 ) {
+		log_err("could not add doc event");
+		comm_point_delete(c);
+		return NULL;
+	}
+	c->event_added = 1;
+	return c;
+#else
+	(void)base;
+	(void)buffer;
+	(void)pp2_enabled;
+	(void)callback;
+	(void)callback_arg;
+	(void)socket;
+	return NULL
+#endif	/* HAVE_COAP */
 }
 
 static struct comm_point*
@@ -6957,12 +6969,6 @@ comm_point_send_reply(struct comm_reply *repinfo)
 #else
 	buffer = repinfo->c->buffer;
 #endif
-	if(repinfo->c->context != NULL) {
-		comm_point_send_coap_msg(repinfo->c, buffer,
-			(struct sockaddr*)&repinfo->remote_addr,
-			repinfo->remote_addrlen, 0, repinfo->session, repinfo->response, repinfo->pdu_wrapper);
-		return;
-	}
 	if(repinfo->c->type == comm_udp) {
 		if(repinfo->srctype)
 			comm_point_send_udp_msg_if(repinfo->c, buffer,
@@ -6986,6 +6992,13 @@ comm_point_send_reply(struct comm_reply *repinfo)
 				repinfo->c->buffer);
 		}
 #endif
+#ifdef HAVE_COAP
+	} else if (repinfo->c->type == comm_doc) {
+		comm_point_send_coap_msg(repinfo->c, buffer,
+			(struct sockaddr*)&repinfo->remote_addr,
+			repinfo->remote_addrlen, 0, repinfo->session, repinfo->response, repinfo->pdu_wrapper);
+	
+#endif	/* HAVE_COAP */
 	} else {
 #ifdef USE_DNSTAP
 		struct dt_env* dtenv =
