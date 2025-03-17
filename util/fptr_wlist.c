@@ -175,7 +175,6 @@ int
 fptr_whitelist_event(void (*fptr)(int, short, void *))
 {
 	if(fptr == &comm_point_udp_callback) return 1;
-	else if(fptr == &comm_point_oscore_callback) return 1;
 #if defined(AF_INET6) && defined(IPV6_PKTINFO) && defined(HAVE_RECVMSG)
 	else if(fptr == &comm_point_udp_ancil_callback) return 1;
 #endif
@@ -190,6 +189,9 @@ fptr_whitelist_event(void (*fptr)(int, short, void *))
 	else if(fptr == &comm_point_http_handle_callback) return 1;
 #ifdef HAVE_NGTCP2
 	else if(fptr == &comm_point_doq_callback) return 1;
+#endif
+#ifdef HAVE_COAP
+	else if(fptr == &comm_point_doc_callback) return 1;
 #endif
 	else if(fptr == &fast_reload_service_cb) return 1;
 #ifdef USE_DNSTAP
