@@ -138,6 +138,8 @@ config_create(void)
 	cfg->http_nodelay = 1;
 	cfg->quic_port = UNBOUND_DNS_OVER_QUIC_PORT;
 	cfg->quic_size = 8*1024*1024;
+	cfg->coap_port = UNBOUND_DNS_OVER_COAP_PORT;
+	cfg->coaps_port = UNBOUND_DNS_OVER_COAPS_PORT;
 	cfg->use_syslog = 1;
 	cfg->log_identity = NULL; /* changed later with argv[0] */
 	cfg->log_time_ascii = 0;
@@ -2926,6 +2928,32 @@ if_is_quic(const char* ifname, int default_port, int quic_port)
 }
 
 int
+if_is_coap(const char* ifname, int default_port, int coap_port)
+{
+#ifdef HAVE_COAP
+	return if_listens_on(ifname, default_port, coap_port, NULL);
+#else
+	(void)ifname;
+	(void)default_port;
+	(void)coap_port;
+	return 0;
+#endif
+}
+
+int
+if_is_coaps(const char* ifname, int default_port, int coaps_port)
+{
+#ifdef HAVE_COAP
+	return if_listens_on(ifname, default_port, coaps_port, NULL);
+#else
+	(void)ifname;
+	(void)default_port;
+	(void)coaps_port;
+	return 0;
+#endif
+}
+
+int
 cfg_ports_list_contains(char* ports, int p)
 {
 	char* now = ports, *after;
@@ -2971,6 +2999,26 @@ cfg_has_quic(struct config_file* cfg)
 			return 1;
 	}
 	if(cfg_ports_list_contains(cfg->if_automatic_ports, cfg->quic_port))
+		return 1;
+	return 0;
+#else
+	(void)cfg;
+	return 0;
+#endif
+}
+
+int
+cfg_has_coap(struct config_file* cfg)
+{
+#ifdef HAVE_COAP
+	int i;
+	for(i = 0; i<cfg->num_ifs; i++) {
+		if (if_is_coap(cfg->ifs[i], cfg->port, cfg->coap_port) ||
+			if_is_coaps(cfg->ifs[i], cfg->port, cfg->coaps_port))
+			return 1;
+	}
+	if(cfg_ports_list_contains(cfg->if_automatic_ports, cfg->coap_port) ||
+		cfg_ports_list_contains(cfg->if_automatic_ports, cfg->coaps_port))
 		return 1;
 	return 0;
 #else

@@ -211,6 +211,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_INTERFACE_ACTION VAR_INTERFACE_VIEW VAR_INTERFACE_TAG
 %token VAR_INTERFACE_TAG_ACTION VAR_INTERFACE_TAG_DATA
 %token VAR_QUIC_PORT VAR_QUIC_SIZE
+%token VAR_COAP_PORT VAR_COAPS_PORT
 %token VAR_PROXY_PROTOCOL_PORT VAR_STATISTICS_INHIBIT_ZERO
 %token VAR_HARDEN_UNKNOWN_ADDITIONAL VAR_DISABLE_EDNS_DO VAR_CACHEDB_NO_STORE
 %token VAR_LOG_DESTADDR VAR_CACHEDB_CHECK_WHEN_SERVE_EXPIRED
@@ -353,6 +354,7 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_zonemd_permissive_mode | server_max_reuse_tcp_queries |
 	server_tcp_reuse_timeout | server_tcp_auth_query_timeout |
 	server_quic_port | server_quic_size |
+	server_coap_port | server_coaps_port |
 	server_interface_automatic_ports | server_ede |
 	server_dns_error_reporting |
 	server_proxy_protocol_port | server_statistics_inhibit_zero |
@@ -1250,6 +1252,32 @@ server_quic_size: VAR_QUIC_SIZE STRING_ARG
 		OUTYY(("P(server_quic_size:%s)\n", $2));
 		if(!cfg_parse_memsize($2, &cfg_parser->cfg->quic_size))
 			yyerror("memory size expected");
+		free($2);
+	};
+server_coap_port: VAR_COAP_PORT STRING_ARG
+	{
+		OUTYY(("P(server_coap_port:%s)\n", $2));
+#ifndef HAVE_COAP
+		log_warn("%s:%d: Unbound is not compiled with "
+			"libcoap. This is required to use DNS "
+			"over CoAP.", cfg_parser->filename, cfg_parser->line);
+#endif
+		if(atoi($2) == 0)
+			yyerror("port number expected");
+		else cfg_parser->cfg->coap_port = atoi($2);
+		free($2);
+	};
+server_coaps_port: VAR_COAPS_PORT STRING_ARG
+	{
+		OUTYY(("P(server_coaps_port:%s)\n", $2));
+#ifndef HAVE_COAP
+		log_warn("%s:%d: Unbound is not compiled with "
+			"libcoap. This is required to use DNS "
+			"over CoAP.", cfg_parser->filename, cfg_parser->line);
+#endif
+		if(atoi($2) == 0)
+			yyerror("port number expected");
+		else cfg_parser->cfg->coaps_port = atoi($2);
 		free($2);
 	};
 server_use_systemd: VAR_USE_SYSTEMD STRING_ARG

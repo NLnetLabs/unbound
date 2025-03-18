@@ -1326,6 +1326,8 @@ set_recvpktinfo(int s, int family)
  * @param dnscrypt_port: dnscrypt service port number
  * @param dscp: DSCP to use.
  * @param quic_port: dns over quic port number.
+ * @param coap_port: dns over coap port number.
+ * @param coaps_port: dns over coaps port number.
  * @param http_notls_downstream: if no tls is used for https downstream.
  * @param sock_queue_timeout: the sock_queue_timeout from config. Seconds to
  * 	wait to discard if UDP packets have waited for long in the socket
@@ -1340,7 +1342,8 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 	struct config_strlist* proxy_protocol_port,
 	int* reuseport, int transparent, int tcp_mss, int freebind,
 	int http2_nodelay, int use_systemd, int dnscrypt_port, int dscp,
-	int quic_port, int http_notls_downstream, int sock_queue_timeout)
+	int quic_port, int coap_port, int coaps_port,
+	int http_notls_downstream, int sock_queue_timeout)
 {
 	int s, s_coap_unencrypted, s_coap_dtls, noip6=0;
 	int is_ssl = if_is_ssl(ifname, port, ssl_port, tls_additional_port);
@@ -1348,6 +1351,8 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 	int is_dnscrypt = if_is_dnscrypt(ifname, port, dnscrypt_port);
 	int is_pp2 = if_is_pp2(ifname, port, proxy_protocol_port);
 	int is_doq = if_is_quic(ifname, port, quic_port);
+	int is_doc = if_is_coap(ifname, port, coap_port);
+	int is_docs = if_is_coaps(ifname, port, coaps_port);
 	/* Always set TCP_NODELAY on TLS connection as it speeds up the TLS
 	 * handshake. DoH had already such option so we respect it.
 	 * Otherwise the server waits before sending more handshake data for
@@ -1384,11 +1389,16 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 		}
 	}
 
+	if (is_doc) {
+		/* Check for OSCORE credentials and fail if they are not set */
+	}
+
 	/* Check if both UDP and TCP ports should be open.
 	 * In the case of encrypted channels, probably an unencrypted channel
 	 * at the same port is not desired. */
 	if((is_ssl || is_https) && !is_doq) do_udp = do_auto = 0;
-	if((is_doq) && !(is_https || is_ssl)) do_tcp = 0;
+	if((is_doc || is_docs) && !is_doq) do_auto = 0;
+	if((is_doq || is_doc || is_docs) && !(is_https || is_ssl)) do_tcp = 0;
 
 	if(do_auto) {
 		ub_sock = calloc(1, sizeof(struct unbound_socket));
@@ -2282,7 +2292,8 @@ listening_ports_open(struct config_file* cfg, char** ifs, int num_ifs,
 						cfg->tcp_mss, cfg->ip_freebind,
 						cfg->http_nodelay, cfg->use_systemd,
 						cfg->dnscrypt_port, cfg->ip_dscp,
-						cfg->quic_port, cfg->http_notls_downstream,
+						cfg->quic_port, cfg->coap_port, cfg->coaps_port,
+						cfg->http_notls_downstream,
 						cfg->sock_queue_timeout)) {
 						listening_ports_free(list);
 						return NULL;
@@ -2301,7 +2312,8 @@ listening_ports_open(struct config_file* cfg, char** ifs, int num_ifs,
 						cfg->tcp_mss, cfg->ip_freebind,
 						cfg->http_nodelay, cfg->use_systemd,
 						cfg->dnscrypt_port, cfg->ip_dscp,
-						cfg->quic_port, cfg->http_notls_downstream,
+						cfg->quic_port, cfg->coap_port, cfg->coaps_port,
+						cfg->http_notls_downstream,
 						cfg->sock_queue_timeout)) {
 						listening_ports_free(list);
 						return NULL;
@@ -2322,7 +2334,8 @@ listening_ports_open(struct config_file* cfg, char** ifs, int num_ifs,
 				cfg->tcp_mss, cfg->ip_freebind,
 				cfg->http_nodelay, cfg->use_systemd,
 				cfg->dnscrypt_port, cfg->ip_dscp,
-				cfg->quic_port, cfg->http_notls_downstream,
+				cfg->quic_port, cfg->coap_port, cfg->coaps_port,
+				cfg->http_notls_downstream,
 				cfg->sock_queue_timeout)) {
 				listening_ports_free(list);
 				return NULL;
@@ -2340,7 +2353,8 @@ listening_ports_open(struct config_file* cfg, char** ifs, int num_ifs,
 				cfg->tcp_mss, cfg->ip_freebind,
 				cfg->http_nodelay, cfg->use_systemd,
 				cfg->dnscrypt_port, cfg->ip_dscp,
-				cfg->quic_port, cfg->http_notls_downstream,
+				cfg->quic_port, cfg->coap_port, cfg->coaps_port,
+				cfg->http_notls_downstream,
 				cfg->sock_queue_timeout)) {
 				listening_ports_free(list);
 				return NULL;
@@ -2360,7 +2374,8 @@ listening_ports_open(struct config_file* cfg, char** ifs, int num_ifs,
 				cfg->tcp_mss, cfg->ip_freebind,
 				cfg->http_nodelay, cfg->use_systemd,
 				cfg->dnscrypt_port, cfg->ip_dscp,
-				cfg->quic_port, cfg->http_notls_downstream,
+				cfg->quic_port, cfg->coap_port, cfg->coaps_port,
+				cfg->http_notls_downstream,
 				cfg->sock_queue_timeout)) {
 				listening_ports_free(list);
 				return NULL;
@@ -2378,7 +2393,8 @@ listening_ports_open(struct config_file* cfg, char** ifs, int num_ifs,
 				cfg->tcp_mss, cfg->ip_freebind,
 				cfg->http_nodelay, cfg->use_systemd,
 				cfg->dnscrypt_port, cfg->ip_dscp,
-				cfg->quic_port, cfg->http_notls_downstream,
+				cfg->quic_port, cfg->coap_port, cfg->coaps_port,
+				cfg->http_notls_downstream,
 				cfg->sock_queue_timeout)) {
 				listening_ports_free(list);
 				return NULL;
