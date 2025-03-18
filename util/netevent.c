@@ -442,7 +442,11 @@ comm_point_send_udp_msg(struct comm_point *c, sldns_buffer* packet,
 				int pret;
 				memset(&p, 0, sizeof(p));
 				p.fd = c->fd;
-				p.events = POLLOUT | POLLERR | POLLHUP;
+				p.events = POLLOUT | POLLERR
+#ifndef USE_WINSOCK
+					| POLLHUP
+#endif
+					;
 #  ifndef USE_WINSOCK
 				pret = poll(&p, 1, SEND_BLOCKED_WAIT_TIMEOUT);
 #  else
@@ -496,7 +500,8 @@ comm_point_send_udp_msg(struct comm_point *c, sldns_buffer* packet,
 #ifndef USE_WINSOCK
 					pret = poll(NULL, 0, (SEND_BLOCKED_WAIT_TIMEOUT/10)<<(retries+1));
 #else
-					pret = WSAPoll(NULL, 0, (SEND_BLOCKED_WAIT_TIMEOUT/10)<<(retries+1));
+					Sleep((SEND_BLOCKED_WAIT_TIMEOUT/10)<<(retries+1));
+					pret = 0;
 #endif
 					if(pret < 0 &&
 #ifndef USE_WINSOCK
@@ -751,7 +756,11 @@ comm_point_send_udp_msg_if(struct comm_point *c, sldns_buffer* packet,
 				int pret;
 				memset(&p, 0, sizeof(p));
 				p.fd = c->fd;
-				p.events = POLLOUT | POLLERR | POLLHUP;
+				p.events = POLLOUT | POLLERR
+#ifndef USE_WINSOCK
+					| POLLHUP
+#endif
+					;
 #  ifndef USE_WINSOCK
 				pret = poll(&p, 1, SEND_BLOCKED_WAIT_TIMEOUT);
 #  else
@@ -805,7 +814,8 @@ comm_point_send_udp_msg_if(struct comm_point *c, sldns_buffer* packet,
 #ifndef USE_WINSOCK
 					pret = poll(NULL, 0, (SEND_BLOCKED_WAIT_TIMEOUT/10)<<(retries+1));
 #else
-					pret = WSAPoll(NULL, 0, (SEND_BLOCKED_WAIT_TIMEOUT/10)<<(retries+1));
+					Sleep((SEND_BLOCKED_WAIT_TIMEOUT/10)<<(retries+1));
+					pret = 0;
 #endif
 					if(pret < 0 &&
 #ifndef USE_WINSOCK
