@@ -238,6 +238,10 @@ STREAMTCP_SRC=testcode/streamtcp.c
 STREAMTCP_OBJ=streamtcp.lo
 STREAMTCP_OBJ_LINK=$(STREAMTCP_OBJ) worker_cb.lo $(COMMON_OBJ) $(COMPAT_OBJ) \
 $(SLDNS_OBJ)
+SHELL_PARSE_SRC=testcode/shell-parse.c
+SHELL_PARSE_OBJ=shell-parse.lo
+SHELL_PARSE_OBJ_LINK=$(SHELL_PARSE_OBJ) $(COMMON_OBJ) $(COMPAT_OBJ) \
+$(SLDNS_OBJ)
 DOHCLIENT_SRC=testcode/dohclient.c
 DOHCLIENT_OBJ=dohclient.lo
 DOHCLIENT_OBJ_LINK=$(DOHCLIENT_OBJ) worker_cb.lo $(COMMON_OBJ) $(COMPAT_OBJ) \
@@ -301,7 +305,7 @@ ALL_OBJ=$(COMMON_OBJ) $(UNITTEST_OBJ) $(DAEMON_OBJ) \
 	$(CONTROL_OBJ) $(UBANCHOR_OBJ) $(PETAL_OBJ) $(DNSTAP_SOCKET_OBJ)\
 	$(COMPAT_OBJ) $(PYUNBOUND_OBJ) \
 	$(SVCINST_OBJ) $(SVCUNINST_OBJ) $(ANCHORUPD_OBJ) $(SLDNS_OBJ) \
-	$(DOHCLIENT_OBJ) $(DOQCLIENT_OBJ) $(READZONE_OBJ)
+	$(SHELL_PARSE_OBJ) $(DOHCLIENT_OBJ) $(DOQCLIENT_OBJ) $(READZONE_OBJ)
 
 COMPILE=$(LIBTOOL) --tag=CC --mode=compile $(CC) $(CPPFLAGS) $(CFLAGS) @PTHREAD_CFLAGS_ONLY@
 LINK=$(LIBTOOL) --tag=CC --mode=link $(CC) $(staticexe) $(RUNTIME_PATH) $(CPPFLAGS) $(CFLAGS) $(LDFLAGS)
@@ -338,7 +342,7 @@ rsrc_unbound_checkconf.o:	$(srcdir)/winrc/rsrc_unbound_checkconf.rc config.h
 TEST_BIN=asynclook$(EXEEXT) delayer$(EXEEXT) \
 	lock-verify$(EXEEXT) memstats$(EXEEXT) perf$(EXEEXT) \
 	petal$(EXEEXT) pktview$(EXEEXT) streamtcp$(EXEEXT) \
-	$(DNSTAP_SOCKET_TESTBIN) dohclient$(EXEEXT) doqclient$(EXEEXT) \
+	$(DNSTAP_SOCKET_TESTBIN) shell-parse$(EXEEXT) dohclient$(EXEEXT) doqclient$(EXEEXT) \
 	testbound$(EXEEXT) unittest$(EXEEXT) readzone$(EXEEXT)
 tests:	all $(TEST_BIN)
 
@@ -416,6 +420,9 @@ asynclook$(EXEEXT):	$(ASYNCLOOK_OBJ_LINK) libunbound.la
 
 streamtcp$(EXEEXT):	$(STREAMTCP_OBJ_LINK)
 	$(LINK) -o $@ $(STREAMTCP_OBJ_LINK) $(SSLLIB) $(LIBS)
+
+shell-parse$(EXEEXT):	$(SHELL_PARSE_OBJ_LINK)
+	$(LINK) -o $@ $(SHELL_PARSE_OBJ_LINK)
 
 dohclient$(EXEEXT):	$(DOHCLIENT_OBJ_LINK)
 	$(LINK) -o $@ $(DOHCLIENT_OBJ_LINK) $(SSLLIB) $(LIBS)
@@ -1847,6 +1854,7 @@ parseutil.lo parseutil.o: $(srcdir)/sldns/parseutil.c config.h $(srcdir)/sldns/p
 rrdef.lo rrdef.o: $(srcdir)/sldns/rrdef.c config.h $(srcdir)/sldns/rrdef.h $(srcdir)/sldns/parseutil.h
 str2wire.lo str2wire.o: $(srcdir)/sldns/str2wire.c config.h $(srcdir)/sldns/str2wire.h $(srcdir)/sldns/rrdef.h \
  $(srcdir)/sldns/wire2str.h $(srcdir)/sldns/sbuffer.h $(srcdir)/sldns/parse.h $(srcdir)/sldns/parseutil.h
+shell-parse.lo shell-parse.o: $(srcdir)/testcode/shell-parse.c config.h $(srcdir)/sldns/keyraw.h $(srcdir)/sldns/parse.h $(srcdir)/sldns/parseutil.h $(srcdir)/sldns/rrdef.h $(srcdir)/sldns/str2wire.h $(srcdir)/sldns/sbuffer.h $(srcdir)/sldns/wire2str.h $(srcdir)/util/data/msgencode.h $(srcdir)/util/data/msgparse.h $(srcdir)/util/data/msgreply.h $(srcdir)/util/log.h $(srcdir)/util/net_help.h
 dohclient.lo dohclient.o: $(srcdir)/testcode/dohclient.c config.h $(srcdir)/sldns/wire2str.h \
  $(srcdir)/sldns/sbuffer.h $(srcdir)/sldns/str2wire.h $(srcdir)/sldns/rrdef.h $(srcdir)/sldns/parseutil.h \
  $(srcdir)/util/data/msgencode.h $(srcdir)/util/data/msgreply.h $(srcdir)/util/storage/lruhash.h \
