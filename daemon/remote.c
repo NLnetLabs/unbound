@@ -3896,7 +3896,11 @@ sock_poll_timeout(int fd, int timeout, int pollin, int pollout, int* event)
 			nfds = 1;
 			memset(&p, 0, sizeof(p));
 			p.fd = fd;
-			p.events = POLLERR | POLLHUP;
+			p.events = POLLERR
+#ifndef USE_WINSOCK
+				| POLLHUP
+#endif
+				;
 			if(pollin)
 				p.events |= POLLIN;
 			if(pollout)
@@ -3905,7 +3909,12 @@ sock_poll_timeout(int fd, int timeout, int pollin, int pollout, int* event)
 #ifndef USE_WINSOCK
 		ret = poll(fds, nfds, timeout);
 #else
-		ret = WSAPoll(fds, nfds, timeout);
+		if(fds == NULL) {
+			Sleep(timeout);
+			ret = 0;
+		} else {
+			ret = WSAPoll(fds, nfds, timeout);
+		}
 #endif
 		if(ret == -1) {
 			if(
