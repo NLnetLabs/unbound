@@ -35,6 +35,7 @@
 /unbound.h
 /asynclook
 /delayer
+/shell-parse
 /dohclient
 /doqclient
 /lock-verify
