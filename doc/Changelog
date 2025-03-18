@@ -1,5 +1,6 @@
 18 March 2025: Wouter
 	- Fix #1251: WSAPoll first argument cannot be NULL.
+	- Fix for windows compile create ssl contexts.
 
 17 March 2025: Wouter
 	- Fix representation of types GPOS and RESINFO, add rdf type for
