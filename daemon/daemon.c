@@ -105,6 +105,7 @@
 #ifdef USE_CACHEDB
 #include "cachedb/cachedb.h"
 #endif
+#include <coap3/coap.h>
 
 /** How many quit requests happened. */
 static int sig_record_quit = 0;
@@ -590,6 +591,7 @@ daemon_init(void)
 		free(daemon);
 		return NULL;
 	}
+	coap_startup();
 	return daemon;	
 }
 
@@ -1237,6 +1239,7 @@ daemon_cleanup(struct daemon* daemon)
 		daemon->doq_table = NULL;
 	}
 #endif
+	coap_cleanup();
 	daemon->cfg = NULL;
 }
 
