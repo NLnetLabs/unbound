@@ -275,6 +275,7 @@ use-systemd{COLON}		{ YDVAR(1, VAR_USE_SYSTEMD) }
 do-daemonize{COLON}		{ YDVAR(1, VAR_DO_DAEMONIZE) }
 interface{COLON}		{ YDVAR(1, VAR_INTERFACE) }
 ip-address{COLON}		{ YDVAR(1, VAR_INTERFACE) }
+distribute{COLON}		{ YDVAR(1, VAR_DISTRIBUTE ) }
 outgoing-interface{COLON}	{ YDVAR(1, VAR_OUTGOING_INTERFACE) }
 interface-automatic{COLON}	{ YDVAR(1, VAR_INTERFACE_AUTOMATIC) }
 interface-automatic-ports{COLON} { YDVAR(1, VAR_INTERFACE_AUTOMATIC_PORTS) }
