@@ -1,3 +1,7 @@
+21 March 2025: Wouter
+	- Fix #1253: Cache entries fail to be removed from Redis cachedb
+	  backend with unbound-control flush* +c.
+
 20 March 2025: Wouter
 	- Fix print of RR type NSAP-PTR, it is an unquoted string.
 
