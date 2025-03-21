@@ -175,6 +175,10 @@ struct config_file {
 	int coap_port;
 	/** port on which to provide DNS over CoAP over DTLS over UDP service */
 	int coaps_port;
+	/** CoAPS pre-shared key */
+	char *coaps_psk;
+	/** Identity sent for CoAPS pre-shared key */
+	char *coaps_psk_id;
 
 	/** outgoing port range number of ports (per thread) */
 	int outgoing_num_ports;
