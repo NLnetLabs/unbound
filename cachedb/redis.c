@@ -369,6 +369,7 @@ redis_store(struct module_env* env, struct cachedb_env* cachedb_env,
 		n = snprintf(cmdbuf, sizeof(cmdbuf), "SET %s %%b", key);
 	} else if(ttl == 0) {
 		/* use the EXPIRE command, SET with EX 0 is an invalid time. */
+		/* Replies with REDIS_REPLY_INTEGER of 1. */
 		verbose(VERB_ALGO, "redis_store expire %s (%d bytes)",
 			key, (int)data_len);
 		n = snprintf(cmdbuf, sizeof(cmdbuf), "EXPIRE %s 0", key);
@@ -394,7 +395,8 @@ redis_store(struct module_env* env, struct cachedb_env* cachedb_env,
 	if(rep) {
 		verbose(VERB_ALGO, "redis_store set completed");
 		if(rep->type != REDIS_REPLY_STATUS &&
-			rep->type != REDIS_REPLY_ERROR) {
+			rep->type != REDIS_REPLY_ERROR &&
+			rep->type != REDIS_REPLY_INTEGER) {
 			log_err("redis_store: unexpected type of reply (%d)",
 				rep->type);
 		}
