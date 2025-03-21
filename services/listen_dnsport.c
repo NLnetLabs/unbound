@@ -1300,21 +1300,23 @@ static coap_context_t*
 doc_setup_server_context(const uint8_t* key, unsigned key_len, const char* hint) {
 	coap_address_t listen_addr;
 	coap_context_t* coap_context = coap_new_context(NULL);
-	coap_dtls_spsk_t dtls_psk;
 
 	coap_context_set_block_mode(coap_context,
 			COAP_BLOCK_USE_LIBCOAP | COAP_BLOCK_SINGLE_BODY);
 
-	/* setup dtls */
-	memset (&dtls_psk, 0, sizeof (dtls_psk));
+	if (key && hint) {
+		/* setup dtls */
+		coap_dtls_spsk_t dtls_psk;
+		memset (&dtls_psk, 0, sizeof (dtls_psk));
 
-	dtls_psk.version				= COAP_DTLS_SPSK_SETUP_VERSION;
-	dtls_psk.psk_info.hint.s		= (const uint8_t*)hint;
-	dtls_psk.psk_info.hint.length	= hint ? strlen(hint) : 0;
-	dtls_psk.psk_info.key.s			= key;
-	dtls_psk.psk_info.key.length	= key_len;
+		dtls_psk.version				= COAP_DTLS_SPSK_SETUP_VERSION;
+		dtls_psk.psk_info.hint.s		= (const uint8_t*)hint;
+		dtls_psk.psk_info.hint.length	= hint ? strlen(hint) : 0;
+		dtls_psk.psk_info.key.s			= key;
+		dtls_psk.psk_info.key.length	= key_len;
 
-	coap_context_set_psk2(coap_context, &dtls_psk);
+		coap_context_set_psk2(coap_context, &dtls_psk);
+	}
 
 	/* setup oscore */
 	uint64_t start_seq_num = 0;
@@ -1632,6 +1634,7 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 	int* reuseport, int transparent, int tcp_mss, int freebind,
 	int http2_nodelay, int use_systemd, int dnscrypt_port, int dscp,
 	int quic_port, int coap_port, int coaps_port,
+	const char* coaps_psk, const char* coaps_psk_id,
 	int http_notls_downstream, int sock_queue_timeout)
 {
 	int s, noip6=0;
@@ -1652,14 +1655,16 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 	const char* add = NULL;
 
 #ifdef HAVE_COAP
-	static const uint8_t psk_key[] = "psk";
-	ssize_t psk_length = sizeof(psk_key) - 1;
-	static const char* hint = "client";
-	coap_context_t* coap_context = doc_setup_server_context(psk_key, psk_length, hint);
+	printf("coaps_psk: %s, coaps_psk_len: %lu, coaps_psk_id: %s\n", coaps_psk, strlen(coaps_psk), coaps_psk_id);
+	coap_context_t* coap_context = doc_setup_server_context(
+		(const uint8_t *)coaps_psk, strlen(coaps_psk), coaps_psk_id);
 
 	if (!coap_context) {
 		fatal_exit("Unable to get server context");
 	}
+#else
+	(void)coaps_psk;
+	(void)coaps_psk_id;
 #endif  /* HAVE_COAP */
 
 	if(!do_udp && !do_tcp)
@@ -2377,6 +2382,7 @@ listening_ports_open(struct config_file* cfg, char** ifs, int num_ifs,
 						cfg->http_nodelay, cfg->use_systemd,
 						cfg->dnscrypt_port, cfg->ip_dscp,
 						cfg->quic_port, cfg->coap_port, cfg->coaps_port,
+						cfg->coaps_psk, cfg->coaps_psk_id,
 						cfg->http_notls_downstream,
 						cfg->sock_queue_timeout)) {
 						listening_ports_free(list);
@@ -2397,6 +2403,7 @@ listening_ports_open(struct config_file* cfg, char** ifs, int num_ifs,
 						cfg->http_nodelay, cfg->use_systemd,
 						cfg->dnscrypt_port, cfg->ip_dscp,
 						cfg->quic_port, cfg->coap_port, cfg->coaps_port,
+						cfg->coaps_psk, cfg->coaps_psk_id,
 						cfg->http_notls_downstream,
 						cfg->sock_queue_timeout)) {
 						listening_ports_free(list);
@@ -2419,6 +2426,7 @@ listening_ports_open(struct config_file* cfg, char** ifs, int num_ifs,
 				cfg->http_nodelay, cfg->use_systemd,
 				cfg->dnscrypt_port, cfg->ip_dscp,
 				cfg->quic_port, cfg->coap_port, cfg->coaps_port,
+				cfg->coaps_psk, cfg->coaps_psk_id,
 				cfg->http_notls_downstream,
 				cfg->sock_queue_timeout)) {
 				listening_ports_free(list);
@@ -2438,6 +2446,7 @@ listening_ports_open(struct config_file* cfg, char** ifs, int num_ifs,
 				cfg->http_nodelay, cfg->use_systemd,
 				cfg->dnscrypt_port, cfg->ip_dscp,
 				cfg->quic_port, cfg->coap_port, cfg->coaps_port,
+				cfg->coaps_psk, cfg->coaps_psk_id,
 				cfg->http_notls_downstream,
 				cfg->sock_queue_timeout)) {
 				listening_ports_free(list);
@@ -2459,6 +2468,7 @@ listening_ports_open(struct config_file* cfg, char** ifs, int num_ifs,
 				cfg->http_nodelay, cfg->use_systemd,
 				cfg->dnscrypt_port, cfg->ip_dscp,
 				cfg->quic_port, cfg->coap_port, cfg->coaps_port,
+				cfg->coaps_psk, cfg->coaps_psk_id,
 				cfg->http_notls_downstream,
 				cfg->sock_queue_timeout)) {
 				listening_ports_free(list);
@@ -2478,6 +2488,7 @@ listening_ports_open(struct config_file* cfg, char** ifs, int num_ifs,
 				cfg->http_nodelay, cfg->use_systemd,
 				cfg->dnscrypt_port, cfg->ip_dscp,
 				cfg->quic_port, cfg->coap_port, cfg->coaps_port,
+				cfg->coaps_psk, cfg->coaps_psk_id,
 				cfg->http_notls_downstream,
 				cfg->sock_queue_timeout)) {
 				listening_ports_free(list);

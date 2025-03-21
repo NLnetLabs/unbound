@@ -274,6 +274,8 @@ quic-port{COLON}		{ YDVAR(1, VAR_QUIC_PORT) }
 quic-size{COLON}		{ YDVAR(1, VAR_QUIC_SIZE) }
 coap-port{COLON}		{ YDVAR(1, VAR_COAP_PORT) }
 coaps-port{COLON}		{ YDVAR(1, VAR_COAPS_PORT) }
+coaps-psk{COLON}		{ YDVAR(1, VAR_COAPS_PSK) }
+coaps-psk-id{COLON}		{ YDVAR(1, VAR_COAPS_PSK_ID) }
 use-systemd{COLON}		{ YDVAR(1, VAR_USE_SYSTEMD) }
 do-daemonize{COLON}		{ YDVAR(1, VAR_DO_DAEMONIZE) }
 interface{COLON}		{ YDVAR(1, VAR_INTERFACE) }

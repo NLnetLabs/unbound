@@ -140,6 +140,8 @@ config_create(void)
 	cfg->quic_size = 8*1024*1024;
 	cfg->coap_port = UNBOUND_DNS_OVER_COAP_PORT;
 	cfg->coaps_port = UNBOUND_DNS_OVER_COAPS_PORT;
+	cfg->coaps_psk = NULL;
+	cfg->coaps_psk_id = NULL;
 	cfg->use_syslog = 1;
 	cfg->log_identity = NULL; /* changed later with argv[0] */
 	cfg->log_time_ascii = 0;
