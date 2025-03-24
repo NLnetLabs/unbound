@@ -369,6 +369,15 @@ udp_send_errno_needs_log(struct sockaddr* addr, socklen_t addrlen)
 		(struct sockaddr_storage*)addr, addrlen) &&
 		verbosity < VERB_DETAIL)
 		return 0;
+#  ifdef ENOTCONN
+	/* For 0.0.0.0, ::0 targets it can return that socket is not connected.
+	 * This can be ignored, and the address skipped. It remains
+	 * possible to send there for completeness in configuration. */
+	if(errno == ENOTCONN && addr_is_any(
+		(struct sockaddr_storage*)addr, addrlen) &&
+		verbosity < VERB_DETAIL)
+		return 0;
+#  endif
 	return 1;
 }
 
