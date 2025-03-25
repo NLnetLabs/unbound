@@ -96,7 +96,7 @@ void pkt_dname_tolower(struct sldns_buffer* pkt, uint8_t* dname);
  * @return: -1, 0, or +1 depending on comparison results.
  * 	Sort order is first difference found. not the canonical ordering.
  */
-int query_dname_compare(uint8_t* d1, uint8_t* d2);
+int query_dname_compare(const uint8_t* d1, const uint8_t* d2);
 
 /**
  * Determine correct, compressed, dname present in packet.

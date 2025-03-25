@@ -48,7 +48,7 @@
  * Verify pkt with the name (domain name), algorithm and key.
  * out 0 on success, an error code otherwise.
  */
-int tsig_verify(sldns_buffer* pkt, const uint8_t* name, size_t name_len,
-		const uint8_t* secret, size_t secret_len);
+int tsig_verify(sldns_buffer* pkt, const uint8_t* name, const uint8_t* alg,
+		const uint8_t* secret, size_t secret_len, uint64_t now);
 
 #endif
