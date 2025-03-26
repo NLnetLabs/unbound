@@ -997,7 +997,7 @@ int
 reply_info_answer_encode(struct query_info* qinf, struct reply_info* rep, 
 	uint16_t id, uint16_t qflags, sldns_buffer* pkt, time_t timenow,
 	int cached, struct regional* region, uint16_t udpsize, 
-	struct edns_data* edns, int dnssec, int secure)
+	struct edns_data* edns, int dnssec, int secure, int cached_ttl)
 {
 	uint16_t flags;
 	unsigned int attach_edns = 0;
@@ -1022,6 +1022,17 @@ reply_info_answer_encode(struct query_info* qinf, struct reply_info* rep,
 		flags &= ~BIT_AD;
 	}
 	log_assert(flags & BIT_QR); /* QR bit must be on in our replies */
+	if(cached_ttl && rep->ttl - timenow == 0) {
+		/* The last remaining second of the TTL for a cached response
+		 * is replied. This makes a 0 in the protocol message. The
+		 * response is valid for the cache, but the DNS TTL 0 item
+		 * causes the received to drop the contents. Even though the
+		 * contents are cachable, so the time used is decremented
+		 * to change that into 1 second, and it can be cached, and
+		 * used for expired response generation, and does not give
+		 * repeated queries during that last second. */
+		timenow --;
+	}
 	if(udpsize < LDNS_HEADER_SIZE)
 		return 0;
 	/* currently edns does not change during calculations;
