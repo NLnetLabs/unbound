@@ -1,3 +1,6 @@
+26 March 2025: Yorgos
+	- Fix #1255: Multiple pinnings to vulnerable copies of libexpat.
+
 24 March 2025: Wouter
 	- Fix #1254: `send failed: Socket is not connected` and
 	  `remote address is 0.0.0.0 port 53`.
