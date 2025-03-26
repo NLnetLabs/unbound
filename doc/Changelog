@@ -2,6 +2,7 @@
 	- Fix #1255: Multiple pinnings to vulnerable copies of libexpat.
 	- For #1255, for ios use an older expat version that does not require
 	  C++11 language features.
+	- For #1255, for ios disable building tests that require C++11.
 
 24 March 2025: Wouter
 	- Fix #1254: `send failed: Socket is not connected` and
