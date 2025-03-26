@@ -59,6 +59,14 @@ struct subnet_env {
 	struct slabhash* subnet_msg_cache;
 	/** access control, which upstream servers we send client address */
 	struct ecs_whitelist* whitelist;
+	/** whether to override client source address for IPv4 */
+	int do_address_override_v4;
+	/** whether to override client source address for IPv6 */
+	int do_address_override_v6;
+	/** overide client source address value for IPv4 */
+	struct sockaddr_storage address_override_v4;
+	/** overide client source address value for IPv6 */
+	struct sockaddr_storage address_override_v6;
 	/** allocation service */
 	struct alloc_cache alloc;
 	lock_rw_type biglock;
@@ -159,5 +167,5 @@ void subnet_ecs_opt_list_append(struct ecs_data* ecs, struct edns_option** list,
 
 /** Create ecs_data from the sockaddr_storage information. */
 void subnet_option_from_ss(struct sockaddr_storage *ss, struct ecs_data* ecs,
-	struct config_file* cfg);
+	struct config_file* cfg, const struct subnet_env* sne);
 #endif /* SUBNETMOD_H */
