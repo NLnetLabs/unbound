@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
-LIBEXPAT_FNAME=expat-2.6.3
-LIBEXPAT_VERSION_DIR=R_2_6_3
+LIBEXPAT_FNAME=expat-2.7.0
+LIBEXPAT_VERSION_DIR=R_2_7_0
 
 echo "Downloading Expat"
 if ! curl -L -k -s -o $LIBEXPAT_FNAME.tar.gz https://github.com/libexpat/libexpat/releases/download/$LIBEXPAT_VERSION_DIR/$LIBEXPAT_FNAME.tar.gz;
