@@ -31,12 +31,12 @@ jobs:
             clang_analysis: "yes"
           - name: OS X
             os: macos-latest
-            install_expat: "yes"
+            install_expat: "no"
             config: "--enable-debug --disable-flto --with-ssl=/opt/homebrew/opt/openssl --with-libexpat=/opt/homebrew/opt/expat"
             make_test: "yes"
           - name: Clang on OS X
             os: macos-latest
-            install_expat: "yes"
+            install_expat: "no"
             config: "CC=clang --enable-debug --disable-flto --with-ssl=/opt/homebrew/opt/openssl --with-libexpat=/opt/homebrew/opt/expat --disable-static"
             make_test: "yes"
             clang_analysis: "yes"

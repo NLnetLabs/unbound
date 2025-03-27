@@ -1,5 +1,6 @@
 27 March 2025: Wouter
 	- Fix unit test dname log printout typecast.
+	- Fix for ci test, expat is installed on the osx image.
 
 26 March 2025: Yorgos
 	- Fix #1255: Multiple pinnings to vulnerable copies of libexpat.
