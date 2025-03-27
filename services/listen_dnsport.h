@@ -49,6 +49,9 @@
 #ifdef HAVE_NGHTTP2_NGHTTP2_H
 #include <nghttp2/nghttp2.h>
 #endif
+#ifdef HAVE_COAP
+#include <coap3/coap.h>
+#endif	/* HAVE COAP */
 #ifdef HAVE_NGTCP2
 #include <ngtcp2/ngtcp2.h>
 #include <ngtcp2/ngtcp2_crypto.h>
@@ -87,6 +90,7 @@ struct listen_list {
 	struct comm_point* com;
 };
 
+
 /**
  * type of ports
  */
@@ -108,8 +112,13 @@ enum listen_type {
 	/** HTTP(2) over TLS over TCP */
 	listen_type_http,
 	/** DNS over QUIC */
-	listen_type_doq
+	listen_type_doq,
+	/** DNS over CoAP over UDP */
+	listen_type_doc,
+	/** DNS over CoAP over DTLS over UDP */
+	listen_type_docs,
 };
+
 
 /*
  * socket properties (just like NSD nsd_socket structure definition)
@@ -125,6 +134,10 @@ struct unbound_socket {
 	int fam;
 	/** ACL on the socket (listening interface) */
 	struct acl_addr* acl;
+#ifdef HAVE_COAP
+	/** libcoap endpoint */
+	coap_endpoint_t* coap_ep;
+#endif	/* HAVE_COAP */
 };
 
 /**
@@ -143,7 +156,13 @@ struct listen_port {
 	/** fill in unbound_socket structure for every opened socket at
 	 * Unbound startup */
 	struct unbound_socket* socket;
+#ifdef HAVE_COAP
+	/** libcoap context */
+	coap_context_t* coap_context;
+#endif	/* HAVE_COAP */
 };
+
+void free_pdu_response_data(struct pdu_response_data* data);
 
 /**
  * Create shared listening ports
