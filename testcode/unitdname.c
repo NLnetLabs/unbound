@@ -998,7 +998,7 @@ dname_test_str(sldns_buffer* buff)
 		unit_assert( pkt_dname_len(buff) == 3);
 		dname_str(sldns_buffer_begin(buff), result);
 		if(strcmp( "?.", result) != 0 ) {
-			log_err("ASCII value '0x%lX' allowed in string output", i);
+			log_err("ASCII value '0x%lX' allowed in string output", (unsigned long)i);
 			unit_assert(0);
 		}
 	}
