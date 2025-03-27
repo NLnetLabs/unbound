@@ -43,6 +43,7 @@
 #include "util/log.h"
 #include "util/net_help.h"
 #include "util/random.h"
+#include "util/tsig.h"
 #include "daemon/worker.h"
 #include "daemon/daemon.h"
 #include "daemon/remote.h"
@@ -78,6 +79,7 @@
 #include "respip/respip.h"
 #include "libunbound/context.h"
 #include "libunbound/libworker.h"
+#include "sldns/parseutil.h"
 #include "sldns/sbuffer.h"
 #include "sldns/wire2str.h"
 #include "util/shm_side/shm_main.h"
@@ -272,6 +274,11 @@ worker_handle_service_reply(struct comm_point* c, void* arg, int error,
 	return 0;
 }
 
+#define REQUEST_OK        0
+#define DROP_REQUEST     -1
+#define RESPONSE_MESSAGE -2
+
+
 /** ratelimit error replies
  * @param worker: the worker struct with ratelimit counter
  * @param err: error code that would be wanted.
@@ -283,7 +290,7 @@ worker_err_ratelimit(struct worker* worker, int err)
 	if(worker->err_limit_time == *worker->env.now) {
 		/* see if limit is exceeded for this second */
 		if(worker->err_limit_count++ > ERROR_RATELIMIT)
-			return -1;
+			return DROP_REQUEST;
 	} else {
 		/* new second, new limits */
 		worker->err_limit_time = *worker->env.now;
@@ -296,6 +303,9 @@ worker_err_ratelimit(struct worker* worker, int err)
  * Structure holding the result of the worker_check_request function.
  * Based on configuration it could be called up to four times; ideally should
  * be called once.
+ * When value is a positive number, it countains the error to return.
+ * Otherwise DROP_REQUEST (-1) is returned, or RESPONSE_MESSAGE (-2) in
+ * case the qr bit was set. Value is set to REQUEST_OK (0) if all is good.
  */
 struct check_request_result {
 	int checked;
@@ -314,18 +324,18 @@ worker_check_request(sldns_buffer* pkt, struct worker* worker,
 	out->checked = 1;
 	if(sldns_buffer_limit(pkt) < LDNS_HEADER_SIZE) {
 		verbose(VERB_QUERY, "request too short, discarded");
-		out->value = -1;
+		out->value = DROP_REQUEST;
 		return;
 	}
 	if(sldns_buffer_limit(pkt) > NORMAL_UDP_SIZE &&
 		worker->daemon->cfg->harden_large_queries) {
 		verbose(VERB_QUERY, "request too large, discarded");
-		out->value = -1;
+		out->value = DROP_REQUEST;
 		return;
 	}
 	if(LDNS_QR_WIRE(sldns_buffer_begin(pkt))) {
-		verbose(VERB_QUERY, "request has QR bit on, discarded");
-		out->value = -1;
+		/* verbose(VERB_QUERY, "request has QR bit on, discarded"); */
+		out->value = RESPONSE_MESSAGE;
 		return;
 	}
 	if(LDNS_TC_WIRE(sldns_buffer_begin(pkt))) {
@@ -367,8 +377,37 @@ worker_check_request(sldns_buffer* pkt, struct worker* worker,
 		out->value = worker_err_ratelimit(worker, LDNS_RCODE_FORMERR);
 		return;
 	}
-	out->value = 0;
+	out->value = REQUEST_OK;
 	return;
+}
+
+/** check response sanity.
+ * @param pkt: the wire packet to examine for sanity.
+ * @param worker: parameters for checking.
+ * @param out: 1 on success, otherwise 0.
+*/
+static int
+worker_check_response(sldns_buffer* pkt, struct worker* worker)
+{
+	if(LDNS_TC_WIRE(sldns_buffer_begin(pkt))) {
+		LDNS_TC_CLR(sldns_buffer_begin(pkt));
+		verbose(VERB_QUERY, "response bad, has TC bit on");
+		return 0;
+	}
+	if(LDNS_OPCODE_WIRE(sldns_buffer_begin(pkt)) != LDNS_PACKET_QUERY) {
+		verbose(VERB_QUERY, "not a query response");
+		return 0;
+	}
+	if(LDNS_QDCOUNT(sldns_buffer_begin(pkt)) != 1) {
+		verbose(VERB_QUERY, "request wrong nr qd=%d",
+			LDNS_QDCOUNT(sldns_buffer_begin(pkt)));
+		return 0;
+	}
+	if(LDNS_ANCOUNT(sldns_buffer_begin(pkt)) == 0) {
+		verbose(VERB_QUERY, "response must be an answer message");
+		return 0;
+	}
+	return 1;
 }
 
 void
@@ -1138,8 +1177,8 @@ deny_refuse(struct comm_point* c, enum acl_access acl,
 		if(worker->stats.extended)
 			worker->stats.unwanted_queries++;
 		worker_check_request(c->buffer, worker, check_result);
-		if(check_result->value != 0) {
-			if(check_result->value != -1) {
+		if(check_result->value != REQUEST_OK) {
+			if(check_result->value > 0) {
 				LDNS_QR_SET(sldns_buffer_begin(c->buffer));
 				LDNS_RCODE_SET(sldns_buffer_begin(c->buffer),
 					check_result->value);
@@ -1416,7 +1455,7 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 		char buf[LDNS_MAX_DOMAINLEN];
 		/* Check if this is unencrypted and asking for certs */
 		worker_check_request(c->buffer, worker, &check_result);
-		if(check_result.value != 0) {
+		if(check_result.value != REQUEST_OK) {
 			verbose(VERB_ALGO,
 				"dnscrypt: worker check request: bad query.");
 			log_addr(VERB_CLIENT,"from",&repinfo->client_addr,
@@ -1479,10 +1518,49 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 	}
 
 	worker_check_request(c->buffer, worker, &check_result);
-	if(check_result.value != 0) {
+	if (check_result.value == RESPONSE_MESSAGE) {
+		struct reply_info *rep = NULL;
+		int r;
+		const char* tsig_name = "\x19""foobar-example-dyn-update\x00";
+		const char* alg = "\x0b""hmac-sha256\x00";
+		const char* tsig_secret =
+			"\x59\x2E\xD3\xD0\x84\xA8\x69\x5F\x8C\xCA\x07\xBE\x1B\xFC\x1E\x98\x74\xE7\xF6\x64\x30\x32\x10\xC6\x33\x09\x93\x94\x9D\xF1\x71\x74\x42\x27\xAB\xF5\x11\x59\x0D\x2E\x52\x2F\xBD\xA8\x7E\xD9\xEA\xD6\x8F\x3D\x6F\xD2\x60\x56\xD8\xD3\xCA\x02\xB7\x16\x1C\x43\x6D\xB8";
+		const size_t tsig_secret_len = 64;
+
+		if (!worker_check_response(c->buffer, worker)) {
+			verbose(VERB_ALGO, "Bad response");
+			log_addr(VERB_CLIENT,"from",&repinfo->client_addr, repinfo->client_addrlen);
+			comm_point_drop_reply(repinfo);
+			return 0;
+		}
+		if((r = tsig_verify(c->buffer, tsig_name, alg, tsig_secret,
+					tsig_secret_len, *worker->env.now))) {
+			verbose(VERB_ALGO, "worker tsig very of response: %s",
+				sldns_lookup_by_id(sldns_tsig_errors, r)?
+				sldns_lookup_by_id(sldns_tsig_errors, r)->name:"??");
+			log_addr(VERB_CLIENT,"from",&repinfo->client_addr, repinfo->client_addrlen);
+			comm_point_drop_reply(repinfo);
+			return 0;
+		}
+		if((r = reply_info_parse(c->buffer, worker->env.alloc, &qinfo,
+				&rep, worker->scratchpad, &edns))) {
+			verbose(VERB_ALGO, "worker parse response: %s",
+				sldns_lookup_by_id(sldns_rcodes, r)?
+				sldns_lookup_by_id(sldns_rcodes, r)->name:"??");
+			log_addr(VERB_CLIENT,"from",&repinfo->client_addr, repinfo->client_addrlen);
+			comm_point_drop_reply(repinfo);
+			return 0;
+		}
+		dns_cache_store(&worker->env, &qinfo, rep, 0 /* is_referral */,
+				0 /* leeway */, 0 /* pside */,
+				NULL /* region */, 0 /* flags */,
+				*worker->env.now, 0 /* is_valrec */);
+		comm_point_drop_reply(repinfo);
+		return 0;
+	} else if(check_result.value != REQUEST_OK) {
 		verbose(VERB_ALGO, "worker check request: bad query.");
 		log_addr(VERB_CLIENT,"from",&repinfo->client_addr, repinfo->client_addrlen);
-		if(check_result.value != -1) {
+		if(check_result.value > REQUEST_OK) {
 			LDNS_QR_SET(sldns_buffer_begin(c->buffer));
 			LDNS_RCODE_SET(sldns_buffer_begin(c->buffer),
 				check_result.value);
@@ -2195,7 +2273,7 @@ worker_init(struct worker* worker, struct config_file *cfg,
 		worker->daemon->connect_dot_sslctx, cfg->delay_close,
 		cfg->tls_use_sni, dtenv, cfg->udp_connect,
 		cfg->max_reuse_tcp_queries, cfg->tcp_reuse_timeout,
-		cfg->tcp_auth_query_timeout);
+		cfg->tcp_auth_query_timeout, cfg->dist, cfg->num_dist);
 	if(!worker->back) {
 		log_err("could not create outgoing sockets");
 		worker_delete(worker);
