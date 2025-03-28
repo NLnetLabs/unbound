@@ -6801,16 +6801,16 @@ fr_read_ack_from_workers(struct fast_reload_thread* fr)
 		if(ret == -1) {
 			if(
 #ifndef USE_WINSOCK
-                                errno == EINTR || errno == EAGAIN
+				errno == EINTR || errno == EAGAIN
 #  ifdef EWOULDBLOCK
-                                || errno == EWOULDBLOCK
+				|| errno == EWOULDBLOCK
 #  endif
 #else
-                                WSAGetLastError() == WSAEINTR ||
-                                WSAGetLastError() == WSAEINPROGRESS ||
-                                WSAGetLastError() == WSAEWOULDBLOCK
+				WSAGetLastError() == WSAEINTR ||
+				WSAGetLastError() == WSAEINPROGRESS ||
+				WSAGetLastError() == WSAEWOULDBLOCK
 #endif
-                                )
+				)
 				continue; /* Try again */
 			log_err("worker reload ack: recv failed: %s",
 				sock_strerror(errno));
