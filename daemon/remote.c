@@ -6598,8 +6598,6 @@ fast_reload_thread_setup(struct worker* worker, int fr_verb, int fr_nopause,
 	if(!create_socketpair(fr->commreload, worker->daemon->rand)) {
 		sock_close(fr->commpair[0]);
 		sock_close(fr->commpair[1]);
-		sock_close(fr->commreload[0]);
-		sock_close(fr->commreload[1]);
 		free(fr->fr_output);
 		free(fr);
 		worker->daemon->fast_reload_thread = NULL;
