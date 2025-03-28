@@ -6877,7 +6877,7 @@ fr_poll_for_reload_start(struct fast_reload_thread* fr)
 }
 
 /** Pick up the worker mesh changes, after fast reload. */
-void
+static void
 fr_worker_pickup_mesh(struct worker* worker)
 {
 	struct mesh_area* mesh = worker->env.mesh;
@@ -6897,7 +6897,7 @@ fr_worker_pickup_mesh(struct worker* worker)
  * They are only incremented when an accept is performed on a tcp comm point.
  * @param front: listening comm ports of the worker.
  */
-void
+static void
 tcl_remove_old(struct listen_dnsport* front)
 {
 	struct listen_list* l;
