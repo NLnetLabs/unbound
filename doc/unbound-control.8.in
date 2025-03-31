@@ -67,6 +67,7 @@ is loaded in a thread, and prepared, then it briefly pauses the existing
 server and updates config options. The intent is that the pause does not
 impact the service of user queries. The cache is kept. Also user queries
 worked on are kept and continue, but with the new config options.
+This command is experimental at this time.
 Not all options are changed, but it changes like forwards, stubs and
 local zones. Also access-control and interface-action and similar options,
 also tcp-connection-limits, views. It can reload some define-tag changes.
