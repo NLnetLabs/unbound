@@ -373,7 +373,7 @@ worker_check_request(sldns_buffer* pkt, struct worker* worker,
 
 /**
  * Send fast-reload acknowledgement to the mainthread in one byte.
- * This signals that this works has received the previous command.
+ * This signals that this worker has received the previous command.
  * The worker is waiting if that is after a reload_stop command.
  * Or the worker has briefly processed the event itself, and in doing so
  * released data pointers to old config, after a reload_poll command.

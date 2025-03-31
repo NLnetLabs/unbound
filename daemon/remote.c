@@ -4510,7 +4510,8 @@ fr_check_compat_cfg(struct fast_reload_thread* fr, struct config_file* newcfg)
 		 * fast reload. */
 		if(!fr_output_printf(fr, "The config changes items that are "
 			"not compatible with fast_reload, perhaps do reload "
-			"or restart: %s\n", changed_str))
+			"or restart: %s", changed_str) ||
+			!fr_output_printf(fr, "\n"))
 			return 0;
 		fr_send_notification(fr, fast_reload_notification_printout);
 		return 0;
@@ -4623,7 +4624,8 @@ fr_check_nopause_cfg(struct fast_reload_thread* fr, struct config_file* newcfg)
 		 * to be able to update the variables. */
 		if(!fr_output_printf(fr, "The config changes items that need "
 			"the fast_reload +p option, for nopause, "
-			"disabled to be reloaded: %s\n", changed_str))
+			"disabled to be reloaded: %s", changed_str) ||
+			!fr_output_printf(fr, "\n"))
 			return 0;
 		fr_send_notification(fr, fast_reload_notification_printout);
 		return 0;
@@ -5009,7 +5011,7 @@ xfr_masterlist_equal(struct auth_master* list1, struct auth_master* list2)
 		p1 = p1->next;
 		p2 = p2->next;
 	}
-	if(!p2 && !p2)
+	if(!p1 && !p2)
 		return 1;
 	return 0;
 }
@@ -5083,8 +5085,8 @@ auth_zones_check_changes(struct fast_reload_thread* fr,
 			struct auth_xfer* old_xfr, *new_xfr;
 			lock_rw_rdlock(&new_z->lock);
 			lock_rw_rdlock(&old_z->lock);
-			new_xfr = auth_xfer_find(ct->auth_zones, old_z->name,
-				old_z->namelen, old_z->dclass);
+			new_xfr = auth_xfer_find(ct->auth_zones, new_z->name,
+				new_z->namelen, new_z->dclass);
 			old_xfr = auth_xfer_find(env->auth_zones, old_z->name,
 				old_z->namelen, old_z->dclass);
 			if(new_xfr) {
@@ -6024,14 +6026,14 @@ fr_reload_config(struct fast_reload_thread* fr, struct config_file* newcfg,
 	lock_rw_unlock(&env->respip_set->lock);
 	lock_rw_unlock(&ct->local_zones->lock);
 	lock_rw_unlock(&daemon->local_zones->lock);
-	lock_rw_unlock(&env->auth_zones->lock);
 	lock_rw_unlock(&ct->auth_zones->lock);
-	lock_rw_unlock(&env->auth_zones->rpz_lock);
+	lock_rw_unlock(&env->auth_zones->lock);
 	lock_rw_unlock(&ct->auth_zones->rpz_lock);
-	lock_rw_unlock(&env->fwds->lock);
+	lock_rw_unlock(&env->auth_zones->rpz_lock);
 	lock_rw_unlock(&ct->fwds->lock);
-	lock_rw_unlock(&env->hints->lock);
+	lock_rw_unlock(&env->fwds->lock);
 	lock_rw_unlock(&ct->hints->lock);
+	lock_rw_unlock(&env->hints->lock);
 	if(ct->anchors) {
 		lock_basic_unlock(&ct->anchors->lock);
 		lock_basic_unlock(&env->anchors->lock);
@@ -6605,8 +6607,6 @@ fast_reload_thread_setup(struct worker* worker, int fr_verb, int fr_nopause,
 	if(!create_socketpair(fr->commreload, worker->daemon->rand)) {
 		sock_close(fr->commpair[0]);
 		sock_close(fr->commpair[1]);
-		sock_close(fr->commreload[0]);
-		sock_close(fr->commreload[1]);
 		free(fr->fr_output);
 		free(fr);
 		worker->daemon->fast_reload_thread = NULL;
@@ -6706,6 +6706,8 @@ fr_send_cmd_to(struct fast_reload_thread* fr,
 		}
 		if(!outevent)
 			continue;
+		/* keep static analyzer happy; send(-1,..) */
+		log_assert(fr->commpair[0] >= 0);
 		ret = send(fr->commpair[0], ((char*)&cmd)+bcount,
 			sizeof(cmd)-bcount, 0);
 		if(ret == -1) {
@@ -6808,16 +6810,16 @@ fr_read_ack_from_workers(struct fast_reload_thread* fr)
 		if(ret == -1) {
 			if(
 #ifndef USE_WINSOCK
-                                errno == EINTR || errno == EAGAIN
+				errno == EINTR || errno == EAGAIN
 #  ifdef EWOULDBLOCK
-                                || errno == EWOULDBLOCK
+				|| errno == EWOULDBLOCK
 #  endif
 #else
-                                WSAGetLastError() == WSAEINTR ||
-                                WSAGetLastError() == WSAEINPROGRESS ||
-                                WSAGetLastError() == WSAEWOULDBLOCK
+				WSAGetLastError() == WSAEINTR ||
+				WSAGetLastError() == WSAEINPROGRESS ||
+				WSAGetLastError() == WSAEWOULDBLOCK
 #endif
-                                )
+				)
 				continue; /* Try again */
 			log_err("worker reload ack: recv failed: %s",
 				sock_strerror(errno));
@@ -6884,7 +6886,7 @@ fr_poll_for_reload_start(struct fast_reload_thread* fr)
 }
 
 /** Pick up the worker mesh changes, after fast reload. */
-void
+static void
 fr_worker_pickup_mesh(struct worker* worker)
 {
 	struct mesh_area* mesh = worker->env.mesh;
@@ -6904,7 +6906,7 @@ fr_worker_pickup_mesh(struct worker* worker)
  * They are only incremented when an accept is performed on a tcp comm point.
  * @param front: listening comm ports of the worker.
  */
-void
+static void
 tcl_remove_old(struct listen_dnsport* front)
 {
 	struct listen_list* l;
@@ -7342,6 +7344,8 @@ fr_main_handle_cmd(struct fast_reload_thread* fr)
 {
 	enum fast_reload_notification status;
 	ssize_t ret;
+	/* keep static analyzer happy; recv(-1,..) */
+	log_assert(fr->commpair[0] >= 0);
 	ret = recv(fr->commpair[0],
 		((char*)&fr->service_read_cmd)+fr->service_read_cmd_count,
 		sizeof(fr->service_read_cmd)-fr->service_read_cmd_count, 0);

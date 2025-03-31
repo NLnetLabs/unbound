@@ -919,6 +919,10 @@ mesh_copy_client_info(struct regional* region, struct respip_client_info* cinfo)
 		cinfo->taglen);
 	if(!client_info->taglist)
 		return NULL;
+	client_info->tag_actions = regional_alloc_init(region, cinfo->tag_actions,
+		cinfo->tag_actions_size);
+	if(!client_info->tag_actions)
+		return NULL;
 	client_info->tag_datas = regional_alloc_zero(region,
 		sizeof(struct config_strlist*)*cinfo->tag_datas_size);
 	if(!client_info->tag_datas)
@@ -2465,19 +2469,19 @@ void mesh_remove_callback(struct mesh_area* mesh, struct query_info* qinfo,
 {
 	struct mesh_state* s = NULL;
 	s = mesh_area_find(mesh, NULL, qinfo, qflags&(BIT_RD|BIT_CD), 0, 0);
-	if(s) {
-		if(mesh_state_del_cb(s, cb, cb_arg)) {
-			/* It was in the list and removed. */
-			log_assert(mesh->num_reply_addrs > 0);
-			mesh->num_reply_addrs--;
-			if(!s->reply_list && !s->cb_list) {
-				/* was a reply state, not anymore */
-				log_assert(mesh->num_reply_states > 0);
-				mesh->num_reply_states--;
-			}
-			if(!s->reply_list && !s->cb_list &&
-				s->super_set.count == 0)
-				mesh->num_detached_states++;
-		}
+	if(!s) return;
+	if(!mesh_state_del_cb(s, cb, cb_arg)) return;
+
+	/* It was in the list and removed. */
+	log_assert(mesh->num_reply_addrs > 0);
+	mesh->num_reply_addrs--;
+	if(!s->reply_list && !s->cb_list) {
+		/* was a reply state, not anymore */
+		log_assert(mesh->num_reply_states > 0);
+		mesh->num_reply_states--;
+	}
+	if(!s->reply_list && !s->cb_list &&
+		s->super_set.count == 0) {
+		mesh->num_detached_states++;
 	}
 }

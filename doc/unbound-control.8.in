@@ -94,11 +94,13 @@ dnstap-tls-client-key-file and dnstap-tls-client-cert-file. The options
 dnstap-send-identity, dnstap-send-version, dnstap-identity, and
 dnstap-version can be loaded when '+p' is not used.
 .IP
-The '+v' option makes the output verbose. With '+vv' it is more verbose.
-That includes the time it took to do the reload. And with more verbose output
-the amount of memory that was allocated temporarily to perform the reload,
-this amount of memory can be big if the config has large contents. In the
-timing output the 'reload' time is the time during which the server was paused.
+The '+v' option makes the output verbose which includes the time it took to do
+the reload.
+With '+vv' it is more verbose which includes the amount of memory that was
+allocated temporarily to perform the reload; this amount of memory can be big
+if the config has large contents.
+In the timing output the 'reload' time is the time during which the server was
+paused.
 .IP
 The '+p' option makes the reload not pause threads, they keep running.
 Locks are acquired, but items are updated in sequence, so it is possible
@@ -131,10 +133,11 @@ processed. The drop makes it so that queries during the life time of the
 query processing see only old, or only new config options.
 .IP
 When there are changes to the config tags, from \fBdefine\-tag\fR config,
-then the '+d' option is turned on with a warning printout, and queries are
-dropped. This is to stop references to the old tag information, by the old
+then the '+d' option is implicitly turned on with a warning printout, and
+queries are dropped.
+This is to stop references to the old tag information, by the old
 queries. If the number of tags is increased in the newly loaded config, by
-adding tags at the end, then the '+d' option is not needed.
+adding tags at the end, then the implicit '+d' option is not needed.
 .IP
 For response ip, that is actions associated with IP addresses, and perhaps
 intersected with access control tag and action information, those settings

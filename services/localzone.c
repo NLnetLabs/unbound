@@ -2225,7 +2225,9 @@ local_zone_get_mem(struct local_zone* z)
 size_t local_zones_get_mem(struct local_zones* zones)
 {
 	struct local_zone* z;
-	size_t m = sizeof(*zones);
+	size_t m;
+	if(!zones) return 0;
+	m = sizeof(*zones);
 	lock_rw_rdlock(&zones->lock);
 	RBTREE_FOR(z, struct local_zone*, &zones->ztree) {
 		m += local_zone_get_mem(z);

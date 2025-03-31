@@ -8697,7 +8697,9 @@ az_xtree_get_mem(struct auth_zones* az)
 
 size_t auth_zones_get_mem(struct auth_zones* zones)
 {
-	size_t m = sizeof(*zones);
+	size_t m;
+	if(!zones) return 0;
+	m = sizeof(*zones);
 	lock_rw_rdlock(&zones->rpz_lock);
 	lock_rw_rdlock(&zones->lock);
 	m += az_ztree_get_mem(zones);

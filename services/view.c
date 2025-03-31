@@ -247,7 +247,9 @@ void views_print(struct views* v)
 size_t views_get_mem(struct views* vs)
 {
 	struct view* v;
-	size_t m = sizeof(struct views);
+	size_t m;
+	if(!vs) return 0;
+	m = sizeof(struct views);
 	lock_rw_rdlock(&vs->lock);
 	RBTREE_FOR(v, struct view*, &vs->vtree) {
 		m += view_get_mem(v);
