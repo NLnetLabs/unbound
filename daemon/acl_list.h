@@ -107,6 +107,8 @@ struct acl_addr {
 	struct config_strlist** tag_datas;
 	/** size of the tag_datas array */
 	size_t tag_datas_size;
+	/* If the acl node is for an interface */
+	int is_interface;
 	/* view element, NULL if none */
 	struct view* view;
 };
@@ -146,9 +148,6 @@ acl_interface_insert(struct acl_list* acl_interface,
  */
 int acl_list_apply_cfg(struct acl_list* acl, struct config_file* cfg,
 	struct views* v);
-
-/** compare ACL interface "addr_tree" nodes (+port) */
-int acl_interface_compare(const void* k1, const void* k2);
 
 /**
  * Initialise (also clean) the acl_interface struct.

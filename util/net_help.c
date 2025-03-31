@@ -544,7 +544,7 @@ void
 log_nametypeclass(enum verbosity_value v, const char* str, uint8_t* name, 
 	uint16_t type, uint16_t dclass)
 {
-	char buf[LDNS_MAX_DOMAINLEN+1];
+	char buf[LDNS_MAX_DOMAINLEN];
 	char t[12], c[12];
 	const char *ts, *cs; 
 	if(verbosity < v)
@@ -575,7 +575,7 @@ log_nametypeclass(enum verbosity_value v, const char* str, uint8_t* name,
 void
 log_query_in(const char* str, uint8_t* name, uint16_t type, uint16_t dclass)
 {
-	char buf[LDNS_MAX_DOMAINLEN+1];
+	char buf[LDNS_MAX_DOMAINLEN];
 	char t[12], c[12];
 	const char *ts, *cs; 
 	dname_str(name, buf);
@@ -608,7 +608,7 @@ void log_name_addr(enum verbosity_value v, const char* str, uint8_t* zone,
 {
 	uint16_t port;
 	const char* family = "unknown_family ";
-	char namebuf[LDNS_MAX_DOMAINLEN+1];
+	char namebuf[LDNS_MAX_DOMAINLEN];
 	char dest[100];
 	int af = (int)((struct sockaddr_in*)addr)->sin_family;
 	void* sinaddr = &((struct sockaddr_in*)addr)->sin_addr;
@@ -720,6 +720,52 @@ sockaddr_cmp_addr(struct sockaddr_storage* addr1, socklen_t len1,
 		return memcmp(&p1_in->sin_addr, &p2_in->sin_addr, INET_SIZE);
 	} else if (p1_in6->sin6_family == AF_INET6) {
 		return memcmp(&p1_in6->sin6_addr, &p2_in6->sin6_addr, 
+			INET6_SIZE);
+	} else {
+		/* eek unknown type, perform this comparison for sanity. */
+		return memcmp(addr1, addr2, len1);
+	}
+}
+
+int
+sockaddr_cmp_scopeid(struct sockaddr_storage* addr1, socklen_t len1,
+	struct sockaddr_storage* addr2, socklen_t len2)
+{
+	struct sockaddr_in* p1_in = (struct sockaddr_in*)addr1;
+	struct sockaddr_in* p2_in = (struct sockaddr_in*)addr2;
+	struct sockaddr_in6* p1_in6 = (struct sockaddr_in6*)addr1;
+	struct sockaddr_in6* p2_in6 = (struct sockaddr_in6*)addr2;
+	if(len1 < len2)
+		return -1;
+	if(len1 > len2)
+		return 1;
+	log_assert(len1 == len2);
+	if( p1_in->sin_family < p2_in->sin_family)
+		return -1;
+	if( p1_in->sin_family > p2_in->sin_family)
+		return 1;
+	log_assert( p1_in->sin_family == p2_in->sin_family );
+	/* compare ip4 */
+	if( p1_in->sin_family == AF_INET ) {
+		/* just order it, ntohs not required */
+		if(p1_in->sin_port < p2_in->sin_port)
+			return -1;
+		if(p1_in->sin_port > p2_in->sin_port)
+			return 1;
+		log_assert(p1_in->sin_port == p2_in->sin_port);
+		return memcmp(&p1_in->sin_addr, &p2_in->sin_addr, INET_SIZE);
+	} else if (p1_in6->sin6_family == AF_INET6) {
+		/* just order it, ntohs not required */
+		if(p1_in6->sin6_port < p2_in6->sin6_port)
+			return -1;
+		if(p1_in6->sin6_port > p2_in6->sin6_port)
+			return 1;
+		if(p1_in6->sin6_scope_id < p2_in6->sin6_scope_id)
+			return -1;
+		if(p1_in6->sin6_scope_id > p2_in6->sin6_scope_id)
+			return 1;
+		log_assert(p1_in6->sin6_port == p2_in6->sin6_port);
+		return memcmp(&p1_in6->sin6_addr, &p2_in6->sin6_addr,
 			INET6_SIZE);
 	} else {
 		/* eek unknown type, perform this comparison for sanity. */
@@ -1116,8 +1162,29 @@ log_cert(unsigned level, const char* str, void* cert)
 }
 #endif /* HAVE_SSL */
 
+#if defined(HAVE_SSL) && defined(HAVE_SSL_CTX_SET_ALPN_SELECT_CB)
+static int
+dot_alpn_select_cb(SSL* ATTR_UNUSED(ssl), const unsigned char** out,
+	unsigned char* outlen, const unsigned char* in, unsigned int inlen,
+	void* ATTR_UNUSED(arg))
+{
+	static const unsigned char alpns[] = { 3, 'd', 'o', 't' };
+	unsigned char* tmp_out;
+	int ret;
+	ret = SSL_select_next_proto(&tmp_out, outlen, alpns, sizeof(alpns), in, inlen);
+	if(ret == OPENSSL_NPN_NO_OVERLAP) {
+		/* Client sent ALPN but no overlap. Should have been error,
+		 * but for privacy we continue without ALPN (e.g., if certain
+		 * ALPNs are blocked) */
+		return SSL_TLSEXT_ERR_NOACK;
+	}
+	*out = tmp_out;
+	return SSL_TLSEXT_ERR_OK;
+}
+#endif
+
 #if defined(HAVE_SSL) && defined(HAVE_NGHTTP2) && defined(HAVE_SSL_CTX_SET_ALPN_SELECT_CB)
-static int alpn_select_cb(SSL* ATTR_UNUSED(ssl), const unsigned char** out,
+static int doh_alpn_select_cb(SSL* ATTR_UNUSED(ssl), const unsigned char** out,
 	unsigned char* outlen, const unsigned char* in, unsigned int inlen,
 	void* ATTR_UNUSED(arg))
 {
@@ -1130,6 +1197,23 @@ static int alpn_select_cb(SSL* ATTR_UNUSED(ssl), const unsigned char** out,
 	return SSL_TLSEXT_ERR_OK;
 }
 #endif
+
+/* setup the callback for ticket keys */
+static int
+setup_ticket_keys_cb(void* sslctx)
+{
+#  ifdef HAVE_SSL_CTX_SET_TLSEXT_TICKET_KEY_EVP_CB
+	if(SSL_CTX_set_tlsext_ticket_key_evp_cb(sslctx, tls_session_ticket_key_cb) == 0) {
+		return 0;
+	}
+#  else
+	if(SSL_CTX_set_tlsext_ticket_key_cb(sslctx, tls_session_ticket_key_cb) == 0) {
+		return 0;
+	}
+#  endif
+	return 1;
+}
+
 
 int
 listen_sslctx_setup(void* ctxt)
@@ -1202,9 +1286,6 @@ listen_sslctx_setup(void* ctxt)
 #ifdef HAVE_SSL_CTX_SET_SECURITY_LEVEL
 	SSL_CTX_set_security_level(ctx, 0);
 #endif
-#if defined(HAVE_SSL_CTX_SET_ALPN_SELECT_CB) && defined(HAVE_NGHTTP2)
-	SSL_CTX_set_alpn_select_cb(ctx, alpn_select_cb, NULL);
-#endif
 #else
 	(void)ctxt;
 #endif /* HAVE_SSL */
@@ -1239,7 +1320,10 @@ listen_sslctx_setup_2(void* ctxt)
 #endif /* HAVE_SSL */
 }
 
-void* listen_sslctx_create(char* key, char* pem, char* verifypem)
+void* listen_sslctx_create(const char* key, const char* pem,
+	const char* verifypem, const char* tls_ciphers,
+	const char* tls_ciphersuites, int set_ticket_keys_cb,
+	int is_dot, int is_doh)
 {
 #ifdef HAVE_SSL
 	SSL_CTX* ctx = SSL_CTX_new(SSLv23_server_method());
@@ -1290,11 +1374,50 @@ void* listen_sslctx_create(char* key, char* pem, char* verifypem)
 			verifypem));
 		SSL_CTX_set_verify(ctx, SSL_VERIFY_PEER|SSL_VERIFY_FAIL_IF_NO_PEER_CERT, NULL);
 	}
+	if(tls_ciphers && tls_ciphers[0]) {
+		if (!SSL_CTX_set_cipher_list(ctx, tls_ciphers)) {
+			log_err("failed to set tls-cipher %s",
+				tls_ciphers);
+			log_crypto_err("Error in SSL_CTX_set_cipher_list");
+			SSL_CTX_free(ctx);
+			return NULL;
+		}
+	}
+#ifdef HAVE_SSL_CTX_SET_CIPHERSUITES
+	if(tls_ciphersuites && tls_ciphersuites[0]) {
+		if (!SSL_CTX_set_ciphersuites(ctx, tls_ciphersuites)) {
+			log_err("failed to set tls-ciphersuites %s",
+				tls_ciphersuites);
+			log_crypto_err("Error in SSL_CTX_set_ciphersuites");
+			SSL_CTX_free(ctx);
+			return NULL;
+		}
+	}
+#endif /* HAVE_SSL_CTX_SET_CIPHERSUITES */
+	if(set_ticket_keys_cb) {
+		if(!setup_ticket_keys_cb(ctx)) {
+			log_crypto_err("no support for TLS session ticket");
+			SSL_CTX_free(ctx);
+			return NULL;
+		}
+	}
+	/* setup ALPN */
+#if defined(HAVE_SSL_CTX_SET_ALPN_SELECT_CB)
+	if(is_dot) {
+		SSL_CTX_set_alpn_select_cb(ctx, dot_alpn_select_cb, NULL);
+	} else if(is_doh) {
+#if defined(HAVE_NGHTTP2)
+		SSL_CTX_set_alpn_select_cb(ctx, doh_alpn_select_cb, NULL);
+#endif
+	}
+#endif /* HAVE_SSL_CTX_SET_ALPN_SELECT_CB */
 	return ctx;
 #else
 	(void)key; (void)pem; (void)verifypem;
+	(void)tls_ciphers; (void)tls_ciphersuites;
+	(void)tls_session_ticket_keys;
 	return NULL;
-#endif
+#endif /* HAVE_SSL */
 }
 
 #ifdef USE_WINSOCK
@@ -1654,7 +1777,7 @@ void ub_openssl_lock_delete(void)
 #endif /* OPENSSL_THREADS */
 }
 
-int listen_sslctx_setup_ticket_keys(void* sslctx, struct config_strlist* tls_session_ticket_keys) {
+int listen_sslctx_setup_ticket_keys(struct config_strlist* tls_session_ticket_keys) {
 #ifdef HAVE_SSL
 	size_t s = 1;
 	struct config_strlist* p;
@@ -1700,24 +1823,11 @@ int listen_sslctx_setup_ticket_keys(void* sslctx, struct config_strlist* tls_ses
 	}
 	/* terminate array with NULL key name entry */
 	keys->key_name = NULL;
-#  ifdef HAVE_SSL_CTX_SET_TLSEXT_TICKET_KEY_EVP_CB
-	if(SSL_CTX_set_tlsext_ticket_key_evp_cb(sslctx, tls_session_ticket_key_cb) == 0) {
-		log_err("no support for TLS session ticket");
-		return 0;
-	}
-#  else
-	if(SSL_CTX_set_tlsext_ticket_key_cb(sslctx, tls_session_ticket_key_cb) == 0) {
-		log_err("no support for TLS session ticket");
-		return 0;
-	}
-#  endif
 	return 1;
 #else
-	(void)sslctx;
 	(void)tls_session_ticket_keys;
 	return 0;
 #endif
-
 }
 
 #ifdef HAVE_SSL

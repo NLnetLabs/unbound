@@ -353,7 +353,7 @@ autr_tp_create(struct val_anchors* anchors, uint8_t* own, size_t own_len,
 
 	lock_basic_lock(&anchors->lock);
 	if(!rbtree_insert(anchors->tree, &tp->node)) {
-		char buf[LDNS_MAX_DOMAINLEN+1];
+		char buf[LDNS_MAX_DOMAINLEN];
 		lock_basic_unlock(&anchors->lock);
 		dname_str(tp->name, buf);
 		log_err("trust anchor for '%s' presented twice", buf);
@@ -363,7 +363,7 @@ autr_tp_create(struct val_anchors* anchors, uint8_t* own, size_t own_len,
 		return NULL;
 	}
 	if(!rbtree_insert(&anchors->autr->probe, &tp->autr->pnode)) {
-		char buf[LDNS_MAX_DOMAINLEN+1];
+		char buf[LDNS_MAX_DOMAINLEN];
 		(void)rbtree_delete(anchors->tree, tp);
 		lock_basic_unlock(&anchors->lock);
 		dname_str(tp->name, buf);
@@ -2303,7 +2303,9 @@ static void
 autr_debug_print_tp(struct trust_anchor* tp)
 {
 	struct autr_ta* ta;
-	char buf[257];
+	/* Note: buf is also used for autr_ctime_r but that only needs a size
+	 *       of 26, so LDNS_MAX_DOMAINLEN is enough. */
+	char buf[LDNS_MAX_DOMAINLEN];
 	if(!tp->autr)
 		return;
 	dname_str(tp->name, buf);

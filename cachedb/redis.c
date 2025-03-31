@@ -58,8 +58,10 @@ struct redis_moddata {
 	int server_port;	 /* server's TCP port */
 	const char* server_path; /* server's unix path, or "", NULL if unused */
 	const char* server_password; /* server's AUTH password, or "", NULL if unused */
-	struct timeval timeout;	 /* timeout for connection setup and commands */
+	struct timeval command_timeout;	 /* timeout for commands */
+	struct timeval connect_timeout;	 /* timeout for connect */
 	int logical_db;		/* the redis logical database to use */
+	int set_with_ex_available;    /* if the SET with EX command is supported */
 };
 
 static redisReply* redis_command(struct module_env*, struct cachedb_env*,
@@ -88,10 +90,10 @@ redis_connect(const struct redis_moddata* moddata)
 
 	if(moddata->server_path && moddata->server_path[0]!=0) {
 		ctx = redisConnectUnixWithTimeout(moddata->server_path,
-			moddata->timeout);
+			moddata->connect_timeout);
 	} else {
 		ctx = redisConnectWithTimeout(moddata->server_host,
-			moddata->server_port, moddata->timeout);
+			moddata->server_port, moddata->connect_timeout);
 	}
 	if(!ctx || ctx->err) {
 		const char *errstr = "out of memory";
@@ -100,8 +102,8 @@ redis_connect(const struct redis_moddata* moddata)
 		log_err("failed to connect to redis server: %s", errstr);
 		goto fail;
 	}
-	if(redisSetTimeout(ctx, moddata->timeout) != REDIS_OK) {
-		log_err("failed to set redis timeout");
+	if(redisSetTimeout(ctx, moddata->command_timeout) != REDIS_OK) {
+		log_err("failed to set redis timeout, %s", ctx->errstr);
 		goto fail;
 	}
 	if(moddata->server_password && moddata->server_password[0]!=0) {
@@ -159,30 +161,46 @@ redis_init(struct module_env* env, struct cachedb_env* cachedb_env)
 	moddata->server_port = env->cfg->redis_server_port;
 	moddata->server_path = env->cfg->redis_server_path;
 	moddata->server_password = env->cfg->redis_server_password;
-	moddata->timeout.tv_sec = env->cfg->redis_timeout / 1000;
-	moddata->timeout.tv_usec = (env->cfg->redis_timeout % 1000) * 1000;
+	moddata->command_timeout.tv_sec = env->cfg->redis_timeout / 1000;
+	moddata->command_timeout.tv_usec =
+		(env->cfg->redis_timeout % 1000) * 1000;
+	moddata->connect_timeout.tv_sec = env->cfg->redis_timeout / 1000;
+	moddata->connect_timeout.tv_usec =
+		(env->cfg->redis_timeout % 1000) * 1000;
+	if(env->cfg->redis_command_timeout != 0) {
+		moddata->command_timeout.tv_sec =
+			env->cfg->redis_command_timeout / 1000;
+		moddata->command_timeout.tv_usec =
+			(env->cfg->redis_command_timeout % 1000) * 1000;
+	}
+	if(env->cfg->redis_connect_timeout != 0) {
+		moddata->connect_timeout.tv_sec =
+			env->cfg->redis_connect_timeout / 1000;
+		moddata->connect_timeout.tv_usec =
+			(env->cfg->redis_connect_timeout % 1000) * 1000;
+	}
 	moddata->logical_db = env->cfg->redis_logical_db;
 	for(i = 0; i < moddata->numctxs; i++) {
 		redisContext* ctx = redis_connect(moddata);
 		if(!ctx) {
-			log_err("redis_init: failed to init redis");
-			goto fail;
+			log_err("redis_init: failed to init redis "
+				"(for thread %d)", i);
+			/* And continue, the context can be established
+			 * later, just like after a disconnect. */
 		}
 		moddata->ctxs[i] = ctx;
 	}
 	cachedb_env->backend_data = moddata;
-	if(env->cfg->redis_expire_records) {
+	if(env->cfg->redis_expire_records &&
+		moddata->ctxs[env->alloc->thread_num] != NULL) {
 		redisReply* rep = NULL;
 		int redis_reply_type = 0;
-		/** check if setex command is supported */
+		/** check if set with ex command is supported */
 		rep = redis_command(env, cachedb_env,
-			"SETEX __UNBOUND_REDIS_CHECK__ 1 none", NULL, 0);
+			"SET __UNBOUND_REDIS_CHECK__ none EX 1", NULL, 0);
 		if(!rep) {
 			/** init failed, no response from redis server*/
-			log_err("redis_init: failed to init redis, the "
-				"redis-expire-records option requires the SETEX command "
-				"(redis >= 2.0.0)");
-			goto fail;
+			goto set_with_ex_fail;
 		}
 		redis_reply_type = rep->type;
 		freeReplyObject(rep);
@@ -190,15 +208,18 @@ redis_init(struct module_env* env, struct cachedb_env* cachedb_env)
 		case REDIS_REPLY_STATUS:
 			break;
 		default:
-			/** init failed, setex command not supported */
-			log_err("redis_init: failed to init redis, the "
-				"redis-expire-records option requires the SETEX command "
-				"(redis >= 2.0.0)");
-			goto fail;
+			/** init failed, set_with_ex command not supported */
+			goto set_with_ex_fail;
 		}
+		moddata->set_with_ex_available = 1;
 	}
 	return 1;
 
+set_with_ex_fail:
+	log_err("redis_init: failure during redis_init, the "
+		"redis-expire-records option requires the SET with EX command "
+		"(redis >= 2.6.2)");
+	return 1;
 fail:
 	moddata_clean(&moddata);
 	return 0;
@@ -329,11 +350,16 @@ redis_store(struct module_env* env, struct cachedb_env* cachedb_env,
 {
 	redisReply* rep;
 	int n;
-	int set_ttl = (env->cfg->redis_expire_records &&
+	struct redis_moddata* moddata = (struct redis_moddata*)
+		cachedb_env->backend_data;
+	int set_ttl = (moddata->set_with_ex_available &&
+		env->cfg->redis_expire_records &&
 		(!env->cfg->serve_expired || env->cfg->serve_expired_ttl > 0));
 	/* Supported commands:
 	 * - "SET " + key + " %b"
-	 * - "SETEX " + key + " " + ttl + " %b"
+	 * - "SET " + key + " %b EX " + ttl
+	 *   older redis 2.0.0 was "SETEX " + key + " " + ttl + " %b"
+	 * - "EXPIRE " + key + " 0"
 	 */
 	char cmdbuf[6+(CACHEDB_HASHSIZE/8)*2+11+3+1];
 
@@ -341,14 +367,22 @@ redis_store(struct module_env* env, struct cachedb_env* cachedb_env,
 		verbose(VERB_ALGO, "redis_store %s (%d bytes)", key, (int)data_len);
 		/* build command to set to a binary safe string */
 		n = snprintf(cmdbuf, sizeof(cmdbuf), "SET %s %%b", key);
+	} else if(ttl == 0) {
+		/* use the EXPIRE command, SET with EX 0 is an invalid time. */
+		/* Replies with REDIS_REPLY_INTEGER of 1. */
+		verbose(VERB_ALGO, "redis_store expire %s (%d bytes)",
+			key, (int)data_len);
+		n = snprintf(cmdbuf, sizeof(cmdbuf), "EXPIRE %s 0", key);
+		data = NULL;
+		data_len = 0;
 	} else {
 		/* add expired ttl time to redis ttl to avoid premature eviction of key */
 		ttl += env->cfg->serve_expired_ttl;
 		verbose(VERB_ALGO, "redis_store %s (%d bytes) with ttl %u",
-			key, (int)data_len, (uint32_t)ttl);
+			key, (int)data_len, (unsigned)(uint32_t)ttl);
 		/* build command to set to a binary safe string */
-		n = snprintf(cmdbuf, sizeof(cmdbuf), "SETEX %s %u %%b", key,
-			(uint32_t)ttl);
+		n = snprintf(cmdbuf, sizeof(cmdbuf), "SET %s %%b EX %u", key,
+			(unsigned)(uint32_t)ttl);
 	}
 
 
@@ -361,7 +395,8 @@ redis_store(struct module_env* env, struct cachedb_env* cachedb_env,
 	if(rep) {
 		verbose(VERB_ALGO, "redis_store set completed");
 		if(rep->type != REDIS_REPLY_STATUS &&
-			rep->type != REDIS_REPLY_ERROR) {
+			rep->type != REDIS_REPLY_ERROR &&
+			rep->type != REDIS_REPLY_INTEGER) {
 			log_err("redis_store: unexpected type of reply (%d)",
 				rep->type);
 		}

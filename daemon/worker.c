@@ -749,22 +749,18 @@ answer_from_cache(struct worker* worker, struct query_info* qinfo,
 	if(rep->ttl < timenow) {
 		/* Check if we need to serve expired now */
 		if(worker->env.cfg->serve_expired &&
-			!worker->env.cfg->serve_expired_client_timeout
+			/* if serve-expired-client-timeout is set, serve
+			 * an expired record without attempting recursion
+			 * if the serve_expired_norec_ttl is set for the record
+			 * as we know that recursion is currently failing. */
+			(!worker->env.cfg->serve_expired_client_timeout ||
+			 timenow < rep->serve_expired_norec_ttl)
 #ifdef USE_CACHEDB
 			&& !(worker->env.cachedb_enabled &&
 			  worker->env.cfg->cachedb_check_when_serve_expired)
 #endif
 			) {
-				if(worker->env.cfg->serve_expired_ttl &&
-					rep->serve_expired_ttl < timenow)
-					return 0;
-				/* Ignore expired failure answers */
-				if(FLAGS_GET_RCODE(rep->flags) !=
-					LDNS_RCODE_NOERROR &&
-					FLAGS_GET_RCODE(rep->flags) !=
-					LDNS_RCODE_NXDOMAIN &&
-					FLAGS_GET_RCODE(rep->flags) !=
-					LDNS_RCODE_YXDOMAIN)
+				if(!reply_info_can_answer_expired(rep, timenow))
 					return 0;
 				if(!rrset_array_lock(rep->ref, rep->rrset_count, 0))
 					return 0;
@@ -1175,7 +1171,7 @@ answer_notify(struct worker* w, struct query_info* qinfo,
 
 	if(verbosity >= VERB_DETAIL) {
 		char buf[380];
-		char zname[255+1];
+		char zname[LDNS_MAX_DOMAINLEN];
 		char sr[25];
 		dname_str(qinfo->qname, zname);
 		sr[0]=0;
@@ -1506,7 +1502,7 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 		return 0;
 	}
 	if(c->dnscrypt && !repinfo->is_dnscrypted) {
-		char buf[LDNS_MAX_DOMAINLEN+1];
+		char buf[LDNS_MAX_DOMAINLEN];
 		/* Check if this is unencrypted and asking for certs */
 		worker_check_request(c->buffer, worker, &check_result);
 		if(check_result.value != 0) {
@@ -1938,10 +1934,10 @@ lookup_cache:
 				 * its qname must be that used for cache
 				 * lookup. */
 				if((worker->env.cfg->prefetch &&
-					*worker->env.now >= rep->prefetch_ttl) ||
+					rep->prefetch_ttl <= *worker->env.now) ||
 					(worker->env.cfg->serve_expired &&
-					*worker->env.now > rep->ttl)) {
-
+					rep->ttl < *worker->env.now  &&
+					!(*worker->env.now < rep->serve_expired_norec_ttl))) {
 					time_t leeway = rep->ttl - *worker->env.now;
 					if(rep->ttl < *worker->env.now)
 						leeway = 0;
@@ -2266,8 +2262,11 @@ worker_init(struct worker* worker, struct config_file *cfg,
 			: cfg->tcp_idle_timeout,
 		cfg->harden_large_queries, cfg->http_max_streams,
 		cfg->http_endpoint, cfg->http_notls_downstream,
-		worker->daemon->tcl, worker->daemon->listen_sslctx,
-		dtenv, worker_handle_request, worker);
+		worker->daemon->tcl, worker->daemon->listen_dot_sslctx,
+		worker->daemon->listen_doh_sslctx,
+		worker->daemon->listen_quic_sslctx,
+		dtenv, worker->daemon->doq_table, worker->env.rnd,
+		cfg, worker_handle_request, worker);
 	if(!worker->front) {
 		log_err("could not create listening sockets");
 		worker_delete(worker);
@@ -2282,7 +2281,7 @@ worker_init(struct worker* worker, struct config_file *cfg,
 		cfg->unwanted_threshold, cfg->outgoing_tcp_mss,
 		&worker_alloc_cleanup, worker,
 		cfg->do_udp || cfg->udp_upstream_without_downstream,
-		worker->daemon->connect_sslctx, cfg->delay_close,
+		worker->daemon->connect_dot_sslctx, cfg->delay_close,
 		cfg->tls_use_sni, dtenv, cfg->udp_connect,
 		cfg->max_reuse_tcp_queries, cfg->tcp_reuse_timeout,
 		cfg->tcp_auth_query_timeout);
@@ -2596,6 +2595,22 @@ void dtio_tap_callback(int ATTR_UNUSED(fd), short ATTR_UNUSED(ev),
 
 #ifdef USE_DNSTAP
 void dtio_mainfdcallback(int ATTR_UNUSED(fd), short ATTR_UNUSED(ev),
+	void* ATTR_UNUSED(arg))
+{
+	log_assert(0);
+}
+#endif
+
+#ifdef HAVE_NGTCP2
+void doq_client_event_cb(int ATTR_UNUSED(fd), short ATTR_UNUSED(ev),
+	void* ATTR_UNUSED(arg))
+{
+	log_assert(0);
+}
+#endif
+
+#ifdef HAVE_NGTCP2
+void doq_client_timer_cb(int ATTR_UNUSED(fd), short ATTR_UNUSED(ev),
 	void* ATTR_UNUSED(arg))
 {
 	log_assert(0);

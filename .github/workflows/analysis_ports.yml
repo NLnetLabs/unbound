@@ -31,12 +31,12 @@ jobs:
             clang_analysis: "yes"
           - name: OS X
             os: macos-latest
-            install_expat: "yes"
+            install_expat: "no"
             config: "--enable-debug --disable-flto --with-ssl=/opt/homebrew/opt/openssl --with-libexpat=/opt/homebrew/opt/expat"
             make_test: "yes"
           - name: Clang on OS X
             os: macos-latest
-            install_expat: "yes"
+            install_expat: "no"
             config: "CC=clang --enable-debug --disable-flto --with-ssl=/opt/homebrew/opt/openssl --with-libexpat=/opt/homebrew/opt/expat --disable-static"
             make_test: "yes"
             clang_analysis: "yes"
@@ -161,13 +161,44 @@ jobs:
             test_windows: "yes"
             config: "no"
             make: "no"
+          - name: FreeBSD
+            os: ubuntu-latest
+            config: "no"
+            make: "no"
+            with_cross_platform_action: "yes"
+            cross_platform_os: "freebsd"
+            cross_platform_arch: "x86-64"
+            cross_platform_version: "14.1"
+            cross_platform_config: "--enable-debug --disable-flto --with-libevent --disable-static"
+          - name: OpenBSD
+            os: ubuntu-latest
+            config: "no"
+            make: "no"
+            with_cross_platform_action: "yes"
+            cross_platform_os: "openbsd"
+            cross_platform_arch: "x86-64"
+            cross_platform_version: "7.5"
+            cross_platform_config: "--enable-debug --disable-flto --with-libevent --disable-static"
+          - name: NetBSD
+            os: ubuntu-latest
+            config: "no"
+            make: "no"
+            with_cross_platform_action: "yes"
+            cross_platform_os: "netbsd"
+            cross_platform_arch: "x86-64"
+            cross_platform_version: "10.0"
+            cross_platform_config: "--enable-debug --disable-flto --with-libevent --disable-static"
  
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: false
+          persist-credentials: false
       - name: test_windows
         if: ${{ matrix.test_windows == 'yes' }}
+        env:
+          LIBEXPAT_FNAME: expat-2.7.0
+          LIBEXPAT_VERSION_DIR: R_2_7_0
         shell: bash
         run: |
           export unboundpath=`pwd`
@@ -210,9 +241,9 @@ jobs:
           cd ..
           mkdir expat
           echo "curl expat"
-          curl -L -k -s -S -o expat-2.2.10.tar.gz https://github.com/libexpat/libexpat/releases/download/R_2_2_10/expat-2.2.10.tar.gz
-          tar xzf expat-2.2.10.tar.gz
-          cd expat-2.2.10
+          curl -L -k -s -S -o $LIBEXPAT_FNAME.tar.gz https://github.com/libexpat/libexpat/releases/download/$LIBEXPAT_VERSION_DIR/$LIBEXPAT_FNAME.tar.gz
+          tar xzf $LIBEXPAT_FNAME.tar.gz
+          cd $LIBEXPAT_FNAME
           echo "./configure SHELL=/usr/bin/bash CONFIG_SHELL=/usr/bin/bash --prefix=\"$prepath/expat\" --exec-prefix=\"$prepath/expat\" --bindir=\"$prepath/expat/bin\" --includedir=\"$prepath/expat/include\" --mandir=\"$prepath/expat/man\" --libdir=\"$prepath/expat/lib\""
           ./configure SHELL=/usr/bin/bash CONFIG_SHELL=/usr/bin/bash --prefix="$prepath/expat" --exec-prefix="$prepath/expat" --bindir="$prepath/expat/bin" --includedir="$prepath/expat/include" --mandir="$prepath/expat/man" --libdir="$prepath/expat/lib"
           # fixup SHELL is treated specially, but SHELZZ is not by make.
@@ -331,6 +362,33 @@ jobs:
           echo "::group::make install"
           make install
           echo "::endgroup::"
+      - name: cross-platform-action on ${{ matrix.cross_platform_os }} ${{ matrix.cross_platform_version }}
+        if: ${{ matrix.with_cross_platform_action == 'yes' }}
+        uses: cross-platform-actions/action@v0.25.0
+        env:
+          CROSS_PLATFORM_OS: ${{ matrix.cross_platform_os }}
+        with:
+          environment_variables: CROSS_PLATFORM_OS
+          operating_system: ${{ matrix.cross_platform_os }}
+          architecture: ${{ matrix.cross_platform_arch }}
+          version: ${{ matrix.cross_platform_version }}
+          shell: bash
+          memory: 4G
+          cpu_count: 2
+          run: |
+            set -e -x
+            if test "$CROSS_PLATFORM_OS" = "freebsd"; then sudo pkg install -y openssl libevent expat; fi
+            if test "$CROSS_PLATFORM_OS" = "openbsd"; then sudo pkg_add libevent; fi
+            if test "$CROSS_PLATFORM_OS" = "netbsd"; then sudo pkgin -y install libevent; fi
+            echo "::group::configure"
+            ./configure ${{ matrix.cross_platform_config }}
+            echo "::endgroup::"
+            echo "::group::make"
+            make
+            echo "::endgroup::"
+            echo "::group::make test"
+            make test
+            echo "::endgroup::"
       - name: install libevent
         if: ${{ matrix.install_libevent == 'yes' }}
         run: sudo apt-get install libevent-dev

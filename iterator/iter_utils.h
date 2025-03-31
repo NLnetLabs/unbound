@@ -143,6 +143,7 @@ struct dns_msg* dns_copy_msg(struct dns_msg* from, struct regional* regional);
  * @param region: to copy modified (cache is better) rrs back to.
  * @param flags: with BIT_CD for dns64 AAAA translated queries.
  * @param qstarttime: time of query start.
+ * @param is_valrec: if the query is validation recursion and does not get
  * return void, because we are not interested in alloc errors,
  * 	the iterator and validator can operate on the results in their
  * 	scratch space (the qstate.region) and are not dependent on the cache.
@@ -151,7 +152,8 @@ struct dns_msg* dns_copy_msg(struct dns_msg* from, struct regional* regional);
  */
 void iter_dns_store(struct module_env* env, struct query_info* qinf,
 	struct reply_info* rep, int is_referral, time_t leeway, int pside,
-	struct regional* region, uint16_t flags, time_t qstarttime);
+	struct regional* region, uint16_t flags, time_t qstarttime,
+	int is_valrec);
 
 /**
  * Select randomly with n/m probability.
@@ -465,5 +467,19 @@ int caps_white_apply_cfg(struct rbtree_type* ntree, struct config_file* cfg);
  * @return false on failure.
  */
 int nat64_apply_cfg(struct iter_nat64* nat64, struct config_file* cfg);
+
+/**
+ * Limit NSEC and NSEC3 TTL in response, RFC9077
+ * @param msg: dns message, the SOA record ttl is used to restrict ttls
+ *	of NSEC and NSEC3 RRsets. If no SOA record, nothing happens.
+ */
+void limit_nsec_ttl(struct dns_msg* msg);
+
+/**
+ * Make the response minimal. Removed authority and additional section,
+ * that works when there is an answer in the answer section.
+ * @param rep: reply to modify.
+ */
+void iter_make_minimal(struct reply_info* rep);
 
 #endif /* ITERATOR_ITER_UTILS_H */

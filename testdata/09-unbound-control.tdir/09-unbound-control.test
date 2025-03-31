@@ -249,6 +249,18 @@ expect_exit_value 1
 teststep "clean reload"
 clean_reload
 
+teststep "Check negative flushing"
+query always.empty.
+expect_answer "SERVFAIL"
+query always.empty. DNSKEY
+expect_answer "SERVFAIL"
+control_command -c ub.conf flush_negative
+expect_exit_value 0
+expect_answer "^ok removed .*, 2 messages and 1 key"
+control_command -c ub.conf flush_negative
+expect_exit_value 0
+expect_answer "^ok removed .*, 0 messages and 0 key"
+
 teststep "create a new local zone"
 control_command -c ub.conf local_zone example.net static
 expect_exit_value 0

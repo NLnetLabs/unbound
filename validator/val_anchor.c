@@ -483,11 +483,10 @@ anchor_read_file(struct val_anchors* anchors, sldns_buffer* buffer,
 
 /** skip file to end of line */
 static void
-skip_to_eol(FILE* in)
+skip_to_eol(FILE* in, int *c)
 {
-	int c;
-	while((c = getc(in)) != EOF ) {
-		if(c == '\n')
+	while((*c = getc(in)) != EOF ) {
+		if(*c == '\n')
 			return;
 	}
 }
@@ -534,7 +533,8 @@ readkeyword_bindfile(FILE* in, sldns_buffer* buf, int* line, int comments)
 	int numdone = 0;
 	while((c = getc(in)) != EOF ) {
 		if(comments && c == '#') {	/*   # blabla   */
-			skip_to_eol(in);
+			skip_to_eol(in, &c);
+			if(c == EOF) return 0;
 			(*line)++;
 			continue;
 		} else if(comments && c=='/' && numdone>0 && /* /_/ bla*/
@@ -542,7 +542,8 @@ readkeyword_bindfile(FILE* in, sldns_buffer* buf, int* line, int comments)
 			sldns_buffer_position(buf)-1) == '/') {
 			sldns_buffer_skip(buf, -1);
 			numdone--;
-			skip_to_eol(in);
+			skip_to_eol(in, &c);
+			if(c == EOF) return 0;
 			(*line)++;
 			continue;
 		} else if(comments && c=='*' && numdone>0 && /* /_* bla *_/ */
@@ -559,6 +560,7 @@ readkeyword_bindfile(FILE* in, sldns_buffer* buf, int* line, int comments)
 				if(c == '\n')
 					(*line)++;
 			}
+			if(c == EOF) return 0;
 			continue;
 		}
 		/* not a comment, complete the keyword */
@@ -593,6 +595,7 @@ readkeyword_bindfile(FILE* in, sldns_buffer* buf, int* line, int comments)
 					break;
 				}
 			}
+			if(c == EOF) return 0;
 			return numdone;
 		}
 		if(is_bind_special(c))
@@ -1018,7 +1021,7 @@ anchors_assemble_rrsets(struct val_anchors* anchors)
 				ta->name, LDNS_RR_TYPE_DNSKEY, ta->dclass);
 		}
 		if(nods == ta->numDS && nokey == ta->numDNSKEY) {
-			char b[257];
+			char b[LDNS_MAX_DOMAINLEN];
 			dname_str(ta->name, b);
 			log_warn("trust anchor %s has no supported algorithms,"
 				" the anchor is ignored (check if you need to"

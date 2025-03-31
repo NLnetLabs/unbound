@@ -326,7 +326,7 @@ add_open(const char* ip, int nr, struct listen_port** list, int noproto_is_err,
 		/* open fd */
 		fd = create_tcp_accept_sock(res, 1, &noproto, 0,
 			cfg->ip_transparent, 0, 0, cfg->ip_freebind,
-			cfg->use_systemd, cfg->ip_dscp);
+			cfg->use_systemd, cfg->ip_dscp, "unbound-control");
 		freeaddrinfo(res);
 	}
 
@@ -795,6 +795,10 @@ print_stats(RES* ssl, const char* nm, struct ub_stats_info* s)
 		(unsigned long)s->svr.num_queries_cookie_client)) return 0;
 	if(!ssl_printf(ssl, "%s.num.queries_cookie_invalid"SQ"%lu\n", nm,
 		(unsigned long)s->svr.num_queries_cookie_invalid)) return 0;
+	if(!ssl_printf(ssl, "%s.num.queries_discard_timeout"SQ"%lu\n", nm,
+		(unsigned long)s->svr.num_queries_discard_timeout)) return 0;
+	if(!ssl_printf(ssl, "%s.num.queries_wait_limit"SQ"%lu\n", nm,
+		(unsigned long)s->svr.num_queries_wait_limit)) return 0;
 	if(!ssl_printf(ssl, "%s.num.cachehits"SQ"%lu\n", nm,
 		(unsigned long)(s->svr.num_queries
 			- s->svr.num_queries_missed_cache))) return 0;
@@ -954,6 +958,10 @@ print_mem(RES* ssl, struct worker* worker, struct daemon* daemon,
 	if(!print_longnum(ssl, "mem.http.response_buffer"SQ,
 		(size_t)s->svr.mem_http2_response_buffer))
 		return 0;
+#ifdef HAVE_NGTCP2
+	if(!print_longnum(ssl, "mem.quic"SQ, (size_t)s->svr.mem_quic))
+		return 0;
+#endif /* HAVE_NGTCP2 */
 	return 1;
 }
 
@@ -1084,6 +1092,10 @@ print_ext(RES* ssl, struct ub_stats_info* s, int inhibit_zero)
 		(unsigned long)s->svr.qipv6)) return 0;
 	if(!ssl_printf(ssl, "num.query.https"SQ"%lu\n",
 		(unsigned long)s->svr.qhttps)) return 0;
+#ifdef HAVE_NGTCP2
+	if(!ssl_printf(ssl, "num.query.quic"SQ"%lu\n",
+		(unsigned long)s->svr.qquic)) return 0;
+#endif /* HAVE_NGTCP2 */
 	/* flags */
 	if(!ssl_printf(ssl, "num.query.flags.QR"SQ"%lu\n",
 		(unsigned long)s->svr.qbit_QR)) return 0;
@@ -2020,7 +2032,7 @@ bogus_del_rrset(struct lruhash_entry* e, void* arg)
 	/* entry is locked */
 	struct del_info* inf = (struct del_info*)arg;
 	struct packed_rrset_data* d = (struct packed_rrset_data*)e->data;
-	if(d->security == sec_status_bogus) {
+	if(d->security == sec_status_bogus && d->ttl > inf->expired) {
 		d->ttl = inf->expired;
 		inf->num_rrsets++;
 	}
@@ -2033,8 +2045,10 @@ bogus_del_msg(struct lruhash_entry* e, void* arg)
 	/* entry is locked */
 	struct del_info* inf = (struct del_info*)arg;
 	struct reply_info* d = (struct reply_info*)e->data;
-	if(d->security == sec_status_bogus) {
+	if(d->security == sec_status_bogus && d->ttl > inf->expired) {
 		d->ttl = inf->expired;
+		d->prefetch_ttl = inf->expired;
+		d->serve_expired_ttl = inf->expired;
 		inf->num_msgs++;
 #ifdef USE_CACHEDB
 		if(inf->remcachedb && inf->worker->env.cachedb_enabled)
@@ -2051,7 +2065,7 @@ bogus_del_kcache(struct lruhash_entry* e, void* arg)
 	/* entry is locked */
 	struct del_info* inf = (struct del_info*)arg;
 	struct key_entry_data* d = (struct key_entry_data*)e->data;
-	if(d->isbad) {
+	if(d->isbad && d->ttl > inf->expired) {
 		d->ttl = inf->expired;
 		inf->num_keys++;
 	}
@@ -2100,7 +2114,8 @@ negative_del_rrset(struct lruhash_entry* e, void* arg)
 	/* delete the parentside negative cache rrsets,
 	 * these are nameserver rrsets that failed lookup, rdata empty */
 	if((k->rk.flags & PACKED_RRSET_PARENT_SIDE) && d->count == 1 &&
-		d->rrsig_count == 0 && d->rr_len[0] == 0) {
+		d->rrsig_count == 0 && d->rr_len[0] == 0 &&
+		d->ttl > inf->expired) {
 		d->ttl = inf->expired;
 		inf->num_rrsets++;
 	}
@@ -2115,8 +2130,11 @@ negative_del_msg(struct lruhash_entry* e, void* arg)
 	struct reply_info* d = (struct reply_info*)e->data;
 	/* rcode not NOERROR: NXDOMAIN, SERVFAIL, ..: an nxdomain or error
 	 * or NOERROR rcode with ANCOUNT==0: a NODATA answer */
-	if(FLAGS_GET_RCODE(d->flags) != 0 || d->an_numrrsets == 0) {
+	if((FLAGS_GET_RCODE(d->flags) != 0 || d->an_numrrsets == 0) &&
+		d->ttl > inf->expired) {
 		d->ttl = inf->expired;
+		d->prefetch_ttl = inf->expired;
+		d->serve_expired_ttl = inf->expired;
 		inf->num_msgs++;
 #ifdef USE_CACHEDB
 		if(inf->remcachedb && inf->worker->env.cachedb_enabled)
@@ -2135,7 +2153,7 @@ negative_del_kcache(struct lruhash_entry* e, void* arg)
 	struct key_entry_data* d = (struct key_entry_data*)e->data;
 	/* could be bad because of lookup failure on the DS, DNSKEY, which
 	 * was nxdomain or servfail, and thus a result of negative lookups */
-	if(d->isbad) {
+	if(d->isbad && d->ttl > inf->expired) {
 		d->ttl = inf->expired;
 		inf->num_keys++;
 	}
@@ -2207,7 +2225,7 @@ static int
 ssl_print_name_dp(RES* ssl, const char* str, uint8_t* nm, uint16_t dclass,
 	struct delegpt* dp)
 {
-	char buf[257];
+	char buf[LDNS_MAX_DOMAINLEN];
 	struct delegpt_ns* ns;
 	struct delegpt_addr* a;
 	int f = 0;
@@ -2575,7 +2593,7 @@ do_insecure_remove(RES* ssl, struct worker* worker, char* arg)
 static void
 do_insecure_list(RES* ssl, struct worker* worker)
 {
-	char buf[257];
+	char buf[LDNS_MAX_DOMAINLEN];
 	struct trust_anchor* a;
 	if(worker->env.anchors) {
 		RBTREE_FOR(a, struct trust_anchor*, worker->env.anchors->tree) {
@@ -2672,7 +2690,7 @@ get_mesh_status(struct mesh_area* mesh, struct mesh_state* m,
 		}
 	} else if(s == module_wait_subquery) {
 		/* look in subs from mesh state to see what */
-		char nm[257];
+		char nm[LDNS_MAX_DOMAINLEN];
 		struct mesh_state_ref* sub;
 		snprintf(buf, len, "%s wants", modname);
 		l = strlen(buf);
@@ -2702,7 +2720,7 @@ do_dump_requestlist(RES* ssl, struct worker* worker)
 	struct mesh_area* mesh;
 	struct mesh_state* m;
 	int num = 0;
-	char buf[257];
+	char buf[LDNS_MAX_DOMAINLEN];
 	char timebuf[32];
 	char statbuf[10240];
 	if(!ssl_printf(ssl, "thread #%d\n", worker->thread_num))
@@ -2752,7 +2770,7 @@ dump_infra_host(struct lruhash_entry* e, void* arg)
 	struct infra_key* k = (struct infra_key*)e->key;
 	struct infra_data* d = (struct infra_data*)e->data;
 	char ip_str[1024];
-	char name[257];
+	char name[LDNS_MAX_DOMAINLEN];
 	int port;
 	if(a->ssl_failed)
 		return;
@@ -3019,7 +3037,7 @@ static void
 do_list_auth_zones(RES* ssl, struct auth_zones* az)
 {
 	struct auth_zone* z;
-	char buf[257], buf2[256];
+	char buf[LDNS_MAX_DOMAINLEN], buf2[256];
 	lock_rw_rdlock(&az->lock);
 	RBTREE_FOR(z, struct auth_zone*, &az->ztree) {
 		lock_rw_rdlock(&z->lock);
@@ -3049,7 +3067,7 @@ static void
 do_list_local_zones(RES* ssl, struct local_zones* zones)
 {
 	struct local_zone* z;
-	char buf[257];
+	char buf[LDNS_MAX_DOMAINLEN];
 	lock_rw_rdlock(&zones->lock);
 	RBTREE_FOR(z, struct local_zone*, &zones->ztree) {
 		lock_rw_rdlock(&z->lock);
@@ -3160,7 +3178,7 @@ rate_list(struct lruhash_entry* e, void* arg)
 	struct ratelimit_list_arg* a = (struct ratelimit_list_arg*)arg;
 	struct rate_key* k = (struct rate_key*)e->key;
 	struct rate_data* d = (struct rate_data*)e->data;
-	char buf[257];
+	char buf[LDNS_MAX_DOMAINLEN];
 	int lim = infra_find_ratelimit(a->infra, k->name, k->namelen);
 	int max = infra_rate_max(d, a->now, a->backoff);
 	if(a->all == 0) {
