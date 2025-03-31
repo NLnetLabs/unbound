@@ -2220,3 +2220,35 @@ void local_zones_del_data(struct local_zones* zones,
 
 	lock_rw_unlock(&z->lock);
 }
+
+/** Get memory usage for local_zone */
+static size_t
+local_zone_get_mem(struct local_zone* z)
+{
+	size_t m = sizeof(*z);
+	lock_rw_rdlock(&z->lock);
+	m += z->namelen + z->taglen + regional_get_mem(z->region);
+	lock_rw_unlock(&z->lock);
+	return m;
+}
+
+size_t local_zones_get_mem(struct local_zones* zones)
+{
+	struct local_zone* z;
+	size_t m;
+	if(!zones) return 0;
+	m = sizeof(*zones);
+	lock_rw_rdlock(&zones->lock);
+	RBTREE_FOR(z, struct local_zone*, &zones->ztree) {
+		m += local_zone_get_mem(z);
+	}
+	lock_rw_unlock(&zones->lock);
+	return m;
+}
+
+void local_zones_swap_tree(struct local_zones* zones, struct local_zones* data)
+{
+	rbtree_type oldtree = zones->ztree;
+	zones->ztree = data->ztree;
+	data->ztree = oldtree;
+}

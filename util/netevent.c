@@ -314,6 +314,11 @@ struct ub_event_base* comm_base_internal(struct comm_base* b)
 	return b->eb->base;
 }
 
+struct ub_event* comm_point_internal(struct comm_point* c)
+{
+	return c->ev->ev;
+}
+
 /** see if errno for udp has to be logged or not uses globals */
 static int
 udp_send_errno_needs_log(struct sockaddr* addr, socklen_t addrlen)
@@ -6917,8 +6922,9 @@ comm_timer_is_set(struct comm_timer* timer)
 }
 
 size_t
-comm_timer_get_mem(struct comm_timer* ATTR_UNUSED(timer))
+comm_timer_get_mem(struct comm_timer* timer)
 {
+	if(!timer) return 0;
 	return sizeof(struct internal_timer);
 }
 

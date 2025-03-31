@@ -2792,3 +2792,31 @@ void rpz_disable(struct rpz* r)
         return;
     r->disabled = 1;
 }
+
+/** Get memory usage for clientip_synthesized_rrset. Ignores memory usage
+ * of locks. */
+static size_t
+rpz_clientip_synthesized_set_get_mem(struct clientip_synthesized_rrset* set)
+{
+	size_t m = sizeof(*set);
+	lock_rw_rdlock(&set->lock);
+	m += regional_get_mem(set->region);
+	lock_rw_unlock(&set->lock);
+	return m;
+}
+
+size_t rpz_get_mem(struct rpz* r)
+{
+	size_t m = sizeof(*r);
+	if(r->taglist)
+		m += r->taglistlen;
+	if(r->log_name)
+		m += strlen(r->log_name) + 1;
+	m += regional_get_mem(r->region);
+	m += local_zones_get_mem(r->local_zones);
+	m += local_zones_get_mem(r->nsdname_zones);
+	m += respip_set_get_mem(r->respip_set);
+	m += rpz_clientip_synthesized_set_get_mem(r->client_set);
+	m += rpz_clientip_synthesized_set_get_mem(r->ns_set);
+	return m;
+}

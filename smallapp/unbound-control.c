@@ -109,6 +109,16 @@ usage(void)
 	printf("  				That means the caches sizes and\n");
 	printf("  				the number of threads must not\n");
 	printf("  				change between reloads.\n");
+	printf("  fast_reload [+dpv]		reloads the server but only briefly stops\n");
+	printf("  				server processing, keeps cache, and changes\n");
+	printf("  				most options; check unbound-control(8).\n");
+	printf("  		+d		drops running queries to keep consistency\n");
+	printf("  				on changed options while reloading.\n");
+	printf("  		+p		does not pause threads for even faster\n");
+	printf("  				reload but less options are supported\n");
+	printf("  				; check unbound-control(8).\n");
+	printf("  		+v		verbose output, it will include duration needed.\n");
+	printf("  		+vv		more verbose output, it will include memory needed.\n");
 	printf("  stats				print statistics\n");
 	printf("  stats_noreset			peek at statistics\n");
 #ifdef HAVE_SHMGET

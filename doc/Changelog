@@ -1,5 +1,9 @@
 31 March 2025: Wouter
 	- iana portlist update.
+	- Merge #1042: Fast Reload. The unbound-control fast_reload is added.
+	  It reads changed config in a thread, then only briefly pauses the
+	  service threads, that keep running. DNS service is only interrupted
+	  briefly, less than a second.
 
 27 March 2025: Wouter
 	- Fix unit test dname log printout typecast.
