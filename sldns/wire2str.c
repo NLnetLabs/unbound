@@ -2059,7 +2059,8 @@ int sldns_wire2str_unquoted_scan(uint8_t** d, size_t* dl, char** s, size_t* sl)
 	(*d)++;
 	(*dl)--;
 	for(i=0; i<len; i++) {
-		if(isspace((unsigned char)(*d)[i]))
+		if(isspace((unsigned char)(*d)[i]) || (*d)[i] == '(' ||
+			(*d)[i] == ')' || (*d)[i] == '\'')
 			w += sldns_str_print(s, sl, "\\%c", (char)(*d)[i]);
 		else	w += str_char_print(s, sl, (*d)[i]);
 	}

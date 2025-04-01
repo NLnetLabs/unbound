@@ -1,3 +1,7 @@
+1 April 2025: Wouter
+	- Fix escape more characters when printing an RR type with an unquoted
+	  string.
+
 31 March 2025: Wouter
 	- iana portlist update.
 	- Merge #1042: Fast Reload. The unbound-control fast_reload is added.
