@@ -1,6 +1,7 @@
 1 April 2025: Wouter
 	- Fix escape more characters when printing an RR type with an unquoted
 	  string.
+	- Enable the auth_tls.tdir and auth_tls_failcert.tdir tests.
 
 31 March 2025: Wouter
 	- iana portlist update.
