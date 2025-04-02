@@ -716,7 +716,7 @@ and initial ACL (check if the proxy itself is denied/refused by configuration).
 The proxied address (if any) will then be used as the true client address and
 will be used where applicable for logging, ACL, DNSTAP, RPZ and IP ratelimiting.
 PROXYv2 is supported for UDP and TCP/TLS listening interfaces.
-There is no support for PROXYv2 on a DoH or DNSCrypt listening interface.
+There is no support for PROXYv2 on a DoH, DoQ or DNSCrypt listening interface.
 Can list multiple, each on a new statement.
 .TP
 .B quic\-port: \fI<number>
@@ -1111,7 +1111,7 @@ This works by first choosing only the strongest DS digest type as per RFC 4509
 (Unbound treats the highest algorithm as the strongest) and then
 expecting signatures from all the advertised signing algorithms from the chosen
 DS(es) to be present.
-If no, allows any algorithm to validate the zone.
+If no, allows any one supported algorithm to validate the zone, even if other advertised algorithms are broken.
 Default is no.
 RFC 6840 mandates that zone signers must produce zones signed with all
 advertised algorithms, but sometimes they do not.
@@ -1260,9 +1260,6 @@ Adding \fIrespip\fR to the front will cause RPZ processing to be done on
 all queries.
 The default is "\fIvalidator iterator\fR".
 .IP
-When the server is built with
-EDNS client subnet support the default is "\fIsubnetcache validator
-iterator\fR".
 Most modules that need to be listed here have to be listed at the beginning
 of the line.  The subnetcachedb module has to be listed just before
 the iterator.
@@ -1638,6 +1635,7 @@ given zone.  Use \fInodefault\fR if you use exactly that zone, if you want to
 use a subzone, use \fItransparent\fR.
 .P
 The default zones are localhost, reverse 127.0.0.1 and ::1, the home.arpa,
+the resolver.arpa, the service.arpa,
 the onion, test, invalid and the AS112 zones. The AS112 zones are reverse
 DNS zones for private use and reserved IP addresses for which the servers
 on the internet cannot provide correct answers. They are configured by
@@ -1690,6 +1688,24 @@ Default content:
 local\-zone: "home.arpa." static
 local\-data: "home.arpa. 10800 IN NS localhost."
 local\-data: "home.arpa. 10800 IN
+    SOA localhost. nobody.invalid. 1 3600 1200 604800 10800"
+.fi
+.TP 10
+\h'5'\fIresolver.arpa (RFC 9462)\fR
+Default content:
+.nf
+local\-zone: "resolver.arpa." static
+local\-data: "resolver.arpa. 10800 IN NS localhost."
+local\-data: "resolver.arpa. 10800 IN
+    SOA localhost. nobody.invalid. 1 3600 1200 604800 10800"
+.fi
+.TP 10
+\h'5'\fIservice.arpa (draft-ietf-dnssd-srp-25)\fR
+Default content:
+.nf
+local\-zone: "service.arpa." static
+local\-data: "service.arpa. 10800 IN NS localhost."
+local\-data: "service.arpa. 10800 IN
     SOA localhost. nobody.invalid. 1 3600 1200 604800 10800"
 .fi
 .TP 10
@@ -2492,8 +2508,8 @@ The dynamic library file to load. Repeat this option for every dynlib module
 instance added to the \fBmodule\-config:\fR option.
 .SS "DNS64 Module Options"
 .LP
-The dns64 module must be configured in the \fBmodule\-config:\fR "dns64
-validator iterator" directive and be compiled into the daemon to be
+The dns64 module must be configured in the \fBmodule\-config:\fR directive
+e.g., "dns64 validator iterator" and be compiled into the daemon to be
 enabled.  These settings go in the \fBserver:\fR section.
 .TP
 .B dns64\-prefix: \fI<IPv6 prefix>\fR
@@ -2593,8 +2609,8 @@ in the dnscrypt nonce cache.  Close to the number of cpus is
 a fairly good setting.
 .SS "EDNS Client Subnet Module Options"
 .LP
-The ECS module must be configured in the \fBmodule\-config:\fR "subnetcache
-validator iterator" directive and be compiled into the daemon to be
+The ECS module must be configured in the \fBmodule\-config:\fR directive e.g.,
+"subnetcache validator iterator" and be compiled into the daemon to be
 enabled.  These settings go in the \fBserver:\fR section.
 .LP
 If the destination address is allowed in the configuration Unbound will add the
@@ -2614,6 +2630,15 @@ The maximum size of the ECS cache is controlled by 'msg-cache-size' in the
 configuration file. On top of that, for each query only 100 different subnets
 are allowed to be stored for each address family. Exceeding that number, older
 entries will be purged from cache.
+.LP
+Note that due to the nature of how EDNS Client Subnet works, by segregating the
+client IP space in order to try and have tailored responses for prefixes of
+unknown sizes, resolution and cache response performance are impacted as a
+result.
+Usage of the subnetcache module should only be enabled in installations that
+require such functionality where the resolver and the clients belong to
+different networks.
+An example of that is an open resolver installation.
 .LP
 This module does not interact with the \fBserve\-expired*\fR and
 \fBprefetch:\fR options.
@@ -2665,8 +2690,8 @@ Specifies the maximum number of subnets ECS answers kept in the ECS radix tree.
 This number applies for each qname/qclass/qtype tuple. Defaults to 100.
 .SS "Opportunistic IPsec Support Module Options"
 .LP
-The IPsec module must be configured in the \fBmodule\-config:\fR "ipsecmod
-validator iterator" directive and be compiled into Unbound by using
+The IPsec module must be configured in the \fBmodule\-config:\fR directive
+e.g., "ipsecmod validator iterator" and be compiled into Unbound by using
 \fB\-\-enable\-ipsecmod\fR to be enabled.
 These settings go in the \fBserver:\fR section.
 .LP
@@ -2735,8 +2760,8 @@ not specified, all domains are treated as being allowed (default).
 Alternate syntax for \fBipsecmod\-allow\fR.
 .SS "Cache DB Module Options"
 .LP
-The Cache DB module must be configured in the \fBmodule\-config:\fR
-"validator cachedb iterator" directive and be compiled into the daemon
+The Cache DB module must be configured in the \fBmodule\-config:\fR directive
+e.g., "validator cachedb iterator" and be compiled into the daemon
 with \fB\-\-enable\-cachedb\fR.
 If this module is enabled and configured, the specified backend database
 works as a second level cache:

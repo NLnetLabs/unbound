@@ -2317,9 +2317,6 @@ auth_free_masters(struct auth_master* list)
 	}
 }
 
-/** delete auth xfer structure
- * @param xfr: delete this xfer and its tasks.
- */
 void
 auth_xfer_delete(struct auth_xfer* xfr)
 {
@@ -7006,6 +7003,18 @@ xfr_set_timeout(struct auth_xfer* xfr, struct module_env* env,
 	comm_timer_set(xfr->task_nextprobe->timer, &tv);
 }
 
+void auth_xfer_pickup_initial_zone(struct auth_xfer* x, struct module_env* env)
+{
+	/* set lease_time, because we now have timestamp in env,
+	 * (not earlier during startup and apply_cfg), and this
+	 * notes the start time when the data was acquired */
+	if(x->have_zone)
+		x->lease_time = *env->now;
+	if(x->task_nextprobe && x->task_nextprobe->worker == NULL) {
+		xfr_set_timeout(x, env, 0, 1);
+	}
+}
+
 /** initial pick up of worker timeouts, ties events to worker event loop */
 void
 auth_xfer_pickup_initial(struct auth_zones* az, struct module_env* env)
@@ -7014,14 +7023,7 @@ auth_xfer_pickup_initial(struct auth_zones* az, struct module_env* env)
 	lock_rw_wrlock(&az->lock);
 	RBTREE_FOR(x, struct auth_xfer*, &az->xtree) {
 		lock_basic_lock(&x->lock);
-		/* set lease_time, because we now have timestamp in env,
-		 * (not earlier during startup and apply_cfg), and this
-		 * notes the start time when the data was acquired */
-		if(x->have_zone)
-			x->lease_time = *env->now;
-		if(x->task_nextprobe && x->task_nextprobe->worker == NULL) {
-			xfr_set_timeout(x, env, 0, 1);
-		}
+		auth_xfer_pickup_initial_zone(x, env);
 		lock_basic_unlock(&x->lock);
 	}
 	lock_rw_unlock(&az->lock);
@@ -8579,4 +8581,162 @@ void auth_zones_pickup_zonemd_verify(struct auth_zones* az,
 			break;
 	}
 	lock_rw_unlock(&az->lock);
+}
+
+/** Get memory usage of auth rrset */
+static size_t
+auth_rrset_get_mem(struct auth_rrset* rrset)
+{
+	size_t m = sizeof(*rrset) + packed_rrset_sizeof(rrset->data);
+	return m;
+}
+
+/** Get memory usage of auth data */
+static size_t
+auth_data_get_mem(struct auth_data* node)
+{
+	size_t m = sizeof(*node) + node->namelen;
+	struct auth_rrset* rrset;
+	for(rrset = node->rrsets; rrset; rrset = rrset->next) {
+		m += auth_rrset_get_mem(rrset);
+	}
+	return m;
+}
+
+/** Get memory usage of auth zone */
+static size_t
+auth_zone_get_mem(struct auth_zone* z)
+{
+	size_t m = sizeof(*z) + z->namelen;
+	struct auth_data* node;
+	if(z->zonefile)
+		m += strlen(z->zonefile)+1;
+	RBTREE_FOR(node, struct auth_data*, &z->data) {
+		m += auth_data_get_mem(node);
+	}
+	if(z->rpz)
+		m += rpz_get_mem(z->rpz);
+	return m;
+}
+
+/** Get memory usage of list of auth addr */
+static size_t
+auth_addrs_get_mem(struct auth_addr* list)
+{
+	size_t m = 0;
+	struct auth_addr* a;
+	for(a = list; a; a = a->next) {
+		m += sizeof(*a);
+	}
+	return m;
+}
+
+/** Get memory usage of list of primaries for auth xfer */
+static size_t
+auth_primaries_get_mem(struct auth_master* list)
+{
+	size_t m = 0;
+	struct auth_master* n;
+	for(n = list; n; n = n->next) {
+		m += sizeof(*n);
+		m += auth_addrs_get_mem(n->list);
+		if(n->host)
+			m += strlen(n->host)+1;
+		if(n->file)
+			m += strlen(n->file)+1;
+	}
+	return m;
+}
+
+/** Get memory usage or list of auth chunks */
+static size_t
+auth_chunks_get_mem(struct auth_chunk* list)
+{
+	size_t m = 0;
+	struct auth_chunk* chunk;
+	for(chunk = list; chunk; chunk = chunk->next) {
+		m += sizeof(*chunk) + chunk->len;
+	}
+	return m;
+}
+
+/** Get memory usage of auth xfer */
+static size_t
+auth_xfer_get_mem(struct auth_xfer* xfr)
+{
+	size_t m = sizeof(*xfr) + xfr->namelen;
+
+	/* auth_nextprobe */
+	m += comm_timer_get_mem(xfr->task_nextprobe->timer);
+
+	/* auth_probe */
+	m += auth_primaries_get_mem(xfr->task_probe->masters);
+	m += comm_point_get_mem(xfr->task_probe->cp);
+	m += comm_timer_get_mem(xfr->task_probe->timer);
+
+	/* auth_transfer */
+	m += auth_chunks_get_mem(xfr->task_transfer->chunks_first);
+	m += auth_primaries_get_mem(xfr->task_transfer->masters);
+	m += comm_point_get_mem(xfr->task_transfer->cp);
+	m += comm_timer_get_mem(xfr->task_transfer->timer);
+
+	/* allow_notify_list */
+	m += auth_primaries_get_mem(xfr->allow_notify_list);
+
+	return m;
+}
+
+/** Get memory usage of auth zones ztree */
+static size_t
+az_ztree_get_mem(struct auth_zones* az)
+{
+	size_t m = 0;
+	struct auth_zone* z;
+	RBTREE_FOR(z, struct auth_zone*, &az->ztree) {
+		lock_rw_rdlock(&z->lock);
+		m += auth_zone_get_mem(z);
+		lock_rw_unlock(&z->lock);
+	}
+	return m;
+}
+
+/** Get memory usage of auth zones xtree */
+static size_t
+az_xtree_get_mem(struct auth_zones* az)
+{
+	size_t m = 0;
+	struct auth_xfer* xfr;
+	RBTREE_FOR(xfr, struct auth_xfer*, &az->xtree) {
+		lock_basic_lock(&xfr->lock);
+		m += auth_xfer_get_mem(xfr);
+		lock_basic_unlock(&xfr->lock);
+	}
+	return m;
+}
+
+size_t auth_zones_get_mem(struct auth_zones* zones)
+{
+	size_t m;
+	if(!zones) return 0;
+	m = sizeof(*zones);
+	lock_rw_rdlock(&zones->rpz_lock);
+	lock_rw_rdlock(&zones->lock);
+	m += az_ztree_get_mem(zones);
+	m += az_xtree_get_mem(zones);
+	lock_rw_unlock(&zones->lock);
+	lock_rw_unlock(&zones->rpz_lock);
+	return m;
+}
+
+void xfr_disown_tasks(struct auth_xfer* xfr, struct worker* worker)
+{
+	if(xfr->task_nextprobe->worker == worker) {
+		xfr_nextprobe_disown(xfr);
+	}
+	if(xfr->task_probe->worker == worker) {
+		xfr_probe_disown(xfr);
+	}
+	if(xfr->task_transfer->worker == worker) {
+		xfr_transfer_disown(xfr);
+	}
 }

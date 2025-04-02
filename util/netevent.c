@@ -314,6 +314,11 @@ struct ub_event_base* comm_base_internal(struct comm_base* b)
 	return b->eb->base;
 }
 
+struct ub_event* comm_point_internal(struct comm_point* c)
+{
+	return c->ev->ev;
+}
+
 /** see if errno for udp has to be logged or not uses globals */
 static int
 udp_send_errno_needs_log(struct sockaddr* addr, socklen_t addrlen)
@@ -369,6 +374,15 @@ udp_send_errno_needs_log(struct sockaddr* addr, socklen_t addrlen)
 		(struct sockaddr_storage*)addr, addrlen) &&
 		verbosity < VERB_DETAIL)
 		return 0;
+#  ifdef ENOTCONN
+	/* For 0.0.0.0, ::0 targets it can return that socket is not connected.
+	 * This can be ignored, and the address skipped. It remains
+	 * possible to send there for completeness in configuration. */
+	if(errno == ENOTCONN && addr_is_any(
+		(struct sockaddr_storage*)addr, addrlen) &&
+		verbosity < VERB_DETAIL)
+		return 0;
+#  endif
 	return 1;
 }
 
@@ -442,7 +456,11 @@ comm_point_send_udp_msg(struct comm_point *c, sldns_buffer* packet,
 				int pret;
 				memset(&p, 0, sizeof(p));
 				p.fd = c->fd;
-				p.events = POLLOUT | POLLERR | POLLHUP;
+				p.events = POLLOUT | POLLERR
+#ifndef USE_WINSOCK
+					| POLLHUP
+#endif
+					;
 #  ifndef USE_WINSOCK
 				pret = poll(&p, 1, SEND_BLOCKED_WAIT_TIMEOUT);
 #  else
@@ -496,7 +514,8 @@ comm_point_send_udp_msg(struct comm_point *c, sldns_buffer* packet,
 #ifndef USE_WINSOCK
 					pret = poll(NULL, 0, (SEND_BLOCKED_WAIT_TIMEOUT/10)<<(retries+1));
 #else
-					pret = WSAPoll(NULL, 0, (SEND_BLOCKED_WAIT_TIMEOUT/10)<<(retries+1));
+					Sleep((SEND_BLOCKED_WAIT_TIMEOUT/10)<<(retries+1));
+					pret = 0;
 #endif
 					if(pret < 0 &&
 #ifndef USE_WINSOCK
@@ -751,7 +770,11 @@ comm_point_send_udp_msg_if(struct comm_point *c, sldns_buffer* packet,
 				int pret;
 				memset(&p, 0, sizeof(p));
 				p.fd = c->fd;
-				p.events = POLLOUT | POLLERR | POLLHUP;
+				p.events = POLLOUT | POLLERR
+#ifndef USE_WINSOCK
+					| POLLHUP
+#endif
+					;
 #  ifndef USE_WINSOCK
 				pret = poll(&p, 1, SEND_BLOCKED_WAIT_TIMEOUT);
 #  else
@@ -805,7 +828,8 @@ comm_point_send_udp_msg_if(struct comm_point *c, sldns_buffer* packet,
 #ifndef USE_WINSOCK
 					pret = poll(NULL, 0, (SEND_BLOCKED_WAIT_TIMEOUT/10)<<(retries+1));
 #else
-					pret = WSAPoll(NULL, 0, (SEND_BLOCKED_WAIT_TIMEOUT/10)<<(retries+1));
+					Sleep((SEND_BLOCKED_WAIT_TIMEOUT/10)<<(retries+1));
+					pret = 0;
 #endif
 					if(pret < 0 &&
 #ifndef USE_WINSOCK
@@ -6898,8 +6922,9 @@ comm_timer_is_set(struct comm_timer* timer)
 }
 
 size_t
-comm_timer_get_mem(struct comm_timer* ATTR_UNUSED(timer))
+comm_timer_get_mem(struct comm_timer* timer)
 {
+	if(!timer) return 0;
 	return sizeof(struct internal_timer);
 }
 
