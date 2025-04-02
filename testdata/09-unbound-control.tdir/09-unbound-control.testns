@@ -34,3 +34,11 @@ ADJUST copy_id
 SECTION QUESTION
 always.empty.	IN	DNSKEY
 ENTRY_END
+
+ENTRY_BEGIN
+MATCH opcode qtype qname
+REPLY QR AA NOERROR
+ADJUST copy_id
+SECTION QUESTION
+_ta-c5aa.always.empty.	IN	NULL
+ENTRY_END

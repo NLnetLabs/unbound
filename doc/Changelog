@@ -3,6 +3,11 @@
 	  'gcc-15 -Wbuiltin-declaration-mismatch' error in compat/malloc.c.
 	- For #1262, ifdef is no longer needed.
 
+2 April 2025: Wouter
+	- Fix unbound-control test so it counts the new flush_negative output,
+	  also answers the _ta probe from testns and prints command output
+	  and skip a thread specific test when no threads are available.
+
 1 April 2025: Wouter
 	- Fix escape more characters when printing an RR type with an unquoted
 	  string.
