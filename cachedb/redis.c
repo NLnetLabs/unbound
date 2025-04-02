@@ -52,7 +52,6 @@
 #include "hiredis/hiredis.h"
 
 struct redis_moddata {
-<<<<<<< HEAD
 	/* thread-specific redis contexts */
 	redisContext** ctxs;
 	redisContext** replica_ctxs;
@@ -281,7 +280,7 @@ redis_init(struct module_env* env, struct cachedb_env* cachedb_env)
 		int redis_reply_type = 0;
 		/** check if set with ex command is supported */
 		rep = redis_command(env, cachedb_env,
-			"SET __UNBOUND_REDIS_CHECK__ none EX 1", NULL, 0);
+			"SET __UNBOUND_REDIS_CHECK__ none EX 1", NULL, 0, 1);
 		if(!rep) {
 			/** init failed, no response from redis server*/
 			goto set_with_ex_fail;
