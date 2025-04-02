@@ -6,7 +6,7 @@
 #include <sys/types.h>
 
 #ifndef USE_WINSOCK
-void *malloc ();
+void *malloc (size_t n);
 #else
 /* provide a prototype */
 void *malloc (size_t n);
