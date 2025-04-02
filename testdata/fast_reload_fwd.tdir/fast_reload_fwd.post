@@ -10,7 +10,9 @@ PRE="../.."
 kill_pid $NS1_PID
 kill_pid $NS2_PID
 if test -f unbound.pid; then
-	kill_pid $UNBOUND_PID
+	if kill -0 $UNBOUND_PID >/dev/null 2>&1; then
+		kill_pid $UNBOUND_PID
+	fi
 fi
 rm -f $CONTROL_PATH/controlpipe.$CONTROL_PID
 echo

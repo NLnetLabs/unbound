@@ -7,6 +7,9 @@
 	- Fix unbound-control test so it counts the new flush_negative output,
 	  also answers the _ta probe from testns and prints command output
 	  and skip a thread specific test when no threads are available.
+	- Fix that ub_event has the facility to deal with callbacks for
+	  fast reload, doq, windows-stop and dnstap.
+	- Fix fast reload test to check if pid exists before acting on it.
 
 1 April 2025: Wouter
 	- Fix escape more characters when printing an RR type with an unquoted

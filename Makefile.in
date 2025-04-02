@@ -1064,7 +1064,7 @@ tube.lo tube.o: $(srcdir)/util/tube.c config.h $(srcdir)/util/tube.h $(srcdir)/u
  $(srcdir)/libunbound/unbound.h $(srcdir)/respip/respip.h $(srcdir)/util/ub_event.h
 ub_event.lo ub_event.o: $(srcdir)/util/ub_event.c config.h $(srcdir)/util/ub_event.h $(srcdir)/util/log.h \
  $(srcdir)/util/netevent.h $(srcdir)/dnscrypt/dnscrypt.h  \
- $(srcdir)/util/tube.h $(srcdir)/util/mini_event.h $(srcdir)/util/rbtree.h
+ $(srcdir)/util/tube.h $(srcdir)/util/mini_event.h $(srcdir)/util/rbtree.h $(srcdir)/daemon/remote.h
 ub_event_pluggable.lo ub_event_pluggable.o: $(srcdir)/util/ub_event_pluggable.c config.h $(srcdir)/util/ub_event.h \
  $(srcdir)/libunbound/unbound-event.h $(srcdir)/util/netevent.h $(srcdir)/dnscrypt/dnscrypt.h \
   $(srcdir)/util/log.h $(srcdir)/util/fptr_wlist.h \
