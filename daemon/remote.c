@@ -4903,8 +4903,11 @@ config_file_getmem(struct config_file* cfg)
 	m += getmem_str(cfg->cachedb_secret);
 #ifdef USE_REDIS
 	m += getmem_str(cfg->redis_server_host);
+	m += getmem_str(cfg->redis_replica_server_host);
 	m += getmem_str(cfg->redis_server_path);
+	m += getmem_str(cfg->redis_replica_server_path);
 	m += getmem_str(cfg->redis_server_password);
+	m += getmem_str(cfg->redis_replica_server_password);
 #endif
 #endif
 #ifdef USE_IPSET
@@ -5779,12 +5782,22 @@ fr_atomic_copy_cfg(struct config_file* oldcfg, struct config_file* cfg,
 	COPY_VAR_int(cachedb_check_when_serve_expired);
 #ifdef USE_REDIS
 	COPY_VAR_ptr(redis_server_host);
+	COPY_VAR_ptr(redis_replica_server_host);
 	COPY_VAR_int(redis_server_port);
+	COPY_VAR_int(redis_replica_server_port);
 	COPY_VAR_ptr(redis_server_path);
+	COPY_VAR_ptr(redis_replica_server_path);
 	COPY_VAR_ptr(redis_server_password);
+	COPY_VAR_ptr(redis_replica_server_password);
 	COPY_VAR_int(redis_timeout);
+	COPY_VAR_int(redis_replica_timeout);
+	COPY_VAR_int(redis_command_timeout);
+	COPY_VAR_int(redis_replica_command_timeout);
+	COPY_VAR_int(redis_connect_timeout);
+	COPY_VAR_int(redis_replica_connect_timeout);
 	COPY_VAR_int(redis_expire_records);
 	COPY_VAR_int(redis_logical_db);
+	COPY_VAR_int(redis_replica_logical_db);
 #endif
 #endif
 	COPY_VAR_int(do_answer_cookie);
