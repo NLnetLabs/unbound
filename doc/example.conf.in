@@ -215,6 +215,12 @@ server:
 	# Apart from the default, the wait limit with cookie can be adjusted.
 	# wait-limit-cookie-netblock: 192.0.2.0/24 50000
 
+	# Defaults for loopback, it has no wait limit.
+	# wait-limit-netblock: 127.0.0.0/8 -1
+	# wait-limit-netblock: ::1/128 -1
+	# wait-limit-cookie-netblock: 127.0.0.0/8 -1
+	# wait-limit-cookie-netblock: ::1/128 -1
+
 	# the amount of memory to use for the RRset cache.
 	# plain value in bytes or you can append k, m or G. default is "4Mb".
 	# rrset-cache-size: 4m

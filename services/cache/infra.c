@@ -297,12 +297,43 @@ infra_wait_limit_netblock_insert(rbtree_type* wait_limits_netblock,
 	return 1;
 }
 
+/** Add a default wait limit netblock */
+static int
+wait_limit_netblock_default(struct rbtree_type* tree, char* str, int limit)
+{
+	struct wait_limit_netblock_info* d;
+	d = wait_limit_netblock_findcreate(tree, str);
+	if(!d)
+		return 0;
+	d->limit = limit;
+	return 1;
+}
+
 int
 setup_wait_limits(rbtree_type* wait_limits_netblock,
 	rbtree_type* wait_limits_cookie_netblock, struct config_file* cfg)
 {
 	addr_tree_init(wait_limits_netblock);
 	addr_tree_init(wait_limits_cookie_netblock);
+
+	/* Insert defaults */
+	/* The loopback address is separated from the rest of the network. */
+	/* wait-limit-netblock: 127.0.0.0/8 -1 */
+	if(!wait_limit_netblock_default(wait_limits_netblock, "127.0.0.0/8",
+		-1))
+		return 0;
+	/* wait-limit-netblock: ::1/128 -1 */
+	if(!wait_limit_netblock_default(wait_limits_netblock, "::1/128", -1))
+		return 0;
+	/* wait-limit-cookie-netblock: 127.0.0.0/8 -1 */
+	if(!wait_limit_netblock_default(wait_limits_cookie_netblock,
+		"127.0.0.0/8", -1))
+		return 0;
+	/* wait-limit-cookie-netblock: ::1/128 -1 */
+	if(!wait_limit_netblock_default(wait_limits_cookie_netblock,
+		"::1/128", -1))
+		return 0;
+
 	if(!infra_wait_limit_netblock_insert(wait_limits_netblock,
 		wait_limits_cookie_netblock, cfg))
 		return 0;

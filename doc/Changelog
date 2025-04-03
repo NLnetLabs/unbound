@@ -1,3 +1,6 @@
+3 April 2025: Wouter
+	- Fix #1263: Exempt loopback addresses from wait-limit.
+
 2 April 2025: Yorgos
 	- Merge #1262 from markyang92, fix build with
 	  'gcc-15 -Wbuiltin-declaration-mismatch' error in compat/malloc.c.
