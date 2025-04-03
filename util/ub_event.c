@@ -47,6 +47,12 @@
 #include "util/netevent.h"
 #include "util/tube.h"
 #include "daemon/remote.h"
+#ifdef USE_DNSTAP
+#include "dnstap/dtstream.h"
+#endif
+#ifdef UB_ON_WINDOWS
+#include "winrc/win_svc.h"
+#endif
 
 /* We define libevent structures here to hide the libevent stuff. */
 
