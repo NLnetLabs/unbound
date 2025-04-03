@@ -1393,6 +1393,8 @@ void* listen_sslctx_create(const char* key, const char* pem,
 			return NULL;
 		}
 	}
+#else
+	(void)tls_ciphersuites; /* variable unused. */
 #endif /* HAVE_SSL_CTX_SET_CIPHERSUITES */
 	if(set_ticket_keys_cb) {
 		if(!setup_ticket_keys_cb(ctx)) {
