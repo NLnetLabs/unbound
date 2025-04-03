@@ -3,6 +3,7 @@
 	- Fix wait-limit-netblock and wait-limit-cookie-netblock config parse
 	  to allow two arguments.
 	- Fix ub_event and include dnstap and win_svc headers.
+	- Fix test for stat_values for wait limit defaults for localhost.
 
 2 April 2025: Yorgos
 	- Merge #1262 from markyang92, fix build with
