@@ -471,8 +471,8 @@ unknown-server-time-limit{COLON} { YDVAR(1, VAR_UNKNOWN_SERVER_TIME_LIMIT) }
 discard-timeout{COLON}		{ YDVAR(1, VAR_DISCARD_TIMEOUT) }
 wait-limit{COLON}		{ YDVAR(1, VAR_WAIT_LIMIT) }
 wait-limit-cookie{COLON}	{ YDVAR(1, VAR_WAIT_LIMIT_COOKIE) }
-wait-limit-netblock{COLON}	{ YDVAR(1, VAR_WAIT_LIMIT_NETBLOCK) }
-wait-limit-cookie-netblock{COLON} { YDVAR(1, VAR_WAIT_LIMIT_COOKIE_NETBLOCK) }
+wait-limit-netblock{COLON}	{ YDVAR(2, VAR_WAIT_LIMIT_NETBLOCK) }
+wait-limit-cookie-netblock{COLON} { YDVAR(2, VAR_WAIT_LIMIT_COOKIE_NETBLOCK) }
 max-udp-size{COLON}		{ YDVAR(1, VAR_MAX_UDP_SIZE) }
 dns64-prefix{COLON}		{ YDVAR(1, VAR_DNS64_PREFIX) }
 dns64-synthall{COLON}		{ YDVAR(1, VAR_DNS64_SYNTHALL) }
