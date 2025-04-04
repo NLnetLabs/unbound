@@ -309,6 +309,7 @@ kill_pid () {
 	local WAIT_THRES=30
 	local try
 	kill $1
+	sleep .001
 	for (( try=0 ; try <= $MAX_DOWN_TRY ; try++ )) ; do
 		if kill -0 $1 >/dev/null 2>&1; then
 			:
@@ -322,6 +323,8 @@ kill_pid () {
 		fi
 		if test $try -ge $WAIT_THRES; then
 			sleep 1
+		else
+			sleep .01
 		fi
 		# re-send the signal
 		kill $1 >/dev/null 2>&1
