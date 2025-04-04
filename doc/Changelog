@@ -1,6 +1,7 @@
 4 April 2025: Wouter
 	- Fix mesh_copy_client_info to omit null contents from copy.
 	- Fix comment name in the rpz nsdname test.
+	- Fix nettle compile for warnings and ticket keys.
 
 3 April 2025: Wouter
 	- Fix #1263: Exempt loopback addresses from wait-limit.
