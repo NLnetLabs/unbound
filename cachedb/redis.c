@@ -157,7 +157,7 @@ redis_connect(const char* host, int port, const char* path,
 	if(verbosity >= VERB_OPS) {
 		char port_str[6+1];
 		port_str[0] = ' ';
-		(void)snprintf(port_str+1, sizeof(port_str-1), "%d", port);
+		(void)snprintf(port_str+1, sizeof(port_str)-1, "%d", port);
 		verbose(VERB_OPS, "Connection to Redis established (%s%s)",
 			path&&path[0]!=0?path:host,
 			path&&path[0]!=0?"":port_str);
@@ -356,7 +356,7 @@ redis_command(struct module_env* env, struct cachedb_env* cachedb_env,
 	 * it on a failure, try to re-establish a new one.   Failures will be
 	 * logged in redis_connect(). */
 	if(!ctx) {
-		if(d->replica_ctxs) {
+		if(!write && d->replica_ctxs) {
 			ctx = redis_connect(
 				d->replica_server_host,
 				d->replica_server_port,
