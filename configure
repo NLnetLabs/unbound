@@ -16100,6 +16100,14 @@ then :
 
 fi
 
+ac_fn_c_check_header_compile "$LINENO" "stdatomic.h" "ac_cv_header_stdatomic_h" "$ac_includes_default
+"
+if test "x$ac_cv_header_stdatomic_h" = xyes
+then :
+  printf "%s\n" "#define HAVE_STDATOMIC_H 1" >>confdefs.h
+
+fi
+
 
 # check for types.
 # Using own tests for int64* because autoconf builtin only give 32bit.

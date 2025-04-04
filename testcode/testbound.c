@@ -601,6 +601,17 @@ void listen_desetup_locks(void)
 	/* nothing */
 }
 
+void fast_reload_printq_list_delete(
+	struct fast_reload_printq* ATTR_UNUSED(list))
+{
+	/* nothing */
+}
+
+void fast_reload_worker_pickup_changes(struct worker* ATTR_UNUSED(worker))
+{
+	/* nothing */
+}
+
 #ifdef HAVE_NGTCP2
 void* quic_sslctx_create(char* ATTR_UNUSED(key), char* ATTR_UNUSED(pem),
 	char* ATTR_UNUSED(verifypem))

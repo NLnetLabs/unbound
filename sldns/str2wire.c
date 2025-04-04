@@ -365,7 +365,8 @@ static int
 sldns_rdf_type_maybe_quoted(sldns_rdf_type rdf_type)
 {
 	return  rdf_type == LDNS_RDF_TYPE_STR ||
-		rdf_type == LDNS_RDF_TYPE_LONG_STR;
+		rdf_type == LDNS_RDF_TYPE_LONG_STR ||
+		rdf_type == LDNS_RDF_TYPE_UNQUOTED;
 }
 
 /** see if rdata is quoted */
@@ -1719,6 +1720,8 @@ int sldns_str2wire_rdf_buf(const char* str, uint8_t* rd, size_t* len,
 		return sldns_str2wire_eui48_buf(str, rd, len);
 	case LDNS_RDF_TYPE_EUI64:
 		return sldns_str2wire_eui64_buf(str, rd, len);
+	case LDNS_RDF_TYPE_UNQUOTED:
+		return sldns_str2wire_unquoted_buf(str, rd, len);
 	case LDNS_RDF_TYPE_TAG:
 		return sldns_str2wire_tag_buf(str, rd, len);
 	case LDNS_RDF_TYPE_LONG_STR:
@@ -2774,6 +2777,11 @@ int sldns_str2wire_eui64_buf(const char* str, uint8_t* rd, size_t* len)
 	rd[7] = h;
 	*len = 8;
 	return LDNS_WIREPARSE_ERR_OK;
+}
+
+int sldns_str2wire_unquoted_buf(const char* str, uint8_t* rd, size_t* len)
+{
+	return sldns_str2wire_str_buf(str, rd, len);
 }
 
 int sldns_str2wire_tag_buf(const char* str, uint8_t* rd, size_t* len)
