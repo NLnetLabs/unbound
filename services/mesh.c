@@ -232,6 +232,7 @@ mesh_create(struct module_stack* stack, struct module_env* env)
 	mesh->ans_cachedb = 0;
 	mesh->num_queries_discard_timeout = 0;
 	mesh->num_queries_wait_limit = 0;
+	mesh->num_dns_error_reports = 0;
 	mesh->max_reply_states = env->cfg->num_queries_per_thread;
 	mesh->max_forever_states = (mesh->max_reply_states+1)/2;
 #ifndef S_SPLINT_S
@@ -1683,7 +1684,9 @@ static void dns_error_reporting(struct module_qstate* qstate,
 
 	log_query_info(VERB_ALGO, "DNS Error Reporting: generating report "
 		"query for", &qinfo);
-	mesh_add_sub(qstate, &qinfo, BIT_RD, 0, 0, &newq, &sub);
+	if(mesh_add_sub(qstate, &qinfo, BIT_RD, 0, 0, &newq, &sub)) {
+		qstate->env->mesh->num_dns_error_reports++;
+	}
 	return;
 skip:
 	verbose(VERB_ALGO, "DNS Error Reporting: report query qname too long; "
@@ -2269,6 +2272,7 @@ mesh_stats_clear(struct mesh_area* mesh)
 	mesh->ans_nodata = 0;
 	mesh->num_queries_discard_timeout = 0;
 	mesh->num_queries_wait_limit = 0;
+	mesh->num_dns_error_reports = 0;
 }
 
 size_t

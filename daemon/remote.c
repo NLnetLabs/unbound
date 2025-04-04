@@ -824,6 +824,8 @@ print_stats(RES* ssl, const char* nm, struct ub_stats_info* s)
 	if(!ssl_printf(ssl, "%s.num.dnscrypt.malformed"SQ"%lu\n", nm,
 		(unsigned long)s->svr.num_query_dnscrypt_crypted_malformed)) return 0;
 #endif
+	if(!ssl_printf(ssl, "%s.num.dns_error_reports"SQ"%lu\n", nm,
+		(unsigned long)s->svr.num_dns_error_reports)) return 0;
 	if(!ssl_printf(ssl, "%s.requestlist.avg"SQ"%g\n", nm,
 		(s->svr.num_queries_missed_cache+s->svr.num_queries_prefetch)?
 			(double)s->svr.sum_query_list_size/
