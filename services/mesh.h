@@ -141,6 +141,8 @@ struct mesh_area {
 	size_t num_queries_discard_timeout;
 	/** stats, number of queries removed due to wait-limit */
 	size_t num_queries_wait_limit;
+	/** stats, number of dns error reports generated */
+	size_t num_dns_error_reports;
 
 	/** backup of query if other operations recurse and need the
 	 * network buffers */

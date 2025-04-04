@@ -232,6 +232,7 @@ mesh_create(struct module_stack* stack, struct module_env* env)
 	mesh->ans_cachedb = 0;
 	mesh->num_queries_discard_timeout = 0;
 	mesh->num_queries_wait_limit = 0;
+	mesh->num_dns_error_reports = 0;
 	mesh->max_reply_states = env->cfg->num_queries_per_thread;
 	mesh->max_forever_states = (mesh->max_reply_states+1)/2;
 #ifndef S_SPLINT_S
@@ -1582,6 +1583,117 @@ mesh_send_reply(struct mesh_state* m, int rcode, struct reply_info* rep,
 	}
 }
 
+/**
+ * Generate the DNS Error Report (RFC9567).
+ * If there is an EDE attached for this reply and there was a Report-Channel
+ * EDNS0 option from the upstream, fire up a report query.
+ * @param qstate: module qstate.
+ * @param rep: prepared reply to be sent.
+ */
+static void dns_error_reporting(struct module_qstate* qstate,
+	struct reply_info* rep)
+{
+	struct query_info qinfo;
+	struct mesh_state* sub;
+	struct module_qstate* newq;
+	uint8_t buf[LDNS_MAX_DOMAINLEN];
+	size_t count = 0;
+	int written;
+	size_t expected_length;
+	struct edns_option* opt;
+	sldns_ede_code reason_bogus = LDNS_EDE_NONE;
+	sldns_rr_type qtype = qstate->qinfo.qtype;
+	uint8_t* qname = qstate->qinfo.qname;
+	size_t qname_len = qstate->qinfo.qname_len-1; /* skip the trailing \0 */
+	uint8_t* agent_domain;
+	size_t agent_domain_len;
+
+	/* We need a valid reporting agent;
+	 * this is based on qstate->edns_opts_back_in that will probably have
+	 * the latest reporting agent we found while iterating */
+	opt = edns_opt_list_find(qstate->edns_opts_back_in,
+		LDNS_EDNS_REPORT_CHANNEL);
+	if(!opt) return;
+	agent_domain_len = opt->opt_len;
+	agent_domain = opt->opt_data;
+	if(dname_valid(agent_domain, agent_domain_len) < 3) {
+		/* The agent domain needs to be a valid dname that is not the
+		 * root; from RFC9567. */
+		return;
+	}
+
+	/* Get the EDE generated from the mesh state, these are mostly
+	 * validator errors. If other errors are produced in the future (e.g.,
+	 * RPZ) we would not want them to result in error reports. */
+	reason_bogus = errinf_to_reason_bogus(qstate);
+	if(rep && ((reason_bogus == LDNS_EDE_DNSSEC_BOGUS &&
+		rep->reason_bogus != LDNS_EDE_NONE) ||
+		reason_bogus == LDNS_EDE_NONE)) {
+		reason_bogus = rep->reason_bogus;
+	}
+	if(reason_bogus == LDNS_EDE_NONE ||
+		/* other, does not make sense without the text that comes
+		 * with it */
+		reason_bogus == LDNS_EDE_OTHER) return;
+
+	/* Synthesize the error report query in the format:
+	 * "_er.$qtype.$qname.$ede._er.$reporting-agent-domain" */
+	/* First check if the static length parts fit in the buffer.
+	 * That is everything except for qtype and ede that need to be
+	 * converted to decimal and checked further on. */
+	expected_length = 4/*_er*/+qname_len+4/*_er*/+agent_domain_len;
+	if(expected_length > LDNS_MAX_DOMAINLEN) goto skip;
+
+	memmove(buf+count, "\3_er", 4);
+	count += 4;
+
+	written = snprintf((char*)buf+count, LDNS_MAX_DOMAINLEN-count,
+		"X%d", qtype);
+	expected_length += written;
+	/* Skip on error, truncation or long expected length */
+	if(written < 0 || (size_t)written >= LDNS_MAX_DOMAINLEN-count ||
+		expected_length > LDNS_MAX_DOMAINLEN ) goto skip;
+	/* Put in the label length */
+	*(buf+count) = (char)(written - 1);
+	count += written;
+
+	memmove(buf+count, qname, qname_len);
+	count += qname_len;
+
+	written = snprintf((char*)buf+count, LDNS_MAX_DOMAINLEN-count,
+		"X%d", reason_bogus);
+	expected_length += written;
+	/* Skip on error, truncation or long expected length */
+	if(written < 0 || (size_t)written >= LDNS_MAX_DOMAINLEN-count ||
+		expected_length > LDNS_MAX_DOMAINLEN ) goto skip;
+	*(buf+count) = (char)(written - 1);
+	count += written;
+
+	memmove(buf+count, "\3_er", 4);
+	count += 4;
+
+	/* Copy the agent domain */
+	memmove(buf+count, agent_domain, agent_domain_len);
+	count += agent_domain_len;
+
+	qinfo.qname = buf;
+	qinfo.qname_len = count;
+	qinfo.qtype = LDNS_RR_TYPE_TXT;
+	qinfo.qclass = qstate->qinfo.qclass;
+	qinfo.local_alias = NULL;
+
+	log_query_info(VERB_ALGO, "DNS Error Reporting: generating report "
+		"query for", &qinfo);
+	if(mesh_add_sub(qstate, &qinfo, BIT_RD, 0, 0, &newq, &sub)) {
+		qstate->env->mesh->num_dns_error_reports++;
+	}
+	return;
+skip:
+	verbose(VERB_ALGO, "DNS Error Reporting: report query qname too long; "
+		"skip");
+	return;
+}
+
 void mesh_query_done(struct mesh_state* mstate)
 {
 	struct mesh_reply* r;
@@ -1610,6 +1722,10 @@ void mesh_query_done(struct mesh_state* mstate)
 			if(err) { log_err("%s", err); }
 		}
 	}
+
+	if(mstate->reply_list && mstate->s.env->cfg->dns_error_reporting)
+		dns_error_reporting(&mstate->s, rep);
+
 	for(r = mstate->reply_list; r; r = r->next) {
 		struct timeval old;
 		timeval_subtract(&old, mstate->s.env->now_tv, &r->start_time);
@@ -2156,6 +2272,7 @@ mesh_stats_clear(struct mesh_area* mesh)
 	mesh->ans_nodata = 0;
 	mesh->num_queries_discard_timeout = 0;
 	mesh->num_queries_wait_limit = 0;
+	mesh->num_dns_error_reports = 0;
 }
 
 size_t

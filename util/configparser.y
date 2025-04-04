@@ -206,6 +206,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_EDNS_CLIENT_STRING_OPCODE VAR_NSID
 %token VAR_ZONEMD_PERMISSIVE_MODE VAR_ZONEMD_CHECK VAR_ZONEMD_REJECT_ABSENCE
 %token VAR_RPZ_SIGNAL_NXDOMAIN_RA VAR_INTERFACE_AUTOMATIC_PORTS VAR_EDE
+%token VAR_DNS_ERROR_REPORTING
 %token VAR_INTERFACE_ACTION VAR_INTERFACE_VIEW VAR_INTERFACE_TAG
 %token VAR_INTERFACE_TAG_ACTION VAR_INTERFACE_TAG_DATA
 %token VAR_QUIC_PORT VAR_QUIC_SIZE
@@ -350,6 +351,7 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_tcp_reuse_timeout | server_tcp_auth_query_timeout |
 	server_quic_port | server_quic_size |
 	server_interface_automatic_ports | server_ede |
+	server_dns_error_reporting |
 	server_proxy_protocol_port | server_statistics_inhibit_zero |
 	server_harden_unknown_additional | server_disable_edns_do |
 	server_log_destaddr | server_cookie_secret_file |
@@ -3070,6 +3072,15 @@ server_ede: VAR_EDE STRING_ARG
 		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
 			yyerror("expected yes or no.");
 		else cfg_parser->cfg->ede = (strcmp($2, "yes")==0);
+		free($2);
+	}
+	;
+server_dns_error_reporting: VAR_DNS_ERROR_REPORTING STRING_ARG
+	{
+		OUTYY(("P(server_dns_error_reporting:%s)\n", $2));
+		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
+			yyerror("expected yes or no.");
+		else cfg_parser->cfg->dns_error_reporting = (strcmp($2, "yes")==0);
 		free($2);
 	}
 	;

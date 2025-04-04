@@ -1086,6 +1086,11 @@ server:
 	# Note that the ede option above needs to be enabled for this to work.
 	# ede-serve-expired: no
 
+	# Enable DNS Error Reporting (RFC9567).
+	# qname-minimisation is advised to be turned on as well to increase
+	# privacy on the outgoing reports.
+	# dns-error-reporting: no
+
 	# Specific options for ipsecmod. Unbound needs to be configured with
 	# --enable-ipsecmod for these to take effect.
 	#
