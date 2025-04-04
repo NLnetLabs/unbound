@@ -4,6 +4,10 @@
 	- Fix nettle compile for warnings and ticket keys.
 	- Fix redis_replicat test for unused option defaults and log printout.
 
+4 April 2025: Yorgos
+	- Merge #1019: Redis read-only replica support.
+	  Introduces new 'redis-replica-*' options for the Redis cache backend.
+
 3 April 2025: Wouter
 	- Fix #1263: Exempt loopback addresses from wait-limit.
 	- Fix wait-limit-netblock and wait-limit-cookie-netblock config parse
