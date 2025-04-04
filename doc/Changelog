@@ -2,7 +2,7 @@
 	- Fix mesh_copy_client_info to omit null contents from copy.
 	- Fix comment name in the rpz nsdname test.
 	- Fix nettle compile for warnings and ticket keys.
-	- Fix redis_replicat test for unused option defaults and log printout.
+	- Fix redis_replica test for unused option defaults and log printout.
 
 4 April 2025: Yorgos
 	- Merge #1019: Redis read-only replica support.
