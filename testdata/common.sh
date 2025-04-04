@@ -1,7 +1,8 @@
 # common.sh - an include file for commonly used functions for test code.
 # BSD licensed (see LICENSE file).
 #
-# Version 6
+# Version 7
+# 2025-04-04: speed up kill_pid.
 # 2023-12-06: list wait_for_soa_serial in overview
 # 2023-12-06: get_ldns_notify, skip_test and teststep, and previous changes
 # also included are wait_logfile, cpu_count, process_cpu_list, and
