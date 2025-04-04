@@ -9,3 +9,10 @@
 kill_pid $REDIS_PID
 kill_pid $REDIS_REPLICA_PID
 kill_pid $UNBOUND_PID
+echo "> cat logfiles"
+echo "redis server.log"
+cat server.log
+echo "redis replica.log"
+cat replica.log
+echo "unbound.log"
+cat unbound.log

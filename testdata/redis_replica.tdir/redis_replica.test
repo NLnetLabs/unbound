@@ -74,7 +74,5 @@ redis_cli_check_keys $REDIS_SOCKET 1
 # check Redis replica server has no keys
 redis_cli_check_keys $REDIS_REPLICA_SOCKET 0
 
-echo "> cat logfiles"
-cat unbound.log
 echo "> OK"
 exit 0
