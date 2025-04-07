@@ -67,7 +67,16 @@ is loaded in a thread, and prepared, then it briefly pauses the existing
 server and updates config options. The intent is that the pause does not
 impact the service of user queries. The cache is kept. Also user queries
 worked on are kept and continue, but with the new config options.
+.IP
 This command is experimental at this time.
+.IP
+The amount of temporal memory needed during a fast_reload is twice the
+amount needed for configuration.
+This is because Unbound temporarily needs to store both current configuration
+values and new ones while trying to fast_reload.
+Zones loaded from disk (authority zones and RPZ zones) are included in such
+memory needs.
+.IP
 Not all options are changed, but it changes like forwards, stubs and
 local zones. Also access-control and interface-action and similar options,
 also tcp-connection-limits, views. It can reload some define-tag changes.
