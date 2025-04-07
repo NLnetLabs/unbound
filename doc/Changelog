@@ -1,3 +1,8 @@
+7 April 2025: Yorgos
+	- Merge #902: DNS Error Reporting (RFC 9567). Introduces new
+	  configuration option 'dns-error-reporting' and new statistics for
+	  'num.dns_error_reports'.
+
 4 April 2025: Wouter
 	- Fix mesh_copy_client_info to omit null contents from copy.
 	- Fix comment name in the rpz nsdname test.
