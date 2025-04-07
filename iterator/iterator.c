@@ -4332,6 +4332,7 @@ process_response(struct module_qstate* qstate, struct iter_qstate* iq,
 	}
 
 	/* Copy the edns options we may got from the back end */
+	qstate->edns_opts_back_in = NULL;
 	if(edns.opt_list_in) {
 		qstate->edns_opts_back_in = edns_opt_copy_region(edns.opt_list_in,
 			qstate->region);

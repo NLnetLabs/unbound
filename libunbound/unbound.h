@@ -853,6 +853,8 @@ struct ub_server_stats {
 	long long num_queries_discard_timeout;
 	/** number of queries removed due to wait-limit */
 	long long num_queries_wait_limit;
+	/** number of dns error reports generated */
+	long long num_dns_error_reports;
 };
 
 /**

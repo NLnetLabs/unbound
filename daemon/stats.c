@@ -285,6 +285,8 @@ server_stats_compile(struct worker* worker, struct ub_stats_info* s, int reset)
 		(long long)worker->env.mesh->num_queries_discard_timeout;
 	s->svr.num_queries_wait_limit +=
 		(long long)worker->env.mesh->num_queries_wait_limit;
+	s->svr.num_dns_error_reports +=
+		(long long)worker->env.mesh->num_dns_error_reports;
 	/* values from outside network */
 	s->svr.unwanted_replies = (long long)worker->back->unwanted_replies;
 	s->svr.qtcp_outgoing = (long long)worker->back->num_tcp_outgoing;
@@ -446,6 +448,7 @@ void server_stats_add(struct ub_stats_info* total, struct ub_stats_info* a)
 	total->svr.num_queries_discard_timeout +=
 		a->svr.num_queries_discard_timeout;
 	total->svr.num_queries_wait_limit += a->svr.num_queries_wait_limit;
+	total->svr.num_dns_error_reports += a->svr.num_dns_error_reports;
 	total->svr.num_queries_missed_cache += a->svr.num_queries_missed_cache;
 	total->svr.num_queries_prefetch += a->svr.num_queries_prefetch;
 	total->svr.num_queries_timed_out += a->svr.num_queries_timed_out;
@@ -458,9 +461,9 @@ void server_stats_add(struct ub_stats_info* total, struct ub_stats_info* a)
 #ifdef USE_DNSCRYPT
 	total->svr.num_query_dnscrypt_crypted += a->svr.num_query_dnscrypt_crypted;
 	total->svr.num_query_dnscrypt_cert += a->svr.num_query_dnscrypt_cert;
-	total->svr.num_query_dnscrypt_cleartext += \
+	total->svr.num_query_dnscrypt_cleartext +=
 		a->svr.num_query_dnscrypt_cleartext;
-	total->svr.num_query_dnscrypt_crypted_malformed += \
+	total->svr.num_query_dnscrypt_crypted_malformed +=
 		a->svr.num_query_dnscrypt_crypted_malformed;
 #endif /* USE_DNSCRYPT */
 	/* the max size reached is upped to higher of both */

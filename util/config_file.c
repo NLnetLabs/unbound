@@ -284,7 +284,6 @@ config_create(void)
 	cfg->serve_expired_ttl_reset = 0;
 	cfg->serve_expired_reply_ttl = 30;
 	cfg->serve_expired_client_timeout = 1800;
-	cfg->ede_serve_expired = 0;
 	cfg->serve_original_ttl = 0;
 	cfg->zonemd_permissive_mode = 0;
 	cfg->add_holddown = 30*24*3600;
@@ -418,6 +417,8 @@ config_create(void)
 	cfg->ipset_name_v6 = NULL;
 #endif
 	cfg->ede = 0;
+	cfg->ede_serve_expired = 0;
+	cfg->dns_error_reporting = 0;
 	cfg->iter_scrub_ns = 20;
 	cfg->iter_scrub_cname = 11;
 	cfg->max_global_quota = 200;
@@ -756,6 +757,7 @@ int config_set_option(struct config_file* cfg, const char* opt,
 	else S_NUMBER_OR_ZERO("serve-expired-client-timeout:", serve_expired_client_timeout)
 	else S_YNO("ede:", ede)
 	else S_YNO("ede-serve-expired:", ede_serve_expired)
+	else S_YNO("dns-error-reporting:", dns_error_reporting)
 	else S_NUMBER_OR_ZERO("iter-scrub-ns:", iter_scrub_ns)
 	else S_NUMBER_OR_ZERO("iter-scrub-cname:", iter_scrub_cname)
 	else S_NUMBER_OR_ZERO("max-global-quota:", max_global_quota)
@@ -1231,6 +1233,7 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_DEC(opt, "serve-expired-client-timeout", serve_expired_client_timeout)
 	else O_YNO(opt, "ede", ede)
 	else O_YNO(opt, "ede-serve-expired", ede_serve_expired)
+	else O_YNO(opt, "dns-error-reporting", dns_error_reporting)
 	else O_DEC(opt, "iter-scrub-ns", iter_scrub_ns)
 	else O_DEC(opt, "iter-scrub-cname", iter_scrub_cname)
 	else O_DEC(opt, "max-global-quota", max_global_quota)

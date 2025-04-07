@@ -438,8 +438,6 @@ struct config_file {
 	/** serve expired entries only after trying to update the entries and this
 	 *  timeout (in milliseconds) is reached */
 	int serve_expired_client_timeout;
-	/** serve EDE code 3 - Stale Answer (RFC8914) for expired entries */
-	int ede_serve_expired;
 	/** serve original TTLs rather than decrementing ones */
 	int serve_original_ttl;
 	/** nsec3 maximum iterations per key size, string */
@@ -784,6 +782,10 @@ struct config_file {
 #endif
 	/** respond with Extended DNS Errors (RFC8914) */
 	int ede;
+	/** serve EDE code 3 - Stale Answer (RFC8914) for expired entries */
+	int ede_serve_expired;
+	/** send DNS Error Reports to upstream reporting agent (RFC9567) */
+	int dns_error_reporting;
 	/** limit on NS RRs in RRset for the iterator scrubber. */
 	size_t iter_scrub_ns;
 	/** limit on CNAME, DNAME RRs in answer for the iterator scrubber. */

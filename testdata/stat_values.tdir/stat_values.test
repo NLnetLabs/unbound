@@ -426,6 +426,35 @@ rrset.cache.count=3
 infra.cache.count=2"
 
 
+teststep "Check dns-error-reporting."
+echo "> dig www.bogusdnssec."
+dig @127.0.0.1 -p $UNBOUND_PORT www.bogusdnssec. | tee outfile
+echo "> check answer"
+if grep "SERVFAIL" outfile; then
+	echo "OK"
+else
+	end 1
+fi
+check_stats "\
+infra.cache.count=4
+key.cache.count=1
+msg.cache.count=7
+num.answer.bogus=1
+num.answer.rcode.SERVFAIL=1
+num.query.class.IN=1
+num.query.edns.present=1
+num.query.flags.AD=1
+num.query.flags.RD=1
+num.query.opcode.QUERY=1
+num.query.type.A=1
+num.query.udpout=9
+rrset.cache.count=4
+total.num.cachemiss=1
+total.num.dns_error_reports=1
+total.num.queries=1
+total.num.recursivereplies=1"
+
+
 ###
 #
 # Bring the discard-timeout, wait-limit configured Unbound up
@@ -436,8 +465,8 @@ bring_up_alternate_configuration ub_discard_wait_limit.conf
 
 
 teststep "Check discard-timeout and wait-limit"
-echo "> dig www.slow"
-dig @127.0.0.1 -p $UNBOUND_PORT +retry=2 +timeout=1 www.slow. | tee outfile
+echo "> dig www.unresponsive"
+dig @127.0.0.1 -p $UNBOUND_PORT +retry=2 +timeout=1 www.unresponsive. | tee outfile
 echo "> check answer"
 if grep "no servers could be reached" outfile; then
 	echo "OK"
