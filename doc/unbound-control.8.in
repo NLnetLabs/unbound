@@ -77,32 +77,85 @@ values and new ones while trying to fast_reload.
 Zones loaded from disk (authority zones and RPZ zones) are included in such
 memory needs.
 .IP
-Not all options are changed, but it changes like forwards, stubs and
-local zones. Also access-control and interface-action and similar options,
-also tcp-connection-limits, views. It can reload some define-tag changes.
-It does not work with interface, outgoing-interface changes, also not with
-remote-control, outgoing-port-permit, outgoing-port-avoid, msg-buffer-size,
-slabs options and statistics-interval changes.
+Options that can be changed are for
+forwards,
+stubs,
+views,
+authority zones,
+RPZ zones and
+local zones.
 .IP
-The fast reload also works on the options: insecure-lan-zones, domain-insecure,
-trust-anchor-file, trust-anchor, trusted-key-file, auto-trust-anchor-file,
-auth-zone and its options, rpz and its options, edns-strings, respip_set,
-view and its options, access-control options, tcp-connection-limit,
-log-identity, infra-cache-numhosts, msg-cache-size, rrset-cache-size,
-key-cache-size, ratelimit-size, neg-cache-size, num-queries-per-thread,
-jostle-timeout, use-caps-for-id, unwanted-reply-threshold, tls-use-sni,
-outgoing-tcp-mss, ip-dscp, max-reuse-tcp-queries, tcp-reuse-timeout,
-tcp-auth-query-timeout, delay-close.
+Also
+access-control and similar options,
+interface-action and similar options and
+tcp-connection-limit.
+It can reload some
+define-tag
+changes, more on that below.
+Further options include
+insecure-lan-zones,
+domain-insecure,
+trust-anchor-file,
+trust-anchor,
+trusted-keys-file,
+auto-trust-anchor-file,
+edns-client-string,
+ipset,
+log-identity,
+infra-cache-numhosts,
+msg-cache-size,
+rrset-cache-size,
+key-cache-size,
+ratelimit-size,
+neg-cache-size,
+num-queries-per-thread,
+jostle-timeout,
+use-caps-for-id,
+unwanted-reply-threshold,
+tls-use-sni,
+outgoing-tcp-mss,
+ip-dscp,
+max-reuse-tcp-queries,
+tcp-reuse-timeout,
+tcp-auth-query-timeout,
+delay-close.
 .IP
-For dnstap, the options can be changed: dnstap-log-resolver-query-messages,
-dnstap-log-resolver-response-messages, dnstap-log-client-query-messages,
-dnstap-log-client-response-messages, dnstap-log-forwarder-query-messages
-and dnstap-log-forwarder-response-messages. It does not work with
-these options: dnstap-enable, dnstap-bidirectional, dnstap-socket-path,
-dnstap-ip, dnstap-tls, dnstap-tls-server-name, dnstap-tls-cert-bundle,
-dnstap-tls-client-key-file and dnstap-tls-client-cert-file. The options
-dnstap-send-identity, dnstap-send-version, dnstap-identity, and
-dnstap-version can be loaded when '+p' is not used.
+It does not work with
+interface and
+outgoing-interface changes,
+also not with
+remote control,
+outgoing-port-permit,
+outgoing-port-avoid,
+msg-buffer-size,
+any **\*-slabs** options and
+statistics-interval changes.
+.IP
+For dnstap these options can be changed:
+dnstap-log-resolver-query-messages,
+dnstap-log-resolver-response-messages,
+dnstap-log-client-query-messages,
+dnstap-log-client-response-messages,
+dnstap-log-forwarder-query-messages and
+dnstap-log-forwarder-response-messages.
+.IP
+It does not work with these options:
+dnstap-enable,
+dnstap-bidirectional,
+dnstap-socket-path,
+dnstap-ip,
+dnstap-tls,
+dnstap-tls-server-name,
+dnstap-tls-cert-bundle,
+dnstap-tls-client-key-file and
+dnstap-tls-client-cert-file.
+.IP
+The options
+dnstap-send-identity,
+dnstap-send-version,
+dnstap-identity, and
+dnstap-version can be loaded
+when ``+p`` is not used.
 .IP
 The '+v' option makes the output verbose which includes the time it took to do
 the reload.
@@ -128,7 +181,7 @@ worker thread.
 .IP
 With the nopause option, the reload does not work to reload some options,
 that fast reload works on without the nopause option: val-bogus-ttl,
-val-date-override, val-sig-key-min, val-sig-skew-max, val-max-restart,
+val-override-date, val-sig-skew-min, val-sig-skew-max, val-max-restart,
 val-nsec3-keysize-iterations, target-fetch-policy, outbound-msg-retry,
 max-sent-count, max-query-restarts, do-not-query-address,
 do-not-query-localhost, private-address, private-domain, caps-exempt,
@@ -142,7 +195,7 @@ so that users keep getting answers for those queries that are currently
 processed. The drop makes it so that queries during the life time of the
 query processing see only old, or only new config options.
 .IP
-When there are changes to the config tags, from \fBdefine\-tag\fR config,
+When there are changes to the config tags, from the \fBdefine\-tag\fR option,
 then the '+d' option is implicitly turned on with a warning printout, and
 queries are dropped.
 This is to stop references to the old tag information, by the old
