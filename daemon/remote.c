@@ -4262,7 +4262,10 @@ fr_read_config(struct fast_reload_thread* fr, struct config_file** newcfg)
 	if(!config_read(*newcfg, fr->worker->daemon->cfgfile,
 		fr->worker->daemon->chroot)) {
 		config_delete(*newcfg);
-		if(!fr_output_printf(fr, "config_read %s failed: %s\n",
+		if(!fr_output_printf(fr, "config_read %s%s%s%s failed: %s\n",
+			(fr->worker->daemon->chroot?"<chroot:":""),
+			(fr->worker->daemon->chroot?fr->worker->daemon->chroot:""),
+			(fr->worker->daemon->chroot?"> ":""),
 			fr->worker->daemon->cfgfile, strerror(errno)))
 			return 0;
 		fr_send_notification(fr, fast_reload_notification_printout);
@@ -4271,7 +4274,10 @@ fr_read_config(struct fast_reload_thread* fr, struct config_file** newcfg)
 	if(fr_poll_for_quit(fr))
 		return 1;
 	if(fr->fr_verb >= 1) {
-		if(!fr_output_printf(fr, "done read config file %s\n",
+		if(!fr_output_printf(fr, "done read config file %s%s%s%s\n",
+			(fr->worker->daemon->chroot?"<chroot:":""),
+			(fr->worker->daemon->chroot?fr->worker->daemon->chroot:""),
+			(fr->worker->daemon->chroot?"> ":""),
 			fr->worker->daemon->cfgfile))
 			return 0;
 		fr_send_notification(fr, fast_reload_notification_printout);
