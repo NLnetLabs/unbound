@@ -5450,7 +5450,7 @@ auth_zones_swap(struct auth_zones* az, struct auth_zones* data)
 	 * the xfer elements can continue to be their callbacks. */
 }
 
-#ifdef ATOMIC_POINTER_LOCK_FREE
+#if defined(ATOMIC_POINTER_LOCK_FREE) && defined(HAVE_LINK_ATOMIC_STORE)
 /** Fast reload thread, if atomics are available, copy the config items
  * one by one with atomic store operations. */
 static void
@@ -5819,7 +5819,7 @@ fr_atomic_copy_cfg(struct config_file* oldcfg, struct config_file* cfg,
 #endif
 	COPY_VAR_int(ede);
 }
-#endif /* ATOMIC_POINTER_LOCK_FREE */
+#endif /* ATOMIC_POINTER_LOCK_FREE && HAVE_LINK_ATOMIC_STORE */
 
 /** fast reload thread, adjust the cache sizes */
 static void
@@ -5997,7 +5997,7 @@ fr_reload_config(struct fast_reload_thread* fr, struct config_file* newcfg,
 		lock_basic_lock(&env->anchors->lock);
 	}
 
-#ifdef ATOMIC_POINTER_LOCK_FREE
+#if defined(ATOMIC_POINTER_LOCK_FREE) && defined(HAVE_LINK_ATOMIC_STORE)
 	if(fr->fr_nopause) {
 		fr_atomic_copy_cfg(ct->oldcfg, env->cfg, newcfg);
 	} else {
@@ -6006,7 +6006,7 @@ fr_reload_config(struct fast_reload_thread* fr, struct config_file* newcfg,
 		*ct->oldcfg = *env->cfg;
 		/* Insert new config elements. */
 		*env->cfg = *newcfg;
-#ifdef ATOMIC_POINTER_LOCK_FREE
+#if defined(ATOMIC_POINTER_LOCK_FREE) && defined(HAVE_LINK_ATOMIC_STORE)
 	}
 #endif
 
@@ -6015,7 +6015,7 @@ fr_reload_config(struct fast_reload_thread* fr, struct config_file* newcfg,
 		log_ident_set_or_default(env->cfg->log_identity);
 	}
 	/* the newcfg elements are in env->cfg, so should not be freed here. */
-#ifdef ATOMIC_POINTER_LOCK_FREE
+#if defined(ATOMIC_POINTER_LOCK_FREE) && defined(HAVE_LINK_ATOMIC_STORE)
 	/* if used, the routine that copies the config has zeroed items. */
 	if(!fr->fr_nopause)
 #endif

@@ -1818,6 +1818,25 @@ AC_CHECK_FUNCS([setresgid],,[AC_CHECK_FUNCS([setregid])])
 if echo $host_os | grep darwin8 > /dev/null; then
 	AC_DEFINE(DARWIN_BROKEN_SETREUID, 1, [Define this if on macOSX10.4-darwin8 and setreuid and setregid do not work])
 fi
+
+AC_MSG_CHECKING([for atomic_store])
+AC_LINK_IFELSE([AC_LANG_PROGRAM(AC_INCLUDES_DEFAULT [[
+#ifdef HAVE_STDATOMIC_H
+#include <stdatomic.h>
+#endif
+]], [[
+	int newvar = 5, var = 0;
+	atomic_store((_Atomic int*)&var, newvar);
+	newvar = 0;
+	/* condition to use the variables. */
+	if(var == newvar) return 1;
+]])], [
+	AC_MSG_RESULT(yes)
+	AC_DEFINE(HAVE_LINK_ATOMIC_STORE, 1, [If we have atomic_store])
+], [
+	AC_MSG_RESULT([no])
+])
+
 AC_CHECK_DECLS([inet_pton,inet_ntop], [], [], [
 AC_INCLUDES_DEFAULT
 #ifdef HAVE_NETINET_IN_H
