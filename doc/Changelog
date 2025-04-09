@@ -1,5 +1,6 @@
 9 April 2025: Wouter
 	- Fix to detect if atomic_store links in configure.
+	- Fix #1264: unbound 1.22.0 leaks memory when doing DoH.
 
 8 April 2025: Wouter
 	- Tag for 1.23.0rc1.
