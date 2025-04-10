@@ -965,7 +965,7 @@ void
 log_reply_info(enum verbosity_value v, struct query_info *qinf,
 	struct sockaddr_storage *addr, socklen_t addrlen, struct timeval dur,
 	int cached, struct sldns_buffer *rmsg, struct sockaddr_storage* daddr,
-	enum comm_point_type tp)
+	enum comm_point_type tp, void* ssl)
 {
 	char clientip_buf[128];
 	char rcode_buf[16];
@@ -1000,9 +1000,9 @@ log_reply_info(enum verbosity_value v, struct query_info *qinf,
 				(int)daddr->ss_family);
 		}
 		comm = "udp";
-		if(tp == comm_tcp) comm = "tcp";
-		else if(tp == comm_tcp_accept) comm = "tcp";
-		else if(tp == comm_http) comm = "dot";
+		if(tp == comm_tcp) comm = (ssl?"dot":"tcp");
+		else if(tp == comm_tcp_accept) comm = (ssl?"dot":"tcp");
+		else if(tp == comm_http) comm = "doh";
 		else if(tp == comm_local) comm = "unix";
 		else if(tp == comm_raw) comm = "raw";
 		snprintf(dest_buf, sizeof(dest_buf), " on %s %s %d",

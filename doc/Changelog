@@ -1,3 +1,6 @@
+10 April 2025: Wouter
+	- Fix for print of connection type in log-replies for dot and doh.
+
 9 April 2025: Wouter
 	- Fix to detect if atomic_store links in configure.
 	- Fix #1264: unbound 1.22.0 leaks memory when doing DoH.
