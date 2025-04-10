@@ -456,9 +456,9 @@ comm_point_send_udp_msg(struct comm_point *c, sldns_buffer* packet,
 				int pret;
 				memset(&p, 0, sizeof(p));
 				p.fd = c->fd;
-				p.events = POLLOUT | POLLERR
+				p.events = POLLOUT
 #ifndef USE_WINSOCK
-					| POLLHUP
+					| POLLERR | POLLHUP
 #endif
 					;
 #  ifndef USE_WINSOCK
@@ -517,18 +517,15 @@ comm_point_send_udp_msg(struct comm_point *c, sldns_buffer* packet,
 					Sleep((SEND_BLOCKED_WAIT_TIMEOUT/10)<<(retries+1));
 					pret = 0;
 #endif
-					if(pret < 0 &&
+					if(pret < 0
 #ifndef USE_WINSOCK
-						errno != EAGAIN && errno != EINTR &&
+						&& errno != EAGAIN && errno != EINTR &&
 #  ifdef EWOULDBLOCK
 						errno != EWOULDBLOCK &&
 #  endif
 						errno != ENOBUFS
 #else
-						WSAGetLastError() != WSAEINPROGRESS &&
-						WSAGetLastError() != WSAEINTR &&
-						WSAGetLastError() != WSAENOBUFS &&
-						WSAGetLastError() != WSAEWOULDBLOCK
+						/* Sleep does not error */
 #endif
 					) {
 						log_err("poll udp out timer failed: %s",
@@ -770,9 +767,9 @@ comm_point_send_udp_msg_if(struct comm_point *c, sldns_buffer* packet,
 				int pret;
 				memset(&p, 0, sizeof(p));
 				p.fd = c->fd;
-				p.events = POLLOUT | POLLERR
+				p.events = POLLOUT
 #ifndef USE_WINSOCK
-					| POLLHUP
+					| POLLERR | POLLHUP
 #endif
 					;
 #  ifndef USE_WINSOCK
@@ -831,18 +828,15 @@ comm_point_send_udp_msg_if(struct comm_point *c, sldns_buffer* packet,
 					Sleep((SEND_BLOCKED_WAIT_TIMEOUT/10)<<(retries+1));
 					pret = 0;
 #endif
-					if(pret < 0 &&
+					if(pret < 0
 #ifndef USE_WINSOCK
-						errno != EAGAIN && errno != EINTR &&
+						&& errno != EAGAIN && errno != EINTR &&
 #  ifdef EWOULDBLOCK
 						errno != EWOULDBLOCK &&
 #  endif
 						errno != ENOBUFS
 #else
-						WSAGetLastError() != WSAEINPROGRESS &&
-						WSAGetLastError() != WSAEINTR &&
-						WSAGetLastError() != WSAENOBUFS &&
-						WSAGetLastError() != WSAEWOULDBLOCK
+						/* Sleep does not error */
 #endif
 					) {
 						log_err("poll udp out timer failed: %s",

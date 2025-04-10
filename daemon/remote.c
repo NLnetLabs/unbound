@@ -3899,6 +3899,7 @@ sock_poll_timeout(int fd, int timeout, int pollin, int pollout, int* event)
 {
 	int loopcount = 0;
 	/* Loop if the system call returns an errno to do so, like EINTR. */
+	log_assert(pollin || pollout);
 	while(1) {
 		struct pollfd p, *fds;
 		int nfds, ret;
@@ -3916,11 +3917,11 @@ sock_poll_timeout(int fd, int timeout, int pollin, int pollout, int* event)
 			nfds = 1;
 			memset(&p, 0, sizeof(p));
 			p.fd = fd;
-			p.events = POLLERR
 #ifndef USE_WINSOCK
+			p.events = POLLERR
 				| POLLHUP
-#endif
 				;
+#endif
 			if(pollin)
 				p.events |= POLLIN;
 			if(pollout)
@@ -3937,19 +3938,20 @@ sock_poll_timeout(int fd, int timeout, int pollin, int pollout, int* event)
 		}
 #endif
 		if(ret == -1) {
-			if(
 #ifndef USE_WINSOCK
+			if(
 				errno == EINTR || errno == EAGAIN
 #  ifdef EWOULDBLOCK
 				|| errno == EWOULDBLOCK
 #  endif
-#else
-				WSAGetLastError() == WSAEINTR ||
-				WSAGetLastError() == WSAEINPROGRESS ||
-				WSAGetLastError() == WSAEWOULDBLOCK
+			) continue; /* Try again. */
 #endif
-				)
-				continue; /* Try again. */
+			/* For WSAPoll we only get errors here:
+			 * o WSAENETDOWN
+			 * o WSAEFAULT
+			 * o WSAEINVAL
+			 * o WSAENOBUFS
+			 */
 			log_err("poll: %s", sock_strerror(errno));
 			if(event)
 				*event = 0;
