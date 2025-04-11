@@ -483,6 +483,9 @@ comm_point_send_udp_msg(struct comm_point *c, sldns_buffer* packet,
 #  ifdef EWOULDBLOCK
 					errno != EWOULDBLOCK &&
 #  endif
+#  ifdef ENOMEM
+					errno != ENOMEM &&
+#  endif
 					errno != ENOBUFS
 #else
 					WSAGetLastError() != WSAEINPROGRESS &&
@@ -496,14 +499,19 @@ comm_point_send_udp_msg(struct comm_point *c, sldns_buffer* packet,
 					return 0;
 				} else if((pret < 0 &&
 #ifndef USE_WINSOCK
+					(
 					errno == ENOBUFS
+#  ifdef ENOMEM
+					|| errno == ENOMEM
+#  endif
+					)
 #else
 					WSAGetLastError() == WSAENOBUFS
 #endif
 					) || (send_nobufs && retries > 0)) {
-					/* ENOBUFS, and poll returned without
+					/* ENOBUFS/ENOMEM, and poll returned without
 					 * a timeout. Or the retried send call
-					 * returned ENOBUFS. It is good to
+					 * returned ENOBUFS/ENOMEM. It is good to
 					 * wait a bit for the error to clear. */
 					/* The timeout is 20*(2^(retries+1)),
 					 * it increases exponentially, starting
@@ -522,6 +530,9 @@ comm_point_send_udp_msg(struct comm_point *c, sldns_buffer* packet,
 						&& errno != EAGAIN && errno != EINTR &&
 #  ifdef EWOULDBLOCK
 						errno != EWOULDBLOCK &&
+#  endif
+#  ifdef ENOMEM
+						errno != ENOMEM &&
 #  endif
 						errno != ENOBUFS
 #else
@@ -794,6 +805,9 @@ comm_point_send_udp_msg_if(struct comm_point *c, sldns_buffer* packet,
 #  ifdef EWOULDBLOCK
 					errno != EWOULDBLOCK &&
 #  endif
+#  ifdef ENOMEM
+					errno != ENOMEM &&
+#  endif
 					errno != ENOBUFS
 #else
 					WSAGetLastError() != WSAEINPROGRESS &&
@@ -807,14 +821,19 @@ comm_point_send_udp_msg_if(struct comm_point *c, sldns_buffer* packet,
 					return 0;
 				} else if((pret < 0 &&
 #ifndef USE_WINSOCK
+					(
 					errno == ENOBUFS
+#  ifdef ENOMEM
+					|| errno == ENOMEM
+#  endif
+					)
 #else
 					WSAGetLastError() == WSAENOBUFS
 #endif
 					) || (send_nobufs && retries > 0)) {
-					/* ENOBUFS, and poll returned without
+					/* ENOBUFS/ENOMEM, and poll returned without
 					 * a timeout. Or the retried send call
-					 * returned ENOBUFS. It is good to
+					 * returned ENOBUFS/ENOMEM. It is good to
 					 * wait a bit for the error to clear. */
 					/* The timeout is 20*(2^(retries+1)),
 					 * it increases exponentially, starting
@@ -834,8 +853,11 @@ comm_point_send_udp_msg_if(struct comm_point *c, sldns_buffer* packet,
 #  ifdef EWOULDBLOCK
 						errno != EWOULDBLOCK &&
 #  endif
+#  ifdef ENOMEM
+						errno != ENOMEM &&
+#  endif
 						errno != ENOBUFS
-#else
+#else  /* USE_WINSOCK */
 						/* Sleep does not error */
 #endif
 					) {
