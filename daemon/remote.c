@@ -7394,11 +7394,17 @@ fr_main_handle_cmd(struct fast_reload_thread* fr)
 #  endif
 #else
 			WSAGetLastError() == WSAEINTR ||
-			WSAGetLastError() == WSAEINPROGRESS ||
-			WSAGetLastError() == WSAEWOULDBLOCK
+			WSAGetLastError() == WSAEINPROGRESS
 #endif
 			)
 			return; /* Continue later. */
+#ifdef USE_WINSOCK
+		if(WSAGetLastError() == WSAEWOULDBLOCK) {
+			ub_winsock_tcp_wouldblock(fr->service_event,
+				UB_EV_READ);
+			return; /* Continue later. */
+		}
+#endif
 		log_err("read cmd from fast reload thread, recv: %s",
 			sock_strerror(errno));
 		return;
@@ -7430,10 +7436,23 @@ fr_check_cmd_from_thread(struct fast_reload_thread* fr)
 		if(!sock_poll_timeout(fr->commpair[0], 0, 1, 0, &inevent)) {
 			log_err("check for cmd from fast reload thread: "
 				"poll failed");
+#ifdef USE_WINSOCK
+			if(worker->daemon->fast_reload_thread)
+				ub_winsock_tcp_wouldblock(worker->daemon->
+					fast_reload_thread->service_event,
+					UB_EV_READ);
+#endif
 			return;
 		}
-		if(!inevent)
+		if(!inevent) {
+#ifdef USE_WINSOCK
+			if(worker->daemon->fast_reload_thread)
+				ub_winsock_tcp_wouldblock(worker->daemon->
+					fast_reload_thread->service_event,
+					UB_EV_READ);
+#endif
 			return;
+		}
 		fr_main_handle_cmd(fr);
 	}
 }
