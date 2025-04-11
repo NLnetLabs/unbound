@@ -1,3 +1,6 @@
+11 April 2025: Yorgos
+	- Merge #1265: Fix WSAPoll.
+
 10 April 2025: Wouter
 	- Fix for print of connection type in log-replies for dot and doh.
 
