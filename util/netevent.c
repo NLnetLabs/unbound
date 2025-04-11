@@ -456,9 +456,9 @@ comm_point_send_udp_msg(struct comm_point *c, sldns_buffer* packet,
 				int pret;
 				memset(&p, 0, sizeof(p));
 				p.fd = c->fd;
-				p.events = POLLOUT | POLLERR
+				p.events = POLLOUT
 #ifndef USE_WINSOCK
-					| POLLHUP
+					| POLLERR | POLLHUP
 #endif
 					;
 #  ifndef USE_WINSOCK
@@ -483,7 +483,7 @@ comm_point_send_udp_msg(struct comm_point *c, sldns_buffer* packet,
 #  ifdef EWOULDBLOCK
 					errno != EWOULDBLOCK &&
 #  endif
-					errno != ENOBUFS
+					errno != ENOMEM && errno != ENOBUFS
 #else
 					WSAGetLastError() != WSAEINPROGRESS &&
 					WSAGetLastError() != WSAEINTR &&
@@ -496,15 +496,19 @@ comm_point_send_udp_msg(struct comm_point *c, sldns_buffer* packet,
 					return 0;
 				} else if((pret < 0 &&
 #ifndef USE_WINSOCK
-					errno == ENOBUFS
+					( errno == ENOBUFS  /* Maybe some systems */
+					|| errno == ENOMEM  /* Linux */
+					|| errno == EAGAIN)  /* Macos, solaris, openbsd */
 #else
 					WSAGetLastError() == WSAENOBUFS
 #endif
 					) || (send_nobufs && retries > 0)) {
-					/* ENOBUFS, and poll returned without
+					/* ENOBUFS/ENOMEM/EAGAIN, and poll
+					 * returned without
 					 * a timeout. Or the retried send call
-					 * returned ENOBUFS. It is good to
-					 * wait a bit for the error to clear. */
+					 * returned ENOBUFS/ENOMEM/EAGAIN.
+					 * It is good to wait a bit for the
+					 * error to clear. */
 					/* The timeout is 20*(2^(retries+1)),
 					 * it increases exponentially, starting
 					 * at 40 msec. After 5 tries, 1240 msec
@@ -517,18 +521,15 @@ comm_point_send_udp_msg(struct comm_point *c, sldns_buffer* packet,
 					Sleep((SEND_BLOCKED_WAIT_TIMEOUT/10)<<(retries+1));
 					pret = 0;
 #endif
-					if(pret < 0 &&
+					if(pret < 0
 #ifndef USE_WINSOCK
-						errno != EAGAIN && errno != EINTR &&
+						&& errno != EAGAIN && errno != EINTR &&
 #  ifdef EWOULDBLOCK
 						errno != EWOULDBLOCK &&
 #  endif
-						errno != ENOBUFS
+						errno != ENOMEM && errno != ENOBUFS
 #else
-						WSAGetLastError() != WSAEINPROGRESS &&
-						WSAGetLastError() != WSAEINTR &&
-						WSAGetLastError() != WSAENOBUFS &&
-						WSAGetLastError() != WSAEWOULDBLOCK
+						/* Sleep does not error */
 #endif
 					) {
 						log_err("poll udp out timer failed: %s",
@@ -770,9 +771,9 @@ comm_point_send_udp_msg_if(struct comm_point *c, sldns_buffer* packet,
 				int pret;
 				memset(&p, 0, sizeof(p));
 				p.fd = c->fd;
-				p.events = POLLOUT | POLLERR
+				p.events = POLLOUT
 #ifndef USE_WINSOCK
-					| POLLHUP
+					| POLLERR | POLLHUP
 #endif
 					;
 #  ifndef USE_WINSOCK
@@ -797,7 +798,7 @@ comm_point_send_udp_msg_if(struct comm_point *c, sldns_buffer* packet,
 #  ifdef EWOULDBLOCK
 					errno != EWOULDBLOCK &&
 #  endif
-					errno != ENOBUFS
+					errno != ENOMEM && errno != ENOBUFS
 #else
 					WSAGetLastError() != WSAEINPROGRESS &&
 					WSAGetLastError() != WSAEINTR &&
@@ -810,15 +811,19 @@ comm_point_send_udp_msg_if(struct comm_point *c, sldns_buffer* packet,
 					return 0;
 				} else if((pret < 0 &&
 #ifndef USE_WINSOCK
-					errno == ENOBUFS
+					( errno == ENOBUFS  /* Maybe some systems */
+					|| errno == ENOMEM  /* Linux */
+					|| errno == EAGAIN)  /* Macos, solaris, openbsd */
 #else
 					WSAGetLastError() == WSAENOBUFS
 #endif
 					) || (send_nobufs && retries > 0)) {
-					/* ENOBUFS, and poll returned without
+					/* ENOBUFS/ENOMEM/EAGAIN, and poll
+					 * returned without
 					 * a timeout. Or the retried send call
-					 * returned ENOBUFS. It is good to
-					 * wait a bit for the error to clear. */
+					 * returned ENOBUFS/ENOMEM/EAGAIN.
+					 * It is good to wait a bit for the
+					 * error to clear. */
 					/* The timeout is 20*(2^(retries+1)),
 					 * it increases exponentially, starting
 					 * at 40 msec. After 5 tries, 1240 msec
@@ -831,18 +836,15 @@ comm_point_send_udp_msg_if(struct comm_point *c, sldns_buffer* packet,
 					Sleep((SEND_BLOCKED_WAIT_TIMEOUT/10)<<(retries+1));
 					pret = 0;
 #endif
-					if(pret < 0 &&
+					if(pret < 0
 #ifndef USE_WINSOCK
-						errno != EAGAIN && errno != EINTR &&
+						&& errno != EAGAIN && errno != EINTR &&
 #  ifdef EWOULDBLOCK
 						errno != EWOULDBLOCK &&
 #  endif
-						errno != ENOBUFS
-#else
-						WSAGetLastError() != WSAEINPROGRESS &&
-						WSAGetLastError() != WSAEINTR &&
-						WSAGetLastError() != WSAENOBUFS &&
-						WSAGetLastError() != WSAEWOULDBLOCK
+						errno != ENOMEM && errno != ENOBUFS
+#else  /* USE_WINSOCK */
+						/* Sleep does not error */
 #endif
 					) {
 						log_err("poll udp out timer failed: %s",
