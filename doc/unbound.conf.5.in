@@ -268,7 +268,7 @@ The number of queries that every thread will service simultaneously.
 If more queries arrive that need servicing, and no queries can be jostled out
 (see \fIjostle\-timeout\fR), then the queries are dropped. This forces
 the client to resend after a timeout; allowing the server time to work on
-the existing queries. Default depends on compile options, 512 or 1024.
+the existing queries. Default depends on compile options, 512 or 2048.
 .TP
 .B jostle\-timeout: \fI<msec>
 Timeout used when the server is very busy.  Set to a value that usually
@@ -280,7 +280,7 @@ service by slow queries or high query rates.  Default 200 milliseconds.
 The effect is that the qps for long-lasting queries is about
 (numqueriesperthread / 2) / (average time for such long queries) qps.
 The qps for short queries can be about (numqueriesperthread / 2)
-/ (jostletimeout in whole seconds) qps per thread, about (1024/2)*5 = 2560
+/ (jostletimeout in whole seconds) qps per thread, about (2048/2)*5 = 5120
 qps by default.
 .TP
 .B delay\-close: \fI<msec>

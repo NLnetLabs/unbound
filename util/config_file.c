@@ -155,7 +155,7 @@ config_create(void)
 #  else
 	/* libevent can use many sockets */
 	cfg->outgoing_num_ports = 4096;
-	cfg->num_queries_per_thread = 1024;
+	cfg->num_queries_per_thread = 2048;
 #  endif
 	cfg->outgoing_num_tcp = 10;
 	cfg->incoming_num_tcp = 10;
