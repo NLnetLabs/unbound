@@ -150,6 +150,8 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_IP_RATELIMIT_BACKOFF VAR_RATELIMIT_BACKOFF
 %token VAR_SEND_CLIENT_SUBNET VAR_CLIENT_SUBNET_ZONE
 %token VAR_CLIENT_SUBNET_ALWAYS_FORWARD VAR_CLIENT_SUBNET_OPCODE
+%token VAR_CLIENT_SUBNET_ADDRESS_OVERRIDE_IPV4
+%token VAR_CLIENT_SUBNET_ADDRESS_OVERRIDE_IPV6
 %token VAR_MAX_CLIENT_SUBNET_IPV4 VAR_MAX_CLIENT_SUBNET_IPV6
 %token VAR_MIN_CLIENT_SUBNET_IPV4 VAR_MIN_CLIENT_SUBNET_IPV6
 %token VAR_MAX_ECS_TREE_SIZE_IPV4 VAR_MAX_ECS_TREE_SIZE_IPV6
@@ -308,6 +310,7 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_max_sent_count | server_max_query_restarts |
 	server_send_client_subnet | server_client_subnet_zone |
 	server_client_subnet_always_forward | server_client_subnet_opcode |
+	server_client_subnet_address_override_ipv4 | server_client_subnet_address_override_ipv6 |
 	server_max_client_subnet_ipv4 | server_max_client_subnet_ipv6 |
 	server_min_client_subnet_ipv4 | server_min_client_subnet_ipv6 |
 	server_max_ecs_tree_size_ipv4 | server_max_ecs_tree_size_ipv6 |
@@ -698,6 +701,26 @@ server_client_subnet_opcode: VAR_CLIENT_SUBNET_OPCODE STRING_ARG
 		OUTYY(("P(Compiled without edns subnet option, ignoring)\n"));
 	#endif
 		free($2);
+	}
+	;
+server_client_subnet_address_override_ipv4: VAR_CLIENT_SUBNET_ADDRESS_OVERRIDE_IPV4 STRING_ARG
+	{
+	#ifdef CLIENT_SUBNET
+		OUTYY(("P(client_subnet_address_override_ipv4:%s)\n", $2));
+		cfg_parser->cfg->client_subnet_address_override_ipv4 = $2;
+	#else
+		OUTYY(("P(Compiled without edns subnet option, ignoring)\n"));
+	#endif
+	}
+	;
+server_client_subnet_address_override_ipv6: VAR_CLIENT_SUBNET_ADDRESS_OVERRIDE_IPV6 STRING_ARG
+	{
+	#ifdef CLIENT_SUBNET
+		OUTYY(("P(client_subnet_address_override_ipv6:%s)\n", $2));
+		cfg_parser->cfg->client_subnet_address_override_ipv6 = $2;
+	#else
+		OUTYY(("P(Compiled without edns subnet option, ignoring)\n"));
+	#endif
 	}
 	;
 server_max_client_subnet_ipv4: VAR_MAX_CLIENT_SUBNET_IPV4 STRING_ARG
