@@ -5,6 +5,10 @@
 	  Network and Information Security Lab, Tsinghua University for the
 	  report.
 
+11 April 2025: Wouter
+	- Tag for 1.23.0rc2. This became the release of 1.23.0 on 24 April
+	  2025. The code repository continues with 1.23.1 in development.
+
 11 April 2025: Yorgos
 	- Merge #1265: Fix WSAPoll.
 
