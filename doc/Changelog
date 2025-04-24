@@ -8,11 +8,16 @@
 11 April 2025: Yorgos
 	- Merge #1265: Fix WSAPoll.
 
+10 April 2025: Wouter
+	- Fix for print of connection type in log-replies for dot and doh.
+
 9 April 2025: Wouter
+	- Fix to detect if atomic_store links in configure.
 	- Fix #1264: unbound 1.22.0 leaks memory when doing DoH.
 
 8 April 2025: Wouter
 	- Tag for 1.23.0rc1.
+	- Fix fast_reload to print chroot with config file name.
 
 7 April 2025: Yorgos
 	- Merge #902: DNS Error Reporting (RFC 9567). Introduces new

@@ -23530,6 +23530,48 @@ if echo $host_os | grep darwin8 > /dev/null; then
 printf "%s\n" "#define DARWIN_BROKEN_SETREUID 1" >>confdefs.h
 
 fi
+
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for atomic_store" >&5
+printf %s "checking for atomic_store... " >&6; }
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+$ac_includes_default
+#ifdef HAVE_STDATOMIC_H
+#include <stdatomic.h>
+#endif
+
+int
+main (void)
+{
+
+	int newvar = 5, var = 0;
+	atomic_store((_Atomic int*)&var, newvar);
+	newvar = 0;
+	/* condition to use the variables. */
+	if(var == newvar) return 1;
+
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"
+then :
+
+	{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+printf "%s\n" "yes" >&6; }
+
+printf "%s\n" "#define HAVE_LINK_ATOMIC_STORE 1" >>confdefs.h
+
+
+else $as_nop
+
+	{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
+printf "%s\n" "no" >&6; }
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.beam \
+    conftest$ac_exeext conftest.$ac_ext
+
 ac_fn_check_decl "$LINENO" "inet_pton" "ac_cv_have_decl_inet_pton" "
 $ac_includes_default
 #ifdef HAVE_NETINET_IN_H

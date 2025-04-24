@@ -2055,13 +2055,13 @@ send_reply_rc:
 				&repinfo->client_addr, repinfo->client_addrlen,
 				tv, 1, c->buffer,
 				(worker->env.cfg->log_destaddr?(void*)repinfo->c->socket->addr:NULL),
-				c->type);
+				c->type, c->ssl);
 		} else {
 			log_reply_info(NO_VERBOSE, &qinfo,
 				&repinfo->client_addr, repinfo->client_addrlen,
 				tv, 1, c->buffer,
 				(worker->env.cfg->log_destaddr?(void*)repinfo->c->socket->addr:NULL),
-				c->type);
+				c->type, c->ssl);
 		}
 	}
 #ifdef USE_DNSCRYPT

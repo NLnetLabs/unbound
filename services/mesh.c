@@ -1579,7 +1579,7 @@ mesh_send_reply(struct mesh_state* m, int rcode, struct reply_info* rep,
 			&r->query_reply.client_addr,
 			r->query_reply.client_addrlen, duration, 0, r_buffer,
 			(m->s.env->cfg->log_destaddr?(void*)r->query_reply.c->socket->addr:NULL),
-			r->query_reply.c->type);
+			r->query_reply.c->type, r->query_reply.c->ssl);
 	}
 }
 

@@ -378,6 +378,9 @@
 /* Define if we have LibreSSL */
 #undef HAVE_LIBRESSL
 
+/* If we have atomic_store */
+#undef HAVE_LINK_ATOMIC_STORE
+
 /* Define to 1 if you have the <linux/net_tstamp.h> header file. */
 #undef HAVE_LINUX_NET_TSTAMP_H
 
