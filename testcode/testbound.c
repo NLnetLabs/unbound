@@ -293,6 +293,12 @@ setup_config(FILE* in, int* lineno, int* pass_argc, char* pass_argv[])
 			fclose(cfg);
 			return;
 		}
+		if(strncmp(parse, "fake-sha1: yes", 14) == 0) {
+			/* Allow the use of SHA1 signatures for the test,
+			 * in case that OpenSSL disallows use of RSASHA1
+			 * with rh-allow-sha1-signatures disabled. */
+			setenv("OPENSSL_ENABLE_SHA1_SIGNATURES", "1", 0);
+		}
 		fputs(line, cfg);
 	}
 	fatal_exit("No CONFIG_END in input file");

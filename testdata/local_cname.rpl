@@ -11,6 +11,7 @@ server:
 	# Use a fixed and faked date for DNSSEC validation to avoid run-time
 	# re-signing test signatures.
 	val-override-date: "20161001003725"
+	fake-sha1: yes
 
 	define-tag: "cname cname2 nx servfail sec ambiguous"
 	access-control-tag: 127.0.0.1/32 "cname cname2 nx servfail sec"
