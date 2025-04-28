@@ -4531,7 +4531,7 @@ fr_check_nopause_compat_cfg(struct fast_reload_thread* fr, struct config_file* n
 	FR_CHECK_CHANGED_CFG("max-query-restarts", max_query_restarts, changed_str);
 	FR_CHECK_CHANGED_CFG_STR("target-fetch-policy", target_fetch_policy, changed_str);
 	FR_CHECK_CHANGED_CFG("do-not-query-localhost", donotquery_localhost, changed_str);
-	FR_CHECK_CHANGED_CFG_STRLIST("do-not-query-localhost", donotqueryaddrs, changed_str);
+	FR_CHECK_CHANGED_CFG_STRLIST("do-not-query-address", donotqueryaddrs, changed_str);
 	FR_CHECK_CHANGED_CFG_STRLIST("private-address", private_address, changed_str);
 	FR_CHECK_CHANGED_CFG_STRLIST("private-domain", private_domain, changed_str);
 	FR_CHECK_CHANGED_CFG_STRLIST("caps-exempt", caps_whitelist, changed_str);
