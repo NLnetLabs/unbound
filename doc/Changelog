@@ -1,3 +1,6 @@
+28 April 2025: Yorgos
+	- Merge #1275: Use macros for the fr_check_changed* functions.
+
 25 April 2025: Wouter
 	- Fix #1272: assertion failure testcode/unitverify.c:202.
 
