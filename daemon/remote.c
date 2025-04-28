@@ -4348,37 +4348,45 @@ fr_check_tag_defines(struct fast_reload_thread* fr, struct config_file* newcfg)
 	return 1;
 }
 
-/** fast reload thread, check if config item has changed, if not add to
- * the explanatory string. */
+/** fast reload thread, add incompatible option to the explanatory string */
 static void
-fr_check_changed_cfg(int cmp, const char* desc, char* str, size_t len)
+fr_add_incompatible_option(const char* desc, char* str, size_t len)
 {
-	if(cmp) {
-		size_t slen = strlen(str);
-		size_t desclen = strlen(desc);
-		if(slen == 0) {
-			snprintf(str, len, "%s", desc);
-			return;
-		}
-		if(len - slen < desclen+2)
-			return; /* It does not fit */
-		snprintf(str+slen, len-slen, " %s", desc);
+	size_t slen = strlen(str);
+	size_t desclen = strlen(desc);
+	if(slen == 0) {
+		snprintf(str, len, "%s", desc);
+		return;
 	}
+	if(len - slen < desclen+2)
+		return; /* It does not fit */
+	snprintf(str+slen, len-slen, " %s", desc);
 }
+
+/** fast reload thread, check if config item has changed; thus incompatible */
+#define FR_CHECK_CHANGED_CFG(desc, var, str)				\
+do {									\
+	if(cfg->var != newcfg->var) {					\
+		fr_add_incompatible_option(desc, str, sizeof(str));	\
+	}								\
+} while(0);
 
 /** fast reload thread, check if config string has changed, checks NULLs. */
-static void
-fr_check_changed_cfg_str(char* cmp1, char* cmp2, const char* desc, char* str,
-	size_t len)
-{
-	if((!cmp1 && cmp2) ||
-		(cmp1 && !cmp2) ||
-		(cmp1 && cmp2 && strcmp(cmp1, cmp2) != 0)) {
-		fr_check_changed_cfg(1, desc, str, len);
-	}
-}
+#define FR_CHECK_CHANGED_CFG_STR(desc, var, str)			\
+do {									\
+	if((!cfg->var && newcfg->var) ||				\
+		(cfg->var && !newcfg->var) ||				\
+		(cfg->var && newcfg->var				\
+		&& strcmp(cfg->var, newcfg->var) != 0)) {		\
+		fr_add_incompatible_option(desc, str, sizeof(str));	\
+	}								\
+} while(0);
 
 /** fast reload thread, check if config strlist has changed. */
+#define FR_CHECK_CHANGED_CFG_STRLIST(desc, var, str) do {		\
+	fr_check_changed_cfg_strlist(cfg->var, newcfg->var, desc, str,	\
+		sizeof(str));						\
+	} while(0);
 static void
 fr_check_changed_cfg_strlist(struct config_strlist* cmp1,
 	struct config_strlist* cmp2, const char* desc, char* str, size_t len)
@@ -4389,18 +4397,22 @@ fr_check_changed_cfg_strlist(struct config_strlist* cmp1,
 			(p1->str && !p2->str) ||
 			(p1->str && p2->str && strcmp(p1->str, p2->str) != 0)) {
 			/* The strlist is different. */
-			fr_check_changed_cfg(1, desc, str, len);
+			fr_add_incompatible_option(desc, str, len);
 			return;
 		}
 		p1 = p1->next;
 		p2 = p2->next;
 	}
 	if((!p1 && p2) || (p1 && !p2)) {
-		fr_check_changed_cfg(1, desc, str, len);
+		fr_add_incompatible_option(desc, str, len);
 	}
 }
 
 /** fast reload thread, check if config str2list has changed. */
+#define FR_CHECK_CHANGED_CFG_STR2LIST(desc, var, buff) do {		\
+	fr_check_changed_cfg_str2list(cfg->var, newcfg->var, desc, buff,\
+		sizeof(buff));						\
+	} while(0);
 static void
 fr_check_changed_cfg_str2list(struct config_str2list* cmp1,
 	struct config_str2list* cmp2, const char* desc, char* str, size_t len)
@@ -4411,7 +4423,7 @@ fr_check_changed_cfg_str2list(struct config_str2list* cmp1,
 			(p1->str && !p2->str) ||
 			(p1->str && p2->str && strcmp(p1->str, p2->str) != 0)) {
 			/* The str2list is different. */
-			fr_check_changed_cfg(1, desc, str, len);
+			fr_add_incompatible_option(desc, str, len);
 			return;
 		}
 		if((!p1->str2 && p2->str2) ||
@@ -4419,14 +4431,14 @@ fr_check_changed_cfg_str2list(struct config_str2list* cmp1,
 			(p1->str2 && p2->str2 &&
 			strcmp(p1->str2, p2->str2) != 0)) {
 			/* The str2list is different. */
-			fr_check_changed_cfg(1, desc, str, len);
+			fr_add_incompatible_option(desc, str, len);
 			return;
 		}
 		p1 = p1->next;
 		p2 = p2->next;
 	}
 	if((!p1 && p2) || (p1 && !p2)) {
-		fr_check_changed_cfg(1, desc, str, len);
+		fr_add_incompatible_option(desc, str, len);
 	}
 }
 
@@ -4440,98 +4452,54 @@ fr_check_compat_cfg(struct fast_reload_thread* fr, struct config_file* newcfg)
 	changed_str[0]=0;
 
 	/* Find incompatible options, and if so, print an error. */
-	fr_check_changed_cfg(cfg->num_threads != newcfg->num_threads,
-		"num-threads", changed_str, sizeof(changed_str));
-	fr_check_changed_cfg(cfg->do_ip4 != newcfg->do_ip4,
-		"do-ip4", changed_str, sizeof(changed_str));
-	fr_check_changed_cfg(cfg->do_ip6 != newcfg->do_ip6,
-		"do-ip6", changed_str, sizeof(changed_str));
-	fr_check_changed_cfg(cfg->do_udp != newcfg->do_udp,
-		"do-udp", changed_str, sizeof(changed_str));
-	fr_check_changed_cfg(cfg->do_tcp != newcfg->do_tcp,
-		"do-tcp", changed_str, sizeof(changed_str));
-	fr_check_changed_cfg(cfg->port != newcfg->port,
-		"port", changed_str, sizeof(changed_str));
+	FR_CHECK_CHANGED_CFG("num-threads", num_threads, changed_str);
+	FR_CHECK_CHANGED_CFG("do-ip4", do_ip4, changed_str);
+	FR_CHECK_CHANGED_CFG("do-ip6", do_ip6, changed_str);
+	FR_CHECK_CHANGED_CFG("do-udp", do_udp, changed_str);
+	FR_CHECK_CHANGED_CFG("do-tcp", do_tcp, changed_str);
+	FR_CHECK_CHANGED_CFG("port", port, changed_str);
 	/* But cfg->outgoing_num_ports has been changed at startup,
 	 * possibly to reduce it, so do not check it here. */
-	fr_check_changed_cfg(cfg->outgoing_num_tcp != newcfg->outgoing_num_tcp,
-		"outgoing-num-tcp", changed_str, sizeof(changed_str));
-	fr_check_changed_cfg(cfg->incoming_num_tcp != newcfg->incoming_num_tcp,
-		"incoming-num-tcp", changed_str, sizeof(changed_str));
-	fr_check_changed_cfg(cfg->num_out_ifs != newcfg->num_out_ifs,
-		"outgoing-interface", changed_str, sizeof(changed_str));
+	FR_CHECK_CHANGED_CFG("outgoing-num-tcp", outgoing_num_tcp, changed_str);
+	FR_CHECK_CHANGED_CFG("incoming-num-tcp", incoming_num_tcp, changed_str);
+	FR_CHECK_CHANGED_CFG("outgoing-interface", num_out_ifs, changed_str);
 	if(cfg->num_out_ifs == newcfg->num_out_ifs) {
 		for(i=0; i<cfg->num_out_ifs; i++)
-			fr_check_changed_cfg(strcmp(cfg->out_ifs[i],
-				newcfg->out_ifs[i]) != 0, "outgoing-interface",
-				changed_str, sizeof(changed_str));
+			FR_CHECK_CHANGED_CFG_STR("outgoing-interface",
+				out_ifs[i], changed_str);
 	}
-	fr_check_changed_cfg(cfg->num_ifs != newcfg->num_ifs,
-		"interface", changed_str, sizeof(changed_str));
+	FR_CHECK_CHANGED_CFG("interface", num_ifs, changed_str);
 	if(cfg->num_ifs == newcfg->num_ifs) {
 		for(i=0; i<cfg->num_ifs; i++)
-			fr_check_changed_cfg(strcmp(cfg->ifs[i],
-				newcfg->ifs[i]) != 0, "interface",
-				changed_str, sizeof(changed_str));
+			FR_CHECK_CHANGED_CFG_STR("interface",
+				ifs[i], changed_str);
 	}
-	fr_check_changed_cfg(cfg->if_automatic != newcfg->if_automatic,
-		"interface-automatic", changed_str, sizeof(changed_str));
-	fr_check_changed_cfg(cfg->so_rcvbuf != newcfg->so_rcvbuf,
-		"so-rcvbuf", changed_str, sizeof(changed_str));
-	fr_check_changed_cfg(cfg->so_sndbuf != newcfg->so_sndbuf,
-		"so-sndbuf", changed_str, sizeof(changed_str));
-	fr_check_changed_cfg(cfg->so_reuseport != newcfg->so_reuseport,
-		"so-reuseport", changed_str, sizeof(changed_str));
-	fr_check_changed_cfg(cfg->ip_transparent != newcfg->ip_transparent,
-		"ip-transparent", changed_str, sizeof(changed_str));
-	fr_check_changed_cfg(cfg->ip_freebind != newcfg->ip_freebind,
-		"ip-freebind", changed_str, sizeof(changed_str));
-	fr_check_changed_cfg(cfg->udp_connect != newcfg->udp_connect,
-		"udp-connect", changed_str, sizeof(changed_str));
-	fr_check_changed_cfg(cfg->msg_buffer_size != newcfg->msg_buffer_size,
-		"msg-buffer-size", changed_str, sizeof(changed_str));
-	fr_check_changed_cfg(cfg->do_tcp_keepalive != newcfg->do_tcp_keepalive,
-		"edns-tcp-keepalive", changed_str, sizeof(changed_str));
-	fr_check_changed_cfg(
-		cfg->tcp_keepalive_timeout != newcfg->tcp_keepalive_timeout,
-		"edns-tcp-keepalive-timeout", changed_str, sizeof(changed_str));
-	fr_check_changed_cfg(cfg->tcp_idle_timeout != newcfg->tcp_idle_timeout,
-		"tcp-idle-timeout", changed_str, sizeof(changed_str));
+	FR_CHECK_CHANGED_CFG("interface-automatic", if_automatic, changed_str);
+	FR_CHECK_CHANGED_CFG("so-rcvbuf", so_rcvbuf, changed_str);
+	FR_CHECK_CHANGED_CFG("so-sndbuf", so_sndbuf, changed_str);
+	FR_CHECK_CHANGED_CFG("so-reuseport", so_reuseport, changed_str);
+	FR_CHECK_CHANGED_CFG("ip-transparent", ip_transparent, changed_str);
+	FR_CHECK_CHANGED_CFG("ip-freebind", ip_freebind, changed_str);
+	FR_CHECK_CHANGED_CFG("udp-connect", udp_connect, changed_str);
+	FR_CHECK_CHANGED_CFG("msg-buffer-size", msg_buffer_size, changed_str);
+	FR_CHECK_CHANGED_CFG("edns-tcp-keepalive", do_tcp_keepalive, changed_str);
+	FR_CHECK_CHANGED_CFG("edns-tcp-keepalive-timeout", tcp_keepalive_timeout, changed_str);
+	FR_CHECK_CHANGED_CFG("tcp-idle-timeout", tcp_idle_timeout, changed_str);
 	/* Not changed, only if DoH is used, it is then stored in commpoints,
 	 * as well as used from cfg. */
-	fr_check_changed_cfg(
-		cfg->harden_large_queries != newcfg->harden_large_queries,
-		"harden-large-queries", changed_str, sizeof(changed_str));
-	fr_check_changed_cfg(cfg->http_max_streams != newcfg->http_max_streams,
-		"http-max-streams", changed_str, sizeof(changed_str));
-	fr_check_changed_cfg_str(cfg->http_endpoint, newcfg->http_endpoint,
-		"http-endpoint", changed_str, sizeof(changed_str));
-	fr_check_changed_cfg(
-		cfg->http_notls_downstream != newcfg->http_notls_downstream,
-		"http_notls_downstream", changed_str, sizeof(changed_str));
-	fr_check_changed_cfg(cfg->https_port != newcfg->https_port,
-		"https-port", changed_str, sizeof(changed_str));
-	fr_check_changed_cfg(cfg->ssl_port != newcfg->ssl_port,
-		"tls-port", changed_str, sizeof(changed_str));
-	fr_check_changed_cfg_str(cfg->ssl_service_key, newcfg->ssl_service_key,
-		"tls-service-key", changed_str, sizeof(changed_str));
-	fr_check_changed_cfg_str(cfg->ssl_service_pem, newcfg->ssl_service_pem,
-		"tls-service-pem", changed_str, sizeof(changed_str));
-	fr_check_changed_cfg_str(cfg->tls_cert_bundle, newcfg->tls_cert_bundle,
-		"tls-cert-bundle", changed_str, sizeof(changed_str));
-	fr_check_changed_cfg_strlist(cfg->proxy_protocol_port,
-		newcfg->proxy_protocol_port, "proxy-protocol-port",
-		changed_str, sizeof(changed_str));
-	fr_check_changed_cfg_strlist(cfg->tls_additional_port,
-		newcfg->tls_additional_port, "tls-additional-port",
-		changed_str, sizeof(changed_str));
-	fr_check_changed_cfg_str(cfg->if_automatic_ports,
-		newcfg->if_automatic_ports, "interface-automatic-ports",
-		changed_str, sizeof(changed_str));
-	fr_check_changed_cfg(cfg->udp_upstream_without_downstream !=
-		newcfg->udp_upstream_without_downstream,
-		"udp-upstream-without-downstream", changed_str,
-		sizeof(changed_str));
+	FR_CHECK_CHANGED_CFG("harden-large-queries", harden_large_queries, changed_str);
+	FR_CHECK_CHANGED_CFG("http-max-streams", http_max_streams, changed_str);
+	FR_CHECK_CHANGED_CFG_STR("http-endpoint", http_endpoint, changed_str);
+	FR_CHECK_CHANGED_CFG("http_notls_downstream", http_notls_downstream, changed_str);
+	FR_CHECK_CHANGED_CFG("https-port", https_port, changed_str);
+	FR_CHECK_CHANGED_CFG("tls-port", ssl_port, changed_str);
+	FR_CHECK_CHANGED_CFG_STR("tls-service-key", ssl_service_key, changed_str);
+	FR_CHECK_CHANGED_CFG_STR("tls-service-pem", ssl_service_pem, changed_str);
+	FR_CHECK_CHANGED_CFG_STR("tls-cert-bundle", tls_cert_bundle, changed_str);
+	FR_CHECK_CHANGED_CFG_STRLIST("proxy-protocol-port", proxy_protocol_port, changed_str);
+	FR_CHECK_CHANGED_CFG_STRLIST("tls-additional-port", tls_additional_port, changed_str);
+	FR_CHECK_CHANGED_CFG_STR("interface-automatic-ports", if_automatic_ports, changed_str);
+	FR_CHECK_CHANGED_CFG("udp-upstream-without-downstream", udp_upstream_without_downstream, changed_str);
 
 	if(changed_str[0] != 0) {
 		/* The new config changes some items that do not work with
@@ -4549,7 +4517,7 @@ fr_check_compat_cfg(struct fast_reload_thread* fr, struct config_file* newcfg)
 
 /** fast reload thread, check nopause config items */
 static int
-fr_check_nopause_cfg(struct fast_reload_thread* fr, struct config_file* newcfg)
+fr_check_nopause_compat_cfg(struct fast_reload_thread* fr, struct config_file* newcfg)
 {
 	char changed_str[1024];
 	struct config_file* cfg = fr->worker->env.cfg;
@@ -4558,94 +4526,43 @@ fr_check_nopause_cfg(struct fast_reload_thread* fr, struct config_file* newcfg)
 	changed_str[0]=0;
 
 	/* Check for iter_env. */
-	fr_check_changed_cfg(
-		cfg->outbound_msg_retry != newcfg->outbound_msg_retry,
-		"outbound-msg-retry", changed_str, sizeof(changed_str));
-	fr_check_changed_cfg(cfg->max_sent_count != newcfg->max_sent_count,
-		"max-sent-count", changed_str, sizeof(changed_str));
-	fr_check_changed_cfg(
-		cfg->max_query_restarts != newcfg->max_query_restarts,
-		"max-query-restarts", changed_str, sizeof(changed_str));
-	fr_check_changed_cfg(strcmp(cfg->target_fetch_policy,
-		newcfg->target_fetch_policy) != 0,
-		"target-fetch-policy", changed_str, sizeof(changed_str));
-	fr_check_changed_cfg(
-		cfg->donotquery_localhost != newcfg->donotquery_localhost,
-		"do-not-query-localhost", changed_str, sizeof(changed_str));
-	fr_check_changed_cfg_strlist(cfg->donotqueryaddrs,
-		newcfg->donotqueryaddrs, "do-not-query-localhost",
-		changed_str, sizeof(changed_str));
-	fr_check_changed_cfg_strlist(cfg->private_address,
-		newcfg->private_address, "private-address",
-		changed_str, sizeof(changed_str));
-	fr_check_changed_cfg_strlist(cfg->private_domain,
-		newcfg->private_domain, "private-domain",
-		changed_str, sizeof(changed_str));
-	fr_check_changed_cfg_strlist(cfg->caps_whitelist,
-		newcfg->caps_whitelist, "caps-exempt",
-		changed_str, sizeof(changed_str));
-	fr_check_changed_cfg(cfg->do_nat64 != newcfg->do_nat64,
-		"do-nat64", changed_str, sizeof(changed_str));
-	fr_check_changed_cfg_str(cfg->nat64_prefix, newcfg->nat64_prefix,
-		"nat64-prefix", changed_str, sizeof(changed_str));
+	FR_CHECK_CHANGED_CFG("outbound-msg-retry", outbound_msg_retry, changed_str);
+	FR_CHECK_CHANGED_CFG("max-sent-count", max_sent_count, changed_str);
+	FR_CHECK_CHANGED_CFG("max-query-restarts", max_query_restarts, changed_str);
+	FR_CHECK_CHANGED_CFG_STR("target-fetch-policy", target_fetch_policy, changed_str);
+	FR_CHECK_CHANGED_CFG("do-not-query-localhost", donotquery_localhost, changed_str);
+	FR_CHECK_CHANGED_CFG_STRLIST("do-not-query-address", donotqueryaddrs, changed_str);
+	FR_CHECK_CHANGED_CFG_STRLIST("private-address", private_address, changed_str);
+	FR_CHECK_CHANGED_CFG_STRLIST("private-domain", private_domain, changed_str);
+	FR_CHECK_CHANGED_CFG_STRLIST("caps-exempt", caps_whitelist, changed_str);
+	FR_CHECK_CHANGED_CFG("do-nat64", do_nat64, changed_str);
+	FR_CHECK_CHANGED_CFG_STR("nat64-prefix", nat64_prefix, changed_str);
 
 	/* Check for val_env. */
-	fr_check_changed_cfg(cfg->bogus_ttl != newcfg->bogus_ttl,
-		"val-bogus-ttl", changed_str, sizeof(changed_str));
-	fr_check_changed_cfg(
-		cfg->val_date_override != newcfg->val_date_override,
-		"val-date-override", changed_str, sizeof(changed_str));
-	fr_check_changed_cfg(cfg->val_sig_skew_min != newcfg->val_sig_skew_min,
-		"val-sig-skew-min", changed_str, sizeof(changed_str));
-	fr_check_changed_cfg(cfg->val_sig_skew_max != newcfg->val_sig_skew_max,
-		"val-sig-skew-max", changed_str, sizeof(changed_str));
-	fr_check_changed_cfg(cfg->val_max_restart != newcfg->val_max_restart,
-		"val-max-restart", changed_str, sizeof(changed_str));
-	fr_check_changed_cfg(strcmp(cfg->val_nsec3_key_iterations,
-		newcfg->val_nsec3_key_iterations) != 0,
-		"val-nsec3-keysize-iterations", changed_str,
-		sizeof(changed_str));
+	FR_CHECK_CHANGED_CFG("val-bogus-ttl", bogus_ttl, changed_str);
+	FR_CHECK_CHANGED_CFG("val-date-override", val_date_override, changed_str);
+	FR_CHECK_CHANGED_CFG("val-sig-skew-min", val_sig_skew_min, changed_str);
+	FR_CHECK_CHANGED_CFG("val-sig-skew-max", val_sig_skew_max, changed_str);
+	FR_CHECK_CHANGED_CFG("val-max-restart", val_max_restart, changed_str);
+	FR_CHECK_CHANGED_CFG_STR("val-nsec3-keysize-iterations",
+		val_nsec3_key_iterations, changed_str);
 
 	/* Check for infra. */
-	fr_check_changed_cfg(cfg->host_ttl != newcfg->host_ttl,
-		"infra-host-ttl", changed_str, sizeof(changed_str));
-	fr_check_changed_cfg(
-		cfg->infra_keep_probing != newcfg->infra_keep_probing,
-		"infra-keep-probing", changed_str, sizeof(changed_str));
-	fr_check_changed_cfg(
-		cfg->ratelimit != newcfg->ratelimit,
-		"ratelimit", changed_str, sizeof(changed_str));
-	fr_check_changed_cfg(
-		cfg->ip_ratelimit != newcfg->ip_ratelimit,
-		"ip-ratelimit", changed_str, sizeof(changed_str));
-	fr_check_changed_cfg(
-		cfg->ip_ratelimit_cookie != newcfg->ip_ratelimit_cookie,
-		"ip-ratelimit-cookie", changed_str, sizeof(changed_str));
-	fr_check_changed_cfg_str2list(cfg->wait_limit_netblock,
-		newcfg->wait_limit_netblock, "wait-limit-netblock",
-		changed_str, sizeof(changed_str));
-	fr_check_changed_cfg_str2list(cfg->wait_limit_cookie_netblock,
-		newcfg->wait_limit_cookie_netblock,
-		"wait-limit-cookie-netblock", changed_str,
-		sizeof(changed_str));
-	fr_check_changed_cfg_str2list(cfg->ratelimit_below_domain,
-		newcfg->ratelimit_below_domain, "ratelimit-below-domain",
-		changed_str, sizeof(changed_str));
-	fr_check_changed_cfg_str2list(cfg->ratelimit_for_domain,
-		newcfg->ratelimit_for_domain, "ratelimit-for-domain",
-		changed_str, sizeof(changed_str));
+	FR_CHECK_CHANGED_CFG("infra-host-ttl", host_ttl, changed_str);
+	FR_CHECK_CHANGED_CFG("infra-keep-probing", infra_keep_probing, changed_str);
+	FR_CHECK_CHANGED_CFG("ratelimit", ratelimit, changed_str);
+	FR_CHECK_CHANGED_CFG("ip-ratelimit", ip_ratelimit, changed_str);
+	FR_CHECK_CHANGED_CFG("ip-ratelimit-cookie", ip_ratelimit_cookie, changed_str);
+	FR_CHECK_CHANGED_CFG_STR2LIST("wait-limit-netblock", wait_limit_netblock, changed_str);
+	FR_CHECK_CHANGED_CFG_STR2LIST("wait-limit-cookie-netblock", wait_limit_cookie_netblock, changed_str);
+	FR_CHECK_CHANGED_CFG_STR2LIST("ratelimit-below-domain", ratelimit_below_domain, changed_str);
+	FR_CHECK_CHANGED_CFG_STR2LIST("ratelimit-for-domain", ratelimit_for_domain, changed_str);
 
 	/* Check for dnstap. */
-	fr_check_changed_cfg(
-		cfg->dnstap_send_identity != newcfg->dnstap_send_identity,
-		"dnstap-send-identity", changed_str, sizeof(changed_str));
-	fr_check_changed_cfg(
-		cfg->dnstap_send_version != newcfg->dnstap_send_version,
-		"dnstap-send-version", changed_str, sizeof(changed_str));
-	fr_check_changed_cfg_str(cfg->dnstap_identity, newcfg->dnstap_identity,
-		"dnstap-identity", changed_str, sizeof(changed_str));
-	fr_check_changed_cfg_str(cfg->dnstap_version, newcfg->dnstap_version,
-		"dnstap-version", changed_str, sizeof(changed_str));
+	FR_CHECK_CHANGED_CFG("dnstap-send-identity", dnstap_send_identity, changed_str);
+	FR_CHECK_CHANGED_CFG("dnstap-send-version", dnstap_send_version, changed_str);
+	FR_CHECK_CHANGED_CFG_STR("dnstap-identity", dnstap_identity, changed_str);
+	FR_CHECK_CHANGED_CFG_STR("dnstap-version", dnstap_version, changed_str);
 
 	if(changed_str[0] != 0) {
 		/* The new config changes some items that need a pause,
@@ -6193,7 +6110,7 @@ fr_load_config(struct fast_reload_thread* fr, struct timeval* time_read,
 		config_delete(newcfg);
 		return 0;
 	}
-	if(!fr_check_nopause_cfg(fr, newcfg)) {
+	if(!fr_check_nopause_compat_cfg(fr, newcfg)) {
 		config_delete(newcfg);
 		return 0;
 	}
