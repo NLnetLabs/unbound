@@ -1460,7 +1460,7 @@ config_auto_slab_values(struct config_file* cfg)
 do {									\
 	if(cfg->var == 0) {						\
 		cfg->var = val;						\
-		verbose(VERB_QUERY, "setting "name": %lu", val);	\
+		verbose(VERB_QUERY, "setting "name": %lu", (unsigned long)val);	\
 	}								\
 } while(0);
 #ifdef THREADS_DISABLED
