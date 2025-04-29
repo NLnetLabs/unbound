@@ -1456,12 +1456,12 @@ create_cfg_parser(struct config_file* cfg, char* filename, const char* chroot)
 void
 config_auto_slab_values(struct config_file* cfg)
 {
-#define SET_AUTO_SLAB(var, name, val)					\
-do {									\
-	if(cfg->var == 0) {						\
-		cfg->var = val;						\
+#define SET_AUTO_SLAB(var, name, val)						\
+do {										\
+	if(cfg->var == 0) {							\
+		cfg->var = val;							\
 		verbose(VERB_QUERY, "setting "name": %lu", (unsigned long)val);	\
-	}								\
+	}									\
 } while(0);
 #ifdef THREADS_DISABLED
 	size_t pow_2_threads = 1;
