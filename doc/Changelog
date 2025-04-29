@@ -2,6 +2,9 @@
 	- Fix for parallel build of dnstap protoc-c output.
 	- Fix dnstap to use protoc.
 
+29 April 2025: Yorgos
+	- Merge #1276: Auto-configure '-slabs' values.
+
 28 April 2025: Yorgos
 	- Merge #1275: Use macros for the fr_check_changed* functions.
 
