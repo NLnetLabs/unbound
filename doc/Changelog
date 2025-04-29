@@ -1,5 +1,6 @@
 29 April 2025: Wouter
 	- Fix for parallel build of dnstap protoc-c output.
+	- Fix dnstap to use protoc.
 
 28 April 2025: Yorgos
 	- Merge #1275: Use macros for the fr_check_changed* functions.

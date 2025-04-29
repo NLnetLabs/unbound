@@ -18,10 +18,17 @@ AC_DEFUN([dt_DNSTAP],
         [opt_dnstap_socket_path="$1"])
 
     if test "x$opt_dnstap" != "xno"; then
-        AC_PATH_PROG([PROTOC_C], [protoc-c])
-        if test -z "$PROTOC_C"; then
-          AC_MSG_ERROR([The protoc-c program was not found. Please install protobuf-c!])
-        fi
+	AC_PATH_PROG([PROTOC], [protoc])
+	# 'protoc-c' is deprecated. We use 'protoc' instead. If it can not be
+	# found, try 'protoc-c'.
+	if test -z "$PROTOC"; then
+	    AC_PATH_PROG([PROTOC_C], [protoc-c])
+	else
+	    PROTOC_C="$PROTOC"
+	fi
+	if test -z "$PROTOC_C"; then
+	  AC_MSG_ERROR([[The protoc or protoc-c program was not found. It is needed for dnstap, use --disable-dnstap, or install protobuf-c to provide protoc or protoc-c]])
+	fi
         AC_ARG_WITH([protobuf-c],
             AS_HELP_STRING([--with-protobuf-c=path], [Path where protobuf-c is installed, for dnstap]),
             [
