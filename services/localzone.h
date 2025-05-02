@@ -88,6 +88,8 @@ enum localzone_type {
 	local_zone_inform_redirect,
 	/** resolve normally, even when there is local data */	
 	local_zone_always_transparent,
+	/** resolve normally, even when there is local data but return NODATA for A queries */
+	local_zone_block_a,
 	/** answer with error, even when there is local data */	
 	local_zone_always_refuse,
 	/** answer with nxdomain, even when there is local data */
@@ -639,4 +641,37 @@ local_zone_enter_rr(struct local_zone* z, uint8_t* nm, size_t nmlen,
  */
 struct local_data* 
 local_zone_find_data(struct local_zone* z, uint8_t* nm, size_t nmlen, int nmlabs);
+
+/** Get memory usage for local_zones tree. The routine locks and unlocks
+ * the tree for reading. */
+size_t local_zones_get_mem(struct local_zones* zones);
+
+/**
+ * Swap internal tree with preallocated entries. Caller should manage
+ * the locks.
+ * @param zones: the local zones structure.
+ * @param data: the data structure used to take elements from. This contains
+ * 	the old elements on return.
+ */
+void local_zones_swap_tree(struct local_zones* zones,
+	struct local_zones* data);
+
+/** Enter a new zone; returns with WRlock
+ *  Made public for unit testing
+ *  @param zones: the local zones tree
+ *  @param name: name of the zone
+ *  @param type: type of the zone
+ *  @param dclass: class of the zone
+ *  @return local_zone (or duplicate), NULL on parse and malloc failures
+ */
+struct local_zone*
+lz_enter_zone(struct local_zones* zones, const char* name, const char* type,
+	uint16_t dclass);
+
+/** Setup parent pointers, so that a lookup can be done for closest match
+ *  Made public for unit testing
+ *  @param zones: the local zones tree
+ */
+void
+lz_init_parents(struct local_zones* zones);
 #endif /* SERVICES_LOCALZONE_H */

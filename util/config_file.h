@@ -4,22 +4,22 @@
  * Copyright (c) 2007, NLnet Labs. All rights reserved.
  *
  * This software is open source.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
  * are met:
- * 
+ *
  * Redistributions of source code must retain the above copyright notice,
  * this list of conditions and the following disclaimer.
- * 
+ *
  * Redistributions in binary form must reproduce the above copyright notice,
  * this list of conditions and the following disclaimer in the documentation
  * and/or other materials provided with the distribution.
- * 
+ *
  * Neither the name of the NLNET LABS nor the names of its contributors may
  * be used to endorse or promote products derived from this software without
  * specific prior written permission.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
  * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -53,6 +53,9 @@ struct module_qstate;
 struct sock_list;
 struct ub_packed_rrset_key;
 struct regional;
+
+/** Default value for PROBE_MAXRTO */
+#define PROBE_MAXRTO_DEFAULT 12000
 
 /** List head for strlist processing, used for append operation. */
 struct config_strlist_head {
@@ -88,6 +91,8 @@ struct config_file {
 	int do_ip4;
 	/** do ip6 query support. */
 	int do_ip6;
+	/** do nat64 on queries */
+	int do_nat64;
 	/** prefer ip4 upstream queries. */
 	int prefer_ip4;
 	/** prefer ip6 upstream queries. */
@@ -116,6 +121,8 @@ struct config_file {
 	int do_tcp_keepalive;
 	/** tcp keepalive timeout, in msec */
 	int tcp_keepalive_timeout;
+	/** timeout of packets sitting in the socket queue */
+	int sock_queue_timeout;
 	/** proxy protocol ports */
 	struct config_strlist* proxy_protocol_port;
 
@@ -156,6 +163,11 @@ struct config_file {
 	int http_nodelay;
 	/** Disable TLS for http sockets downstream */
 	int http_notls_downstream;
+
+	/** port on which to provide DNS over QUIC service */
+	int quic_port;
+	/** size of the quic data, max bytes */
+	size_t quic_size;
 
 	/** outgoing port range number of ports (per thread) */
 	int outgoing_num_ports;
@@ -232,7 +244,7 @@ struct config_file {
 	/** interface description strings (IP addresses) */
 	char **ifs;
 
-	/** number of outgoing interfaces to open. 
+	/** number of outgoing interfaces to open.
 	 * If 0 default all interfaces. */
 	int num_out_ifs;
 	/** outgoing interface description strings (IP addresses) */
@@ -251,7 +263,7 @@ struct config_file {
 	/** list of donotquery addresses, linked list */
 	struct config_strlist* donotqueryaddrs;
 #ifdef CLIENT_SUBNET
-	/** list of servers we send edns-client-subnet option to and 
+	/** list of servers we send edns-client-subnet option to and
 	 * accept option from, linked list */
 	struct config_strlist* client_subnet;
 	/** list of zones we send edns-client-subnet option for */
@@ -284,6 +296,8 @@ struct config_file {
 	int harden_large_queries;
 	/** harden against spoofed glue (out of zone data) */
 	int harden_glue;
+	/** harden against unverified glue */
+	int harden_unverified_glue;
 	/** harden against receiving no DNSSEC data for trust anchor */
 	int harden_dnssec_stripped;
 	/** harden against queries that fall under known nxdomain names */
@@ -292,6 +306,9 @@ struct config_file {
 	int harden_referral_path;
 	/** harden against algorithm downgrade */
 	int harden_algo_downgrade;
+	/** harden against unknown records in the authority section and in
+	 * the additional section */
+	int harden_unknown_additional;
 	/** use 0x20 bits in query as random ID bits */
 	int use_caps_bits_for_id;
 	/** 0x20 whitelist, domains that do not use capsforid */
@@ -308,6 +325,8 @@ struct config_file {
 	int min_ttl;
 	/** the number of seconds maximal negative TTL for SOA in auth */
 	int max_negative_ttl;
+	/** the number of seconds minimal negative TTL for SOA in auth */
+	int min_negative_ttl;
 	/** if prefetching of messages should be performed. */
 	int prefetch;
 	/** if prefetching of DNSKEYs should be performed. */
@@ -330,6 +349,8 @@ struct config_file {
 	int use_syslog;
 	/** log timestamp in ascii UTC */
 	int log_time_ascii;
+	/** log timestamp in ISO8601 format */
+	int log_time_iso;
 	/** log queries with one line per query */
 	int log_queries;
 	/** log replies with one line per reply */
@@ -342,6 +363,8 @@ struct config_file {
 	int log_servfail;
 	/** log identity to report */
 	char* log_identity;
+	/** log dest addr for log_replies */
+	int log_destaddr;
 
 	/** do not report identity (id.server, hostname.bind) */
 	int hide_identity;
@@ -364,7 +387,7 @@ struct config_file {
 
 	/** the module configuration string */
 	char* module_conf;
-	
+
 	/** files with trusted DS and DNSKEYs in zonefile format, list */
 	struct config_strlist* trust_anchor_file_list;
 	/** list of trustanchor keys, linked list */
@@ -389,7 +412,7 @@ struct config_file {
 	/** max number of query restarts, number of IPs to probe */
 	int32_t val_max_restart;
 	/** this value sets the number of seconds before revalidating bogus */
-	int bogus_ttl; 
+	int bogus_ttl;
 	/** should validator clean additional section for secure msgs */
 	int val_clean_additional;
 	/** log bogus messages by the validator */
@@ -402,6 +425,8 @@ struct config_file {
 	int aggressive_nsec;
 	/** ignore the CD flag in incoming queries and refuse them bogus data */
 	int ignore_cd;
+	/** disable EDNS DO flag in outgoing requests */
+	int disable_edns_do;
 	/** serve expired entries and prefetch them */
 	int serve_expired;
 	/** serve expired entries until TTL after expiration */
@@ -413,8 +438,6 @@ struct config_file {
 	/** serve expired entries only after trying to update the entries and this
 	 *  timeout (in milliseconds) is reached */
 	int serve_expired_client_timeout;
-	/** serve EDE code 3 - Stale Answer (RFC8914) for expired entries */
-	int ede_serve_expired;
 	/** serve original TTLs rather than decrementing ones */
 	int serve_original_ttl;
 	/** nsec3 maximum iterations per key size, string */
@@ -524,6 +547,21 @@ struct config_file {
 	/* wait time for unknown server in msec */
 	int unknown_server_time_limit;
 
+	/** Wait time to drop recursion replies */
+	int discard_timeout;
+
+	/** Wait limit for number of replies per IP address */
+	int wait_limit;
+
+	/** Wait limit for number of replies per IP address with cookie */
+	int wait_limit_cookie;
+
+	/** wait limit per netblock */
+	struct config_str2list* wait_limit_netblock;
+
+	/** wait limit with cookie per netblock */
+	struct config_str2list* wait_limit_cookie_netblock;
+
 	/* maximum UDP response size */
 	size_t max_udp_size;
 
@@ -534,6 +572,9 @@ struct config_file {
 	int dns64_synthall;
 	/** ignore AAAAs for these domain names and use A record anyway */
 	struct config_strlist* dns64_ignore_aaaa;
+
+	/* NAT64 prefix; if unset defaults to dns64_prefix */
+	char* nat64_prefix;
 
 	/** true to enable dnstap support */
 	int dnstap;
@@ -561,6 +602,8 @@ struct config_file {
 	char* dnstap_identity;
 	/** dnstap "version", package version is used if "". */
 	char* dnstap_version;
+	/** dnstap sample rate */
+	int dnstap_sample_rate;
 
 	/** true to log dnstap RESOLVER_QUERY message events */
 	int dnstap_log_resolver_query_messages;
@@ -580,6 +623,9 @@ struct config_file {
 
 	/** ratelimit for ip addresses. 0 is off, otherwise qps (unless overridden) */
 	int ip_ratelimit;
+	/** ratelimit for ip addresses with a valid DNS Cookie. 0 is off,
+	 *  otherwise qps (unless overridden) */
+	int ip_ratelimit_cookie;
 	/** number of slabs for ip_ratelimit cache */
 	size_t ip_ratelimit_slabs;
 	/** memory size in bytes for ip_ratelimit cache */
@@ -686,17 +732,48 @@ struct config_file {
 	char* cachedb_backend;
 	/** secret seed for hash key calculation */
 	char* cachedb_secret;
+	/** cachedb that does not store, but only reads from database, if on */
+	int cachedb_no_store;
+	/** cachedb check before serving serve-expired response */
+	int cachedb_check_when_serve_expired;
 #ifdef USE_REDIS
 	/** redis server's IP address or host name */
 	char* redis_server_host;
+	char* redis_replica_server_host;
 	/** redis server's TCP port */
 	int redis_server_port;
+	int redis_replica_server_port;
+	/** redis server's unix path. Or "", NULL if unused */
+	char* redis_server_path;
+	char* redis_replica_server_path;
+	/** redis server's AUTH password. Or "", NULL if unused */
+	char* redis_server_password;
+	char* redis_replica_server_password;
 	/** timeout (in ms) for communication with the redis server */
 	int redis_timeout;
+	int redis_replica_timeout;
+	/** timeout (in ms) for redis commands */
+	int redis_command_timeout;
+	int redis_replica_command_timeout;
+	/** timeout (in ms) for redis connection set up */
+	int redis_connect_timeout;
+	int redis_replica_connect_timeout;
 	/** set timeout on redis records based on DNS response ttl */
 	int redis_expire_records;
+	/** set the redis logical database upon connection */
+	int redis_logical_db;
+	int redis_replica_logical_db;
 #endif
 #endif
+	/** Downstream DNS Cookies */
+	/** do answer with server cookie when request contained cookie option */
+	int do_answer_cookie;
+	/** cookie secret */
+	uint8_t cookie_secret[40];
+	/** cookie secret length */
+	size_t  cookie_secret_len;
+	/** path to cookie secret store */
+	char* cookie_secret_file;
 
 	/* ipset module */
 #ifdef USE_IPSET
@@ -705,6 +782,16 @@ struct config_file {
 #endif
 	/** respond with Extended DNS Errors (RFC8914) */
 	int ede;
+	/** serve EDE code 3 - Stale Answer (RFC8914) for expired entries */
+	int ede_serve_expired;
+	/** send DNS Error Reports to upstream reporting agent (RFC9567) */
+	int dns_error_reporting;
+	/** limit on NS RRs in RRset for the iterator scrubber. */
+	size_t iter_scrub_ns;
+	/** limit on CNAME, DNAME RRs in answer for the iterator scrubber. */
+	int iter_scrub_cname;
+	/** limit on upstream queries for an incoming query and subqueries. */
+	int max_global_quota;
 };
 
 /** from cfg username, after daemonize setup performed */
@@ -809,7 +896,7 @@ struct config_view {
 	struct config_strlist* local_zones_ipset;
 #endif
 	/** Fallback to global local_zones when there is no match in the view
-	 * view specific tree. 1 for yes, 0 for no */	
+	 * view specific tree. 1 for yes, 0 for no */
 	int isfirst;
 	/** predefined actions for particular IP address responses */
 	struct config_str2list* respip_actions;
@@ -880,11 +967,22 @@ struct config_file* config_create(void);
 struct config_file* config_create_forlib(void);
 
 /**
+ * If _slabs values are not explicitly configured, 0 value, put them in a
+ * pow2 value close to the number of threads used.
+ * Starts at the current default 4.
+ * If num_threads is in between two pow2 values, 1/3 of the way stays with
+ * the lower pow2 value.
+ * Exported for unit testing.
+ * @param config: where the _slabs values reside.
+ */
+void config_auto_slab_values(struct config_file* config);
+
+/**
  * Read the config file from the specified filename.
  * @param config: where options are stored into, must be freshly created.
  * @param filename: name of configfile. If NULL nothing is done.
  * @param chroot: if not NULL, the chroot dir currently in use (for include).
- * @return: false on error. In that case errno is set, ENOENT means 
+ * @return: false on error. In that case errno is set, ENOENT means
  * 	file not found.
  */
 int config_read(struct config_file* config, const char* filename,
@@ -901,6 +999,10 @@ void config_delete(struct config_file* config);
  * @param config: to apply. Side effect: global constants change.
  */
 void config_apply(struct config_file* config);
+
+/** Apply the relevant changes that rely upon RTT_MAX_TIMEOUT;
+ *  exported for unit test */
+int config_apply_max_rtt(int max_rtt);
 
 /**
  * Find username, sets cfg_uid and cfg_gid.
@@ -919,16 +1021,16 @@ void config_lookup_uid(struct config_file* config);
 int config_set_option(struct config_file* config, const char* option,
 	const char* value);
 
-/** 
+/**
  * Call print routine for the given option.
  * @param cfg: config.
- * @param opt: option name without trailing :. 
+ * @param opt: option name without trailing :.
  *	This is different from config_set_option.
  * @param func: print func, called as (str, arg) for every data element.
  * @param arg: user argument for print func.
  * @return false if the option name is not supported (syntax error).
  */
-int config_get_option(struct config_file* cfg, const char* opt, 
+int config_get_option(struct config_file* cfg, const char* opt,
 	void (*func)(char*,void*), void* arg);
 
 /**
@@ -948,7 +1050,7 @@ int config_get_option_list(struct config_file* cfg, const char* opt,
  * @param str: string. malloced, caller must free it.
  * @return 0=OK, 1=syntax error, 2=malloc failed.
  */
-int config_get_option_collate(struct config_file* cfg, const char* opt, 
+int config_get_option_collate(struct config_file* cfg, const char* opt,
 	char** str);
 
 /**
@@ -1143,7 +1245,7 @@ int cfg_count_numbers(const char* str);
  * k=1024, m=1024*1024, g=1024*1024*1024.
  * @param str: string
  * @param res: result is stored here, size in bytes.
- * @return: true if parsed correctly, or 0 on a parse error (and an error 
+ * @return: true if parsed correctly, or 0 on a parse error (and an error
  * is logged).
  */
 int cfg_parse_memsize(const char* str, size_t* res);
@@ -1177,7 +1279,7 @@ int find_tag_id(struct config_file* cfg, const char* tag);
 /**
  * parse taglist from string into bytestring with bitlist.
  * @param cfg: the config structure (with tagnames)
- * @param str: the string to parse.  Parse puts 0 bytes in string. 
+ * @param str: the string to parse.  Parse puts 0 bytes in string.
  * @param listlen: returns length of in bytes.
  * @return malloced bytes with a bitlist of the tags.  or NULL on parse error
  * or malloc failure.
@@ -1220,7 +1322,7 @@ int cfg_parse_local_zone(struct config_file* cfg, const char* val);
  * @param allow: give true if this range is permitted.
  * @param avail: the array from cfg.
  * @param num: size of the array (65536).
- * @return: true if parsed correctly, or 0 on a parse error (and an error 
+ * @return: true if parsed correctly, or 0 on a parse error (and an error
  * is logged).
  */
 int cfg_mark_ports(const char* str, int allow, int* avail, int num);
@@ -1248,7 +1350,7 @@ void cfg_apply_local_port_policy(struct config_file* cfg, int num);
  */
 int cfg_scan_ports(int* avail, int num);
 
-/** 
+/**
  * Convert a filename to full pathname in original filesys
  * @param fname: the path name to convert.
  *      Must not be null or empty.
@@ -1257,7 +1359,7 @@ int cfg_scan_ports(int* avail, int num);
  * @return pointer to malloced buffer which is: [chroot][chdir]fname
  *      or NULL on malloc failure.
  */
-char* fname_after_chroot(const char* fname, struct config_file* cfg, 
+char* fname_after_chroot(const char* fname, struct config_file* cfg,
 	int use_chdir);
 
 /**
@@ -1321,8 +1423,39 @@ void w_config_adjust_directory(struct config_file* cfg);
 /** debug option for unit tests. */
 extern int fake_dsa, fake_sha1;
 
-/** see if interface is https, its port number == the https port number */
-int if_is_https(const char* ifname, const char* port, int https_port);
+/** Return true if interface will listen to specific port(s).
+ * @param ifname: the interface as configured in the configuration file.
+ * @param default_port: the default port to use as the interface port if ifname
+ *	does not include a port via the '@' notation.
+ * @param port: port to check for, if 0 it will not be checked.
+ * @param additional_ports: additional configured ports, if any (nonNULL) to
+ *	be checked against.
+ * @return true if one of (port, additional_ports) matches the interface port.
+ */
+int if_listens_on(const char* ifname, int default_port, int port,
+	struct config_strlist* additional_ports);
+
+/** see if interface will listen on https;
+ *  its port number == the https port number */
+int if_is_https(const char* ifname, int default_port, int https_port);
+
+/** see if interface will listen on ssl;
+ *  its port number == the ssl port number or any of the additional ports */
+int if_is_ssl(const char* ifname, int default_port, int ssl_port,
+	struct config_strlist* tls_additional_port);
+
+/** see if interface will listen on PROXYv2;
+ *  its port number == any of the proxy ports number */
+int if_is_pp2(const char* ifname, int default_port,
+	struct config_strlist* proxy_protocol_port);
+
+/** see if interface will listen on DNSCRYPT;
+ *  its port number == the dnscrypt port number */
+int if_is_dnscrypt(const char* ifname, int default_port, int dnscrypt_port);
+
+/** see if interface will listen on quic;
+ *  its port number == the quic port number */
+int if_is_quic(const char* ifname, int default_port, int quic_port);
 
 /**
  * Return true if the config contains settings that enable https.
@@ -1331,15 +1464,18 @@ int if_is_https(const char* ifname, const char* port, int https_port);
  */
 int cfg_has_https(struct config_file* cfg);
 
-/** see if interface is PROXYv2, its port number == the proxy port number */
-int if_is_pp2(const char* ifname, const char* port,
-	struct config_strlist* proxy_protocol_port);
+/**
+ * Return true if the config contains settings that enable quic.
+ * @param cfg: config information.
+ * @return true if quic ports are used for server.
+ */
+int cfg_has_quic(struct config_file* cfg);
 
-/** see if interface is DNSCRYPT, its port number == the dnscrypt port number */
-int if_is_dnscrypt(const char* ifname, const char* port, int dnscrypt_port);
 #ifdef USE_LINUX_IP_LOCAL_PORT_RANGE
 #define LINUX_IP_LOCAL_PORT_RANGE_PATH "/proc/sys/net/ipv4/ip_local_port_range"
 #endif
 
-#endif /* UTIL_CONFIG_FILE_H */
+/** get memory for string */
+size_t getmem_str(char* str);
 
+#endif /* UTIL_CONFIG_FILE_H */

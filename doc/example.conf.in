@@ -143,8 +143,8 @@ server:
 	# edns-buffer-size: 1232
 
 	# Maximum UDP response size (not applied to TCP response).
-	# Suggested values are 512 to 4096. Default is 4096. 65536 disables it.
-	# max-udp-size: 4096
+	# Suggested values are 512 to 4096. Default is 1232. 65536 disables it.
+	# max-udp-size: 1232
 
 	# max memory to use for stream(tcp and tls) waiting result buffers.
 	# stream-wait-size: 4m
@@ -163,7 +163,7 @@ server:
 	# msg-cache-slabs: 4
 
 	# the number of queries that a thread gets to service.
-	# num-queries-per-thread: 1024
+	# num-queries-per-thread: 2048
 
 	# if very busy, 50% queries run to completion, 50% get timeout in msec
 	# jostle-timeout: 200
@@ -187,9 +187,39 @@ server:
 	# query upon encountering a CNAME record.
 	# max-query-restarts: 11
 
+	# Limit on number of NS records in NS RRset for incoming packets.
+	# iter-scrub-ns: 20
+
+	# Limit on number of CNAME, DNAME records for incoming packets.
+	# iter-scrub-cname: 11
+
+	# Limit on upstream queries for an incoming query and its recursion.
+	# max-global-quota: 200
+
 	# msec for waiting for an unknown server to reply.  Increase if you
 	# are behind a slow satellite link, to eg. 1128.
 	# unknown-server-time-limit: 376
+
+	# msec before recursion replies are dropped. The work item continues.
+	# discard-timeout: 1900
+
+	# Max number of replies waiting for recursion per IP address.
+	# wait-limit: 1000
+
+	# Max replies waiting for recursion for IP address with cookie.
+	# wait-limit-cookie: 10000
+
+	# Apart from the default, the wait limit can be set for a netblock.
+	# wait-limit-netblock: 192.0.2.0/24 50000
+
+	# Apart from the default, the wait limit with cookie can be adjusted.
+	# wait-limit-cookie-netblock: 192.0.2.0/24 50000
+
+	# Defaults for loopback, it has no wait limit.
+	# wait-limit-netblock: 127.0.0.0/8 -1
+	# wait-limit-netblock: ::1/128 -1
+	# wait-limit-cookie-netblock: 127.0.0.0/8 -1
+	# wait-limit-cookie-netblock: ::1/128 -1
 
 	# the amount of memory to use for the RRset cache.
 	# plain value in bytes or you can append k, m or G. default is "4Mb".
@@ -210,6 +240,11 @@ server:
 
 	# the time to live (TTL) value cap for negative responses in the cache
 	# cache-max-negative-ttl: 3600
+
+	# the time to live (TTL) value lower bound, in seconds. Default 0.
+	# For negative responses in the cache. If disabled, default,
+	# cache-min-ttl applies if configured.
+	# cache-min-negative-ttl: 0
 
 	# the time to live (TTL) value for cached roundtrip times, lameness and
 	# EDNS version information for hosts. In seconds.
@@ -243,6 +278,18 @@ server:
 	# Enable IPv6, "yes" or "no".
 	# do-ip6: yes
 
+	# If running unbound on an IPv6-only host, domains that only have
+	# IPv4 servers would become unresolveable.  If NAT64 is available in
+	# the network, unbound can use NAT64 to reach these servers with
+	# the following option.  This is NOT needed for enabling DNS64 on a
+	# system that has IPv4 connectivity.
+	# Consider also enabling prefer-ip6 to prefer native IPv6 connections
+	# to nameservers.
+	# do-nat64: no
+
+	# NAT64 prefix.  Defaults to using dns64-prefix value.
+	# nat64-prefix: 64:ff9b::0/96
+
 	# Enable UDP, "yes" or "no".
 	# do-udp: yes
 
@@ -271,8 +318,13 @@ server:
 	# Enable EDNS TCP keepalive option.
 	# edns-tcp-keepalive: no
 
-	# Timeout for EDNS TCP keepalive, in msec.
+	# Timeout for EDNS TCP keepalive, in msec. Overrides tcp-idle-timeout
+	# if edns-tcp-keepalive is set.
 	# edns-tcp-keepalive-timeout: 120000
+
+	# UDP queries that have waited in the socket buffer for a long time
+	# can be dropped. Default is 0, disabled. In seconds, such as 3.
+	# sock-queue-timeout: 0
 
 	# Use systemd socket activation for UDP, TCP, and control sockets.
 	# use-systemd: no
@@ -287,6 +339,7 @@ server:
 	# Choose deny (drop message), refuse (polite error reply),
 	# allow (recursive ok), allow_setrd (recursive ok, rd bit is forced on),
 	# allow_snoop (recursive and nonrecursive ok)
+	# allow_cookie (allow UDP with valid cookie or stateful transport)
 	# deny_non_local (drop queries unless can be answered from local-data)
 	# refuse_non_local (like deny_non_local but polite error reply).
 	# access-control: 127.0.0.0/8 allow
@@ -414,6 +467,10 @@ server:
 	# print UTC timestamp in ascii to logfile, default is epoch in seconds.
 	# log-time-ascii: no
 
+	# log timestamp in ISO8601 format if also log-time-ascii is enabled.
+	# (y-m-dTh:m:s.msec[+-]tzhours:tzminutes)
+	# log-time-iso: no
+
 	# print one line with time, IP, name, type, class for every query.
 	# log-queries: no
 
@@ -424,6 +481,9 @@ server:
 	# log with tag 'query' and 'reply' instead of 'info' for
 	# filtering log-queries and log-replies from the log.
 	# log-tag-queryreply: no
+
+	# log with destination address, port and type for log-replies.
+	# log-destaddr: no
 
 	# log the local-zone actions, like local-zone type inform is enabled
 	# also for the other local zone types.
@@ -483,6 +543,9 @@ server:
 	# Harden against out of zone rrsets, to avoid spoofing attempts.
 	# harden-glue: yes
 
+	# Harden against unverified (outside-zone, including sibling zone) glue rrsets
+	# harden-unverified-glue: no
+
 	# Harden against receiving dnssec-stripped data. If you turn it
 	# off, failing to validate dnskey data for a trustanchor will
 	# trigger insecure mode for that zone (like without a trustanchor).
@@ -499,9 +562,14 @@ server:
 	# harden-referral-path: no
 
 	# Harden against algorithm downgrade when multiple algorithms are
-	# advertised in the DS record.  If no, allows the weakest algorithm
-	# to validate the zone.
+	# advertised in the DS record.  If no, allows any algorithm
+	# to validate the zone which is the standard behavior for validators.
+	# Check the manpage for detailed information.
 	# harden-algo-downgrade: no
+
+	# Harden against unknown records in the authority section and the
+	# additional section.
+	# harden-unknown-additional: no
 
 	# Sent minimum amount of information to upstream servers to enhance
 	# privacy. Only sent minimum required labels of the QNAME and set QTYPE
@@ -663,13 +731,19 @@ server:
 	# that set CD but cannot validate themselves.
 	# ignore-cd-flag: no
 
+	# Disable the DO flag in outgoing requests. It is helpful for upstream
+	# devices that cannot handle DNSSEC information. But do not enable it
+	# otherwise, because it would stop DNSSEC validation.
+	# disable-edns-do: no
+
 	# Serve expired responses from cache, with serve-expired-reply-ttl in
-	# the response, and then attempt to fetch the data afresh.
+	# the response. By default it first tries to refresh an expired answer.
+	# Can be configured with serve-expired-client-timeout.
 	# serve-expired: no
 	#
 	# Limit serving of expired responses to configured seconds after
 	# expiration. 0 disables the limit.
-	# serve-expired-ttl: 0
+	# serve-expired-ttl: 86400
 	#
 	# Set the TTL of expired records to the serve-expired-ttl value after a
 	# failed attempt to retrieve the record from upstream. This makes sure
@@ -682,10 +756,9 @@ server:
 	#
 	# Time in milliseconds before replying to the client with expired data.
 	# This essentially enables the serve-stale behavior as specified in
-	# RFC 8767 that first tries to resolve before
-	# immediately responding with expired data.  0 disables this behavior.
-	# A recommended value is 1800.
-	# serve-expired-client-timeout: 0
+	# RFC 8767 that first tries to resolve before immediately responding
+	# with expired data.  0 disables this behavior.
+	# serve-expired-client-timeout: 1800
 
 	# Return the original TTL as received from the upstream name server rather
 	# than the decrementing TTL as stored in the cache.  Enabling this feature
@@ -744,6 +817,8 @@ server:
 	# local-zone: "127.in-addr.arpa." nodefault
 	# local-zone: "1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.ip6.arpa." nodefault
 	# local-zone: "home.arpa." nodefault
+	# local-zone: "resolver.arpa." nodefault
+	# local-zone: "service.arpa." nodefault
 	# local-zone: "onion." nodefault
 	# local-zone: "test." nodefault
 	# local-zone: "invalid." nodefault
@@ -810,6 +885,8 @@ server:
 	# o always_transparent, always_refuse, always_nxdomain, always_nodata,
 	#   always_deny resolve in that way but ignore local data for
 	#   that name
+	# o block_a resolves all records normally but returns
+	#   NODATA for A queries and ignores local data for that name
 	# o always_null returns 0.0.0.0 or ::0 for any name in the zone.
 	# o noview breaks out of that view towards global local-zones.
 	#
@@ -852,6 +929,7 @@ server:
 	# tls-service-pem: "path/to/publiccertfile.pem"
 	# tls-port: 853
 	# https-port: 443
+	# quic-port: 853
 
 	# cipher setting for TLSv1.2
 	# tls-ciphers: "DHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES128-GCM-SHA256:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-SHA256:DHE-RSA-AES128-SHA256:ECDHE-RSA-AES256-SHA384:ECDHE-RSA-AES128-SHA256"
@@ -916,6 +994,9 @@ server:
 	# Disable TLS for DNS-over-HTTP downstream service.
 	# http-notls-downstream: no
 
+	# Maximum number of bytes used for QUIC buffers.
+	# quic-size: 8m
+
 	# The interfaces that use these listed port numbers will support and
 	# expect PROXYv2. For UDP and TCP/TLS interfaces.
 	# proxy-protocol-port: portno for each of the port numbers.
@@ -956,6 +1037,13 @@ server:
 	# if 0(default) it is disabled, otherwise states qps allowed per ip address
 	# ip-ratelimit: 0
 
+	# global query ratelimit for all ip addresses with a valid DNS Cookie.
+	# feature is experimental.
+	# if 0(default) it is disabled, otherwise states qps allowed per ip address
+	# useful in combination with 'allow_cookie'.
+	# If used, suggested to be higher than ip-ratelimit, tenfold.
+	# ip-ratelimit-cookie: 0
+
 	# ip ratelimits are tracked in a cache, size in bytes of cache (or k,m).
 	# ip-ratelimit-size: 4m
 	# ip ratelimit cache slabs, reduces lock contention if equal to cpucount.
@@ -977,6 +1065,19 @@ server:
 	# the number of servers that will be used in the fast server selection.
 	# fast-server-num: 3
 
+	# reply to requests containing DNS Cookies as specified in RFC 7873 and RFC 9018.
+	# answer-cookie: no
+
+	# secret for DNS Cookie generation.
+	# useful for anycast deployments.
+	# example value "000102030405060708090a0b0c0d0e0f".
+	# cookie-secret: <128 bit random hex string>
+
+	# File with cookie secrets, the 'cookie-secret:' option is ignored
+	# and the file can be managed to have staging and active secrets
+	# with remote control commands. Disabled with "". Default is "".
+	# cookie-secret-file: "/usr/local/etc/unbound_cookiesecrets.txt"
+
 	# Enable to attach Extended DNS Error codes (RFC8914) to responses.
 	# ede: no
 
@@ -984,6 +1085,11 @@ server:
 	# Answer as EDNS0 option to expired responses.
 	# Note that the ede option above needs to be enabled for this to work.
 	# ede-serve-expired: no
+
+	# Enable DNS Error Reporting (RFC9567).
+	# qname-minimisation is advised to be turned on as well to increase
+	# privacy on the outgoing reports.
+	# dns-error-reporting: no
 
 	# Specific options for ipsecmod. Unbound needs to be configured with
 	# --enable-ipsecmod for these to take effect.
@@ -1123,7 +1229,7 @@ remote-control:
 # sources of notifies.
 # auth-zone:
 #	name: "."
-#	primary: 199.9.14.201         # b.root-servers.net
+#	primary: 170.247.170.2        # b.root-servers.net
 #	primary: 192.33.4.12          # c.root-servers.net
 #	primary: 199.7.91.13          # d.root-servers.net
 #	primary: 192.5.5.241          # f.root-servers.net
@@ -1131,7 +1237,7 @@ remote-control:
 #	primary: 193.0.14.129         # k.root-servers.net
 #	primary: 192.0.47.132         # xfr.cjr.dns.icann.org
 #	primary: 192.0.32.132         # xfr.lax.dns.icann.org
-#	primary: 2001:500:200::b      # b.root-servers.net
+#	primary: 2801:1b8:10::b       # b.root-servers.net
 #	primary: 2001:500:2::c        # c.root-servers.net
 #	primary: 2001:500:2d::d       # d.root-servers.net
 #	primary: 2001:500:2f::f       # f.root-servers.net
@@ -1199,6 +1305,11 @@ remote-control:
 #     backend: "testframe"
 #     # secret seed string to calculate hashed keys
 #     secret-seed: "default"
+#     # if the backend should be read from, but not written to.
+#     cachedb-no-store: no
+#     # if the cachedb should be checked before a serve-expired response is
+#     # given, when serve-expired is enabled.
+#     cachedb-check-when-serve-expired: yes
 #
 #     # For "redis" backend:
 #     # (to enable, use --with-libhiredis to configure before compiling)
@@ -1206,10 +1317,36 @@ remote-control:
 #     redis-server-host: 127.0.0.1
 #     # redis server's TCP port
 #     redis-server-port: 6379
+#     # if the server uses a unix socket, set its path, or "" when not used.
+#     redis-server-path: "/var/lib/redis/redis-server.sock"
+#     # if the server uses an AUTH password, specify here, or "" when not used.
+#     redis-server-password: ""
 #     # timeout (in ms) for communication with the redis server
 #     redis-timeout: 100
+#     # timeout (in ms) for commands, if 0, uses redis-timeout.
+#     redis-command-timeout: 0
+#     # timeout (in ms) for connection set up, if 0, uses redis-timeout.
+#     redis-connect-timeout: 0
 #     # set timeout on redis records based on DNS response TTL
 #     redis-expire-records: no
+#     # redis logical database to use, 0 is the default database.
+#     redis-logical-db: 0
+#     # redis replica server's IP address or host name
+#     redis-replica-server-host: 127.0.0.1
+#     # redis replica server's TCP port
+#     redis-replica-server-port: 6379
+#     # if the replica server uses a unix socket, set its path, or "" when not used.
+#     redis-replica-server-path: "/var/lib/redis/redis-server.sock"
+#     # if the replica server uses an AUTH password, specify here, or "" when not used.
+#     redis-replica-server-password: ""
+#     # timeout (in ms) for communication with the redis replica server
+#     redis-replica-timeout: 100
+#     # timeout (in ms) for redis replica commands, if 0, uses redis-replica-timeout.
+#     redis-replica-command-timeout: 0
+#     # timeout (in ms) for redis replica connection set up, if 0, uses redis-replica-timeout.
+#     redis-replica-connect-timeout: 0
+#     # redis logical database to use for the replica server, 0 is the default database.
+#     redis-replica-logical-db: 0
 
 # IPSet
 # Add specify domain into set via ipset.
@@ -1251,6 +1388,8 @@ remote-control:
 # 	dnstap-identity: ""
 # 	# if "" it uses the package version.
 # 	dnstap-version: ""
+# 	# log only 1/N messages, if 0 it is disabled. default 0.
+# 	dnstap-sample-rate: 0
 # 	dnstap-log-resolver-query-messages: no
 # 	dnstap-log-resolver-response-messages: no
 # 	dnstap-log-client-query-messages: no
@@ -1259,7 +1398,8 @@ remote-control:
 # 	dnstap-log-forwarder-response-messages: no
 
 # Response Policy Zones
-# RPZ policies. Applied in order of configuration. QNAME, Response IP
+# RPZ policies. Applied in order of configuration. Any match from an earlier
+# RPZ zone will terminate the RPZ lookup. QNAME, Response IP
 # Address, nsdname, nsip and clientip triggers are supported. Supported
 # actions are: NXDOMAIN, NODATA, PASSTHRU, DROP, Local Data, tcp-only
 # and drop.  Policies can be loaded from a file, or using zone

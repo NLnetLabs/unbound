@@ -151,7 +151,7 @@
 #define HTTPS_PORT 443
 
 #ifdef USE_WINSOCK
-/* sneakily reuse the the wsa_strerror function, on windows */
+/* sneakily reuse the wsa_strerror function, on windows */
 char* wsa_strerror(int err);
 #endif
 
@@ -183,7 +183,9 @@ static const char DS_TRUST_ANCHOR[] =
 	/* The anchors must start on a new line with ". IN DS and end with \n"[;]
 	 * because the makedist script greps on the source here */
 	/* anchor 20326 is from 2017 */
-". IN DS 20326 8 2 E06D44B80B8F1D39A95C0B0D7C65D08458E880409BBC683457104237C7F8EC8D\n";
+". IN DS 20326 8 2 E06D44B80B8F1D39A95C0B0D7C65D08458E880409BBC683457104237C7F8EC8D\n"
+	/* anchor 38696 is from 2024 */
+". IN DS 38696 8 2 683D2D0ACB8C9B712A1948B27F741219298D0A450D612C483AF444A4C0FB2B16\n";
 
 /** verbosity for this application */
 static int verb = 0;
@@ -805,7 +807,11 @@ TLS_initiate(SSL_CTX* sslctx, int fd, const char* urlname, int use_sni)
 		}
 		/* wants to be called again */
 	}
+#ifdef HAVE_SSL_GET1_PEER_CERTIFICATE
+	x = SSL_get1_peer_certificate(ssl);
+#else
 	x = SSL_get_peer_certificate(ssl);
+#endif
 	if(!x) {
 		if(verb) printf("Server presented no peer certificate\n");
 		SSL_free(ssl);
@@ -1589,8 +1595,7 @@ xml_parse_setup(XML_Parser parser, struct xml_data* data, time_t now)
 
 /**
  * Perform XML parsing of the root-anchors file
- * Its format description can be read here
- * https://data.iana.org/root-anchors/draft-icann-dnssec-trust-anchor.txt
+ * Its format description can be found in RFC 7958.
  * It uses libexpat.
  * @param xml: BIO with xml data.
  * @param now: the current time for checking DS validity periods.
@@ -1836,15 +1841,49 @@ verify_p7sig(BIO* data, BIO* p7s, STACK_OF(X509)* trust, const char* p7signer)
 	return secure;
 }
 
+/** open a temp file */
+static FILE*
+tempfile_open(char* tempf, size_t tempflen, const char* fname, const char* mode)
+{
+	snprintf(tempf, tempflen, "%s~", fname);
+	return fopen(tempf, mode);
+}
+
+/** close an open temp file and replace the original with it */
+static void
+tempfile_close(FILE* fd, const char* tempf, const char* fname)
+{
+	fflush(fd);
+#ifdef HAVE_FSYNC
+	fsync(fileno(fd));
+#else
+	FlushFileBuffers((HANDLE)_get_osfhandle(_fileno(fd)));
+#endif
+	if(fclose(fd) != 0) {
+		printf("could not complete write: %s: %s\n",
+			tempf, strerror(errno));
+		unlink(tempf);
+		return;
+	}
+	/* success; overwrite actual file */
+#ifdef USE_WINSOCK
+	(void)unlink(fname); /* windows does not replace file with rename() */
+#endif
+	if(rename(tempf, fname) < 0) {
+		printf("rename(%s to %s): %s", tempf, fname, strerror(errno));
+	}
+}
+
 /** write unsigned root anchor file, a 5011 revoked tp */
 static void
 write_unsigned_root(const char* root_anchor_file)
 {
 	FILE* out;
 	time_t now = time(NULL);
-	out = fopen(root_anchor_file, "w");
+	char tempf[2048];
+	out = tempfile_open(tempf, sizeof(tempf), root_anchor_file, "w");
 	if(!out) {
-		if(verb) printf("%s: %s\n", root_anchor_file, strerror(errno));
+		if(verb) printf("%s: %s\n", tempf, strerror(errno));
 		return;
 	}
 	if(fprintf(out, "; autotrust trust anchor file\n"
@@ -1859,13 +1898,7 @@ write_unsigned_root(const char* root_anchor_file)
 			root_anchor_file);
 		if(verb && errno != 0) printf("%s\n", strerror(errno));
 	}
-	fflush(out);
-#ifdef HAVE_FSYNC
-	fsync(fileno(out));
-#else
-	FlushFileBuffers((HANDLE)_get_osfhandle(_fileno(out)));
-#endif
-	fclose(out);
+	tempfile_close(out, tempf, root_anchor_file);
 }
 
 /** write root anchor file */
@@ -1875,29 +1908,24 @@ write_root_anchor(const char* root_anchor_file, BIO* ds)
 	char* pp = NULL;
 	int len;
 	FILE* out;
+	char tempf[2048];
 	(void)BIO_seek(ds, 0);
 	len = BIO_get_mem_data(ds, &pp);
 	if(!len || !pp) {
 		if(verb) printf("out of memory\n");
 		return;
 	}
-	out = fopen(root_anchor_file, "w");
+	out = tempfile_open(tempf, sizeof(tempf), root_anchor_file, "w");
 	if(!out) {
-		if(verb) printf("%s: %s\n", root_anchor_file, strerror(errno));
+		if(verb) printf("%s: %s\n", tempf, strerror(errno));
 		return;
 	}
 	if(fwrite(pp, (size_t)len, 1, out) != 1) {
 		if(verb) printf("failed to write all data to %s\n",
-			root_anchor_file);
+			tempf);
 		if(verb && errno != 0) printf("%s\n", strerror(errno));
 	}
-	fflush(out);
-#ifdef HAVE_FSYNC
-	fsync(fileno(out));
-#else
-	FlushFileBuffers((HANDLE)_get_osfhandle(_fileno(out)));
-#endif
-	fclose(out);
+	tempfile_close(out, tempf, root_anchor_file);
 }
 
 /** Perform the verification and update of the trustanchor file */
@@ -2041,18 +2069,19 @@ try_read_anchor(const char* file)
 static void
 write_builtin_anchor(const char* file)
 {
+	char tempf[2048];
 	const char* builtin_root_anchor = get_builtin_ds();
-	FILE* out = fopen(file, "w");
+	FILE* out = tempfile_open(tempf, sizeof(tempf), file, "w");
 	if(!out) {
 		printf("could not write builtin anchor, to file %s: %s\n",
-			file, strerror(errno));
+			tempf, strerror(errno));
 		return;
 	}
 	if(!fwrite(builtin_root_anchor, strlen(builtin_root_anchor), 1, out)) {
 		printf("could not complete write builtin anchor, to file %s: %s\n",
-			file, strerror(errno));
+			tempf, strerror(errno));
 	}
-	fclose(out);
+	tempfile_close(out, tempf, file);
 }
 
 /** 

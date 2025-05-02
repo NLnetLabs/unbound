@@ -84,10 +84,11 @@ enum rpz_action {
 	RPZ_CNAME_OVERRIDE_ACTION, /* RPZ CNAME action override*/
 };
 
-struct clientip_synthesized_rrset{
+struct clientip_synthesized_rrset {
 	struct regional* region;
 	struct rbtree_type entries;
-	lock_rw_type lock;	/* lock on the respip tree */
+	/** lock on the entries tree */
+	lock_rw_type lock;
 };
 
 struct clientip_synthesized_rr {
@@ -95,10 +96,6 @@ struct clientip_synthesized_rr {
 	struct addr_tree_node node;
 	/** lock on the node item */
 	lock_rw_type lock;
-	/** tag bitlist */
-	uint8_t* taglist;
-	/** length of the taglist (in bytes) */
-	size_t taglen;
 	/** action for this address span */
 	enum rpz_action action;
 	/** "local data" for this node */
@@ -152,6 +149,7 @@ int rpz_insert_rr(struct rpz* r, uint8_t* azname, size_t aznamelen, uint8_t* dna
 /**
  * Delete policy matching RR, used for IXFR.
  * @param r: the rpz to add the policy to.
+ * @param azname: dname of the auth-zone
  * @param aznamelen: the length of the auth-zone name
  * @param dname: dname of the RR
  * @param dnamelen: length of the dname
@@ -160,9 +158,9 @@ int rpz_insert_rr(struct rpz* r, uint8_t* azname, size_t aznamelen, uint8_t* dna
  * @param rdatawl: rdata of the RR, prepended with the rdata size
  * @param rdatalen: length if the RR, including the prepended rdata size
  */
-void rpz_remove_rr(struct rpz* r, size_t aznamelen, uint8_t* dname,
-	size_t dnamelen, uint16_t rr_type, uint16_t rr_class, uint8_t* rdatawl,
-	size_t rdatalen);
+void rpz_remove_rr(struct rpz* r, uint8_t* azname, size_t aznamelen,
+	uint8_t* dname, size_t dnamelen, uint16_t rr_type, uint16_t rr_class,
+	uint8_t* rdatawl, size_t rdatalen);
 
 /**
  * Walk over the RPZ zones to find and apply a QNAME trigger policy.
@@ -228,6 +226,14 @@ int rpz_clear(struct rpz* r);
 struct rpz* rpz_create(struct config_auth* p);
 
 /**
+ * Change config on rpz, after reload.
+ * @param r: the rpz structure.
+ * @param p: the config that was read.
+ * @return false on failure.
+ */
+int rpz_config(struct rpz* r, struct config_auth* p);
+
+/**
  * String for RPZ action enum
  * @param a: RPZ action to get string for
  * @return: string for RPZ action
@@ -262,5 +268,12 @@ void rpz_enable(struct rpz* r);
  * @param r: RPZ struct to disable
  */
 void rpz_disable(struct rpz* r);
+
+/**
+ * Get memory usage of rpz. Caller must manage locks.
+ * @param r: RPZ struct.
+ * @return memory usage.
+ */
+size_t rpz_get_mem(struct rpz* r);
 
 #endif /* SERVICES_RPZ_H */

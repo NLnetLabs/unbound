@@ -84,8 +84,10 @@ void errinf_ede(struct module_qstate* qstate,
 	const char* str, sldns_ede_code reason_bogus)
 {
 	struct errinf_strlist* p;
-	if((qstate->env->cfg->val_log_level < 2 && !qstate->env->cfg->log_servfail) || !str)
+	if(!str || (qstate->env->cfg->val_log_level < 2 &&
+		!qstate->env->cfg->log_servfail)) {
 		return;
+	}
 	p = (struct errinf_strlist*)regional_alloc(qstate->region, sizeof(*p));
 	if(!p) {
 		log_err("malloc failure in validator-error-info string");
@@ -127,13 +129,13 @@ void errinf_origin(struct module_qstate* qstate, struct sock_list *origin)
 	}
 }
 
-char* errinf_to_str_bogus(struct module_qstate* qstate)
+char* errinf_to_str_bogus(struct module_qstate* qstate, struct regional* region)
 {
 	char buf[20480];
 	char* p = buf;
 	size_t left = sizeof(buf);
 	struct errinf_strlist* s;
-	char dname[LDNS_MAX_DOMAINLEN+1];
+	char dname[LDNS_MAX_DOMAINLEN];
 	char t[16], c[16];
 	sldns_wire2str_type_buf(qstate->qinfo.qtype, t, sizeof(t));
 	sldns_wire2str_class_buf(qstate->qinfo.qclass, c, sizeof(c));
@@ -146,21 +148,28 @@ char* errinf_to_str_bogus(struct module_qstate* qstate)
 		snprintf(p, left, " %s", s->str);
 		left -= strlen(p); p += strlen(p);
 	}
-	p = strdup(buf);
+	if(region)
+		p = regional_strdup(region, buf);
+	else
+		p = strdup(buf);
 	if(!p)
 		log_err("malloc failure in errinf_to_str");
 	return p;
 }
 
+/* Try to find the latest (most specific) dnssec failure */
 sldns_ede_code errinf_to_reason_bogus(struct module_qstate* qstate)
 {
 	struct errinf_strlist* s;
+	sldns_ede_code ede = LDNS_EDE_NONE;
 	for(s=qstate->errinf; s; s=s->next) {
-		if (s->reason_bogus != LDNS_EDE_NONE) {
-			return s->reason_bogus;
-		}
+		if(s->reason_bogus == LDNS_EDE_NONE) continue;
+		if(ede != LDNS_EDE_NONE
+			&& ede != LDNS_EDE_DNSSEC_BOGUS
+			&& s->reason_bogus == LDNS_EDE_DNSSEC_BOGUS) continue;
+		ede = s->reason_bogus;
 	}
-	return LDNS_EDE_NONE;
+	return ede;
 }
 
 char* errinf_to_str_servfail(struct module_qstate* qstate)
@@ -169,7 +178,7 @@ char* errinf_to_str_servfail(struct module_qstate* qstate)
 	char* p = buf;
 	size_t left = sizeof(buf);
 	struct errinf_strlist* s;
-	char dname[LDNS_MAX_DOMAINLEN+1];
+	char dname[LDNS_MAX_DOMAINLEN];
 	char t[16], c[16];
 	sldns_wire2str_type_buf(qstate->qinfo.qtype, t, sizeof(t));
 	sldns_wire2str_class_buf(qstate->qinfo.qclass, c, sizeof(c));
@@ -182,7 +191,25 @@ char* errinf_to_str_servfail(struct module_qstate* qstate)
 		snprintf(p, left, " %s", s->str);
 		left -= strlen(p); p += strlen(p);
 	}
-	p = strdup(buf);
+	p = regional_strdup(qstate->region, buf);
+	if(!p)
+		log_err("malloc failure in errinf_to_str");
+	return p;
+}
+
+char* errinf_to_str_misc(struct module_qstate* qstate)
+{
+	char buf[20480];
+	char* p = buf;
+	size_t left = sizeof(buf);
+	struct errinf_strlist* s;
+	if(!qstate->errinf)
+		snprintf(p, left, "misc failure");
+	else for(s=qstate->errinf; s; s=s->next) {
+		snprintf(p, left, "%s%s", (s==qstate->errinf?"":" "), s->str);
+		left -= strlen(p); p += strlen(p);
+	}
+	p = regional_strdup(qstate->region, buf);
 	if(!p)
 		log_err("malloc failure in errinf_to_str");
 	return p;
@@ -191,7 +218,7 @@ char* errinf_to_str_servfail(struct module_qstate* qstate)
 void errinf_rrset(struct module_qstate* qstate, struct ub_packed_rrset_key *rr)
 {
 	char buf[1024];
-	char dname[LDNS_MAX_DOMAINLEN+1];
+	char dname[LDNS_MAX_DOMAINLEN];
 	char t[16], c[16];
 	if((qstate->env->cfg->val_log_level < 2 && !qstate->env->cfg->log_servfail) || !rr)
 		return;
@@ -205,7 +232,7 @@ void errinf_rrset(struct module_qstate* qstate, struct ub_packed_rrset_key *rr)
 void errinf_dname(struct module_qstate* qstate, const char* str, uint8_t* dname)
 {
 	char b[1024];
-	char buf[LDNS_MAX_DOMAINLEN+1];
+	char buf[LDNS_MAX_DOMAINLEN];
 	if((qstate->env->cfg->val_log_level < 2 && !qstate->env->cfg->log_servfail) || !str || !dname)
 		return;
 	dname_str(dname, buf);

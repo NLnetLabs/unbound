@@ -45,11 +45,14 @@
 #include "util/module.h"
 #include "util/data/msgreply.h"
 #include "validator/val_utils.h"
+#include "validator/val_nsec3.h"
 struct val_anchors;
 struct key_cache;
 struct key_entry_key;
 struct val_neg_cache;
 struct config_strlist;
+struct comm_timer;
+struct config_file;
 
 /**
  * This is the TTL to use when a trust anchor fails to prime. A trust anchor
@@ -157,7 +160,7 @@ struct val_qstate {
 	 * The query restart count
 	 */
 	int restart_count;
-	/** The blacklist saved for chainoftrust elements */
+	/** The blacklist saved for chain of trust elements */
 	struct sock_list* chain_blacklist;
 
 	/**
@@ -215,6 +218,19 @@ struct val_qstate {
 
 	/** true if this state is waiting to prime a trust anchor */
 	int wait_prime_ta;
+
+	/** State to continue with RRSIG validation in a message later */
+	int msg_signatures_state;
+	/** The rrset index for the msg signatures to continue from */
+	size_t msg_signatures_index;
+	/** Cache table for NSEC3 hashes */
+	struct nsec3_cache_table nsec3_cache_table;
+	/** DS message from sub if it got suspended from NSEC3 calculations */
+	struct dns_msg* sub_ds_msg;
+	/** The timer to resume processing msg signatures */
+	struct comm_timer* suspend_timer;
+	/** Number of suspends */
+	int suspend_count;
 };
 
 /**
@@ -261,5 +277,30 @@ void val_clear(struct module_qstate* qstate, int id);
  * @return memory in use in bytes.
  */
 size_t val_get_mem(struct module_env* env, int id);
+
+/** Timer callback for msg signatures continue timer */
+void validate_suspend_timer_cb(void* arg);
+
+/**
+ * Parse the val_nsec3_key_iterations string.
+ * @param val_nsec3_key_iterations: the string with nsec3 iterations config.
+ * @param keysize: returns malloced key size array on success.
+ * @param maxiter: returns malloced max iterations array on success.
+ * @param keyiter_count: returns size of keysize and maxiter arrays.
+ * @return false if it does not parse correctly.
+ */
+int val_env_parse_key_iter(char* val_nsec3_key_iterations, size_t** keysize,
+	size_t** maxiter, int* keyiter_count);
+
+/**
+ * Apply config to validator env
+ * @param val_env: validator env.
+ * @param cfg: config
+ * @param keysize: nsec3 key size array.
+ * @param maxiter: nsec3 max iterations array.
+ * @param keyiter_count: size of keysize and maxiter arrays.
+ */
+void val_env_apply_cfg(struct val_env* val_env, struct config_file* cfg,
+	size_t* keysize, size_t* maxiter, int keyiter_count);
 
 #endif /* VALIDATOR_VALIDATOR_H */

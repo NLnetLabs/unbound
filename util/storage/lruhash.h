@@ -178,6 +178,8 @@ struct lruhash {
 	size_t space_used;
 	/** the amount of space the hash table is maximally allowed to use. */
 	size_t space_max;
+	/** the maximum collisions were detected during the lruhash_insert operations. */
+	size_t max_collisions;
 };
 
 /**
@@ -301,6 +303,27 @@ void lru_touch(struct lruhash* table, struct lruhash_entry* entry);
  */
 void lruhash_setmarkdel(struct lruhash* table, lruhash_markdelfunc_type md);
 
+/**
+ * Update the size of an element in the hashtable.
+ *
+ * @param table: hash table.
+ * @param cb_override: if not NULL overrides the cb_arg for deletefunc.
+ * @param diff_size: difference in size to the hash table storage.
+ * 	This is newsize - oldsize, a positive number uses more space.
+ */
+void lruhash_update_space_used(struct lruhash* table, void* cb_override,
+	int diff_size);
+
+/**
+ * Update the max space for the hashtable.
+ *
+ * @param table: hash table.
+ * @param cb_override: if not NULL overrides the cb_arg for deletefunc.
+ * @param max: the new max.
+ */
+void lruhash_update_space_max(struct lruhash* table, void* cb_override,
+	size_t max);
+
 /************************* getdns functions ************************/
 /*** these are used by getdns only and not by unbound. ***/
 
@@ -357,10 +380,11 @@ void bin_delete(struct lruhash* table, struct lruhash_bin* bin);
  * @param bin: hash bin to look into.
  * @param hash: hash value to look for.
  * @param key: key to look for.
+ * @param collisions: how many collisions were found during the search.
  * @return: the entry or NULL if not found.
  */
 struct lruhash_entry* bin_find_entry(struct lruhash* table, 
-	struct lruhash_bin* bin, hashvalue_type hash, void* key);
+	struct lruhash_bin* bin, hashvalue_type hash, void* key, size_t* collisions);
 
 /**
  * Remove entry from bin overflow chain.

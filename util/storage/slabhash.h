@@ -162,6 +162,18 @@ size_t slabhash_get_size(struct slabhash* table);
 int slabhash_is_size(struct slabhash* table, size_t size, size_t slabs);
 
 /**
+ * Update the size of an element in the hashtable, uses
+ * lruhash_update_space_used.
+ *
+ * @param table: hash table.
+ * @param hash: hash value. User calculates the hash.
+ * @param cb_override: if not NULL overrides the cb_arg for deletefunc.
+ * @param diff_size: difference in size to the hash table storage.
+ */
+void slabhash_update_space_used(struct slabhash* table, hashvalue_type hash,
+	void* cb_override, int diff_size);
+
+/**
  * Retrieve slab hash current memory use.
  * @param table: hash table.
  * @return memory in use.
@@ -199,6 +211,22 @@ void slabhash_traverse(struct slabhash* table, int wr,
  * @return the number of items
  */
 size_t count_slabhash_entries(struct slabhash* table);
+
+/**
+ * Retrieves number of items in slabhash and the current max collision level
+ * @param table: slabbed hash table.
+ * @param entries_count: where to save the current number of elements.
+ * @param max_collisions: where to save the current max collisions level.
+ */
+void get_slabhash_stats(struct slabhash* table,
+	long long* entries_count, long long* max_collisions);
+
+/**
+ * Adjust size of slabhash memory max
+ * @param table: slabbed hash table
+ * @param max: new max memory
+ */
+void slabhash_adjust_size(struct slabhash* table, size_t max);
 
 /* --- test representation --- */
 /** test structure contains test key */

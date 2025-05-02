@@ -81,6 +81,7 @@ lruhash_create(size_t start_size, size_t maxmem,
 	table->num = 0;
 	table->space_used = 0;
 	table->space_max = maxmem;
+	table->max_collisions = 0;
 	table->array = calloc(table->size, sizeof(struct lruhash_bin));
 	if(!table->array) {
 		lock_quick_destroy(&table->lock);
@@ -216,15 +217,19 @@ reclaim_space(struct lruhash* table, struct lruhash_entry** list)
 
 struct lruhash_entry* 
 bin_find_entry(struct lruhash* table, 
-	struct lruhash_bin* bin, hashvalue_type hash, void* key)
+	struct lruhash_bin* bin, hashvalue_type hash, void* key, size_t* collisions)
 {
+	size_t c = 0;
 	struct lruhash_entry* p = bin->overflow_list;
 	while(p) {
 		if(p->hash == hash && table->compfunc(p->key, key) == 0)
-			return p;
+			break;
+		c++;
 		p = p->overflow_next;
 	}
-	return NULL;
+	if (collisions != NULL)
+		*collisions = c;
+	return p;
 }
 
 void 
@@ -303,6 +308,7 @@ lruhash_insert(struct lruhash* table, hashvalue_type hash,
 	struct lruhash_bin* bin;
 	struct lruhash_entry* found, *reclaimlist=NULL;
 	size_t need_size;
+	size_t collisions;
 	fptr_ok(fptr_whitelist_hash_sizefunc(table->sizefunc));
 	fptr_ok(fptr_whitelist_hash_delkeyfunc(table->delkeyfunc));
 	fptr_ok(fptr_whitelist_hash_deldatafunc(table->deldatafunc));
@@ -317,12 +323,14 @@ lruhash_insert(struct lruhash* table, hashvalue_type hash,
 	lock_quick_lock(&bin->lock);
 
 	/* see if entry exists already */
-	if(!(found=bin_find_entry(table, bin, hash, entry->key))) {
+	if(!(found=bin_find_entry(table, bin, hash, entry->key, &collisions))) {
 		/* if not: add to bin */
 		entry->overflow_next = bin->overflow_list;
 		bin->overflow_list = entry;
 		lru_front(table, entry);
 		table->num++;
+		if (table->max_collisions < collisions)
+			table->max_collisions = collisions;
 		table->space_used += need_size;
 	} else {
 		/* if so: update data - needs a writelock */
@@ -362,7 +370,7 @@ lruhash_lookup(struct lruhash* table, hashvalue_type hash, void* key, int wr)
 	lock_quick_lock(&table->lock);
 	bin = &table->array[hash & table->size_mask];
 	lock_quick_lock(&bin->lock);
-	if((entry=bin_find_entry(table, bin, hash, key)))
+	if((entry=bin_find_entry(table, bin, hash, key, NULL)))
 		lru_touch(table, entry);
 	lock_quick_unlock(&table->lock);
 
@@ -389,7 +397,7 @@ lruhash_remove(struct lruhash* table, hashvalue_type hash, void* key)
 	lock_quick_lock(&table->lock);
 	bin = &table->array[hash & table->size_mask];
 	lock_quick_lock(&bin->lock);
-	if((entry=bin_find_entry(table, bin, hash, key))) {
+	if((entry=bin_find_entry(table, bin, hash, key, NULL))) {
 		bin_overflow_remove(bin, entry);
 		lru_remove(table, entry);
 	} else {
@@ -520,6 +528,70 @@ lruhash_setmarkdel(struct lruhash* table, lruhash_markdelfunc_type md)
 	lock_quick_unlock(&table->lock);
 }
 
+void
+lruhash_update_space_used(struct lruhash* table, void* cb_arg, int diff_size)
+{
+	struct lruhash_entry *reclaimlist = NULL;
+
+	fptr_ok(fptr_whitelist_hash_sizefunc(table->sizefunc));
+	fptr_ok(fptr_whitelist_hash_delkeyfunc(table->delkeyfunc));
+	fptr_ok(fptr_whitelist_hash_deldatafunc(table->deldatafunc));
+	fptr_ok(fptr_whitelist_hash_markdelfunc(table->markdelfunc));
+
+	if(cb_arg == NULL) cb_arg = table->cb_arg;
+
+	/* update space used */
+	lock_quick_lock(&table->lock);
+
+	if((int)table->space_used + diff_size < 0)
+		table->space_used = 0;
+	else table->space_used = (size_t)((int)table->space_used + diff_size);
+
+	if(table->space_used > table->space_max)
+		reclaim_space(table, &reclaimlist);
+
+	lock_quick_unlock(&table->lock);
+
+	/* finish reclaim if any (outside of critical region) */
+	while(reclaimlist) {
+		struct lruhash_entry* n = reclaimlist->overflow_next;
+		void* d = reclaimlist->data;
+		(*table->delkeyfunc)(reclaimlist->key, cb_arg);
+		(*table->deldatafunc)(d, cb_arg);
+		reclaimlist = n;
+	}
+}
+
+void lruhash_update_space_max(struct lruhash* table, void* cb_arg, size_t max)
+{
+	struct lruhash_entry *reclaimlist = NULL;
+
+	fptr_ok(fptr_whitelist_hash_sizefunc(table->sizefunc));
+	fptr_ok(fptr_whitelist_hash_delkeyfunc(table->delkeyfunc));
+	fptr_ok(fptr_whitelist_hash_deldatafunc(table->deldatafunc));
+	fptr_ok(fptr_whitelist_hash_markdelfunc(table->markdelfunc));
+
+	if(cb_arg == NULL) cb_arg = table->cb_arg;
+
+	/* update space max */
+	lock_quick_lock(&table->lock);
+	table->space_max = max;
+
+	if(table->space_used > table->space_max)
+		reclaim_space(table, &reclaimlist);
+
+	lock_quick_unlock(&table->lock);
+
+	/* finish reclaim if any (outside of critical region) */
+	while(reclaimlist) {
+		struct lruhash_entry* n = reclaimlist->overflow_next;
+		void* d = reclaimlist->data;
+		(*table->delkeyfunc)(reclaimlist->key, cb_arg);
+		(*table->deldatafunc)(d, cb_arg);
+		reclaimlist = n;
+	}
+}
+
 void 
 lruhash_traverse(struct lruhash* h, int wr, 
 	void (*func)(struct lruhash_entry*, void*), void* arg)
@@ -579,6 +651,7 @@ lruhash_insert_or_retrieve(struct lruhash* table, hashvalue_type hash,
 	struct lruhash_bin* bin;
 	struct lruhash_entry* found, *reclaimlist = NULL;
 	size_t need_size;
+	size_t collisions;
 	fptr_ok(fptr_whitelist_hash_sizefunc(table->sizefunc));
 	fptr_ok(fptr_whitelist_hash_delkeyfunc(table->delkeyfunc));
 	fptr_ok(fptr_whitelist_hash_deldatafunc(table->deldatafunc));
@@ -593,7 +666,7 @@ lruhash_insert_or_retrieve(struct lruhash* table, hashvalue_type hash,
 	lock_quick_lock(&bin->lock);
 
 	/* see if entry exists already */
-	if ((found = bin_find_entry(table, bin, hash, entry->key)) != NULL) {
+	if ((found = bin_find_entry(table, bin, hash, entry->key, &collisions)) != NULL) {
 		/* if so: keep the existing data - acquire a writelock */
 		lock_rw_wrlock(&found->lock);
 	}
@@ -604,6 +677,8 @@ lruhash_insert_or_retrieve(struct lruhash* table, hashvalue_type hash,
 		bin->overflow_list = entry;
 		lru_front(table, entry);
 		table->num++;
+		if (table->max_collisions < collisions)
+			table->max_collisions = collisions;
 		table->space_used += need_size;
 		/* return the entry that was presented, and lock it */
 		found = entry;

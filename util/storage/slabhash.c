@@ -166,6 +166,13 @@ int slabhash_is_size(struct slabhash* sl, size_t size, size_t slabs)
 	return 0;
 }
 
+void slabhash_update_space_used(struct slabhash* sl, hashvalue_type hash,
+	void* cb_arg, int diff_size)
+{
+	lruhash_update_space_used(sl->array[slab_idx(sl, hash)], cb_arg,
+		diff_size);
+}
+
 size_t slabhash_get_mem(struct slabhash* sl)
 {	
 	size_t i, total = sizeof(*sl);
@@ -241,4 +248,31 @@ size_t count_slabhash_entries(struct slabhash* sh)
 		lock_quick_unlock(&sh->array[slab]->lock);
 	}
 	return cnt;
+}
+
+void get_slabhash_stats(struct slabhash* sh, long long* num, long long* collisions)
+{
+	size_t slab, cnt = 0, max_collisions = 0;
+
+	for(slab=0; slab<sh->size; slab++) {
+		lock_quick_lock(&sh->array[slab]->lock);
+		cnt += sh->array[slab]->num;
+		if (max_collisions < sh->array[slab]->max_collisions) {
+			max_collisions = sh->array[slab]->max_collisions;
+		}
+		lock_quick_unlock(&sh->array[slab]->lock);
+	}
+	if (num != NULL)
+		*num = cnt;
+	if (collisions != NULL)
+		*collisions = max_collisions;
+}
+
+void slabhash_adjust_size(struct slabhash* sl, size_t max)
+{
+	size_t space_max = max / sl->size;
+	size_t i;
+	for(i=0; i<sl->size; i++) {
+		lruhash_update_space_max(sl->array[i], NULL, space_max);
+	}
 }
