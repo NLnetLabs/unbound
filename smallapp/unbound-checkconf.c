@@ -636,8 +636,10 @@ check_modules_exist(const char* module_conf)
 				}
 				n[j] = s[j];
 			}
-			fatal_exit("module_conf lists module '%s' but that "
-				"module is not available.", n);
+			fatal_exit("Unknown value in module-config, module: "
+				"'%s'. This module is not present (not "
+				"compiled in); see the list of linked modules "
+				"with unbound -V", n);
 		}
 		s += strlen(names[i]);
 	}
