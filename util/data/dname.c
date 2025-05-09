@@ -752,7 +752,7 @@ dname_remove_label_limit_len(uint8_t** dname, size_t* len, size_t lenlimit)
 	log_assert(*len > lablen);
 	if(lablen == 0)
 		return 0; /* do not modify root label */
-	if(*len - lablen + 1 < lenlimit) return 0;
+	if((*len - lablen) + 1 < lenlimit) return 0;
 	*len -= lablen+1;
 	*dname += lablen+1;
 	return 1;

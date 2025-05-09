@@ -2413,6 +2413,8 @@ az_find_wildcard(struct auth_zone* z, struct query_info* qinfo,
 	if(!dname_subdomain_c(nm, z->name))
 		return NULL; /* out of zone */
 	while((node=az_find_wildcard_domain(z, nm, nmlen))==NULL) {
+		if(nmlen == z->namelen)
+			return NULL; /* top of zone reached */
 		if(ce && nmlen == ce->namelen)
 			return NULL; /* ce reached */
 		if(!dname_remove_label_limit_len(&nm, &nmlen, z->namelen))
@@ -2782,6 +2784,7 @@ az_find_nsec_cover(struct auth_zone* z, struct auth_data** node)
 	/* but there could be glue, and if this is node, then it has no NSEC.
 	 * Go up to find nonglue (previous) NSEC-holding nodes */
 	while((rrset=az_domain_rrset(*node, LDNS_RR_TYPE_NSEC)) == NULL) {
+		if(nmlen == z->namelen) return NULL;
 		if(!dname_remove_label_limit_len(&nm, &nmlen, z->namelen))
 			return NULL; /* can't go up */
 		/* adjust *node for the nsec rrset to find in */
