@@ -1,3 +1,7 @@
+9 May 2025: Wouter
+	- Fix #1281: forward-zone "name: ." conflicts with auth-zone "name: ."
+	  in 1.23.0, but worked in 1.22.0.
+
 5 May 2025: Yorgos
 	- Sync unbound and unbound-checkconf log output for unknown modules.
 
