@@ -226,6 +226,8 @@ config_create(void)
 	cfg->client_subnet = NULL;
 	cfg->client_subnet_zone = NULL;
 	cfg->client_subnet_opcode = LDNS_EDNS_CLIENT_SUBNET;
+	cfg->client_subnet_address_override_ipv4 = NULL;
+	cfg->client_subnet_address_override_ipv6 = NULL;
 	cfg->client_subnet_always_forward = 0;
 	cfg->max_client_subnet_ipv4 = 24;
 	cfg->max_client_subnet_ipv6 = 56;
@@ -1284,6 +1286,8 @@ config_get_option(struct config_file* cfg, const char* opt,
 #ifdef CLIENT_SUBNET
 	else O_LST(opt, "send-client-subnet", client_subnet)
 	else O_LST(opt, "client-subnet-zone", client_subnet_zone)
+	else O_STR(opt, "client-subnet-address-override-ipv4", client_subnet_address_override_ipv4)
+	else O_STR(opt, "client-subnet-address-override-ipv6", client_subnet_address_override_ipv6)
 	else O_DEC(opt, "max-client-subnet-ipv4", max_client_subnet_ipv4)
 	else O_DEC(opt, "max-client-subnet-ipv6", max_client_subnet_ipv6)
 	else O_DEC(opt, "min-client-subnet-ipv4", min_client_subnet_ipv4)
@@ -1763,6 +1767,8 @@ config_delete(struct config_file* cfg)
 #ifdef CLIENT_SUBNET
 	config_delstrlist(cfg->client_subnet);
 	config_delstrlist(cfg->client_subnet_zone);
+	free(cfg->client_subnet_address_override_ipv4);
+	free(cfg->client_subnet_address_override_ipv6);
 #endif
 	free(cfg->identity);
 	free(cfg->version);

@@ -376,6 +376,8 @@ send-client-subnet{COLON}	{ YDVAR(1, VAR_SEND_CLIENT_SUBNET) }
 client-subnet-zone{COLON}	{ YDVAR(1, VAR_CLIENT_SUBNET_ZONE) }
 client-subnet-always-forward{COLON} { YDVAR(1, VAR_CLIENT_SUBNET_ALWAYS_FORWARD) }
 client-subnet-opcode{COLON}	{ YDVAR(1, VAR_CLIENT_SUBNET_OPCODE) }
+client-subnet-address-override-ipv4{COLON} { YDVAR(1, VAR_CLIENT_SUBNET_ADDRESS_OVERRIDE_IPV4) }
+client-subnet-address-override-ipv6{COLON} { YDVAR(1, VAR_CLIENT_SUBNET_ADDRESS_OVERRIDE_IPV6) }
 max-client-subnet-ipv4{COLON}	{ YDVAR(1, VAR_MAX_CLIENT_SUBNET_IPV4) }
 max-client-subnet-ipv6{COLON}	{ YDVAR(1, VAR_MAX_CLIENT_SUBNET_IPV6) }
 min-client-subnet-ipv4{COLON}	{ YDVAR(1, VAR_MIN_CLIENT_SUBNET_IPV4) }

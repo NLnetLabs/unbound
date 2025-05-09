@@ -270,6 +270,10 @@ struct config_file {
 	struct config_strlist* client_subnet_zone;
 	/** opcode assigned by IANA for edns0-client-subnet option */
 	uint16_t client_subnet_opcode;
+	/** Override the outgoing client subnet source address to this value (IPv4) */
+	char *client_subnet_address_override_ipv4;
+	/** Override the outgoing client subnet source address to this value (IPv6) */
+	char *client_subnet_address_override_ipv6;
 	/** Do not check whitelist if incoming query contains an ECS record */
 	int client_subnet_always_forward;
 	/** Subnet length we are willing to give up privacy for */

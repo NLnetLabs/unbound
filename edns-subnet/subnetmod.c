@@ -249,6 +249,31 @@ subnetmod_init(struct module_env *env, int id)
 		env->modinfo[id] = NULL;
 		return 0;
 	}
+	/* Copy address override settings */
+	if(env->cfg->client_subnet_address_override_ipv4) {
+		struct sockaddr_storage *addr = &sn_env->address_override_v4;
+		char *ipstr = env->cfg->client_subnet_address_override_ipv4;
+		socklen_t len = 0;
+		if(!ipstrtoaddr(ipstr, 0, addr, &len) || addr->ss_family != AF_INET) {
+			log_err("subnetcache: error parsing ipv4 address override: '%s'", ipstr);
+			free(sn_env);
+			env->modinfo[id] = NULL;
+			return 0;
+		}
+		sn_env->do_address_override_v4 = 1;
+	}
+	if(env->cfg->client_subnet_address_override_ipv6) {
+		struct sockaddr_storage *addr = &sn_env->address_override_v6;
+		char *ipstr = env->cfg->client_subnet_address_override_ipv6;
+		socklen_t len = 0;
+		if(!ipstrtoaddr(ipstr, 0, addr, &len) || addr->ss_family != AF_INET6) {
+			log_err("subnetcache: error parsing ipv6 address override: '%s'", ipstr);
+			free(sn_env);
+			env->modinfo[id] = NULL;
+			return 0;
+		}
+		sn_env->do_address_override_v6 = 1;
+	}
 
 	verbose(VERB_QUERY, "subnetcache: option registered (%d)",
 		env->cfg->client_subnet_opcode);
@@ -684,7 +709,7 @@ parse_subnet_option(struct edns_option* ecs_option, struct ecs_data* ecs)
 
 void
 subnet_option_from_ss(struct sockaddr_storage *ss, struct ecs_data* ecs,
-	struct config_file* cfg)
+	struct config_file* cfg, const struct subnet_env* sne)
 {
 	void* sinaddr;
 
@@ -692,7 +717,12 @@ subnet_option_from_ss(struct sockaddr_storage *ss, struct ecs_data* ecs,
 	if(((struct sockaddr_in*)ss)->sin_family == AF_INET) {
 		ecs->subnet_source_mask = cfg->max_client_subnet_ipv4;
 		ecs->subnet_addr_fam = EDNSSUBNET_ADDRFAM_IP4;
-		sinaddr = &((struct sockaddr_in*)ss)->sin_addr;
+		if (sne->do_address_override_v4) {
+			sinaddr = &((struct sockaddr_in*)
+				(&sne->address_override_v4))->sin_addr;
+		} else {
+			sinaddr = &((struct sockaddr_in*)ss)->sin_addr;
+		}
 		if (!copy_clear( ecs->subnet_addr, INET6_SIZE,
 			(uint8_t *)sinaddr, INET_SIZE,
 			ecs->subnet_source_mask)) {
@@ -703,7 +733,12 @@ subnet_option_from_ss(struct sockaddr_storage *ss, struct ecs_data* ecs,
 	else {
 		ecs->subnet_source_mask = cfg->max_client_subnet_ipv6;
 		ecs->subnet_addr_fam = EDNSSUBNET_ADDRFAM_IP6;
-		sinaddr = &((struct sockaddr_in6*)ss)->sin6_addr;
+		if (sne->do_address_override_v6) {
+			sinaddr = &((struct sockaddr_in6*)
+				(&sne->address_override_v6))->sin6_addr;
+		} else {
+			sinaddr = &((struct sockaddr_in6*)ss)->sin6_addr;
+		}
 		if (!copy_clear( ecs->subnet_addr, INET6_SIZE,
 			(uint8_t *)sinaddr, INET6_SIZE,
 			ecs->subnet_source_mask)) {
@@ -839,12 +874,12 @@ subnetmod_operate(struct module_qstate *qstate, enum module_ev event,
 		else if(qstate->mesh_info->reply_list) {
 			subnet_option_from_ss(
 				&qstate->mesh_info->reply_list->query_reply.client_addr,
-				&sq->ecs_client_in, qstate->env->cfg);
+				&sq->ecs_client_in, qstate->env->cfg, sne);
 		}
 		else if(qstate->client_addr.ss_family != AF_UNSPEC) {
 			subnet_option_from_ss(
 				&qstate->client_addr,
-				&sq->ecs_client_in, qstate->env->cfg);
+				&sq->ecs_client_in, qstate->env->cfg, sne);
 		}
 		
 		if(sq->ecs_client_in.subnet_validdata == 0) {
