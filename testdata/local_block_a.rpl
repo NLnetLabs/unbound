@@ -1,0 +1,302 @@
+; config options
+; The island of trust is at example.com
+server:
+	trust-anchor: "example.com.	IN	DS	55566 8 2 9c148338951ce1c3b5cd3da532f3d90dfcf92595148022f2c2fd98e5deee90af"
+	val-override-date: "20240606235030"
+	target-fetch-policy: "0 0 0 0 0"
+	qname-minimisation: "no"
+	fake-sha1: yes
+	trust-anchor-signaling: no
+	minimal-responses: no
+	local-zone: "example.com" block_a
+
+stub-zone:
+	name: "."
+	stub-addr: 193.0.14.129 	# K.ROOT-SERVERS.NET.
+CONFIG_END
+
+SCENARIO_BEGIN Test block_a
+
+; K.ROOT-SERVERS.NET.
+RANGE_BEGIN 0 100
+	ADDRESS 193.0.14.129 
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR NOERROR
+SECTION QUESTION
+. IN NS
+SECTION ANSWER
+. IN NS	K.ROOT-SERVERS.NET.
+SECTION ADDITIONAL
+K.ROOT-SERVERS.NET.	IN	A	193.0.14.129
+ENTRY_END
+
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR NOERROR
+SECTION QUESTION
+example.com. IN A
+SECTION AUTHORITY
+com.	IN NS	a.gtld-servers.net.
+SECTION ADDITIONAL
+a.gtld-servers.net.	IN 	A	192.5.6.30
+ENTRY_END
+RANGE_END
+
+; a.gtld-servers.net.
+RANGE_BEGIN 0 100
+	ADDRESS 192.5.6.30
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR NOERROR
+SECTION QUESTION
+com. IN NS
+SECTION ANSWER
+com.	IN NS	a.gtld-servers.net.
+SECTION ADDITIONAL
+a.gtld-servers.net.	IN 	A	192.5.6.30
+ENTRY_END
+
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR NOERROR
+SECTION QUESTION
+example.com. IN A
+SECTION AUTHORITY
+example.com.	IN NS	ns.example.com.
+SECTION ADDITIONAL
+ns.example.com.		IN 	A	1.2.3.4
+ENTRY_END
+RANGE_END
+
+; ns.example.com.
+RANGE_BEGIN 0 100
+	ADDRESS 1.2.3.4
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR NOERROR
+SECTION QUESTION
+example.com. IN NS
+SECTION ANSWER
+example.com.	IN NS	ns.example.com.
+example.com.    3600    IN      RRSIG   NS 8 2 3600 20240629235030 20240530235030 55566 example.com. FWRjlbOPZX7xY8uZ+spdbgKGEwtlvRjD4RTpb3FhDXy1kif/3VCf4vpuhGEmzt5mhwFf5+8eMSPDpyg7mD2gqvOdiZF0c5WqEqZwcYjKB0YFURiUTYI+Wbdo2IRvUErddoWqg0Qe7VnBMxfkXIZPPYQyajPsnUFtx8xfoBLyPmw= ;{id = 55566}
+SECTION ADDITIONAL
+ns.example.com.		IN 	A	1.2.3.4
+ns.example.com. 3600    IN      RRSIG   A 8 3 3600 20240629235030 20240530235030 55566 example.com. kDlQr8elTrch1rfd2CblhJf/50h65ZrMrWPhHc1Zp6/cJW9lEqTn8pmT22VzxSnFWuPZdsrWW528XMdjYyN8kL13PArCoHulA4Qkzh+aOx/yFhNfrGhUdio0gYXtxEImQ4KDgOX3AYRSXFeriyB4aNjXisCkBioaiuVncWplRig= ;{id = 55566}
+ENTRY_END
+
+; response to DNSKEY priming query
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR NOERROR
+SECTION QUESTION
+example.com. IN DNSKEY
+SECTION ANSWER
+example.com.    3600    IN      DNSKEY	256 3 8 AwEAAdug/L739i0mgN2nuK/bhxu3wFn5Ud9nK2+XUmZQlPUEZUC5YZvm1rfMmEWTGBn87fFxEu/kjFZHJ55JLzqsbbpVHLbmKCTT2gYR2FV2WDKROGKuYbVkJIXdKAjJ0ONuK507NinYvlWXIoxHn22KAWOd9wKgSTNHBlmGkX+ts3hh ;{id = 55566 (zsk), size = 1024b}
+example.com.    3600    IN      RRSIG   DNSKEY 8 2 3600 20240629235030 20240530235030 55566 example.com. 024FPcjHt8Pslhof0HDFGp6AMCqpLJfTgsOmj3KW1ndS34y5G50x0Sbsxt6L2XI6NPB2ElplZ6pkpq3g2MoJSim7E9gHoEDIGIB/YfyCsdwslDP6CXVVIfnxN3nnRtHb1zEcRawtlZX63Vg3Awehc8PLo06TqySGDNly8oARVNA= ;{id = 55566}
+SECTION AUTHORITY
+example.com.	IN NS	ns.example.com.
+example.com.    3600    IN      RRSIG   NS 8 2 3600 20240629235030 20240530235030 55566 example.com. FWRjlbOPZX7xY8uZ+spdbgKGEwtlvRjD4RTpb3FhDXy1kif/3VCf4vpuhGEmzt5mhwFf5+8eMSPDpyg7mD2gqvOdiZF0c5WqEqZwcYjKB0YFURiUTYI+Wbdo2IRvUErddoWqg0Qe7VnBMxfkXIZPPYQyajPsnUFtx8xfoBLyPmw= ;{id = 55566}
+SECTION ADDITIONAL
+ns.example.com.		IN 	A	1.2.3.4
+ns.example.com. 3600    IN      RRSIG   A 8 3 3600 20240629235030 20240530235030 55566 example.com. kDlQr8elTrch1rfd2CblhJf/50h65ZrMrWPhHc1Zp6/cJW9lEqTn8pmT22VzxSnFWuPZdsrWW528XMdjYyN8kL13PArCoHulA4Qkzh+aOx/yFhNfrGhUdio0gYXtxEImQ4KDgOX3AYRSXFeriyB4aNjXisCkBioaiuVncWplRig= ;{id = 55566}
+ENTRY_END
+
+; response to query of interest
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR NOERROR
+SECTION QUESTION
+example.com. IN A
+SECTION ANSWER
+example.com. IN A	10.20.30.40
+example.com.        3600    IN      RRSIG   A 8 2 3600 20240629235030 20240530235030 55566 example.com.	jL4P3XZ8HN0SpY/xSHii3xK5yWbqo+t7sqaq4TAsorj1Kt4md8KanC9J39I+zXdwnlcC3lDMJJb09+b70ysDIScjgn3G/hLpQJkOyuks73BvxhysXKozLZtyY2ue0RKI2axL9BB1ERYv0OqNbImDo5MbnTk/0HpnYmWEFnOrolI= ;{id = 55566}
+SECTION AUTHORITY
+example.com.	IN NS	ns.example.com.
+example.com.    3600    IN      RRSIG   NS 8 2 3600 20240629235030 20240530235030 55566 example.com. FWRjlbOPZX7xY8uZ+spdbgKGEwtlvRjD4RTpb3FhDXy1kif/3VCf4vpuhGEmzt5mhwFf5+8eMSPDpyg7mD2gqvOdiZF0c5WqEqZwcYjKB0YFURiUTYI+Wbdo2IRvUErddoWqg0Qe7VnBMxfkXIZPPYQyajPsnUFtx8xfoBLyPmw= ;{id = 55566}
+SECTION ADDITIONAL
+ns.example.com.		IN 	A	1.2.3.4
+ns.example.com. 3600    IN      RRSIG   A 8 3 3600 20240629235030 20240530235030 55566 example.com. kDlQr8elTrch1rfd2CblhJf/50h65ZrMrWPhHc1Zp6/cJW9lEqTn8pmT22VzxSnFWuPZdsrWW528XMdjYyN8kL13PArCoHulA4Qkzh+aOx/yFhNfrGhUdio0gYXtxEImQ4KDgOX3AYRSXFeriyB4aNjXisCkBioaiuVncWplRig= ;{id = 55566}
+ENTRY_END
+
+; response to query for other name
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR NOERROR
+SECTION QUESTION
+www.example.com. IN A
+SECTION ANSWER
+www.example.com. IN A	10.20.30.41
+www.example.com.        3600    IN      RRSIG   A 8 3 3600 20240629235030 20240530235030 55566 example.com.	QlnnqSWqNyujF9CTSm5FFeXn1tMQOjCMcQjkWx+Msl9YamT5MaGJVlnyOcOSWUFv2AquiMilzqct3qogcFOtXx2gRPcsEhiuUZgh9TrSnwPT8fZMgJMiE6BuO06I1ca1FOFqYa4nXl7WUoUajyXjRK8QiIrYgSyMwXVJWV8BY/Y= ;{id = 55566}
+SECTION AUTHORITY
+example.com.	IN NS	ns.example.com.
+example.com.    3600    IN      RRSIG   NS 8 2 3600 20240629235030 20240530235030 55566 example.com. FWRjlbOPZX7xY8uZ+spdbgKGEwtlvRjD4RTpb3FhDXy1kif/3VCf4vpuhGEmzt5mhwFf5+8eMSPDpyg7mD2gqvOdiZF0c5WqEqZwcYjKB0YFURiUTYI+Wbdo2IRvUErddoWqg0Qe7VnBMxfkXIZPPYQyajPsnUFtx8xfoBLyPmw= ;{id = 55566}
+SECTION ADDITIONAL
+ns.example.com.		IN 	A	1.2.3.4
+ns.example.com. 3600    IN      RRSIG   A 8 3 3600 20240629235030 20240530235030 55566 example.com. kDlQr8elTrch1rfd2CblhJf/50h65ZrMrWPhHc1Zp6/cJW9lEqTn8pmT22VzxSnFWuPZdsrWW528XMdjYyN8kL13PArCoHulA4Qkzh+aOx/yFhNfrGhUdio0gYXtxEImQ4KDgOX3AYRSXFeriyB4aNjXisCkBioaiuVncWplRig= ;{id = 55566}
+ENTRY_END
+
+; response to query for other type
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR NOERROR
+SECTION QUESTION
+example.com. IN AAAA
+SECTION ANSWER
+example.com. IN AAAA	2001::1
+example.com.        3600    IN      RRSIG   AAAA 8 2 3600 20240629235030 20240530235030 55566 example.com. wSPkFoL/8jory27xXwBhC4Th7ODxe/yvHeW9sOCjRb2wnV0XWg34GYbXt5fw0ieADwB3Z/jVhjhaOPL4TdVZ5l85JiuO1eQArbSfi/NnNUCyHrOIwajkX92VKmVLnTWbFVju69+WXEPtBJG6kZq69KolO22fAKzG0PIYNYNo4rM= ;{id = 55566}
+SECTION AUTHORITY
+example.com.	IN NS	ns.example.com.
+example.com.    3600    IN      RRSIG   NS 8 2 3600 20240629235030 20240530235030 55566 example.com. FWRjlbOPZX7xY8uZ+spdbgKGEwtlvRjD4RTpb3FhDXy1kif/3VCf4vpuhGEmzt5mhwFf5+8eMSPDpyg7mD2gqvOdiZF0c5WqEqZwcYjKB0YFURiUTYI+Wbdo2IRvUErddoWqg0Qe7VnBMxfkXIZPPYQyajPsnUFtx8xfoBLyPmw= ;{id = 55566}
+SECTION ADDITIONAL
+ns.example.com.		IN 	A	1.2.3.4
+ns.example.com. 3600    IN      RRSIG   A 8 3 3600 20240629235030 20240530235030 55566 example.com. kDlQr8elTrch1rfd2CblhJf/50h65ZrMrWPhHc1Zp6/cJW9lEqTn8pmT22VzxSnFWuPZdsrWW528XMdjYyN8kL13PArCoHulA4Qkzh+aOx/yFhNfrGhUdio0gYXtxEImQ4KDgOX3AYRSXFeriyB4aNjXisCkBioaiuVncWplRig= ;{id = 55566}
+ENTRY_END
+
+RANGE_END
+
+STEP 0 QUERY
+ENTRY_BEGIN
+REPLY RD DO
+SECTION QUESTION
+example.com. IN A
+ENTRY_END
+
+; get internet answer with DO
+STEP 1 CHECK_ANSWER
+ENTRY_BEGIN
+MATCH all
+REPLY QR RA RD AD DO NOERROR
+SECTION QUESTION
+example.com. IN A
+SECTION ANSWER
+example.com. IN A	10.20.30.40
+example.com.    3600    IN      RRSIG   A 8 2 3600 20240629235030 20240530235030 55566 example.com.	jL4P3XZ8HN0SpY/xSHii3xK5yWbqo+t7sqaq4TAsorj1Kt4md8KanC9J39I+zXdwnlcC3lDMJJb09+b70ysDIScjgn3G/hLpQJkOyuks73BvxhysXKozLZtyY2ue0RKI2axL9BB1ERYv0OqNbImDo5MbnTk/0HpnYmWEFnOrolI= ;{id = 55566}
+SECTION AUTHORITY
+example.com.	IN NS	ns.example.com.
+example.com.    3600    IN      RRSIG   NS 8 2 3600 20240629235030 20240530235030 55566 example.com. FWRjlbOPZX7xY8uZ+spdbgKGEwtlvRjD4RTpb3FhDXy1kif/3VCf4vpuhGEmzt5mhwFf5+8eMSPDpyg7mD2gqvOdiZF0c5WqEqZwcYjKB0YFURiUTYI+Wbdo2IRvUErddoWqg0Qe7VnBMxfkXIZPPYQyajPsnUFtx8xfoBLyPmw= ;{id = 55566}
+SECTION ADDITIONAL
+ns.example.com.		IN 	A	1.2.3.4
+ns.example.com. 3600    IN      RRSIG   A 8 3 3600 20240629235030 20240530235030 55566 example.com. kDlQr8elTrch1rfd2CblhJf/50h65ZrMrWPhHc1Zp6/cJW9lEqTn8pmT22VzxSnFWuPZdsrWW528XMdjYyN8kL13PArCoHulA4Qkzh+aOx/yFhNfrGhUdio0gYXtxEImQ4KDgOX3AYRSXFeriyB4aNjXisCkBioaiuVncWplRig= ;{id = 55566}
+ENTRY_END
+
+STEP 10 QUERY
+ENTRY_BEGIN
+REPLY RD AD
+SECTION QUESTION
+example.com. IN A
+ENTRY_END
+
+; get NODATA
+STEP 11 CHECK_ANSWER
+ENTRY_BEGIN
+MATCH all
+REPLY QR AA RA RD NOERROR
+SECTION QUESTION
+example.com. IN A
+SECTION ANSWER
+SECTION AUTHORITY
+SECTION ADDITIONAL
+ENTRY_END
+
+STEP 20 QUERY
+ENTRY_BEGIN
+REPLY RD AD DO
+SECTION QUESTION
+example.com. IN AAAA
+ENTRY_END
+
+; get internet answer for other type with DO
+STEP 21 CHECK_ANSWER
+ENTRY_BEGIN
+MATCH all
+REPLY QR AD RA RD DO NOERROR
+SECTION QUESTION
+example.com. IN AAAA
+SECTION ANSWER
+example.com. IN AAAA	2001::1
+example.com.    3600    IN      RRSIG   AAAA 8 2 3600 20240629235030 20240530235030 55566 example.com. wSPkFoL/8jory27xXwBhC4Th7ODxe/yvHeW9sOCjRb2wnV0XWg34GYbXt5fw0ieADwB3Z/jVhjhaOPL4TdVZ5l85JiuO1eQArbSfi/NnNUCyHrOIwajkX92VKmVLnTWbFVju69+WXEPtBJG6kZq69KolO22fAKzG0PIYNYNo4rM= ;{id = 55566}
+SECTION AUTHORITY
+example.com.	IN NS	ns.example.com.
+example.com.    3600    IN      RRSIG   NS 8 2 3600 20240629235030 20240530235030 55566 example.com. FWRjlbOPZX7xY8uZ+spdbgKGEwtlvRjD4RTpb3FhDXy1kif/3VCf4vpuhGEmzt5mhwFf5+8eMSPDpyg7mD2gqvOdiZF0c5WqEqZwcYjKB0YFURiUTYI+Wbdo2IRvUErddoWqg0Qe7VnBMxfkXIZPPYQyajPsnUFtx8xfoBLyPmw= ;{id = 55566}
+SECTION ADDITIONAL
+ns.example.com.		IN 	A	1.2.3.4
+ns.example.com. 3600    IN      RRSIG   A 8 3 3600 20240629235030 20240530235030 55566 example.com. kDlQr8elTrch1rfd2CblhJf/50h65ZrMrWPhHc1Zp6/cJW9lEqTn8pmT22VzxSnFWuPZdsrWW528XMdjYyN8kL13PArCoHulA4Qkzh+aOx/yFhNfrGhUdio0gYXtxEImQ4KDgOX3AYRSXFeriyB4aNjXisCkBioaiuVncWplRig= ;{id = 55566}
+ENTRY_END
+
+STEP 30 QUERY
+ENTRY_BEGIN
+REPLY RD AD
+SECTION QUESTION
+example.com. IN AAAA
+ENTRY_END
+
+; get internet answer for other type
+STEP 31 CHECK_ANSWER
+ENTRY_BEGIN
+MATCH all
+REPLY QR AD RA RD NOERROR
+SECTION QUESTION
+example.com. IN AAAA
+SECTION ANSWER
+example.com. IN AAAA	2001::1
+SECTION AUTHORITY
+example.com.	IN NS	ns.example.com.
+SECTION ADDITIONAL
+ns.example.com.		IN 	A	1.2.3.4
+ENTRY_END
+
+STEP 40 QUERY
+ENTRY_BEGIN
+REPLY RD DO
+SECTION QUESTION
+www.example.com. IN A
+ENTRY_END
+
+; get internet answer for other name with DO
+STEP 41 CHECK_ANSWER
+ENTRY_BEGIN
+MATCH all
+REPLY QR RA RD AD DO NOERROR
+SECTION QUESTION
+www.example.com. IN A
+SECTION ANSWER
+www.example.com. IN A	10.20.30.41
+www.example.com.    3600    IN      RRSIG   A 8 3 3600 20240629235030 20240530235030 55566 example.com.	QlnnqSWqNyujF9CTSm5FFeXn1tMQOjCMcQjkWx+Msl9YamT5MaGJVlnyOcOSWUFv2AquiMilzqct3qogcFOtXx2gRPcsEhiuUZgh9TrSnwPT8fZMgJMiE6BuO06I1ca1FOFqYa4nXl7WUoUajyXjRK8QiIrYgSyMwXVJWV8BY/Y= ;{id = 55566}
+SECTION AUTHORITY
+example.com.	IN NS	ns.example.com.
+example.com.    3600    IN      RRSIG   NS 8 2 3600 20240629235030 20240530235030 55566 example.com. FWRjlbOPZX7xY8uZ+spdbgKGEwtlvRjD4RTpb3FhDXy1kif/3VCf4vpuhGEmzt5mhwFf5+8eMSPDpyg7mD2gqvOdiZF0c5WqEqZwcYjKB0YFURiUTYI+Wbdo2IRvUErddoWqg0Qe7VnBMxfkXIZPPYQyajPsnUFtx8xfoBLyPmw= ;{id = 55566}
+SECTION ADDITIONAL
+ns.example.com.		IN 	A	1.2.3.4
+ns.example.com. 3600    IN      RRSIG   A 8 3 3600 20240629235030 20240530235030 55566 example.com. kDlQr8elTrch1rfd2CblhJf/50h65ZrMrWPhHc1Zp6/cJW9lEqTn8pmT22VzxSnFWuPZdsrWW528XMdjYyN8kL13PArCoHulA4Qkzh+aOx/yFhNfrGhUdio0gYXtxEImQ4KDgOX3AYRSXFeriyB4aNjXisCkBioaiuVncWplRig= ;{id = 55566}
+ENTRY_END
+
+STEP 50 QUERY
+ENTRY_BEGIN
+REPLY RD AD
+SECTION QUESTION
+www.example.com. IN A
+ENTRY_END
+
+; get NODATA for other name
+STEP 51 CHECK_ANSWER
+ENTRY_BEGIN
+MATCH all
+REPLY QR AA RA RD NOERROR
+SECTION QUESTION
+www.example.com. IN A
+SECTION ANSWER
+SECTION AUTHORITY
+SECTION ADDITIONAL
+ENTRY_END
+
+SCENARIO_END
