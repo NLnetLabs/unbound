@@ -3,6 +3,10 @@
 	  broken auth zones that include unsigned out of zone (above apex)
 	  data. Could lead to hang while trying to prove a wildcard answer.
 
+12 May 2025: Wouter
+	- Fix #1283: Unsafe usage of atoi() while parsing the configuration
+	  file.
+
 9 May 2025: Wouter
 	- Fix #1281: forward-zone "name: ." conflicts with auth-zone "name: ."
 	  in 1.23.0, but worked in 1.22.0.
