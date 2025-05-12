@@ -2413,14 +2413,12 @@ az_find_wildcard(struct auth_zone* z, struct query_info* qinfo,
 	if(!dname_subdomain_c(nm, z->name))
 		return NULL; /* out of zone */
 	while((node=az_find_wildcard_domain(z, nm, nmlen))==NULL) {
-		/* see if we can go up to find the wildcard */
 		if(nmlen == z->namelen)
 			return NULL; /* top of zone reached */
 		if(ce && nmlen == ce->namelen)
 			return NULL; /* ce reached */
-		if(dname_is_root(nm))
-			return NULL; /* cannot go up */
-		dname_remove_label(&nm, &nmlen);
+		if(!dname_remove_label_limit_len(&nm, &nmlen, z->namelen))
+			return NULL; /* can't go up */
 	}
 	return node;
 }
@@ -2442,9 +2440,8 @@ az_find_candidate_ce(struct auth_zone* z, struct query_info* qinfo,
 	n = az_find_name(z, nm, nmlen);
 	/* delete labels and go up on name */
 	while(!n) {
-		if(dname_is_root(nm))
-			return NULL; /* cannot go up */
-		dname_remove_label(&nm, &nmlen);
+		if(!dname_remove_label_limit_len(&nm, &nmlen, z->namelen))
+			return NULL; /* can't go up */
 		n = az_find_name(z, nm, nmlen);
 	}
 	return n;
@@ -2456,8 +2453,7 @@ az_domain_go_up(struct auth_zone* z, struct auth_data* n)
 {
 	uint8_t* nm = n->name;
 	size_t nmlen = n->namelen;
-	while(!dname_is_root(nm)) {
-		dname_remove_label(&nm, &nmlen);
+	while(dname_remove_label_limit_len(&nm, &nmlen, z->namelen)) {
 		if((n=az_find_name(z, nm, nmlen)) != NULL)
 			return n;
 	}
@@ -2788,9 +2784,9 @@ az_find_nsec_cover(struct auth_zone* z, struct auth_data** node)
 	/* but there could be glue, and if this is node, then it has no NSEC.
 	 * Go up to find nonglue (previous) NSEC-holding nodes */
 	while((rrset=az_domain_rrset(*node, LDNS_RR_TYPE_NSEC)) == NULL) {
-		if(dname_is_root(nm)) return NULL;
 		if(nmlen == z->namelen) return NULL;
-		dname_remove_label(&nm, &nmlen);
+		if(!dname_remove_label_limit_len(&nm, &nmlen, z->namelen))
+			return NULL; /* can't go up */
 		/* adjust *node for the nsec rrset to find in */
 		*node = az_find_name(z, nm, nmlen);
 	}
@@ -3018,12 +3014,9 @@ az_nsec3_find_ce(struct auth_zone* z, uint8_t** cenm, size_t* cenmlen,
 	struct auth_data* node;
 	while((node = az_nsec3_find_exact(z, *cenm, *cenmlen,
 		algo, iter, salt, saltlen)) == NULL) {
-		if(*cenmlen == z->namelen) {
-			/* next step up would take us out of the zone. fail */
-			return NULL;
-		}
+		if(!dname_remove_label_limit_len(cenm, cenmlen, z->namelen))
+			return NULL; /* can't go up */
 		*no_exact_ce = 1;
-		dname_remove_label(cenm, cenmlen);
 	}
 	return node;
 }
@@ -3340,7 +3333,8 @@ az_generate_wildcard_answer(struct auth_zone* z, struct query_info* qinfo,
 	} else if(ce) {
 		uint8_t* wildup = wildcard->name;
 		size_t wilduplen= wildcard->namelen;
-		dname_remove_label(&wildup, &wilduplen);
+		if(!dname_remove_label_limit_len(&wildup, &wilduplen, z->namelen))
+			return 0; /* can't go up */
 		if(!az_add_nsec3_proof(z, region, msg, wildup,
 			wilduplen, msg->qinfo.qname,
 			msg->qinfo.qname_len, 0, insert_ce, 1, 0))
