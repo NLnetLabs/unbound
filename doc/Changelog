@@ -1,3 +1,8 @@
+12 May 2025: Yorgos
+	- Merge #1280: Fix auth nsec3 code. Fixes NSEC3 code to not break on
+	  broken auth zones that include unsigned out of zone (above apex)
+	  data. Could lead to hang while trying to prove a wildcard answer.
+
 9 May 2025: Wouter
 	- Fix #1281: forward-zone "name: ." conflicts with auth-zone "name: ."
 	  in 1.23.0, but worked in 1.22.0.
