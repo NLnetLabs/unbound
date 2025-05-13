@@ -473,7 +473,8 @@ create_udp_sock(int family, int socktype, struct sockaddr* addr,
 					"Got %u. To fix: start with "
 					"root permissions(linux) or sysctl "
 					"bigger net.core.wmem_max(linux) or "
-					"kern.ipc.maxsockbuf(bsd) values.",
+					"kern.ipc.maxsockbuf(bsd) values. or "
+					"set so-sndbuf: 0 (use system value).",
 					(unsigned)snd, (unsigned)got);
 			}
 #  ifdef SO_SNDBUFFORCE

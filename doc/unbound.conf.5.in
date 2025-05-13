@@ -355,11 +355,14 @@ If not 0, then set the SO_SNDBUF socket option to get more buffer space on
 UDP port 53 outgoing queries.  This for very busy servers handles spikes
 in answer traffic, otherwise 'send: resource temporarily unavailable'
 can get logged, the buffer overrun is also visible by netstat \-su.
-Default is 0 (use system value).  Specify the number of bytes to ask
-for, try "4m" on a very busy server.  The OS caps it at a maximum, on
-linux Unbound needs root permission to bypass the limit, or the admin
-can use sysctl net.core.wmem_max.  On BSD, Solaris changes are similar
-to so\-rcvbuf.
+Default is 1M. If set to 0 it uses the system value. Specify the number
+of bytes to ask for, try "4m" on a very busy server. It needs some space
+to be able to deal with packets that wait for local address resolution,
+from like ARP and NDP discovery, before they are sent out, hence
+it is elevated above the system default by default.  The OS caps it at
+a maximum, on linux Unbound needs root permission to bypass the limit,
+or the admin can use sysctl net.core.wmem_max.  On BSD, Solaris changes
+are similar to so\-rcvbuf.
 .TP
 .B so\-reuseport: \fI<yes or no>
 If yes, then open dedicated listening sockets for incoming queries for each
