@@ -355,8 +355,8 @@ If not 0, then set the SO_SNDBUF socket option to get more buffer space on
 UDP port 53 outgoing queries.  This for very busy servers handles spikes
 in answer traffic, otherwise 'send: resource temporarily unavailable'
 can get logged, the buffer overrun is also visible by netstat \-su.
-Default is 1M. If set to 0 it uses the system value. Specify the number
-of bytes to ask for, try "4m" on a very busy server. It needs some space
+Default is 4m. If set to 0 it uses the system value. Specify the number
+of bytes to ask for, try "8m" on a very busy server. It needs some space
 to be able to deal with packets that wait for local address resolution,
 from like ARP and NDP discovery, before they are sent out, hence
 it is elevated above the system default by default.  The OS caps it at

@@ -7,6 +7,7 @@
 	- Change default for so-sndbuf to 1m, to mitigate a cross-layer
 	  issue where the UDP socket send buffers are exhausted waiting
 	  for ARP/NDP resolution. Thanks to Reflyable for the report.
+	- Adjusted so-sndbuf default to 4m.
 
 12 May 2025: Yorgos
 	- Merge #1280: Fix auth nsec3 code. Fixes NSEC3 code to not break on
