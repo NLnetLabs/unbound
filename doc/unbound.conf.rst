@@ -81,21 +81,21 @@ all the options.
 
     # unbound.conf(5) config file for unbound(8).
     server:
-    directory: "/etc/unbound"
-    username: unbound
-    # make sure unbound can access entropy from inside the chroot.
-    # e.g. on linux the use these commands (on BSD, devfs(8) is used):
-    #      mount --bind -n /dev/urandom /etc/unbound/dev/urandom
-    # and  mount --bind -n /dev/log /etc/unbound/dev/log
-    chroot: "/etc/unbound"
-    # logfile: "/etc/unbound/unbound.log"  #uncomment to use logfile.
-    pidfile: "/etc/unbound/unbound.pid"
-    # verbosity: 1      # uncomment and increase to get more logging.
-    # listen on all interfaces, answer queries from the local subnet.
-    interface: 0.0.0.0
-    interface: ::0
-    access-control: 10.0.0.0/8 allow
-    access-control: 2001:DB8::/64 allow
+        directory: "/etc/unbound"
+        username: unbound
+        # make sure unbound can access entropy from inside the chroot.
+        # e.g. on linux the use these commands (on BSD, devfs(8) is used):
+        #      mount --bind -n /dev/urandom /etc/unbound/dev/urandom
+        # and  mount --bind -n /dev/log /etc/unbound/dev/log
+        chroot: "/etc/unbound"
+        # logfile: "/etc/unbound/unbound.log"  #uncomment to use logfile.
+        pidfile: "/etc/unbound/unbound.pid"
+        # verbosity: 1      # uncomment and increase to get more logging.
+        # listen on all interfaces, answer queries from the local subnet.
+        interface: 0.0.0.0
+        interface: ::0
+        access-control: 10.0.0.0/8 allow
+        access-control: 2001:DB8::/64 allow
 
 File Format
 -----------
@@ -373,7 +373,7 @@ incoming-num-tcp: *<number>*
 
     Default: 10
 
-.. _unbound.conf.ends-buffer-size:
+.. _unbound.conf.edns-buffer-size:
 
 edns-buffer-size: *<number>*
     Number of bytes size to advertise as the EDNS reassembly buffer size.
@@ -398,7 +398,7 @@ max-udp-size: *<number>*
     client, always.
     Suggested values are 512 to 4096.
 
-    Default: 4096
+    Default: 1232 (same as :ref:`edns-buffer-size:<unbound.conf.edns-buffer-size>`)
 
 .. _unbound.conf.stream-wait-size:
 
@@ -508,6 +508,70 @@ unknown-server-time-limit: *<msec>*
     That would then avoid re-querying every initial query because it times out.
 
     Default: 376
+
+.. _unbound.conf.discard-timeout:
+
+discard-timeout: *<msec>*
+    The wait time in msec where recursion requests are dropped.
+    This is to stop a large number of replies from accumulating.
+    They receive no reply, the work item continues to recurse.
+    It is nice to be a bit larger than
+    :ref:`serve-expired-client-timeout<unbound.conf.serve-expired-client-timeout>`
+    if that is enabled.
+    A value of ``1900`` msec is suggested.
+    The value ``0`` disables it.
+
+    Default: 1900
+
+.. _unbound.conf.wait-limit:
+
+wait-limit: *<number>*
+    The number of replies that can wait for recursion, for an IP address.
+    This makes a ratelimit per IP address of waiting replies for recursion.
+    It stops very large amounts of queries waiting to be returned to one
+    destination.
+    The value ``0`` disables wait limits.
+
+    Default: 1000
+
+.. _unbound.conf.wait-limit-cookie:
+
+wait-limit-cookie: *<number>*
+    The number of replies that can wait for recursion, for an IP address
+    that sent the query with a valid DNS Cookie.
+    Since the cookie validates the client address, this limit can be higher.
+
+    Default: 10000
+
+.. _unbound.conf.wait-limit-netblock:
+
+wait-limit-netblock: *<netblock>* *<number>*
+    The wait limit for the netblock.
+    If not given the
+    :ref:`wait-limit<unbound.conf.wait-limit>`
+    value is used.
+    The most specific netblock is used to determine the limit.
+    Useful for overriding the default for a specific, group or individual,
+    server.
+    The value ``-1`` disables wait limits for the netblock.
+    By default the loopback has a wait limit netblock of ``-1``, it is not
+    limited, because it is separated from the rest of network for spoofed
+    packets.
+    The loopback addresses ``127.0.0.0/8`` and ``::1/128`` are default at ``-1``.
+
+    Default: (none)
+
+.. _unbound.conf.wait-limit-cookie-netblock:
+
+wait-limit-cookie-netblock: *<netblock>* *<number>*
+    The wait limit for the netblock, when the query has a DNS Cookie.
+    If not given, the
+    :ref:`wait-limit-cookie<unbound.conf.wait-limit-cookie>`
+    value is used.
+    The value ``-1`` disables wait limits for the netblock.
+    The loopback addresses ``127.0.0.0/8`` and ``::1/128`` are default at ``-1``.
+
+    Default: (none)
 
 .. _unbound.conf.so-rcvbuf:
 
@@ -666,6 +730,19 @@ cache-max-negative-ttl: *<seconds>*
 
     Default: 3600
 
+.. _unbound.conf.cache-min-negative-ttl:
+
+cache-min-negative-ttl: *<seconds>*
+    Time to live minimum for negative responses, these have a SOA in the
+    authority section that is limited in time.
+    If this is disabled and
+    :ref:`cache-min-ttl<unbound.conf.cache-min-ttl>`
+    is configured, it will take effect instead.
+    In that case you can set this to ``1`` to honor the upstream TTL.
+    This applies to NXDOMAIN and NODATA answers.
+
+    Default: 0 (disabled)
+
 .. _unbound.conf.infra-host-ttl:
 
 infra-host-ttl: *<seconds>*
@@ -816,6 +893,11 @@ tcp-idle-timeout: *<msec>*
     number configured.
     A minimum timeout of 200 milliseconds is observed regardless of the option
     value used.
+    It will be overridden by
+    :ref:`edns-tcp-keepalive-timeout<unbound.conf.edns-tcp-keepalive-timeout>`
+    if
+    :ref:`edns-tcp-keepalive<unbound.conf.edns-tcp-keepalive>`
+    is enabled.
 
     Default: 30000 (30 seconds)
 
@@ -852,23 +934,30 @@ edns-tcp-keepalive: *<yes or no>*
 .. _unbound.conf.edns-tcp-keepalive-timeout:
 
 edns-tcp-keepalive-timeout: *<msec>*
-    The period Unbound will wait for a query on a TCP connection when EDNS TCP
-    Keepalive is active.
-    If this timeout expires Unbound closes the connection.
+    Overrides
+    :ref:`tcp-idle-timeout<unbound.conf.tcp-idle-timeout>`
+    when
+    :ref:`edns-tcp-keepalive<unbound.conf.edns-tcp-keepalive>`
+    is enabled.
+    If the client supports the EDNS TCP Keepalive option,
     If the client supports the EDNS TCP Keepalive option, Unbound sends the
     timeout value to the client to encourage it to close the connection before
     the server times out.
 
-    When the number of free incoming TCP buffers falls below 50% of the total
-    number configured, the advertised timeout is progressively reduced to 1% of
-    the configured value, then to 0.2% of the configured value if the number of
-    free buffers falls below 35% of the total number configured, and finally to
-    0 if the number of free buffers falls below 20% of the total number
-    configured.
-    A minimum actual timeout of 200 milliseconds is observed regardless of the
-    advertised timeout.
+    Default: 120000 (2 minutes)
 
-    Default: 120000 (2 seconds)
+.. _unbound.conf.sock-queue-timeout:
+
+sock-queue-timeout: *<sec>*
+    UDP queries that have waited in the socket buffer for a long time can be
+    dropped.
+    The time is set in seconds, 3 could be a good value to ignore old queries
+    that likely the client does not need a reply for any more.
+    This could happen if the host has not been able to service the queries for
+    a while, i.e. Unbound is not running, and then is enabled again.
+    It uses timestamp socket options.
+
+    Default: 0 (disabled)
 
 .. _unbound.conf.tcp-upstream:
 
@@ -912,6 +1001,13 @@ tls-upstream: *<yes or no>*
     :ref:`forward-tls-upstream:<unbound.conf.forward.forward-tls-upstream>`.
     And also with
     :ref:`stub-tls-upstream:<unbound.conf.stub.stub-tls-upstream>`.
+    If the
+    :ref:`tls-upstream:<unbound.conf.tls-upstream>`
+    option is enabled, it is for all the forwards and stubs, where the
+    :ref:`forward-tls-upstream:<unbound.conf.forward.forward-tls-upstream>`
+    and
+    :ref:`stub-tls-upstream:<unbound.conf.stub.stub-tls-upstream>`
+    options are ignored, as if they had been set to yes.
 
     Default: no
 
@@ -1195,9 +1291,30 @@ proxy-protocol-port: *<portnr>*
 
     PROXYv2 is supported for UDP and TCP/TLS listening interfaces.
 
-    There is no support for PROXYv2 on a DoH or DNSCrypt listening interface.
+    There is no support for PROXYv2 on a DoH, DoQ or DNSCrypt listening interface.
 
     Can list multiple, each on a new statement.
+
+.. _unbound.conf.quic-port:
+
+quic-port: *<number>*
+    The port number on which to provide DNS-over-QUIC service.
+    Only interfaces configured with that port number as @number get the QUIC
+    service.
+    The interface uses QUIC for the UDP traffic on that port number.
+
+    Default: 853
+
+.. _unbound.conf.quic-size:
+
+quic-size: *<size in bytes>*
+    Maximum number of bytes for all QUIC buffers and data combined.
+    A plain number is in bytes, append 'k', 'm' or 'g' for kilobytes, megabytes
+    or gigabytes (1024*1024 bytes in a megabyte).
+    New connections receive connection refused when the limit is exceeded.
+    New streams are reset when the limit is exceeded.
+
+    Default: 8m
 
 .. _unbound.conf.use-systemd:
 
@@ -1227,6 +1344,12 @@ tcp-connection-limit: *<IP netblock> <limit>*
 .. _unbound.conf.access-control:
 
 access-control: *<IP netblock> <action>*
+    Specify treatment of incoming queries from their originating IP address.
+    Queries can be allowed to have access to this server that gives DNS
+    answers, or refused, with other actions possible.
+    The IP address range can be specified as a netblock, it is possible to give
+    the statement several times in order to specify the treatment of different
+    netblocks.
     The netblock is given as an IPv4 or IPv6 address with /size appended for a
     classless network block.
     The most specific netblock match is used, if none match
@@ -1238,6 +1361,7 @@ access-control: *<IP netblock> <action>*
     :ref:`allow<unbound.conf.access-control.action.allow>`,
     :ref:`allow_setrd<unbound.conf.access-control.action.allow_setrd>`,
     :ref:`allow_snoop<unbound.conf.access-control.action.allow_snoop>`,
+    :ref:`allow_cookie<unbound.conf.access-control.action.allow_cookie>`,
     :ref:`deny_non_local<unbound.conf.access-control.action.deny_non_local>` or
     :ref:`refuse_non_local<unbound.conf.access-control.action.refuse_non_local>`.
 
@@ -1288,7 +1412,7 @@ access-control: *<IP netblock> <action>*
 
     allow_snoop
         Gives non-recursive access too.
-        This give both recursive and non recursive access.
+        This gives both recursive and non recursive access.
         The name *allow_snoop* refers to cache snooping, a technique to use
         non-recursive queries to examine the cache contents (for malicious
         acts).
@@ -1298,6 +1422,22 @@ access-control: *<IP netblock> <action>*
         In that case use
         :ref:`allow_snoop<unbound.conf.access-control.action.allow_snoop>` for
         your administration host.
+
+    .. _unbound.conf.access-control.action.allow_cookie:
+
+    allow_cookie
+        Allows access only to UDP queries that contain a valid DNS Cookie as
+        specified in RFC 7873 and RFC 9018, when the
+        :ref:`answer-cookie:<unbound.conf.answer-cookie>` option is enabled.
+        UDP queries containing only a DNS Client Cookie and no Server Cookie,
+        or an invalid DNS Cookie, will receive a BADCOOKIE response including a
+        newly generated DNS Cookie, allowing clients to retry with that DNS
+        Cookie.
+        The *allow_cookie* action will also accept requests over stateful
+        transports, regardless of the presence of an DNS Cookie and regardless
+        of the :ref:`answer-cookie:<unbound.conf.answer-cookie>` setting.
+        UDP queries without a DNS Cookie receive REFUSED responses with the TC
+        flag set, that may trigger fall back to TCP for those clients.
 
     .. _unbound.conf.access-control.action.deny_non_local:
     .. _unbound.conf.access-control.action.refuse_non_local:
@@ -1317,7 +1457,8 @@ access-control: *<IP netblock> <action>*
         :ref:`refuse_non_local<unbound.conf.access-control.action.refuse_non_local>`
         they receive error code REFUSED.
 
-    By default only localhost is *allowed*, the rest is refused.
+    By default only localhost (the 127.0.0.0/8 IP netblock, not the loopback
+    interface) is implicitly *allowed*, the rest is refused.
     The default is *refused*, because that is protocol-friendly.
     The DNS protocol is not designed to handle dropped packets due to policy,
     and dropping may result in (possibly excessive) retried queries.
@@ -1371,9 +1512,12 @@ interface-action: *<ip address or interface name [@port]> <action>*
 
     Default action for interfaces is
     :ref:`refuse<unbound.conf.access-control.action.refuse>`.
-    By default only localhost (the IP netblock, not the loopback interface) is
-    allowed through the default
+    By default only localhost (the 127.0.0.0/8 IP netblock, not the loopback
+    interface) is implicitly allowed through the default
     :ref:`access-control:<unbound.conf.access-control>` behavior.
+    This also means that any attempt to use the **interface-\*:** options for
+    the loopback interface will not work as they will be overridden by the
+    implicit default "access-control: 127.0.0.0/8 allow" option.
 
     .. note::
         The interface needs to be already specified with
@@ -1534,6 +1678,15 @@ log-time-ascii: *<yes or no>*
 
     Default: no (prints the seconds since 1970 in brackets)
 
+.. _unbound.conf.log-time-iso:
+
+log-time-iso: *<yes or no>*
+    Log time in ISO8601 format, if
+    :ref:`log-time-ascii: yes`<unbound.conf.log-time-ascii>`
+    is also set.
+
+    Default: no
+
 .. _unbound.conf.log-queries:
 
 log-queries: *<yes or no>*
@@ -1566,6 +1719,16 @@ log-tag-queryreply: *<yes or no>*
     This makes filtering logs easier.
 
     Default: no (backwards compatible)
+
+.. _unbound.conf.log-destaddr:
+
+log-destaddr: *<yes or no>*
+    Prints the destination address, port and type in the
+    :ref:`log-replies<unbound.conf.log-replies>` output.
+    This disambiguates what type of traffic, eg. UDP or TCP, and to what local
+    port the traffic was sent to.
+
+    Default: no
 
 .. _unbound.conf.log-local-actions:
 
@@ -1605,7 +1768,7 @@ pidfile: *<filename>*
 
     gracefully terminates.
 
-    Default: /usr/local/etc/unbound/unbound.pid
+    Default: @UNBOUND_PIDFILE@
 
 .. _unbound.conf.root-hints:
 
@@ -1711,13 +1874,13 @@ target-fetch-policy: *<"list of numbers">*
 harden-short-bufsize: *<yes or no>*
     Very small EDNS buffer sizes from queries are ignored.
 
-    Default: on (as described in the standard)
+    Default: yes (as described in the standard)
 
 .. _unbound.conf.harden-large-queries:
 
 harden-large-queries: *<yes or no>*
     Very large queries are ignored.
-    Default is off, since it is legal protocol wise to send these, and could be
+    Default is no, since it is legal protocol wise to send these, and could be
     necessary for operation if TSIG or EDNS payload is very large.
 
     Default: no
@@ -1728,6 +1891,15 @@ harden-glue: *<yes or no>*
     Will trust glue only if it is within the servers authority.
 
     Default: yes
+
+.. _unbound.conf.harden-unverified-glue:
+
+harden-unverified-glue: *<yes or no>*
+    Will trust only in-zone glue.
+    Will try to resolve all out of zone (*unverified*) glue.
+    Will fallback to the original glue if unable to resolve.
+
+    Default: no
 
 .. _unbound.conf.harden-dnssec-stripped:
 
@@ -1789,10 +1961,36 @@ harden-referral-path: *<yes or no>*
 harden-algo-downgrade: *<yes or no>*
     Harden against algorithm downgrade when multiple algorithms are advertised
     in the DS record.
-    If no, allows the weakest algorithm to validate the zone.
-    Zone signers must produce zones that allow this feature to work, but
-    sometimes they do not, and turning this option off avoids that validation
-    failure.
+    This works by first choosing only the strongest DS digest type as per
+    :rfc:`4509` (Unbound treats the highest algorithm as the strongest) and
+    then expecting signatures from all the advertised signing algorithms from
+    the chosen DS(es) to be present.
+    If no, allows any one supported algorithm to validate the zone, even if
+    other advertised algorithms are broken.
+    :rfc:`6840` mandates that zone signers must produce zones signed with all
+    advertised algorithms, but sometimes they do not.
+    :rfc:`6840` also clarifies that this requirement is not for validators and
+    validators should accept any single valid path.
+    It should thus be explicitly noted that this option violates :rfc:`6840`
+    for DNSSEC validation and should only be used to perform a signature
+    completeness test to support troubleshooting.
+
+    .. warning::
+        Using this option may break DNSSEC resolution with non :rfc:`6840`
+        conforming signers and/or in multi-signer configurations that don't
+        send all the advertised signatures.
+
+    Default: no
+
+.. _unbound.conf.harden-unknown-additional:
+
+harden-unknown-additional: *<yes or no>*
+    Harden against unknown records in the authority section and additional
+    section.
+    If no, such records are copied from the upstream and presented to the
+    client together with the answer.
+    If yes, it could hamper future protocol developments that want to add
+    records.
 
     Default: no
 
@@ -1817,7 +2015,7 @@ caps-exempt: *<domain>*
 
 .. _unbound.conf.caps-whitelist:
 
-caps-whitelist: *<yes or no>*
+caps-whitelist: *<domain>*
     Alternate syntax for :ref:`caps-exempt:<unbound.conf.caps-exempt>`.
 
 .. _unbound.conf.qname-minimisation:
@@ -1929,8 +2127,8 @@ do-not-query-localhost: *<yes or no>*
 .. _unbound.conf.prefetch:
 
 prefetch: *<yes or no>*
-    If yes, message cache elements are prefetched before they expire to keep
-    the cache up to date.
+    If yes, cache hits on message cache elements that are on their last 10
+    percent of their TTL value trigger a prefetch to keep the cache up to date.
     Turning it on gives about 10 percent more traffic and load on the machine,
     but popular items do not expire from the cache.
 
@@ -1971,14 +2169,13 @@ minimal-responses: *<yes or no>*
     If yes, Unbound does not insert authority/additional sections into response
     messages when those sections are not required.
     This reduces response size significantly, and may avoid TCP fallback for
-    some responses.
-    This may cause a slight speedup.
-
+    some responses which may cause a slight speedup.
     The default is yes, even though the DNS protocol RFCs mandate these
-    sections, and the additional content could be of use and save roundtrips
-    for clients.
-    Because they are not used, and the saved roundtrips are easier saved with
-    prefetch, whilst this is faster.
+    sections, and the additional content could save roundtrips for clients that
+    use the additional content.
+    However these sections are hardly used by clients.
+    Enabling prefetch can benefit clients that need the additional content
+    by trying to keep that content fresh in the cache.
 
     Default: yes
 
@@ -2017,9 +2214,6 @@ module-config: *"<module names>"*
     queries.
 
     The default is "validator iterator".
-
-    When the server is built with EDNS client subnet support the default is
-    "subnetcache validator iterator".
 
     Most modules that need to be listed here have to be listed at the beginning
     of the line.
@@ -2233,13 +2427,33 @@ ignore-cd-flag: *<yes or no>*
 
     Default: no
 
+.. _unbound.conf.disable-edns-do:
+
+disable-edns-do: *<yes or no>*
+    Disable the EDNS DO flag in upstream requests.
+    It breaks DNSSEC validation for Unbound's clients.
+    This results in the upstream name servers to not include DNSSEC records in
+    their replies and could be helpful for devices that cannot handle DNSSEC
+    information.
+    When the option is enabled, clients that set the DO flag receive no EDNS
+    record in the response to indicate the lack of support to them.
+    If this option is enabled but Unbound is already configured for DNSSEC
+    validation (i.e., the validator module is enabled; default) this option is
+    implicitly turned off with a warning as to not break DNSSEC validation in
+    Unbound.
+
+    Default: no
+
 .. _unbound.conf.serve-expired:
 
 serve-expired: *<yes or no>*
     If enabled, Unbound attempts to serve old responses from cache with a TTL
     of :ref:`serve-expired-reply-ttl:<unbound.conf.serve-expired-reply-ttl>` in
-    the response without waiting for the actual resolution to finish.
-    The actual resolution answer ends up in the cache later on.
+    the response.
+    By default the expired answer will be used after a resolution attempt
+    errored out or is taking more than
+    :ref:`serve-expired-client-timeout:<unbound.conf.serve-expired-client-timeout>`
+    to resolve.
 
     Default: no
 
@@ -2247,13 +2461,13 @@ serve-expired: *<yes or no>*
 
 serve-expired-ttl: *<seconds>*
     Limit serving of expired responses to configured seconds after expiration.
-    0 disables the limit.
+    ``0`` disables the limit.
     This option only applies when
     :ref:`serve-expired:<unbound.conf.serve-expired>` is enabled.
-    A suggested value per :rfc:`8767` is between 86400 (1 day) and 259200 (3
-    days).
+    A suggested value per RFC 8767 is between 86400 (1 day) and 259200 (3 days).
+    The default is 86400.
 
-    Default: 0
+    Default: 86400
 
 .. _unbound.conf.serve-expired-ttl-reset:
 
@@ -2283,10 +2497,11 @@ serve-expired-client-timeout: *<msec>*
     This essentially enables the serve-stale behavior as specified in
     :rfc:`8767` that first tries to resolve before immediately responding with
     expired data.
-    A recommended value per :rfc:`8767` is 1800.
-    Setting this to 0 will disable this behavior.
+    Setting this to ``0`` will disable this behavior and instead serve the
+    expired record immediately from the cache before attempting to refresh it
+    via resolution.
 
-    Default: 0
+    Default: 1800
 
 .. _unbound.conf.serve-original-ttl:
 
@@ -2454,6 +2669,7 @@ local-zone: *<zone> <type>*
     :ref:`inform_deny<unbound.conf.local-zone.type.inform_deny>`,
     :ref:`inform_redirect<unbound.conf.local-zone.type.inform_redirect>`,
     :ref:`always_transparent<unbound.conf.local-zone.type.always_transparent>`,
+    :ref:`block_a<unbound.conf.local-zone.type.block_a>`,
     :ref:`always_refuse<unbound.conf.local-zone.type.always_refuse>`,
     :ref:`always_nxdomain<unbound.conf.local-zone.type.always_nxdomain>`,
     :ref:`always_null<unbound.conf.local-zone.type.always_null>`,
@@ -2589,6 +2805,15 @@ local-zone: *<zone> <type>*
         Like :ref:`transparent<unbound.conf.local-zone.type.transparent>`, but
         ignores local data and resolves normally.
 
+    .. _unbound.conf.local-zone.type.block_a:
+
+    block_a
+        Like :ref:`transparent<unbound.conf.local-zone.type.transparent>`, but
+        ignores local data and resolves normally all query types excluding A.
+        For A queries it unconditionally returns NODATA.
+        Useful in cases when there is a need to explicitly force all apps to
+        use IPv6 protocol and avoid any queries to IPv4.
+
     .. _unbound.conf.local-zone.type.always_refuse:
 
     always_refuse
@@ -2646,7 +2871,8 @@ local-zone: *<zone> <type>*
         :ref:`transparent<unbound.conf.local-zone.type.transparent>`.
 
     The default zones are localhost, reverse ``127.0.0.1`` and ``::1``, the
-    home.arpa, onion, test, invalid and the AS112 zones.
+    ``home.arpa``, ``resolver.arpa``, ``service.arpa``, ``onion``, ``test``,
+    ``invalid`` and the AS112 zones.
     The AS112 zones are reverse DNS zones for private use and reserved IP
     addresses for which the servers on the internet cannot provide correct
     answers.
@@ -2700,6 +2926,24 @@ local-zone: *<zone> <type>*
             local-zone: "home.arpa." static
             local-data: "home.arpa. 10800 IN NS localhost."
             local-data: "home.arpa. 10800 IN SOA localhost. nobody.invalid. 1 3600 1200 604800 10800"
+
+    resolver.arpa (:rfc:`9462`)
+        Default content:
+
+        .. code-block:: text
+
+            local-zone: "resolver.arpa." static
+            local-data: "resolver.arpa. 10800 IN NS localhost."
+            local-data: "resolver.arpa. 10800 IN SOA localhost. nobody.invalid. 1 3600 1200 604800 10800"
+
+    service.arpa (draft-ietf-dnssd-srp-25)
+        Default content:
+
+        .. code-block:: text
+
+            local-zone: "service.arpa." static
+            local-data: "service.arpa. 10800 IN NS localhost."
+            local-data: "service.arpa. 10800 IN SOA localhost. nobody.invalid. 1 3600 1200 604800 10800"
 
     onion (:rfc:`7686`)
         Default content:
@@ -3019,15 +3263,38 @@ ratelimit-below-domain: *<domain> <number qps or 0>*
 
 ip-ratelimit: *<number or 0>*
     Enable global ratelimiting of queries accepted per ip address.
-    0 disables the feature.
     This option is experimental at this time.
     The ratelimit is in queries per second that are allowed.
     More queries are completely dropped and will not receive a reply, SERVFAIL
     or otherwise.
     IP ratelimiting happens before looking in the cache.
     This may be useful for mitigating amplification attacks.
+    Clients with a valid DNS Cookie will bypass the ratelimit.
+    If a ratelimit for such clients is still needed,
+    :ref:`ip-ratelimit-cookie<unbound.conf.ip-ratelimit-cookie>`
+    can be used instead.
 
-    Default: 0
+    Default: 0 (disabled)
+
+.. _unbound.conf.ip-ratelimit-cookie:
+
+ip-ratelimit-cookie: *<number or 0>*
+    Enable global ratelimiting of queries accepted per IP address with a valid
+    DNS Cookie.
+    This option is experimental at this time.
+    The ratelimit is in queries per second that are allowed.
+    More queries are completely dropped and will not receive a reply, SERVFAIL
+    or otherwise.
+    IP ratelimiting happens before looking in the cache.
+    This option could be useful in combination with
+    :ref:`allow_cookie<unbound.conf.access-control.action.allow_cookie>`, in an
+    attempt to mitigate other amplification attacks than UDP reflections (e.g.,
+    attacks targeting Unbound itself) which are already handled with DNS
+    Cookies.
+    If used, the value is suggested to be higher than
+    :ref:`ip-ratelimit:<unbound.conf.ip-ratelimit>` e.g., tenfold.
+
+    Default: 0 (disabled)
 
 .. _unbound.conf.ip-ratelimit-size:
 
@@ -3110,6 +3377,36 @@ max-query-restarts: *<number>*
 
     Default: 11
 
+.. _unbound.conf.iter-scrub-ns:
+
+iter-scrub-ns: *<number>*
+    Limit on the number of NS records allowed in an rrset of type NS, from the
+    iterator scrubber.
+    This protects the internals of the resolver from overly large NS sets.
+
+    Default: 20
+
+.. _unbound.conf.iter-scrub-cname:
+
+iter-scrub-cname: *<number>*
+    Limit on the number of CNAME, DNAME records in an answer, from the iterator
+    scrubber.
+    This protects the internals of the resolver from overly long indirection
+    chains.
+    Clips off the remainder of the reply packet at that point.
+
+    Default: 11
+
+.. _unbound.conf.max-global-quota:
+
+max-global-quota: *<number>*
+    Limit on the number of upstream queries sent out for an incoming query and
+    its subqueries from recursion.
+    It is not reset during the resolution.
+    When it is exceeded the query is failed and the lookup process stops.
+
+    Default: 200
+
 .. _unbound.conf.fast-server-permil:
 
 fast-server-permil: *<number>*
@@ -3137,6 +3434,48 @@ fast-server-num: *<number>*
 
     Default: 3
 
+.. _unbound.conf.answer-cookie:
+
+answer-cookie: *<yes or no>*
+    If enabled, Unbound will answer to requests containing DNS Cookies as
+    specified in RFC 7873 and RFC 9018.
+
+    Default: no
+
+.. _unbound.conf.cookie-secret:
+
+cookie-secret: *"<128 bit hex string>"*
+    Server's secret for DNS Cookie generation.
+    Useful to explicitly set for servers in an anycast deployment that need to
+    share the secret in order to verify each other's Server Cookies.
+    An example hex string would be "000102030405060708090a0b0c0d0e0f".
+
+    .. note::
+        This option is ignored if a
+        :ref:`cookie-secret-file:<unbound.conf.cookie-secret-file>` is present.
+        In that case the secrets from that file are used in DNS Cookie
+        calculations.
+
+    Default: 128 bits random secret generated at startup time
+
+.. _unbound.conf.cookie-secret-file:
+
+cookie-secret-file: *<filename>*
+    File from which the secrets are read used in DNS Cookie calculations.
+    When this file exists, the secrets in this file are used and the secret
+    specified by the
+    :ref:`cookie-secret:<unbound.conf.cookie-secret>` option is ignored.
+    Enable it by setting a filename, like
+    "/usr/local/etc/unbound_cookiesecrets.txt".
+    The content of this file must be manipulated with the
+    :ref:`add_cookie_secret<unbound-control.commands.add_cookie_secret>`,
+    :ref:`drop_cookie_secret<unbound-control.commands.drop_cookie_secret>` and
+    :ref:`activate_cookie_secret<unbound-control.commands.activate_cookie_secret>`
+    commands to the :doc:`unbound-control(8)</manpages/unbound-control>` tool.
+    Please see that manpage on how to perform a safe cookie secret rollover.
+
+    Default: "" (disabled)
+
 .. _unbound.conf.edns-client-string:
 
 edns-client-string: *<IP netblock> <string>*
@@ -3161,13 +3500,13 @@ edns-client-string-opcode: *<opcode>*
 ede: *<yes or no>*
     If enabled, Unbound will respond with Extended DNS Error codes
     (:rfc:`8914`).
-    These EDEs attach informative error messages to a response for various
-    errors.
+    These EDEs privide additional information with a response mainly for, but
+    not limited to, DNS and DNSSEC errors.
 
     When the :ref:`val-log-level:<unbound.conf.val-log-level>` option is also
-    set to 2, responses with Extended DNS Errors concerning DNSSEC failures
-    that are not served from cache, will also contain a descriptive text
-    message about the reason for the failure.
+    set to ``2``, responses with Extended DNS Errors concerning DNSSEC failures
+    will also contain a descriptive text message about the reason for the
+    failure.
 
     Default: no
 
@@ -3178,8 +3517,27 @@ ede-serve-expired: *<yes or no>*
     - Stale Answer* as EDNS0 option to the expired response.
 
     .. note::
-        This will not attach the EDE code without setting
-        :ref:`ede: yes<unbound.conf.ede>` as well.
+        The :ref:`ede: yes<unbound.conf.ede>` option needs to be enabled as
+        well for this to work.
+
+    Default: no
+
+.. _unbound.conf.dns-error-reporting:
+
+dns-error-reporting: *<yes or no>*
+    If enabled, Unbound will send DNS Error Reports (:rfc:`9567`).
+    The name servers need to express support by attaching the Report-Channel
+    EDNS0 option on their replies specifying the reporting agent for the zone.
+    Any errors encountered during resolution that would result in Unbound
+    generating an Extended DNS Error (:rfc:`8914`) will be reported to the
+    zone's reporting agent.
+
+    The :ref:`ede: yes<unbound.conf.ede>` option does not need to be enabled
+    for this to work.
+
+    It is advised that the
+    :ref:`qname-minimisation:<unbound.conf.qname-minimisation>` option is also
+    enabled to increase privacy on the outgoing reports.
 
     Default: no
 
@@ -3547,14 +3905,34 @@ Authority zones are configured with **auth-zone:**, and each one must have a
 There can be multiple ones, by listing multiple auth-zone clauses, each with a
 different name, pertaining to that part of the namespace.
 The authority zone with the name closest to the name looked up is used.
-Authority zones are processed after :ref:`local-zone:<unbound.conf.local-zone>`
-and before cache (:ref:`for-downstream:
-yes<unbound.conf.auth.for-downstream>`), and when used in this manner make
-Unbound respond like an authority server.
-Authority zones are also processed after cache, just before going to the
-network to fetch information for recursion (:ref:`for-upstream:
-yes<unbound.conf.auth.for-upstream>`), and when used in this manner provide a
-local copy of an authority server that speeds up lookups of that data.
+Authority zones can be processed on two distinct, non-exclusive, configurable
+stages.
+
+With :ref:`for-downstream: yes<unbound.conf.auth.for-downstream>` (default),
+authority zones are processed after **local-zones** and before cache.
+When used in this manner, Unbound responds like an authority server with no
+further processing other than returning an answer from the zone contents.
+A notable example, in this case, is CNAME records which are returned verbatim
+to downstream clients without further resolution.
+
+With :ref:`for-upstream: yes<unbound.conf.auth.for-upstream>` (default),
+authority zones are processed after the cache lookup, just before going to the
+network to fetch information for recursion.
+When used in this manner they provide a local copy of an authority server
+that speeds up lookups for that data during resolving.
+
+If both options are enabled (default), client queries for an authority zone are
+answered authoritatively from Unbound, while internal queries that require data
+from the authority zone consult the local zone data instead of going to the
+network.
+
+An interesting configuration is
+:ref:`for-downstream: no<unbound.conf.auth.for-downstream>`,
+:ref:`for-upstream: yes<unbound.conf.auth.for-upstream>`
+that allows for hyperlocal behavior where both client and internal queries
+consult the local zone data while resolving.
+In this case, the aforementioned CNAME example will result in a thoroughly
+resolved answer.
 
 Authority zones can be read from zonefile.
 And can be kept updated via AXFR and IXFR.
@@ -3734,6 +4112,8 @@ zonefile: *<filename>*
     If the file does not exist or is empty, Unbound will attempt to fetch zone
     data (eg. from the primary servers).
 
+.. _unbound.conf.view:
+
 View Options
 ^^^^^^^^^^^^
 
@@ -3894,6 +4274,31 @@ dns64-ignore-aaaa: *<domain name>*
     per line.
     Applies also to names underneath the name given.
 
+NAT64 Operation
+^^^^^^^^^^^^^^^
+
+NAT64 operation allows using a NAT64 prefix for outbound requests to IPv4-only
+servers.
+It is controlled by two options in the
+:ref:`server:<unbound.conf.server>` section:
+
+.. _unbound.conf.nat64.do-nat64:
+
+do-nat64: *<yes or no>*
+    Use NAT64 to reach IPv4-only servers.
+    Consider also enabling :ref:`prefer-ip6:<unbound.conf.prefer-ip6>`
+    to prefer native IPv6 connections to nameservers.
+
+    Default: no
+
+.. _unbound.conf.nat64.nat64-prefix:
+
+nat64-prefix: *<IPv6 prefix>*
+    Use a specific NAT64 prefix to reach IPv4-only servers.
+    The prefix length must be one of /32, /40, /48, /56, /64 or /96.
+
+    Default: 64:ff9b::/96 (same as :ref:`dns64-prefix:<unbound.conf.dns64.dns64-prefix>`)
+
 DNSCrypt Options
 ^^^^^^^^^^^^^^^^
 
@@ -4038,6 +4443,15 @@ The maximum size of the ECS cache is controlled by
 On top of that, for each query only 100 different subnets are allowed to be
 stored for each address family.
 Exceeding that number, older entries will be purged from cache.
+
+Note that due to the nature of how EDNS Client Subnet works, by segregating the
+client IP space in order to try and have tailored responses for prefixes of
+unknown sizes, resolution and cache response performance are impacted as a
+result.
+Usage of the subnetcache module should only be enabled in installations that
+require such functionality where the resolver and the clients belong to
+different networks.
+An example of that is an open resolver installation.
 
 This module does not interact with the
 :ref:`serve-expired\*:<unbound.conf.serve-expired>` and
@@ -4239,7 +4653,7 @@ ipsecmod-allow: *<domain>*
 
 .. _unbound.conf.ipsecmod-whitelist:
 
-ipsecmod-whitelist: *<yes or no>*
+ipsecmod-whitelist: *<domain>*
     Alternate syntax for :ref:`ipsecmod-allow:<unbound.conf.ipsecmod-allow>`.
 
 Cache DB Module Options
@@ -4264,12 +4678,6 @@ usual, and stores the answer in the backend.
 
 This module interacts with the *serve-expired-\** options and will reply with
 expired data if Unbound is configured for that.
-Currently the use of
-:ref:`serve-expired-client-timeout:<unbound.conf.serve-expired-client-timeout>`
-and :ref:`serve-expired-reply-ttl:<unbound.conf.serve-expired-reply-ttl>` is
-not consistent for data originating from the external cache as these will
-result in a reply with 0 TTL without trying to update the data first, ignoring
-the configured values.
 
 If Unbound was built with ``--with-libhiredis`` on a system that has installed
 the hiredis C client library of Redis, then the ``redis`` backend can be used.
@@ -4324,7 +4732,34 @@ secret-seed: *"<secret string>"*
     If the backend database is shared by multiple Unbound instances, all
     instances must use the same secret seed.
 
-    Default: default
+    Default: "default"
+
+.. _unbound.conf.cachedb.cachedb-no-store:
+
+cachedb-no-store: *<yes or no>*
+    If the backend should be read from, but not written to.
+    This makes this instance not store dns messages in the backend.
+    But if data is available it is retrieved.
+
+    Default: no
+
+.. _unbound.conf.cachedb.cachedb-check-when-serve-expired:
+
+cachedb-check-when-serve-expired: *<yes or no>*
+    If enabled, the cachedb is checked before an expired response is returned.
+    When
+    :ref:`serve-expired<unbound.conf.serve-expired>`
+    is enabled, without
+    :ref:`serve-expired-client-timeout<unbound.conf.serve-expired-client-timeout>`
+    , it then does not immediately respond with an expired response from cache,
+    but instead first checks the cachedb for valid contents, and if so returns it.
+    If the cachedb also has no valid contents, the serve expired response is sent.
+    If also
+    :ref:`serve-expired-client-timeout<unbound.conf.serve-expired-client-timeout>`
+    is enabled, the expired response is delayed until the timeout expires.
+    Unless the lookup succeeds within the timeout.
+
+    Default: yes
 
 The following **cachedb:** options are specific to the ``redis`` backend.
 
@@ -4345,15 +4780,51 @@ redis-server-port: *<port number>*
 
     Default: 6379
 
+.. _unbound.conf.cachedb.redis-server-path:
+
+redis-server-path: *<unix socket path>*
+    The unix socket path to connect to the Redis server.
+    Unix sockets may have better throughput than the IP address option.
+
+    Default: "" (disabled)
+
+.. _unbound.conf.cachedb.redis-server-password:
+
+redis-server-password: *"<password>"*
+    The Redis AUTH password to use for the Redis server.
+    Only relevant if Redis is configured for client password authorisation.
+
+    Default: "" (disabled)
+
 .. _unbound.conf.cachedb.redis-timeout:
 
 redis-timeout: *<msec>*
-    The period until when Unbound waits for a response from the Redis sever.
+    The period until when Unbound waits for a response from the Redis server.
     If this timeout expires Unbound closes the connection, treats it as if the
     Redis server does not have the requested data, and will try to re-establish
     a new connection later.
 
     Default: 100
+
+.. _unbound.conf.cachedb.redis-command-timeout:
+
+redis-command-timeout: *<msec>*
+    The timeout to use for Redis commands, in milliseconds.
+    If ``0``, it uses the
+    :ref:`redis-timeout:<unbound.conf.cachedb.redis-timeout>`
+    value.
+
+    Default: 0
+
+.. _unbound.conf.cachedb.redis-connect-timeout:
+
+redis-connect-timeout: *<msec>*
+    The timeout to use for Redis connection set up, in milliseconds.
+    If ``0``, it uses the
+    :ref:`redis-timeout:<unbound.conf.cachedb.redis-timeout>`
+    value.
+
+    Default: 0
 
 .. _unbound.conf.cachedb.redis-expire-records:
 
@@ -4370,6 +4841,101 @@ redis-expire-records: *<yes or no>*
         Redis SETEX support is required for this option (Redis >= 2.0.0).
 
     Default: no
+
+.. _unbound.conf.cachedb.redis-logical-db:
+
+redis-logical-db: *<logical database index>*
+    The logical database in Redis to use.
+    These are databases in the same Redis instance sharing the same
+    configuration and persisted in the same RDB/AOF file.
+    If unsure about using this option, Redis documentation
+    (https://redis.io/commands/select/) suggests not to use a single Redis
+    instance for multiple unrelated applications.
+    The default database in Redis is 0 while other logical databases need to be
+    explicitly SELECT'ed upon connecting.
+
+    Default: 0
+
+.. _unbound.conf.cachedb.redis-replica-server-host:
+
+redis-replica-server-host: *<server address or name>*
+    The IP (either v6 or v4) address or domain name of the Redis server.
+    In general an IP address should be specified as otherwise Unbound will have
+    to resolve the name of the server every time it establishes a connection to
+    the server.
+
+    This server is treated as a read-only replica server
+    (https://redis.io/docs/management/replication/#read-only-replica).
+    If specified, all Redis read commands will go to this replica server, while
+    the write commands will go to the
+    :ref:`redis-server-host:<unbound.conf.cachedb.redis-server-host>`.
+
+    Default: "" (disabled).
+
+.. _unbound.conf.cachedb.redis-replica-server-port:
+
+redis-replica-server-port: *<port number>*
+    The TCP port number of the Redis replica server.
+
+    Default: 6379
+
+.. _unbound.conf.cachedb.redis-replica-server-path:
+
+redis-replica-server-path: *<unix socket path>*
+    The unix socket path to connect to the Redis replica server.
+    Unix sockets may have better throughput than the IP address option.
+
+    Default: "" (disabled)
+
+.. _unbound.conf.cachedb.redis-replica-server-password:
+
+redis-replica-server-password: *"<password>"*
+    The Redis AUTH password to use for the Redis server.
+    Only relevant if Redis is configured for client password authorisation.
+
+    Default: "" (disabled)
+
+.. _unbound.conf.cachedb.redis-replica-timeout:
+
+redis-replica-timeout: *<msec>*
+    The period until when Unbound waits for a response from the Redis replica
+    server.
+    If this timeout expires Unbound closes the connection, treats it as if the
+    Redis server does not have the requested data, and will try to re-establish
+    a new connection later.
+
+    Default: 100
+
+.. _unbound.conf.cachedb.redis-replica-command-timeout:
+
+redis-replica-command-timeout: *<msec>*
+    The timeout to use for Redis replica commands, in milliseconds.
+    If ``0``, it uses the
+    :ref:`redis-replica-timeout:<unbound.conf.cachedb.redis-replica-timeout>`
+    value.
+
+    Default: 0
+
+.. _unbound.conf.cachedb.redis-replica-connect-timeout:
+
+redis-replica-connect-timeout: *<msec>*
+    The timeout to use for Redis replica connection set up, in milliseconds.
+    If ``0``, it uses the
+    :ref:`redis-replica-timeout:<unbound.conf.cachedb.redis-replica-timeout>`
+    value.
+
+    Default: 0
+
+.. _unbound.conf.cachedb.redis-replica-logical-db:
+
+redis-replica-logical-db: *<logical database index>*
+    Same as :ref:`redis-logical-db:<unbound.conf.cachedb.redis-logical-db>` but
+    for the Redis replica server.
+
+    Default: 0
+
+
+.. _unbound.conf.dnstap:
 
 DNSTAP Logging Options
 ^^^^^^^^^^^^^^^^^^^^^^
@@ -4484,6 +5050,18 @@ dnstap-version: *<string>*
 
     Default: ""
 
+.. _unbound.conf.dnstap.dnstap-sample-rate:
+
+dnstap-sample-rate: *<number>*
+    The sample rate for log of messages, it logs only 1/N messages.
+    With 0 it is disabled.
+    This is useful in a high volume environment, where log functionality would
+    otherwise not be reliable.
+    For example 10 would spend only 1/10th time on logging, and 100 would only
+    spend a hundredth of the time on logging.
+
+    Default: 0 (disabled)
+
 .. _unbound.conf.dnstap.dnstap-log-resolver-query-messages:
 
 dnstap-log-resolver-query-messages: *<yes or no>*
@@ -4537,9 +5115,11 @@ Response Policy Zone Options
 
 Response Policy Zones are configured with **rpz:**, and each one must have a
 :ref:`name:<unbound.conf.rpz.name>`.
-There can be multiple ones, by listing multiple rpz clauses, each with a
+There can be multiple ones, by listing multiple RPZ clauses, each with a
 different name.
-RPZ clauses are applied in order of configuration.
+RPZ clauses are applied in order of configuration and any match from an earlier
+RPZ zone will terminate the RPZ lookup.
+Note that a PASSTHRU action is still considered a match.
 The respip module needs to be added to the
 :ref:`module-config<unbound.conf.module-config>`, e.g.:
 
@@ -4554,7 +5134,7 @@ RPZ QNAME triggers are applied after any
 :ref:`local-zone:<unbound.conf.local-zone>` and before any
 :ref:`auth-zone:<unbound.conf.auth>`.
 
-The RPZ zone is formatted with a SOA start record as usual.
+The RPZ zone is a regular DNS zone formatted with a SOA start record as usual.
 The items in the zone are entries, that specify what to act on (the trigger)
 and what to do (the action).
 The trigger to act on is recorded in the name, the action to do is recorded as
@@ -4758,24 +5338,24 @@ Mb after heavy usage.
 
         # example settings that reduce memory usage
         server:
-        num-threads: 1
-        outgoing-num-tcp: 1 # this limits TCP service, uses less buffers.
-        incoming-num-tcp: 1
-        outgoing-range: 60  # uses less memory, but less performance.
-        msg-buffer-size: 8192   # note this limits service, 'no huge stuff'.
-        msg-cache-size: 100k
-        msg-cache-slabs: 1
-        rrset-cache-size: 100k
-        rrset-cache-slabs: 1
-        infra-cache-numhosts: 200
-        infra-cache-slabs: 1
-        key-cache-size: 100k
-        key-cache-slabs: 1
-        neg-cache-size: 10k
-        num-queries-per-thread: 30
-        target-fetch-policy: "2 1 0 0 0 0"
-        harden-large-queries: "yes"
-        harden-short-bufsize: "yes"
+            num-threads: 1
+            outgoing-num-tcp: 1 # this limits TCP service, uses less buffers.
+            incoming-num-tcp: 1
+            outgoing-range: 60  # uses less memory, but less performance.
+            msg-buffer-size: 8192   # note this limits service, 'no huge stuff'.
+            msg-cache-size: 100k
+            msg-cache-slabs: 1
+            rrset-cache-size: 100k
+            rrset-cache-slabs: 1
+            infra-cache-numhosts: 200
+            infra-cache-slabs: 1
+            key-cache-size: 100k
+            key-cache-slabs: 1
+            neg-cache-size: 10k
+            num-queries-per-thread: 30
+            target-fetch-policy: "2 1 0 0 0 0"
+            harden-large-queries: "yes"
+            harden-short-bufsize: "yes"
 
 Files
 -----

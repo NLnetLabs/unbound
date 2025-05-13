@@ -177,7 +177,7 @@ The available options are:
        unbound-anchor goes to the network itself for these roots, to resolve
        the server (:option:`-u` option) and to check the root DNSKEY records.
        It does so, because the tool when used for bootstrapping the recursive
-       reolver, cannot use that recursive resolver itself because it is
+       resolver, cannot use that recursive resolver itself because it is
        bootstrapping that server.
 
 .. option:: -R

@@ -63,6 +63,10 @@ The available options are:
     Print full pathname, with chroot applied to it.
     Use with the :option:`-o` option.
 
+.. option:: -q
+
+    Make the operation quiet, suppress output on success.
+
 .. option:: -o <option>
 
     If given, after checking the config file the value of this option is
