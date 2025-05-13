@@ -2767,21 +2767,18 @@ az_change_dnames(struct dns_msg* msg, uint8_t* oldname, uint8_t* newname,
 	}
 }
 
-/** find NSEC record covering the query */
+/** find NSEC record covering the query, with the given node in the zone */
 static struct auth_rrset*
 az_find_nsec_cover(struct auth_zone* z, struct auth_data** node)
 {
-	uint8_t* nm = (*node)->name;
-	size_t nmlen = (*node)->namelen;
+	uint8_t* nm;
+	size_t nmlen;
 	struct auth_rrset* rrset;
+	log_assert(*node); /* we already have a node when calling this */
+	nm = (*node)->name;
+	nmlen = (*node)->namelen;
 	/* find the NSEC for the smallest-or-equal node */
-	/* if node == NULL, we did not find a smaller name.  But the zone
-	 * name is the smallest name and should have an NSEC. So there is
-	 * no NSEC to return (for a properly signed zone) */
-	/* for empty nonterminals, the auth-data node should not exist,
-	 * and thus we don't need to go rbtree_previous here to find
-	 * a domain with an NSEC record */
-	/* but there could be glue, and if this is node, then it has no NSEC.
+	/* But there could be glue, and then it has no NSEC.
 	 * Go up to find nonglue (previous) NSEC-holding nodes */
 	while((rrset=az_domain_rrset(*node, LDNS_RR_TYPE_NSEC)) == NULL) {
 		if(nmlen == z->namelen) return NULL;
@@ -3393,7 +3390,7 @@ az_generate_answer_with_node(struct auth_zone* z, struct query_info* qinfo,
 }
 
 /** Generate answer without an existing-node that we can use.
- * So it'll be a referral, DNAME or nxdomain */
+ * So it'll be a referral, DNAME, notype, wildcard or nxdomain */
 static int
 az_generate_answer_nonexistnode(struct auth_zone* z, struct query_info* qinfo,
 	struct regional* region, struct dns_msg* msg, struct auth_data* ce,
