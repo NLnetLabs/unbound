@@ -1,3 +1,24 @@
+13 May 2025: Yorgos
+	- Fix #1284: NULL pointer deref in az_find_nsec_cover() (latent bug)
+	  by adding a log_assert() to safeguard future development.
+	- Fix #1282: log-destaddr fail on long ipv6 addresses.
+
+12 May 2025: Yorgos
+	- Merge #1280: Fix auth nsec3 code. Fixes NSEC3 code to not break on
+	  broken auth zones that include unsigned out of zone (above apex)
+	  data. Could lead to hang while trying to prove a wildcard answer.
+
+12 May 2025: Wouter
+	- Fix #1283: Unsafe usage of atoi() while parsing the configuration
+	  file.
+
+9 May 2025: Wouter
+	- Fix #1281: forward-zone "name: ." conflicts with auth-zone "name: ."
+	  in 1.23.0, but worked in 1.22.0.
+
+5 May 2025: Yorgos
+	- Sync unbound and unbound-checkconf log output for unknown modules.
+
 29 April 2025: Wouter
 	- Fix for parallel build of dnstap protoc-c output.
 	- Fix dnstap to use protoc.

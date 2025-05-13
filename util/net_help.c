@@ -317,6 +317,11 @@ int netblockstrtoaddr(const char* str, int port, struct sockaddr_storage* addr,
 			log_err("cannot parse netblock: '%s'", str);
 			return 0;
 		}
+		if(*net < 0) {
+			log_err("netblock value %d is negative in: '%s'",
+				*net, str);
+			return 0;
+		}
 		strlcpy(buf, str, sizeof(buf));
 		s = strchr(buf, '/');
 		if(s) *s = 0;
@@ -429,6 +434,8 @@ int netblockdnametoaddr(uint8_t* dname, size_t dnamelen,
 	buff[nlablen] = '\0';
 	*net = atoi(buff);
 	if(*net == 0 && strcmp(buff, "0") != 0)
+		return 0;
+	if(*net < 0)
 		return 0;
 	dname += nlablen;
 	dname++;
@@ -797,7 +804,7 @@ addr_mask(struct sockaddr_storage* addr, socklen_t len, int net)
 		s = (uint8_t*)&((struct sockaddr_in*)addr)->sin_addr;
 		max = 32;
 	}
-	if(net >= max)
+	if(net >= max || net < 0)
 		return;
 	for(i=net/8+1; i<max/8; i++) {
 		s[i] = 0;

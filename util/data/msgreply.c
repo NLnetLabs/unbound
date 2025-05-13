@@ -984,14 +984,14 @@ log_reply_info(enum verbosity_value v, struct query_info *qinf,
 		if(daddr->ss_family == AF_INET6) {
 			struct sockaddr_in6 *d = (struct sockaddr_in6 *)daddr;
 			if(inet_ntop(d->sin6_family, &d->sin6_addr, da,
-				sizeof(*d)) == 0)
+				sizeof(da)) == 0)
 				snprintf(dest_buf, sizeof(dest_buf),
 					"(inet_ntop_error)");
 			port = ntohs(d->sin6_port);
 		} else if(daddr->ss_family == AF_INET) {
 			struct sockaddr_in *d = (struct sockaddr_in *)daddr;
 			if(inet_ntop(d->sin_family, &d->sin_addr, da,
-				sizeof(*d)) == 0)
+				sizeof(da)) == 0)
 				snprintf(dest_buf, sizeof(dest_buf),
 					"(inet_ntop_error)");
 			port = ntohs(d->sin_port);
