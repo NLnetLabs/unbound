@@ -133,76 +133,76 @@ Options that can be changed are for
 \fI\%local zones\fP\&.
 .sp
 Also
-\fI\%access\-control:\fP and similar options,
-\fI\%interface\-action:\fP and similar
+\fI\%access\-control\fP and similar options,
+\fI\%interface\-action\fP and similar
 options and
-\fI\%tcp\-connection\-limit:\fP\&.
+\fI\%tcp\-connection\-limit\fP\&.
 It can reload some
-\fI\%define\-tag:\fP
+\fI\%define\-tag\fP
 changes, more on that below.
 Further options include
-\fI\%insecure\-lan\-zones:\fP,
-\fI\%domain\-insecure:\fP,
-\fI\%trust\-anchor\-file:\fP,
-\fI\%trust\-anchor:\fP,
-\fI\%trusted\-keys\-file:\fP,
-\fI\%auto\-trust\-anchor\-file:\fP,
-\fI\%edns\-client\-string:\fP,
+\fI\%insecure\-lan\-zones\fP,
+\fI\%domain\-insecure\fP,
+\fI\%trust\-anchor\-file\fP,
+\fI\%trust\-anchor\fP,
+\fI\%trusted\-keys\-file\fP,
+\fI\%auto\-trust\-anchor\-file\fP,
+\fI\%edns\-client\-string\fP,
 ipset,
-\fI\%log\-identity:\fP,
-\fI\%infra\-cache\-numhosts:\fP,
-\fI\%msg\-cache\-size:\fP,
-\fI\%rrset\-cache\-size:\fP,
-\fI\%key\-cache\-size:\fP,
-\fI\%ratelimit\-size:\fP,
-\fI\%neg\-cache\-size:\fP,
-\fI\%num\-queries\-per\-thread:\fP,
-\fI\%jostle\-timeout:\fP,
-\fI\%use\-caps\-for\-id:\fP,
-\fI\%unwanted\-reply\-threshold:\fP,
-\fI\%tls\-use\-sni:\fP,
-\fI\%outgoing\-tcp\-mss:\fP,
-\fI\%ip\-dscp:\fP,
-\fI\%max\-reuse\-tcp\-queries:\fP,
-\fI\%tcp\-reuse\-timeout:\fP,
-\fI\%tcp\-auth\-query\-timeout:\fP,
-\fI\%delay\-close:\fP\&.
+\fI\%log\-identity\fP,
+\fI\%infra\-cache\-numhosts\fP,
+\fI\%msg\-cache\-size\fP,
+\fI\%rrset\-cache\-size\fP,
+\fI\%key\-cache\-size\fP,
+\fI\%ratelimit\-size\fP,
+\fI\%neg\-cache\-size\fP,
+\fI\%num\-queries\-per\-thread\fP,
+\fI\%jostle\-timeout\fP,
+\fI\%use\-caps\-for\-id\fP,
+\fI\%unwanted\-reply\-threshold\fP,
+\fI\%tls\-use\-sni\fP,
+\fI\%outgoing\-tcp\-mss\fP,
+\fI\%ip\-dscp\fP,
+\fI\%max\-reuse\-tcp\-queries\fP,
+\fI\%tcp\-reuse\-timeout\fP,
+\fI\%tcp\-auth\-query\-timeout\fP,
+\fI\%delay\-close\fP\&.
 .sp
 It does not work with
-\fI\%interface:\fP and
-\fI\%outgoing\-interface:\fP changes,
+\fI\%interface\fP and
+\fI\%outgoing\-interface\fP changes,
 also not with
 \fI\%remote control\fP,
-\fI\%outgoing\-port\-permit:\fP,
-\fI\%outgoing\-port\-avoid:\fP,
-\fI\%msg\-buffer\-size:\fP,
+\fI\%outgoing\-port\-permit\fP,
+\fI\%outgoing\-port\-avoid\fP,
+\fI\%msg\-buffer\-size\fP,
 any \fB*\-slabs\fP options and
-\fI\%statistics\-interval:\fP changes.
+\fI\%statistics\-interval\fP changes.
 .sp
 For \fI\%dnstap\fP these options can be changed:
-\fI\%dnstap\-log\-resolver\-query\-messages:\fP,
-\fI\%dnstap\-log\-resolver\-response\-messages:\fP,
-\fI\%dnstap\-log\-client\-query\-messages:\fP,
-\fI\%dnstap\-log\-client\-response\-messages:\fP,
-\fI\%dnstap\-log\-forwarder\-query\-messages:\fP and
-\fI\%dnstap\-log\-forwarder\-response\-messages:\fP\&.
+\fI\%dnstap\-log\-resolver\-query\-messages\fP,
+\fI\%dnstap\-log\-resolver\-response\-messages\fP,
+\fI\%dnstap\-log\-client\-query\-messages\fP,
+\fI\%dnstap\-log\-client\-response\-messages\fP,
+\fI\%dnstap\-log\-forwarder\-query\-messages\fP and
+\fI\%dnstap\-log\-forwarder\-response\-messages\fP\&.
 .sp
 It does not work with these options:
-\fI\%dnstap\-enable:\fP,
-\fI\%dnstap\-bidirectional:\fP,
-\fI\%dnstap\-socket\-path:\fP,
-\fI\%dnstap\-ip:\fP,
-\fI\%dnstap\-tls:\fP,
-\fI\%dnstap\-tls\-server\-name:\fP,
-\fI\%dnstap\-tls\-cert\-bundle:\fP,
-\fI\%dnstap\-tls\-client\-key\-file:\fP and
-\fI\%dnstap\-tls\-client\-cert\-file:\fP\&.
+\fI\%dnstap\-enable\fP,
+\fI\%dnstap\-bidirectional\fP,
+\fI\%dnstap\-socket\-path\fP,
+\fI\%dnstap\-ip\fP,
+\fI\%dnstap\-tls\fP,
+\fI\%dnstap\-tls\-server\-name\fP,
+\fI\%dnstap\-tls\-cert\-bundle\fP,
+\fI\%dnstap\-tls\-client\-key\-file\fP and
+\fI\%dnstap\-tls\-client\-cert\-file\fP\&.
 .sp
 The options
-\fI\%dnstap\-send\-identity:\fP,
-\fI\%dnstap\-send\-version:\fP,
-\fI\%dnstap\-identity:\fP, and
-\fI\%dnstap\-version:\fP can be loaded
+\fI\%dnstap\-send\-identity\fP,
+\fI\%dnstap\-send\-version\fP,
+\fI\%dnstap\-identity\fP, and
+\fI\%dnstap\-version\fP can be loaded
 when \fB+p\fP is not used.
 .sp
 The \fB+v\fP option makes the output verbose which includes the time it took
@@ -229,32 +229,32 @@ takes up time from the remote control servicing worker thread.
 .sp
 With the nopause option (\fB+p\fP), the reload does not work to reload some
 options, that fast reload works on without the nopause option:
-\fI\%val\-bogus\-ttl:\fP,
-\fI\%val\-override\-date:\fP,
-\fI\%val\-sig\-skew\-min:\fP,
-\fI\%val\-sig\-skew\-max:\fP,
-\fI\%val\-max\-restart:\fP,
-\fI\%val\-nsec3\-keysize\-iterations:\fP,
-\fI\%target\-fetch\-policy:\fP,
-\fI\%outbound\-msg\-retry:\fP,
-\fI\%max\-sent\-count:\fP,
-\fI\%max\-query\-restarts:\fP,
-\fI\%do\-not\-query\-address:\fP,
-\fI\%do\-not\-query\-localhost:\fP,
-\fI\%private\-address:\fP,
-\fI\%private\-domain:\fP,
-\fI\%caps\-exempt:\fP,
-\fI\%nat64\-prefix:\fP,
-\fI\%do\-nat64:\fP,
-\fI\%infra\-host\-ttl:\fP,
-\fI\%infra\-keep\-probing:\fP,
-\fI\%ratelimit:\fP,
-\fI\%ip\-ratelimit:\fP,
-\fI\%ip\-ratelimit\-cookie:\fP,
-\fI\%wait\-limit\-netblock:\fP,
-\fI\%wait\-limit\-cookie\-netblock:\fP,
-\fI\%ratelimit\-below\-domain:\fP,
-\fI\%ratelimit\-for\-domain:\fP\&.
+\fI\%val\-bogus\-ttl\fP,
+\fI\%val\-override\-date\fP,
+\fI\%val\-sig\-skew\-min\fP,
+\fI\%val\-sig\-skew\-max\fP,
+\fI\%val\-max\-restart\fP,
+\fI\%val\-nsec3\-keysize\-iterations\fP,
+\fI\%target\-fetch\-policy\fP,
+\fI\%outbound\-msg\-retry\fP,
+\fI\%max\-sent\-count\fP,
+\fI\%max\-query\-restarts\fP,
+\fI\%do\-not\-query\-address\fP,
+\fI\%do\-not\-query\-localhost\fP,
+\fI\%private\-address\fP,
+\fI\%private\-domain\fP,
+\fI\%caps\-exempt\fP,
+\fI\%nat64\-prefix\fP,
+\fI\%do\-nat64\fP,
+\fI\%infra\-host\-ttl\fP,
+\fI\%infra\-keep\-probing\fP,
+\fI\%ratelimit\fP,
+\fI\%ip\-ratelimit\fP,
+\fI\%ip\-ratelimit\-cookie\fP,
+\fI\%wait\-limit\-netblock\fP,
+\fI\%wait\-limit\-cookie\-netblock\fP,
+\fI\%ratelimit\-below\-domain\fP,
+\fI\%ratelimit\-for\-domain\fP\&.
 .sp
 The \fB+d\fP option makes the reload drop queries that the worker threads are
 working on.
@@ -266,7 +266,7 @@ The drop makes it so that queries during the life time of the
 query processing see only old, or only new config options.
 .sp
 When there are changes to the config tags, from the
-\fI\%define\-tag:\fP option,
+\fI\%define\-tag\fP option,
 then the \fB+d\fP option is implicitly turned on with a warning printout, and
 queries are dropped.
 This is to stop references to the old tag information, by the old
@@ -777,7 +777,7 @@ command.
 .sp
 Persistence is accomplished by writing to a file which is configured with
 the
-\fI\%cookie\-secret\-file:\fP
+\fI\%cookie\-secret\-file\fP
 option in the server section of the config file.
 This is disabled by default, \(dq\(dq.
 .UNINDENT
@@ -827,7 +827,7 @@ If you have not configured a username in \fBunbound.conf\fP, the keys need
 read permission for the user credentials under which the daemon is started.
 The script preserves private keys present in the directory.
 After running the script as root, turn on
-\fI\%control\-enable:\fP in
+\fI\%control\-enable\fP in
 \fBunbound.conf\fP\&.
 .SH STATISTIC COUNTERS
 .sp
@@ -932,7 +932,7 @@ buffer for too long.
 .B threadX.query.queue_time_us.max
 The maximum wait time for packets in the socket buffer, in microseconds.
 This is only reported when
-\fI\%sock\-queue\-timeout:\fP is enabled.
+\fI\%sock\-queue\-timeout\fP is enabled.
 .UNINDENT
 .INDENT 0.0
 .TP

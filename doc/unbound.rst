@@ -62,7 +62,9 @@ For performance and efficiency reasons that answer is cached for a certain time
 A second query for the same name will then be answered from the cache.
 Unbound can also do DNSSEC validation.
 
-To use a locally running Unbound for resolving put::
+To use a locally running Unbound for resolving put:
+
+.. code-block:: text
 
    nameserver 127.0.0.1
 
