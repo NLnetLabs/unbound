@@ -214,7 +214,7 @@ used.
 .UNINDENT
 .INDENT 0.0
 .TP
-.B \-P port
+.B \-P <port>
 Set the port number to use for the https connection.
 The default is 443.
 .UNINDENT

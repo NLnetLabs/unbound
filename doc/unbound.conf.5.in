@@ -444,9 +444,11 @@ Default: 4m
 Number of slabs in the message cache.
 Slabs reduce lock contention by threads.
 Must be set to a power of 2.
-Setting (close) to the number of cpus is a reasonable guess.
+Setting (close) to the number of cpus is a fairly good setting.
+If left unconfigured, it will be configured automatically to be a power of
+2 close to the number of configured threads in multi\-threaded environments.
 .sp
-Default: 4
+Default: (unconfigured)
 .UNINDENT
 .INDENT 0.0
 .TP
@@ -459,7 +461,7 @@ This forces the client to resend after a timeout; allowing the server time
 to work on the existing queries.
 Default depends on compile options.
 .sp
-Default: 1024 (libevent) / 512 (minievent) / 24 (windows)
+Default: 2048 (libevent) / 512 (minievent) / 24 (windows)
 .UNINDENT
 .INDENT 0.0
 .TP
@@ -474,11 +476,31 @@ they have already spent more than their allowed time.
 This protects against denial of service by slow queries or high query
 rates.
 .sp
-The effect is that the qps for long\-lasting queries is about
-(numqueriesperthread / 2) / (average time for such long queries) qps.
-The qps for short queries can be about (numqueriesperthread / 2) /
-(jostletimeout in whole seconds) qps per thread, about (1024/2)*5 = 2560
-qps by default.
+The effect is that the qps for long\-lasting queries is about:
+.INDENT 7.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+(num\-queries\-per\-thread / 2) / (average time for such long queries) qps
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+The qps for short queries can be about:
+.INDENT 7.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+(num\-queries\-per\-thread / 2) / (jostle\-timeout in whole seconds) qps per thread
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+about (2048/2)*5 = 5120 qps by default.
 .sp
 Default: 200
 .UNINDENT
@@ -600,7 +622,7 @@ Default: 0 (use system value)
 .B so\-sndbuf: \fI<number>\fP
 If not 0, then set the SO_SNDBUF socket option to get more buffer space on
 UDP port 53 outgoing queries.
-This for very busy servers handles spikes in answer traffic, otherwise
+This for very busy servers handles spikes in answer traffic, otherwise:
 .INDENT 7.0
 .INDENT 3.5
 .sp
@@ -613,7 +635,12 @@ send: resource temporarily unavailable
 .UNINDENT
 .sp
 can get logged, the buffer overrun is also visible by \fBnetstat \-su\fP\&.
-Specify the number of bytes to ask for, try \(dq4m\(dq on a very busy server.
+If set to 0 it uses the system value.
+Specify the number of bytes to ask for, try \(dq8m\(dq on a very busy server.
+.sp
+It needs some space to be able to deal with packets that wait for local
+address resolution, from like ARP and NDP discovery, before they are sent
+out, hence it is elevated above the system default by default.
 .sp
 The OS caps it at a maximum, on linux Unbound needs root permission to
 bypass the limit, or the admin can use \fBsysctl net.core.wmem_max\fP\&.
@@ -621,7 +648,7 @@ bypass the limit, or the admin can use \fBsysctl net.core.wmem_max\fP\&.
 On BSD, Solaris changes are similar to
 \fI\%so\-rcvbuf:\fP\&.
 .sp
-Default: 0 (use system value)
+Default: 4m
 .UNINDENT
 .INDENT 0.0
 .TP
@@ -702,8 +729,11 @@ Default: 4m
 Number of slabs in the RRset cache.
 Slabs reduce lock contention by threads.
 Must be set to a power of 2.
+Setting (close) to the number of cpus is a fairly good setting.
+If left unconfigured, it will be configured automatically to be a power of
+2 close to the number of configured threads in multi\-threaded environments.
 .sp
-Default: 4
+Default: (unconfigured)
 .UNINDENT
 .INDENT 0.0
 .TP
@@ -765,8 +795,11 @@ Default: 900
 Number of slabs in the infrastructure cache.
 Slabs reduce lock contention by threads.
 Must be set to a power of 2.
+Setting (close) to the number of cpus is a fairly good setting.
+If left unconfigured, it will be configured automatically to be a power of
+2 close to the number of configured threads in multi\-threaded environments.
 .sp
-Default: 4
+Default: (unconfigured)
 .UNINDENT
 .INDENT 0.0
 .TP
@@ -2283,8 +2316,6 @@ You must also set trust\-anchors for validation to be useful.
 Adding \fBrespip\fP to the front will cause RPZ processing to be done on all
 queries.
 .sp
-The default is \(dqvalidator iterator\(dq.
-.sp
 Most modules that need to be listed here have to be listed at the beginning
 of the line.
 .sp
@@ -2295,6 +2326,8 @@ the output of the module it is just before.
 .sp
 The \fBdynlib\fP module can be listed pretty much anywhere, it is only a very
 thin wrapper that allows dynamic libraries to run in its place.
+.sp
+Default: \(dqvalidator iterator\(dq
 .UNINDENT
 .INDENT 0.0
 .TP
@@ -2697,9 +2730,11 @@ Default: 4m
 Number of slabs in the key cache.
 Slabs reduce lock contention by threads.
 Must be set to a power of 2.
-Setting (close) to the number of cpus is a reasonable guess.
+Setting (close) to the number of cpus is a fairly good setting.
+If left unconfigured, it will be configured automatically to be a power of
+2 close to the number of configured threads in multi\-threaded environments.
 .sp
-Default: 4
+Default: (unconfigured)
 .UNINDENT
 .INDENT 0.0
 .TP
@@ -2842,10 +2877,8 @@ There may be no local data beneath the zone name.
 This answers queries for the zone, and all subdomains of the zone with
 the local data for the zone.
 It can be used to redirect a domain to return a different address
-record to the end user, with
+record to the end user, with:
 .INDENT 7.0
-.INDENT 3.5
-.INDENT 0.0
 .INDENT 3.5
 .sp
 .nf
@@ -2854,8 +2887,6 @@ local\-zone: \(dqexample.com.\(dq redirect
 local\-data: \(dqexample.com. A 127.0.0.1\(dq
 .ft P
 .fi
-.UNINDENT
-.UNINDENT
 .UNINDENT
 .UNINDENT
 .sp
@@ -3376,11 +3407,14 @@ Default: 4m
 .INDENT 0.0
 .TP
 .B ratelimit\-slabs: \fI<number>\fP
-Give power of 2 number of slabs, this is used to reduce lock contention in
-the ratelimit tracking data structure.
-Close to the number of CPUs is a fairly good setting.
+Number of slabs in the ratelimit tracking data structure.
+Slabs reduce lock contention by threads.
+Must be set to a power of 2.
+Setting (close) to the number of cpus is a fairly good setting.
+If left unconfigured, it will be configured automatically to be a power of
+2 close to the number of configured threads in multi\-threaded environments.
 .sp
-Default: 4
+Default: (unconfigured)
 .UNINDENT
 .INDENT 0.0
 .TP
@@ -3487,11 +3521,14 @@ Default: 4m
 .INDENT 0.0
 .TP
 .B ip\-ratelimit\-slabs: \fI<number>\fP
-Give power of 2 number of slabs, this is used to reduce lock contention in
-the IP ratelimit tracking data structure.
-Close to the number of cpus is a fairly good setting.
+Number of slabs in the ip ratelimit tracking data structure.
+Slabs reduce lock contention by threads.
+Must be set to a power of 2.
+Setting (close) to the number of cpus is a fairly good setting.
+If left unconfigured, it will be configured automatically to be a power of
+2 close to the number of configured threads in multi\-threaded environments.
 .sp
-Default: 4
+Default: (unconfigured)
 .UNINDENT
 .INDENT 0.0
 .TP
@@ -3717,8 +3754,8 @@ Any errors encountered during resolution that would result in Unbound
 generating an Extended DNS Error (\fI\%RFC 8914\fP) will be reported to the
 zone\(aqs reporting agent.
 .sp
-The \fI\%ede: yes\fP option does not need to be enabled
-for this to work.
+The \fI\%ede\fP option does not need to be enabled for
+this to work.
 .sp
 It is advised that the
 \fI\%qname\-minimisation:\fP option is also
@@ -4519,8 +4556,24 @@ There should be a matching interface option defined in the
 .TP
 .B dnscrypt\-provider: \fI<provider name>\fP
 The provider name to use to distribute certificates.
-This is of the form: \fB2.dnscrypt\-cert.example.com.\fP\&.
+This is of the form:
+.INDENT 7.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+2.dnscrypt\-cert.example.com.
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+\fBIMPORTANT:\fP
+.INDENT 7.0
+.INDENT 3.5
 The name \fIMUST\fP end with a dot.
+.UNINDENT
+.UNINDENT
 .UNINDENT
 .INDENT 0.0
 .TP
@@ -4571,11 +4624,14 @@ Default: 4m
 .INDENT 0.0
 .TP
 .B dnscrypt\-shared\-secret\-cache\-slabs: \fI<number>\fP
-Give power of 2 number of slabs, this is used to reduce lock contention in
-the dnscrypt shared secrets cache.
-Close to the number of cpus is a fairly good setting.
+Number of slabs in the dnscrypt shared secrets cache.
+Slabs reduce lock contention by threads.
+Must be set to a power of 2.
+Setting (close) to the number of cpus is a fairly good setting.
+If left unconfigured, it will be configured automatically to be a power of
+2 close to the number of configured threads in multi\-threaded environments.
 .sp
-Default: 4
+Default: (unconfigured)
 .UNINDENT
 .INDENT 0.0
 .TP
@@ -4590,11 +4646,14 @@ Default: 4m
 .INDENT 0.0
 .TP
 .B dnscrypt\-nonce\-cache\-slabs: \fI<number>\fP
-Give power of 2 number of slabs, this is used to reduce lock contention in
-the dnscrypt nonce cache.
-Close to the number of cpus is a fairly good setting.
+Number of slabs in the dnscrypt nonce cache.
+Slabs reduce lock contention by threads.
+Must be set to a power of 2.
+Setting (close) to the number of cpus is a fairly good setting.
+If left unconfigured, it will be configured automatically to be a power of
+2 close to the number of configured threads in multi\-threaded environments.
 .sp
-Default: 4
+Default: (unconfigured)
 .UNINDENT
 .SS EDNS Client Subnet Module Options
 .sp
@@ -5183,7 +5242,7 @@ Default: yes
 Sets the unix socket file name for connecting to the server that is
 listening on that socket.
 .sp
-Default: \(dq@DNSTAP_SOCKET_PATH@\(dq
+Default: @DNSTAP_SOCKET_PATH@
 .UNINDENT
 .INDENT 0.0
 .TP
@@ -5478,7 +5537,7 @@ the hostname from the url are used to authenticate the connection.
 .UNINDENT
 .INDENT 0.0
 .TP
-.B allow\-notify: \fI<IP address or host name or netblockIP / prefix>\fP
+.B allow\-notify: \fI<IP address or host name or netblockIP/prefix>\fP
 With \fI\%allow\-notify:\fP you can specify
 additional sources of notifies.
 When notified, the server attempts to first probe and then zone transfer.

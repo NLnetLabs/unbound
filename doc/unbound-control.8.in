@@ -1278,6 +1278,13 @@ uses TLS and TCP.
 .UNINDENT
 .INDENT 0.0
 .TP
+.B num.query.quic
+Number of queries that were made using QUIC towards the Unbound server.
+These are also counted in num.query.tls, because TLS is used for these
+queries.
+.UNINDENT
+.INDENT 0.0
+.TP
 .B num.query.ipv6
 Number of queries that were made using IPv6 towards the Unbound server.
 .UNINDENT

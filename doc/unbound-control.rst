@@ -1285,6 +1285,13 @@ num.query.https
     These are also counted in num.query.tcp and num.query.tls, because HTTPS
     uses TLS and TCP.
 
+.. _unbound-control.stats.num.query.quic:
+
+num.query.quic
+    Number of queries that were made using QUIC towards the Unbound server.
+    These are also counted in num.query.tls, because TLS is used for these
+    queries.
+
 .. _unbound-control.stats.num.query.ipv6:
 
 num.query.ipv6

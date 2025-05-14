@@ -442,9 +442,11 @@ msg-cache-slabs: *<number>*
     Number of slabs in the message cache.
     Slabs reduce lock contention by threads.
     Must be set to a power of 2.
-    Setting (close) to the number of cpus is a reasonable guess.
+    Setting (close) to the number of cpus is a fairly good setting.
+    If left unconfigured, it will be configured automatically to be a power of
+    2 close to the number of configured threads in multi-threaded environments.
 
-    Default: 4
+    Default: (unconfigured)
 
 .. _unbound.conf.num-queries-per-thread:
 
@@ -457,7 +459,7 @@ num-queries-per-thread: *<number>*
     to work on the existing queries.
     Default depends on compile options.
 
-    Default: 1024 (libevent) / 512 (minievent) / 24 (windows)
+    Default: 2048 (libevent) / 512 (minievent) / 24 (windows)
 
 .. _unbound.conf.jostle-timeout:
 
@@ -472,11 +474,15 @@ jostle-timeout: *<msec>*
     This protects against denial of service by slow queries or high query
     rates.
 
-    The effect is that the qps for long-lasting queries is about
-    (numqueriesperthread / 2) / (average time for such long queries) qps.
-    The qps for short queries can be about (numqueriesperthread / 2) /
-    (jostletimeout in whole seconds) qps per thread, about (1024/2)*5 = 2560
-    qps by default.
+    The effect is that the qps for long-lasting queries is about::
+
+        (num-queries-per-thread / 2) / (average time for such long queries) qps
+
+    The qps for short queries can be about::
+
+        (num-queries-per-thread / 2) / (jostle-timeout in whole seconds) qps per thread
+
+    about (2048/2)*5 = 5120 qps by default.
 
     Default: 200
 
@@ -598,14 +604,17 @@ so-rcvbuf: *<number>*
 so-sndbuf: *<number>*
     If not 0, then set the SO_SNDBUF socket option to get more buffer space on
     UDP port 53 outgoing queries.
-    This for very busy servers handles spikes in answer traffic, otherwise
-
-    .. code-block:: text
+    This for very busy servers handles spikes in answer traffic, otherwise::
 
         send: resource temporarily unavailable
 
     can get logged, the buffer overrun is also visible by ``netstat -su``.
-    Specify the number of bytes to ask for, try "4m" on a very busy server.
+    If set to 0 it uses the system value.
+    Specify the number of bytes to ask for, try "8m" on a very busy server.
+
+    It needs some space to be able to deal with packets that wait for local
+    address resolution, from like ARP and NDP discovery, before they are sent
+    out, hence it is elevated above the system default by default.
 
     The OS caps it at a maximum, on linux Unbound needs root permission to
     bypass the limit, or the admin can use ``sysctl net.core.wmem_max``.
@@ -613,7 +622,7 @@ so-sndbuf: *<number>*
     On BSD, Solaris changes are similar to
     :ref:`so-rcvbuf:<unbound.conf.so-rcvbuf>`.
 
-    Default: 0 (use system value)
+    Default: 4m
 
 .. _unbound.conf.so-reuseport:
 
@@ -694,8 +703,11 @@ rrset-cache-slabs: *<number>*
     Number of slabs in the RRset cache.
     Slabs reduce lock contention by threads.
     Must be set to a power of 2.
+    Setting (close) to the number of cpus is a fairly good setting.
+    If left unconfigured, it will be configured automatically to be a power of
+    2 close to the number of configured threads in multi-threaded environments.
 
-    Default: 4
+    Default: (unconfigured)
 
 .. _unbound.conf.cache-max-ttl:
 
@@ -758,8 +770,11 @@ infra-cache-slabs: *<number>*
     Number of slabs in the infrastructure cache.
     Slabs reduce lock contention by threads.
     Must be set to a power of 2.
+    Setting (close) to the number of cpus is a fairly good setting.
+    If left unconfigured, it will be configured automatically to be a power of
+    2 close to the number of configured threads in multi-threaded environments.
 
-    Default: 4
+    Default: (unconfigured)
 
 .. _unbound.conf.infra-cache-numhosts:
 
@@ -1635,9 +1650,7 @@ directory: *<directory>*
 
 logfile: *<filename>*
     If ``""`` is given, logging goes to stderr, or nowhere once daemonized.
-    The logfile is appended to, in the following format: 
-
-    .. code-block:: text
+    The logfile is appended to, in the following format::
 
         [seconds since 1970] unbound[pid:tid]: type: message.
 
@@ -1756,13 +1769,13 @@ pidfile: *<filename>*
     Default is :file:`"@UNBOUND_PIDFILE@"`.
     So,
 
-    .. code-block:: bash
+    .. code-block:: text
 
         kill -HUP `cat @UNBOUND_PIDFILE@`
 
     triggers a reload,
 
-    .. code-block:: bash
+    .. code-block:: text
 
         kill -TERM `cat @UNBOUND_PIDFILE@`
 
@@ -1931,7 +1944,6 @@ harden-below-nxdomain: *<yes or no>*
     software does not have DNSSEC.
 
     .. note::
-
         The NXDOMAIN must be secure, this means NSEC3 with optout is
         insufficient.
 
@@ -2199,7 +2211,6 @@ module-config: *"<module names>"*
     more, see below).
 
     .. note::
-
         The ordering of the modules is significant, the order decides the order
         of processing.
 
@@ -2207,13 +2218,10 @@ module-config: *"<module names>"*
     Setting this to "validator iterator" will turn on DNSSEC validation.
 
     .. note::
-
         You must also set trust-anchors for validation to be useful.
 
     Adding ``respip`` to the front will cause RPZ processing to be done on all
     queries.
-
-    The default is "validator iterator".
 
     Most modules that need to be listed here have to be listed at the beginning
     of the line.
@@ -2225,6 +2233,8 @@ module-config: *"<module names>"*
 
     The ``dynlib`` module can be listed pretty much anywhere, it is only a very
     thin wrapper that allows dynamic libraries to run in its place.
+
+    Default: "validator iterator"
 
 .. _unbound.conf.trust-anchor-file:
 
@@ -2611,9 +2621,11 @@ key-cache-slabs: *<number>*
     Number of slabs in the key cache.
     Slabs reduce lock contention by threads.
     Must be set to a power of 2.
-    Setting (close) to the number of cpus is a reasonable guess.
+    Setting (close) to the number of cpus is a fairly good setting.
+    If left unconfigured, it will be configured automatically to be a power of
+    2 close to the number of configured threads in multi-threaded environments.
 
-    Default: 4
+    Default: (unconfigured)
 
 .. _unbound.conf.neg-cache-size:
 
@@ -2757,12 +2769,10 @@ local-zone: *<zone> <type>*
         This answers queries for the zone, and all subdomains of the zone with
         the local data for the zone.
         It can be used to redirect a domain to return a different address
-        record to the end user, with
+        record to the end user, with::
 
-            .. code-block:: text
-
-                local-zone: "example.com." redirect
-                local-data: "example.com. A 127.0.0.1"
+            local-zone: "example.com." redirect
+            local-data: "example.com. A 127.0.0.1"
 
         queries for ``www.example.com`` and ``www.foo.example.com`` are
         redirected, so that users with web browsers cannot access sites with
@@ -2774,9 +2784,7 @@ local-zone: *<zone> <type>*
         The query is answered normally, same as
         :ref:`transparent<unbound.conf.local-zone.type.transparent>`.
         The client IP address (@portnumber) is printed to the logfile.
-        The log message is:
-
-        .. code-block:: text
+        The log message is::
 
             timestamp, unbound-pid, info: zonename inform IP@port queryname type class.
 
@@ -2888,9 +2896,7 @@ local-zone: *<zone> <type>*
         The IPv4 and IPv6 localhost information is given.
         NS and SOA records are provided for completeness and to satisfy some
         DNS update tools.
-        Default content:
-
-        .. code-block:: text
+        Default content::
 
             local-zone: "localhost." redirect
             local-data: "localhost. 10800 IN NS localhost."
@@ -2899,9 +2905,7 @@ local-zone: *<zone> <type>*
             local-data: "localhost. 10800 IN AAAA ::1"
 
     reverse IPv4 loopback
-        Default content:
-
-        .. code-block:: text
+        Default content::
 
             local-zone: "127.in-addr.arpa." static
             local-data: "127.in-addr.arpa. 10800 IN NS localhost."
@@ -2909,9 +2913,7 @@ local-zone: *<zone> <type>*
             local-data: "1.0.0.127.in-addr.arpa. 10800 IN PTR localhost."
 
     reverse IPv6 loopback
-        Default content:
-
-        .. code-block:: text
+        Default content::
 
             local-zone: "1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.ip6.arpa." static
             local-data: "1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.ip6.arpa. 10800 IN NS localhost."
@@ -2919,54 +2921,42 @@ local-zone: *<zone> <type>*
             local-data: "1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.ip6.arpa. 10800 IN PTR localhost."
 
     home.arpa (:rfc:`8375`)
-        Default content:
-
-        .. code-block:: text
+        Default content::
 
             local-zone: "home.arpa." static
             local-data: "home.arpa. 10800 IN NS localhost."
             local-data: "home.arpa. 10800 IN SOA localhost. nobody.invalid. 1 3600 1200 604800 10800"
 
     resolver.arpa (:rfc:`9462`)
-        Default content:
-
-        .. code-block:: text
+        Default content::
 
             local-zone: "resolver.arpa." static
             local-data: "resolver.arpa. 10800 IN NS localhost."
             local-data: "resolver.arpa. 10800 IN SOA localhost. nobody.invalid. 1 3600 1200 604800 10800"
 
     service.arpa (draft-ietf-dnssd-srp-25)
-        Default content:
-
-        .. code-block:: text
+        Default content::
 
             local-zone: "service.arpa." static
             local-data: "service.arpa. 10800 IN NS localhost."
             local-data: "service.arpa. 10800 IN SOA localhost. nobody.invalid. 1 3600 1200 604800 10800"
 
     onion (:rfc:`7686`)
-        Default content:
-
-        .. code-block:: text
+        Default content::
 
             local-zone: "onion." static
             local-data: "onion. 10800 IN NS localhost."
             local-data: "onion. 10800 IN SOA localhost. nobody.invalid. 1 3600 1200 604800 10800"
 
     test (:rfc:`6761`)
-        Default content:
-
-        .. code-block:: text
+        Default content::
 
             local-zone: "test." static
             local-data: "test. 10800 IN NS localhost."
             local-data: "test. 10800 IN SOA localhost. nobody.invalid. 1 3600 1200 604800 10800"
 
     invalid (:rfc:`6761`)
-        Default content:
-
-        .. code-block:: text
+        Default content::
 
             local-zone: "invalid." static
             local-data: "invalid. 10800 IN NS localhost."
@@ -3000,9 +2990,7 @@ local-zone: *<zone> <type>*
     reverse IPv6 Example Prefix
         Reverse data for zone ``8.B.D.0.1.0.0.2.ip6.arpa``.
         This zone is used for tutorials and examples.
-        You can remove the block on this zone with:
-
-        .. code-block:: text
+        You can remove the block on this zone with::
 
             local-zone: 8.B.D.0.1.0.0.2.ip6.arpa. nodefault
 
@@ -3022,9 +3010,7 @@ local-data: *"<resource record string>"*
     subdomain of a :ref:`local-zone:<unbound.conf.local-zone>`, a
     :ref:`transparent local-zone<unbound.conf.local-zone.type.transparent>` is
     configured.
-    For record types such as TXT, use single quotes, as in:
-
-    .. code-block:: text
+    For record types such as TXT, use single quotes, as in::
 
         local-data: 'example. TXT "text"'
 
@@ -3179,9 +3165,7 @@ ratelimit: *<number or 0>*
     overloaded with random names, and keeps unbound from sending traffic to the
     nameservers for those zones.
 
-    .. note::
-
-        Configured forwarders are excluded from ratelimiting.
+    .. note:: Configured forwarders are excluded from ratelimiting.
 
     Default: 0
 
@@ -3199,11 +3183,14 @@ ratelimit-size: *<memory size>*
 .. _unbound.conf.ratelimit-slabs:
 
 ratelimit-slabs: *<number>*
-    Give power of 2 number of slabs, this is used to reduce lock contention in
-    the ratelimit tracking data structure.
-    Close to the number of CPUs is a fairly good setting.
+    Number of slabs in the ratelimit tracking data structure.
+    Slabs reduce lock contention by threads.
+    Must be set to a power of 2.
+    Setting (close) to the number of cpus is a fairly good setting.
+    If left unconfigured, it will be configured automatically to be a power of
+    2 close to the number of configured threads in multi-threaded environments.
 
-    Default: 4
+    Default: (unconfigured)
 
 .. _unbound.conf.ratelimit-factor:
 
@@ -3310,11 +3297,14 @@ ip-ratelimit-size: *<memory size>*
 .. _unbound.conf.ip-ratelimit-slabs:
 
 ip-ratelimit-slabs: *<number>*
-    Give power of 2 number of slabs, this is used to reduce lock contention in
-    the IP ratelimit tracking data structure.
-    Close to the number of cpus is a fairly good setting.
+    Number of slabs in the ip ratelimit tracking data structure.
+    Slabs reduce lock contention by threads.
+    Must be set to a power of 2.
+    Setting (close) to the number of cpus is a fairly good setting.
+    If left unconfigured, it will be configured automatically to be a power of
+    2 close to the number of configured threads in multi-threaded environments.
 
-    Default: 4
+    Default: (unconfigured)
 
 .. _unbound.conf.ip-ratelimit-factor:
 
@@ -3532,8 +3522,8 @@ dns-error-reporting: *<yes or no>*
     generating an Extended DNS Error (:rfc:`8914`) will be reported to the
     zone's reporting agent.
 
-    The :ref:`ede: yes<unbound.conf.ede>` option does not need to be enabled
-    for this to work.
+    The :ref:`ede<unbound.conf.ede>` option does not need to be enabled for
+    this to work.
 
     It is advised that the
     :ref:`qname-minimisation:<unbound.conf.qname-minimisation>` option is also
@@ -3593,7 +3583,6 @@ control-port: *<port number>*
     The port number to listen on for IPv4 or IPv6 control interfaces.
 
     .. note::
-
         If you change this and permissions have been dropped, you must restart
         the server for the change to take effect.
 
@@ -3669,9 +3658,7 @@ The stub zone can be used to configure authoritative data to be used by the
 resolver that cannot be accessed using the public internet servers.
 This is useful for company-local data or private zones.
 Setup an authoritative server on a different host (or different port).
-Enter a config entry for Unbound with:
-
-.. code-block:: text
+Enter a config entry for Unbound with::
 
    stub-addr: <ip address of host[@port]>
 
@@ -3986,9 +3973,7 @@ master: *<IP address or host name>*
 url: *<URL to zone file>*
     Where to download a zonefile for the zone.
     With HTTP or HTTPS.
-    An example for the url is:
-
-    .. code-block:: text
+    An example for the url is::
 
         http://www.example.com/example.org.zone
 
@@ -4025,7 +4010,6 @@ allow-notify: *<IP address or host name or netblockIP/prefix>*
     notified.
 
     .. note::
-
         The primaries from :ref:`primary:<unbound.conf.auth.primary>` and
         :ref:`url:<unbound.conf.auth.url>` statements are allowed notify by
         default.
@@ -4242,7 +4226,6 @@ The ``dns64`` module must be configured in the
 and be compiled into the daemon to be enabled.
 
 .. note::
-
     These settings go in the :ref:`server:<unbound.conf.server>` section.
 
 .. _unbound.conf.dns64.dns64-prefix:
@@ -4330,8 +4313,11 @@ dnscrypt-port: *<port number>*
 
 dnscrypt-provider: *<provider name>*
     The provider name to use to distribute certificates.
-    This is of the form: ``2.dnscrypt-cert.example.com.``.
-    The name *MUST* end with a dot.
+    This is of the form::
+
+        2.dnscrypt-cert.example.com.
+
+    .. important:: The name *MUST* end with a dot.
 
 .. _unbound.conf.dnscrypt.dnscrypt-secret-key:
 
@@ -4382,11 +4368,14 @@ dnscrypt-shared-secret-cache-size: *<memory size>*
 .. _unbound.conf.dnscrypt.dnscrypt-shared-secret-cache-slabs:
 
 dnscrypt-shared-secret-cache-slabs: *<number>*
-    Give power of 2 number of slabs, this is used to reduce lock contention in
-    the dnscrypt shared secrets cache.
-    Close to the number of cpus is a fairly good setting.
+    Number of slabs in the dnscrypt shared secrets cache.
+    Slabs reduce lock contention by threads.
+    Must be set to a power of 2.
+    Setting (close) to the number of cpus is a fairly good setting.
+    If left unconfigured, it will be configured automatically to be a power of
+    2 close to the number of configured threads in multi-threaded environments.
 
-    Default: 4
+    Default: (unconfigured)
 
 .. _unbound.conf.dnscrypt.dnscrypt-nonce-cache-size:
 
@@ -4401,11 +4390,14 @@ dnscrypt-nonce-cache-size: *<memory size>*
 .. _unbound.conf.dnscrypt.dnscrypt-nonce-cache-slabs:
 
 dnscrypt-nonce-cache-slabs: *<number>*
-    Give power of 2 number of slabs, this is used to reduce lock contention in
-    the dnscrypt nonce cache.
-    Close to the number of cpus is a fairly good setting.
+    Number of slabs in the dnscrypt nonce cache.
+    Slabs reduce lock contention by threads.
+    Must be set to a power of 2.
+    Setting (close) to the number of cpus is a fairly good setting.
+    If left unconfigured, it will be configured automatically to be a power of
+    2 close to the number of configured threads in multi-threaded environments.
 
-    Default: 4
+    Default: (unconfigured)
 
 EDNS Client Subnet Module Options
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -4557,7 +4549,6 @@ The IPsec module must be configured in the
 and be compiled into Unbound by using ``--enable-ipsecmod`` to be enabled.
 
 .. note::
-
     These settings go in the :ref:`server:<unbound.conf.server>` section.
 
 When Unbound receives an A/AAAA query that is not in the cache and finds a
@@ -4970,7 +4961,7 @@ dnstap-socket-path: *<file name>*
     Sets the unix socket file name for connecting to the server that is
     listening on that socket.
 
-    Default: "@DNSTAP_SOCKET_PATH@"
+    Default: @DNSTAP_SOCKET_PATH@
 
 .. _unbound.conf.dnstap.dnstap-ip:
 
@@ -5219,9 +5210,7 @@ master: *<IP address or host name>*
 url: *<url to zonefile>*
     Where to download a zonefile for the zone.
     With HTTP or HTTPS.
-    An example for the url is:
-
-    .. code-block:: text
+    An example for the url is::
 
         http://www.example.com/example.org.zone
 
@@ -5239,7 +5228,7 @@ url: *<url to zonefile>*
 
 .. _unbound.conf.rpz.allow-notify:
 
-allow-notify: *<IP address or host name or netblockIP / prefix>*
+allow-notify: *<IP address or host name or netblockIP/prefix>*
     With :ref:`allow-notify:<unbound.conf.rpz.allow-notify>` you can specify
     additional sources of notifies.
     When notified, the server attempts to first probe and then zone transfer.
@@ -5249,7 +5238,6 @@ allow-notify: *<IP address or host name or netblockIP / prefix>*
     notified.
 
     .. note::
-
         The primaries from :ref:`primary:<unbound.conf.rpz.primary>` and
         :ref:`url:<unbound.conf.rpz.url>` statements are allowed notify by
         default.

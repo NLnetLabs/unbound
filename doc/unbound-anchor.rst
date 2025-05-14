@@ -203,7 +203,7 @@ The available options are:
        Debug option to read :file:`<unbound.conf>` into the resolver process
        used.
 
-.. option:: -P port
+.. option:: -P <port>
 
        Set the port number to use for the https connection.
        The default is 443.
