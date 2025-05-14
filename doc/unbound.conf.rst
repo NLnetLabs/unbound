@@ -357,8 +357,8 @@ outgoing-port-avoid: *<port number or range>*
 
 outgoing-num-tcp: *<number>*
     Number of outgoing TCP buffers to allocate per thread.
-    If set to 0, or if :ref:`do-tcp: no<unbound.conf.do-tcp>`, no TCP queries
-    to authoritative servers are done.
+    If set to 0, or if :ref:`do-tcp: no<unbound.conf.do-tcp>` is set, no TCP
+    queries to authoritative servers are done.
     For larger installations increasing this value is a good idea.
 
     Default: 10
@@ -367,8 +367,8 @@ outgoing-num-tcp: *<number>*
 
 incoming-num-tcp: *<number>*
     Number of incoming TCP buffers to allocate per thread.
-    If set to 0, or if :ref:`do-tcp: no<unbound.conf.do-tcp>`, no TCP queries
-    from clients are accepted.
+    If set to 0, or if :ref:`do-tcp: no<unbound.conf.do-tcp>` is set, no TCP
+    queries from clients are accepted.
     For larger installations increasing this value is a good idea.
 
     Default: 10
@@ -996,7 +996,7 @@ tcp-upstream: *<yes or no>*
 .. _unbound.conf.udp-upstream-without-downstream:
 
 udp-upstream-without-downstream: *<yes or no>*
-    Enable UDP upstream even if :ref:`do-udp<unbound.conf.do-udp>` is no.
+    Enable UDP upstream even if :ref:`do-udp: no<unbound.conf.do-udp>` is set.
     Useful for TLS service providers, that want no UDP downstream but use UDP
     to fetch data upstream.
 
@@ -1662,7 +1662,8 @@ logfile: *<filename>*
         [seconds since 1970] unbound[pid:tid]: type: message.
 
     If this option is given, the :ref:`use-syslog<unbound.conf.use-syslog>`
-    attribute is set to "no".
+    attribute is internally set to ``no``.
+
     The logfile is reopened (for append) when the config file is reread, on
     SIGHUP.
 
@@ -1674,7 +1675,7 @@ use-syslog: *<yes or no>*
     Sets Unbound to send log messages to the syslogd, using *syslog(3)*.
     The log facility LOG_DAEMON is used, with identity "unbound".
     The logfile setting is overridden when
-    :ref:`use-syslog<unbound.conf.use-syslog>` is turned on.
+    :ref:`use-syslog: yes<unbound.conf.use-syslog>` is set.
 
     Default: yes
 
@@ -1702,7 +1703,7 @@ log-time-ascii: *<yes or no>*
 
 log-time-iso: *<yes or no>*
     Log time in ISO8601 format, if
-    :ref:`log-time-ascii: yes`<unbound.conf.log-time-ascii>`
+    :ref:`log-time-ascii: yes<unbound.conf.log-time-ascii>`
     is also set.
 
     Default: no
@@ -3538,8 +3539,8 @@ ede-serve-expired: *<yes or no>*
     - Stale Answer* as EDNS0 option to the expired response.
 
     .. note::
-        The :ref:`ede: yes<unbound.conf.ede>` option needs to be enabled as
-        well for this to work.
+        :ref:`ede: yes<unbound.conf.ede>` needs to be set as well for this to
+        work.
 
     Default: no
 
@@ -4070,9 +4071,9 @@ for-downstream: *<yes or no>*
     a local copy of zone data.
 
     If :ref:`for-downstream: no<unbound.conf.auth.for-downstream>` and
-    :ref:`for-upstream: yes<unbound.conf.auth.for-upstream>`, then Unbound will
-    DNSSEC validate the contents of the zone before serving the zone contents
-    to clients and store validation results in the cache.
+    :ref:`for-upstream: yes<unbound.conf.auth.for-upstream>` are set, then
+    Unbound will DNSSEC validate the contents of the zone before serving the
+    zone contents to clients and store validation results in the cache.
 
     Default: yes
 
@@ -4165,11 +4166,11 @@ local-zone: *<zone> <type>*
     Has the same types and behaviour as the global
     :ref:`local-zone<unbound.conf.local-zone>` elements.
     When there is at least one *local-zone:* specified and :ref:`view-first:
-    no<unbound.conf.view.view-first>`, the default local-zones will be added to
-    this view.
+    no<unbound.conf.view.view-first>` is set, the default local-zones will be
+    added to this view.
     Defaults can be disabled using the nodefault type.
-    When :ref:`view-first: yes<unbound.conf.view.view-first>` or when a view
-    does not have a :ref:`local-zone<unbound.conf.view.local-zone>`, the
+    When :ref:`view-first: yes<unbound.conf.view.view-first>` is set or when a
+    view does not have a :ref:`local-zone<unbound.conf.view.local-zone>`, the
     global :ref:`local-zone<unbound.conf.local-zone>` will be used including
     it's default zones.
 
@@ -4461,8 +4462,8 @@ forward the option when sending the query to addresses that are explicitly
 allowed in the configuration using
 :ref:`send-client-subnet<unbound.conf.ecs.send-client-subnet>`.
 The option will always be forwarded, regardless the allowed addresses, when
-:ref:`client-subnet-always-forward:
-yes<unbound.conf.ecs.client-subnet-always-forward>`.
+:ref:`client-subnet-always-forward: yes<unbound.conf.ecs.client-subnet-always-forward>`
+is set.
 In this case the lookup in the regular cache is skipped.
 
 The maximum size of the ECS cache is controlled by
@@ -4611,9 +4612,9 @@ The A/AAAA answer is then cached and returned to the client.
 If the external hook was called the TTL changes to ensure it doesn't surpass
 :ref:`ipsecmod-max-ttl<unbound.conf.ipsecmod-max-ttl>`.
 
-The same procedure is also followed when :ref:`prefetch:
-yes<unbound.conf.prefetch>` is used, but the A/AAAA answer is given to the
-client before the hook is called.
+The same procedure is also followed when
+:ref:`prefetch: yes<unbound.conf.prefetch>` is set, but the A/AAAA answer is
+given to the client before the hook is called.
 :ref:`ipsecmod-max-ttl<unbound.conf.ipsecmod-max-ttl>` ensures that the A/AAAA
 answer given from cache is still relevant for opportunistic IPsec.
 
@@ -5019,7 +5020,7 @@ dnstap-tls: *<yes or no>*
 
 dnstap-tls-server-name: *<name of TLS authentication>*
     The TLS server name to authenticate the server with.
-    Used when :ref:`dnstap-tls: yes<unbound.conf.dnstap.dnstap-tls>`.
+    Used when :ref:`dnstap-tls: yes<unbound.conf.dnstap.dnstap-tls>` is set.
     If ``""`` it is ignored.
 
     Default: ""
