@@ -210,7 +210,7 @@ config_create(void)
 	cfg->if_automatic = 0;
 	cfg->if_automatic_ports = NULL;
 	cfg->so_rcvbuf = 0;
-	cfg->so_sndbuf = 0;
+	cfg->so_sndbuf = 4*1024*1024;
 	cfg->so_reuseport = REUSEPORT_DEFAULT;
 	cfg->ip_transparent = 0;
 	cfg->ip_freebind = 0;
