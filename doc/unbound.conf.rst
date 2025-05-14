@@ -113,7 +113,7 @@ Files can be included using the **include:** directive.
 It can appear anywhere, it accepts a single file name as argument.
 Processing continues as if the text from the included file was copied into the
 config file at that point.
-If also using :ref:`chroot:<unbound.conf.chroot>`, using full path names for
+If also using :ref:`chroot<unbound.conf.chroot>`, using full path names for
 the included files works, relative pathnames for the included names work if the
 directory where the daemon is started equals its chroot/working directory or is
 specified before the include statement with :ref:`directory:
@@ -238,12 +238,12 @@ interface: *<IP address or interface name[@port]>*
 
     A port number can be specified with @port (without spaces between interface
     and port number), if not specified the default port (from
-    :ref:`port:<unbound.conf.port>`) is used.
+    :ref:`port<unbound.conf.port>`) is used.
 
 .. _unbound.conf.ip-address:
 
 ip-address: *<IP address or interface name[@port]>*
-    Same as :ref:`interface:<unbound.conf.interface>` (for ease of
+    Same as :ref:`interface<unbound.conf.interface>` (for ease of
     compatibility with :external+nsd:doc:`manpages/nsd.conf`).
 
 .. _unbound.conf.interface-automatic:
@@ -251,9 +251,9 @@ ip-address: *<IP address or interface name[@port]>*
 interface-automatic: *<yes or no>*
     Listen on all addresses on all (current and future) interfaces, detect the
     source interface on UDP queries and copy them to replies.
-    This is a lot like :ref:`ip-transparent:<unbound.conf.ip-transparent>`, but
+    This is a lot like :ref:`ip-transparent<unbound.conf.ip-transparent>`, but
     this option services all interfaces whilst with
-    :ref:`ip-transparent:<unbound.conf.ip-transparent>` you can select which
+    :ref:`ip-transparent<unbound.conf.ip-transparent>` you can select which
     (future) interfaces Unbound provides service on.
     This feature is experimental, and needs support in your OS for particular
     socket options.
@@ -264,7 +264,7 @@ interface-automatic: *<yes or no>*
 
 interface-automatic-ports: *"<string>"*
     List the port numbers that
-    :ref:`interface-automatic:<unbound.conf.interface-automatic>` listens on.
+    :ref:`interface-automatic<unbound.conf.interface-automatic>` listens on.
     If empty, the default port is listened on.
     The port numbers are separated by spaces in the string.
 
@@ -284,8 +284,8 @@ outgoing-interface: *<IPv4/IPv6 address or IPv6 netblock>*
     Can be given multiple times to work on several interfaces.
     If none are given the default (all) is used.
     You can specify the same interfaces in
-    :ref:`interface:<unbound.conf.interface>` and
-    :ref:`outgoing-interface:<unbound.conf.outgoing-interface>` lines, the
+    :ref:`interface<unbound.conf.interface>` and
+    :ref:`outgoing-interface<unbound.conf.outgoing-interface>` lines, the
     interfaces are then used for both purposes.
     Outgoing queries are sent via a random outgoing interface to counter
     spoofing.
@@ -297,10 +297,10 @@ outgoing-interface: *<IPv4/IPv6 address or IPv6 netblock>*
     requires OS support for unprivileged non-local binds (currently only
     supported on Linux).
     Several netblocks may be specified with multiple
-    :ref:`outgoing-interface:<unbound.conf.outgoing-interface>` options, but do
+    :ref:`outgoing-interface<unbound.conf.outgoing-interface>` options, but do
     not specify both an individual IPv6 address and an IPv6 netblock, or the
     randomisation will be compromised.
-    Consider combining with :ref:`prefer-ip6:<unbound.conf.prefer-ip6>` yes to
+    Consider combining with :ref:`prefer-ip6<unbound.conf.prefer-ip6>` yes to
     increase the likelihood of IPv6 nameservers being selected for queries.
     On Linux you need these two commands to be able to use the freebind socket
     option to receive traffic for the ip6 netblock:
@@ -334,8 +334,8 @@ outgoing-port-permit: *<port number or range>*
     used.
     Give a port number or a range of the form "low-high", without spaces.
 
-    The :ref:`outgoing-port-permit:<unbound.conf.outgoing-port-permit>` and
-    :ref:`outgoing-port-avoid:<unbound.conf.outgoing-port-avoid>` statements
+    The :ref:`outgoing-port-permit<unbound.conf.outgoing-port-permit>` and
+    :ref:`outgoing-port-avoid<unbound.conf.outgoing-port-avoid>` statements
     are processed in the line order of the config file, adding the permitted
     ports and subtracting the avoided ports from the set of allowed ports.
     The processing starts with the non IANA allocated ports above 1024 in the
@@ -379,13 +379,13 @@ edns-buffer-size: *<number>*
     Number of bytes size to advertise as the EDNS reassembly buffer size.
     This is the value put into datagrams over UDP towards peers.
     The actual buffer size is determined by
-    :ref:`msg-buffer-size:<unbound.conf.msg-buffer-size>` (both for TCP and
+    :ref:`msg-buffer-size<unbound.conf.msg-buffer-size>` (both for TCP and
     UDP).
     Do not set higher than that value.
     Setting to 512 bypasses even the most stringent path MTU problems, but is
     seen as extreme, since the amount of TCP fallback generated is excessive
     (probably also for this resolver, consider tuning
-    :ref:`outgoing-num-tcp:<unbound.conf.outgoing-num-tcp>`).
+    :ref:`outgoing-num-tcp<unbound.conf.outgoing-num-tcp>`).
 
     Default: 1232 (`DNS Flag Day 2020 recommendation
     <https://dnsflagday.net/2020/>`__)
@@ -398,7 +398,7 @@ max-udp-size: *<number>*
     client, always.
     Suggested values are 512 to 4096.
 
-    Default: 1232 (same as :ref:`edns-buffer-size:<unbound.conf.edns-buffer-size>`)
+    Default: 1232 (same as :ref:`edns-buffer-size<unbound.conf.edns-buffer-size>`)
 
 .. _unbound.conf.stream-wait-size:
 
@@ -453,7 +453,7 @@ msg-cache-slabs: *<number>*
 num-queries-per-thread: *<number>*
     The number of queries that every thread will service simultaneously.
     If more queries arrive that need servicing, and no queries can be jostled
-    out (see :ref:`jostle-timeout:<unbound.conf.jostle-timeout>`), then the
+    out (see :ref:`jostle-timeout<unbound.conf.jostle-timeout>`), then the
     queries are dropped.
     This forces the client to resend after a timeout; allowing the server time
     to work on the existing queries.
@@ -620,7 +620,7 @@ so-sndbuf: *<number>*
     bypass the limit, or the admin can use ``sysctl net.core.wmem_max``.
 
     On BSD, Solaris changes are similar to
-    :ref:`so-rcvbuf:<unbound.conf.so-rcvbuf>`.
+    :ref:`so-rcvbuf<unbound.conf.so-rcvbuf>`.
 
     Default: 4m
 
@@ -655,7 +655,7 @@ ip-transparent: *<yes or no>*
     with host failover configuration.
 
     This is a lot like
-    :ref:`interface-automatic:<unbound.conf.interface-automatic>`, but that one
+    :ref:`interface-automatic<unbound.conf.interface-automatic>`, but that one
     services all interfaces and with this option you can select which (future)
     interfaces Unbound provides service on.
 
@@ -675,7 +675,7 @@ ip-freebind: *<yes or no>*
     when the network interface or IP address is down.
 
     Exists only on Linux, where the similar
-    :ref:`ip-transparent:<unbound.conf.ip-transparent>` option is also
+    :ref:`ip-transparent<unbound.conf.ip-transparent>` option is also
     available.
 
     Default: no
@@ -808,7 +808,7 @@ infra-keep-probing: *<yes or no>*
     at a time regime.
     Hosts that are down, eg. they did not respond during the one probe at a
     time period, are marked as down and it may take
-    :ref:`infra-host-ttl:<unbound.conf.infra-host-ttl>` time to get probed
+    :ref:`infra-host-ttl<unbound.conf.infra-host-ttl>` time to get probed
     again.
 
     Default: no
@@ -817,8 +817,8 @@ infra-keep-probing: *<yes or no>*
 
 define-tag: *"<list of tags>"*
     Define the tags that can be used with
-    :ref:`local-zone:<unbound.conf.local-zone>` and
-    :ref:`access-control:<unbound.conf.access-control>`.
+    :ref:`local-zone<unbound.conf.local-zone>` and
+    :ref:`access-control<unbound.conf.access-control>`.
     Enclose the list between quotes (``""``) and put spaces between tags.
 
 .. _unbound.conf.do-ip4:
@@ -981,8 +981,8 @@ tcp-upstream: *<yes or no>*
     Useful in tunneling scenarios.
     If set to no you can specify TCP transport only for selected forward or
     stub zones using
-    :ref:`forward-tcp-upstream:<unbound.conf.forward.forward-tcp-upstream>` or
-    :ref:`stub-tcp-upstream:<unbound.conf.stub.stub-tcp-upstream>`
+    :ref:`forward-tcp-upstream<unbound.conf.forward.forward-tcp-upstream>` or
+    :ref:`stub-tcp-upstream<unbound.conf.stub.stub-tcp-upstream>`
     respectively.
 
     Default: no
@@ -990,7 +990,7 @@ tcp-upstream: *<yes or no>*
 .. _unbound.conf.udp-upstream-without-downstream:
 
 udp-upstream-without-downstream: *<yes or no>*
-    Enable UDP upstream even if :ref:`do-udp:<unbound.conf.do-udp>` is no.
+    Enable UDP upstream even if :ref:`do-udp<unbound.conf.do-udp>` is no.
     Useful for TLS service providers, that want no UDP downstream but use UDP
     to fetch data upstream.
 
@@ -1003,25 +1003,25 @@ tls-upstream: *<yes or no>*
     Useful in tunneling scenarios.
     The TLS contains plain DNS in TCP wireformat.
     The other server must support this (see
-    :ref:`tls-service-key:<unbound.conf.tls-service-key>`).
+    :ref:`tls-service-key<unbound.conf.tls-service-key>`).
 
     If you enable this, also configure a
-    :ref:`tls-cert-bundle:<unbound.conf.tls-cert-bundle>` or use
-    :ref:`tls-win-cert:<unbound.conf.tls-win-cert>` or
-    :ref:`tls-system-cert:<unbound.conf.tls-system-cert>` to load CA certs,
+    :ref:`tls-cert-bundle<unbound.conf.tls-cert-bundle>` or use
+    :ref:`tls-win-cert<unbound.conf.tls-win-cert>` or
+    :ref:`tls-system-cert<unbound.conf.tls-system-cert>` to load CA certs,
     otherwise the connections cannot be authenticated.
 
     This option enables TLS for all of them, but if you do not set this you can
     configure TLS specifically for some forward zones with
-    :ref:`forward-tls-upstream:<unbound.conf.forward.forward-tls-upstream>`.
+    :ref:`forward-tls-upstream<unbound.conf.forward.forward-tls-upstream>`.
     And also with
-    :ref:`stub-tls-upstream:<unbound.conf.stub.stub-tls-upstream>`.
+    :ref:`stub-tls-upstream<unbound.conf.stub.stub-tls-upstream>`.
     If the
-    :ref:`tls-upstream:<unbound.conf.tls-upstream>`
+    :ref:`tls-upstream<unbound.conf.tls-upstream>`
     option is enabled, it is for all the forwards and stubs, where the
-    :ref:`forward-tls-upstream:<unbound.conf.forward.forward-tls-upstream>`
+    :ref:`forward-tls-upstream<unbound.conf.forward.forward-tls-upstream>`
     and
-    :ref:`stub-tls-upstream:<unbound.conf.stub.stub-tls-upstream>`
+    :ref:`stub-tls-upstream<unbound.conf.stub.stub-tls-upstream>`
     options are ignored, as if they had been set to yes.
 
     Default: no
@@ -1029,7 +1029,7 @@ tls-upstream: *<yes or no>*
 .. _unbound.conf.ssl-upstream:
 
 ssl-upstream: *<yes or no>*
-    Alternate syntax for :ref:`tls-upstream:<unbound.conf.tls-upstream>`.
+    Alternate syntax for :ref:`tls-upstream<unbound.conf.tls-upstream>`.
     If both are present in the config file the last is used.
 
 .. _unbound.conf.tls-service-key:
@@ -1037,18 +1037,18 @@ ssl-upstream: *<yes or no>*
 tls-service-key: *<file>*
     If enabled, the server provides DNS-over-TLS or DNS-over-HTTPS service on
     the TCP ports marked implicitly or explicitly for these services with
-    :ref:`tls-port:<unbound.conf.tls-port>` or
-    :ref:`https-port:<unbound.conf.https-port>`.
+    :ref:`tls-port<unbound.conf.tls-port>` or
+    :ref:`https-port<unbound.conf.https-port>`.
     The file must contain the private key for the TLS session, the public
-    certificate is in the :ref:`tls-service-pem:<unbound.conf.tls-service-pem>`
+    certificate is in the :ref:`tls-service-pem<unbound.conf.tls-service-pem>`
     file and it must also be specified if
-    :ref:`tls-service-key:<unbound.conf.tls-service-key>` is specified.
+    :ref:`tls-service-key<unbound.conf.tls-service-key>` is specified.
     Enabling or disabling this service requires a restart (a reload is not
     enough), because the key is read while root permissions are held and before
     chroot (if any).
     The ports enabled implicitly or explicitly via
-    :ref:`tls-port:<unbound.conf.tls-port>` and
-    :ref:`https-port:<unbound.conf.https-port>` do not provide normal DNS TCP
+    :ref:`tls-port<unbound.conf.tls-port>` and
+    :ref:`https-port<unbound.conf.https-port>` do not provide normal DNS TCP
     service.
 
     .. note::
@@ -1060,7 +1060,7 @@ tls-service-key: *<file>*
 .. _unbound.conf.ssl-service-key:
 
 ssl-service-key: *<file>*
-    Alternate syntax for :ref:`tls-service-key:<unbound.conf.tls-service-key>`.
+    Alternate syntax for :ref:`tls-service-key<unbound.conf.tls-service-key>`.
 
 .. _unbound.conf.tls-service-pem:
 
@@ -1072,7 +1072,7 @@ tls-service-pem: *<file>*
 .. _unbound.conf.ssl-service-pem:
 
 ssl-service-pem: *<file>*
-    Alternate syntax for :ref:`tls-service-pem:<unbound.conf.tls-service-pem>`.
+    Alternate syntax for :ref:`tls-service-pem<unbound.conf.tls-service-pem>`.
 
 .. _unbound.conf.tls-port:
 
@@ -1086,7 +1086,7 @@ tls-port: *<number>*
 .. _unbound.conf.ssl-port:
 
 ssl-port: *<number>*
-    Alternate syntax for :ref:`tls-port:<unbound.conf.tls-port>`.
+    Alternate syntax for :ref:`tls-port<unbound.conf.tls-port>`.
 
 .. _unbound.conf.tls-cert-bundle:
 
@@ -1096,7 +1096,7 @@ tls-cert-bundle: *<file>*
     :file:`/etc/pki/tls/certs/ca-bundle.crt`.
     These certificates are used for authenticating connections made to outside
     peers.
-    For example :ref:`auth-zone urls:<unbound.conf.auth.url>`, and also
+    For example :ref:`auth-zone urls<unbound.conf.auth.url>`, and also
     DNS-over-TLS connections.
     It is read at start up before permission drop and chroot.
 
@@ -1105,7 +1105,7 @@ tls-cert-bundle: *<file>*
 .. _unbound.conf.ssl-cert-bundle:
 
 ssl-cert-bundle: *<file>*
-    Alternate syntax for :ref:`tls-cert-bundle:<unbound.conf.tls-cert-bundle>`.
+    Alternate syntax for :ref:`tls-cert-bundle<unbound.conf.tls-cert-bundle>`.
 
 .. _unbound.conf.tls-win-cert:
 
@@ -1114,7 +1114,7 @@ tls-win-cert: *<yes or no>*
     authentication.
     If no cert bundle, it uses only these certificates.
     On windows this option uses the certificates from the cert store.
-    Use the :ref:`tls-cert-bundle:<unbound.conf.tls-cert-bundle>` option on
+    Use the :ref:`tls-cert-bundle<unbound.conf.tls-cert-bundle>` option on
     other systems.
     On other systems, this option enables the system certificates.
 
@@ -1124,7 +1124,7 @@ tls-win-cert: *<yes or no>*
 
 tls-system-cert: *<yes or no>*
     This the same attribute as the
-    :ref:`tls-win-cert:<unbound.conf.tls-win-cert>` attribute, under a
+    :ref:`tls-win-cert<unbound.conf.tls-win-cert>` attribute, under a
     different name.
     Because it is not windows specific.
 
@@ -1132,7 +1132,7 @@ tls-system-cert: *<yes or no>*
 
 tls-additional-port: *<portnr>*
     List port numbers as
-    :ref:`tls-additional-port:<unbound.conf.tls-additional-port>`, and when
+    :ref:`tls-additional-port<unbound.conf.tls-additional-port>`, and when
     interfaces are defined, eg. with the @port suffix, as this port number,
     they provide DNS-over-TLS service.
     Can list multiple, each on a new statement.
@@ -1185,7 +1185,7 @@ tls-ciphersuites: *<string with ciphersuites list>*
 pad-responses: *<yes or no>*
     If enabled, TLS serviced queries that contained an EDNS Padding option will
     cause responses padded to the closest multiple of the size specified in
-    :ref:`pad-responses-block-size:<unbound.conf.pad-responses-block-size>`.
+    :ref:`pad-responses-block-size<unbound.conf.pad-responses-block-size>`.
 
     Default: yes
 
@@ -1202,7 +1202,7 @@ pad-responses-block-size: *<number>*
 pad-queries: *<yes or no>*
     If enabled, all queries sent over TLS upstreams will be padded to the
     closest multiple of the size specified in
-    :ref:`pad-queries-block-size:<unbound.conf.pad-queries-block-size>`.
+    :ref:`pad-queries-block-size<unbound.conf.pad-queries-block-size>`.
 
     Default: yes
 
@@ -1292,7 +1292,7 @@ http-notls-downstream: *<yes or no>*
 
 proxy-protocol-port: *<portnr>*
     List port numbers as
-    :ref:`proxy-protocol-port:<unbound.conf.proxy-protocol-port>`, and when
+    :ref:`proxy-protocol-port<unbound.conf.proxy-protocol-port>`, and when
     interfaces are defined, eg. with the @port suffix, as this port number,
     they support and expect PROXYv2.
 
@@ -1443,14 +1443,14 @@ access-control: *<IP netblock> <action>*
     allow_cookie
         Allows access only to UDP queries that contain a valid DNS Cookie as
         specified in RFC 7873 and RFC 9018, when the
-        :ref:`answer-cookie:<unbound.conf.answer-cookie>` option is enabled.
+        :ref:`answer-cookie<unbound.conf.answer-cookie>` option is enabled.
         UDP queries containing only a DNS Client Cookie and no Server Cookie,
         or an invalid DNS Cookie, will receive a BADCOOKIE response including a
         newly generated DNS Cookie, allowing clients to retry with that DNS
         Cookie.
         The *allow_cookie* action will also accept requests over stateful
         transports, regardless of the presence of an DNS Cookie and regardless
-        of the :ref:`answer-cookie:<unbound.conf.answer-cookie>` setting.
+        of the :ref:`answer-cookie<unbound.conf.answer-cookie>` setting.
         UDP queries without a DNS Cookie receive REFUSED responses with the TC
         flag set, that may trigger fall back to TCP for those clients.
 
@@ -1463,7 +1463,7 @@ access-control: *<IP netblock> <action>*
         and
         :ref:`refuse_non_local<unbound.conf.access-control.action.refuse_non_local>`
         actions are for hosts that are only allowed to query for the
-        authoritative :ref:`local-data:<unbound.conf.local-data>`, they are not
+        authoritative :ref:`local-data<unbound.conf.local-data>`, they are not
         allowed full recursion but only the static data.
 
         With
@@ -1482,17 +1482,17 @@ access-control: *<IP netblock> <action>*
 .. _unbound.conf.access-control-tag:
 
 access-control-tag: *<IP netblock> "<list of tags>"*
-    Assign tags to :ref:`access-control:<unbound.conf.access-control>`
+    Assign tags to :ref:`access-control<unbound.conf.access-control>`
     elements.
     Clients using this access control element use localzones that are tagged
     with one of these tags.
 
-    Tags must be defined in :ref:`define-tag:<unbound.conf.define-tag>`.
+    Tags must be defined in :ref:`define-tag<unbound.conf.define-tag>`.
     Enclose list of tags in quotes (``""``) and put spaces between tags.
 
-    If :ref:`access-control-tag:<unbound.conf.access-control-tag>` is
+    If :ref:`access-control-tag<unbound.conf.access-control-tag>` is
     configured for a netblock that does not have an
-    :ref:`access-control:<unbound.conf.access-control>`, an access-control
+    :ref:`access-control<unbound.conf.access-control>`, an access-control
     element with action :ref:`allow<unbound.conf.access-control.action.allow>`
     is configured for this netblock.
 
@@ -1502,9 +1502,9 @@ access-control-tag-action: *<IP netblock> <tag> <action>*
     Set action for particular tag for given access control element.
     If you have multiple tag values, the tag used to lookup the action is the
     first tag match between
-    :ref:`access-control-tag:<unbound.conf.access-control-tag>` and
-    :ref:`local-zone-tag:<unbound.conf.local-zone-tag>` where "first" comes
-    from the order of the :ref:`define-tag:<unbound.conf.define-tag>` values.
+    :ref:`access-control-tag<unbound.conf.access-control-tag>` and
+    :ref:`local-zone-tag<unbound.conf.local-zone-tag>` where "first" comes
+    from the order of the :ref:`define-tag<unbound.conf.define-tag>` values.
 
 .. _unbound.conf.access-control-tag-data:
 
@@ -1519,36 +1519,36 @@ access-control-view: *<IP netblock> <view name>*
 .. _unbound.conf.interface-action:
 
 interface-action: *<ip address or interface name [@port]> <action>*
-    Similar to :ref:`access-control:<unbound.conf.access-control>` but for
+    Similar to :ref:`access-control<unbound.conf.access-control>` but for
     interfaces.
 
     The action is the same as the ones defined under
-    :ref:`access-control:<unbound.conf.access-control>`.
+    :ref:`access-control<unbound.conf.access-control>`.
 
     Default action for interfaces is
     :ref:`refuse<unbound.conf.access-control.action.refuse>`.
     By default only localhost (the 127.0.0.0/8 IP netblock, not the loopback
     interface) is implicitly allowed through the default
-    :ref:`access-control:<unbound.conf.access-control>` behavior.
+    :ref:`access-control<unbound.conf.access-control>` behavior.
     This also means that any attempt to use the **interface-\*:** options for
     the loopback interface will not work as they will be overridden by the
     implicit default "access-control: 127.0.0.0/8 allow" option.
 
     .. note::
         The interface needs to be already specified with
-        :ref:`interface:<unbound.conf.interface>` and that any
+        :ref:`interface<unbound.conf.interface>` and that any
         **access-control\*:** attribute overrides all **interface-\*:**
         attributes for targeted clients.
 
 .. _unbound.conf.interface-tag:
 
 interface-tag: *<ip address or interface name [@port]> <"list of tags">*
-    Similar to :ref:`access-control-tag:<unbound.conf.access-control-tag>` but
+    Similar to :ref:`access-control-tag<unbound.conf.access-control-tag>` but
     for interfaces.
 
     .. note::
         The interface needs to be already specified with
-        :ref:`interface:<unbound.conf.interface>` and that any
+        :ref:`interface<unbound.conf.interface>` and that any
         **access-control\*:** attribute overrides all **interface-\*:**
         attributes for targeted clients.
 
@@ -1556,12 +1556,12 @@ interface-tag: *<ip address or interface name [@port]> <"list of tags">*
 
 interface-tag-action: *<ip address or interface name [@port]> <tag> <action>*
     Similar to
-    :ref:`access-control-tag-action:<unbound.conf.access-control-tag-action>`
+    :ref:`access-control-tag-action<unbound.conf.access-control-tag-action>`
     but for interfaces.
 
     .. note::
         The interface needs to be already specified with
-        :ref:`interface:<unbound.conf.interface>` and that any
+        :ref:`interface<unbound.conf.interface>` and that any
         **access-control\*:** attribute overrides all **interface-\*:**
         attributes for targeted clients.
 
@@ -1569,31 +1569,31 @@ interface-tag-action: *<ip address or interface name [@port]> <tag> <action>*
 
 interface-tag-data: *<ip address or interface name [@port]> <tag> <"resource record string">*
     Similar to
-    :ref:`access-control-tag-data:<unbound.conf.access-control-tag-data>` but
+    :ref:`access-control-tag-data<unbound.conf.access-control-tag-data>` but
     for interfaces.
 
     .. note::
         The interface needs to be already specified with
-        :ref:`interface:<unbound.conf.interface>` and that any
+        :ref:`interface<unbound.conf.interface>` and that any
         **access-control\*:** attribute overrides all **interface-\*:**
         attributes for targeted clients.
 
 .. _unbound.conf.interface-view:
 
 interface-view: *<ip address or interface name [@port]> <view name>*
-    Similar to :ref:`access-control-view:<unbound.conf.access-control-view>`
+    Similar to :ref:`access-control-view<unbound.conf.access-control-view>`
     but for interfaces.
 
     .. note::
         The interface needs to be already specified with
-        :ref:`interface:<unbound.conf.interface>` and that any
+        :ref:`interface<unbound.conf.interface>` and that any
         **access-control\*:** attribute overrides all **interface-\*:**
         attributes for targeted clients.
 
 .. _unbound.conf.chroot:
 
 chroot: *<directory>*
-    If :ref:`chroot:<unbound.conf.chroot>` is enabled, you should pass the
+    If :ref:`chroot<unbound.conf.chroot>` is enabled, you should pass the
     configfile (from the commandline) as a full path from the original root.
     After the chroot has been performed the now defunct portion of the config
     file path is removed to be able to reread the config after a reload.
@@ -1641,7 +1641,7 @@ directory: *<directory>*
     :command:`unbound.exe` resides in.
     If you give a :ref:`server: directory:
     \<directory\><unbound.conf.directory>` before
-    :ref:`include:<unbound.conf.include>` file statements then those includes
+    :ref:`include<unbound.conf.include>` file statements then those includes
     can be relative to the working directory.
 
     Default: @UNBOUND_RUN_DIR@
@@ -1654,7 +1654,7 @@ logfile: *<filename>*
 
         [seconds since 1970] unbound[pid:tid]: type: message.
 
-    If this option is given, the :ref:`use-syslog:<unbound.conf.use-syslog>`
+    If this option is given, the :ref:`use-syslog<unbound.conf.use-syslog>`
     attribute is set to "no".
     The logfile is reopened (for append) when the config file is reread, on
     SIGHUP.
@@ -1667,7 +1667,7 @@ use-syslog: *<yes or no>*
     Sets Unbound to send log messages to the syslogd, using *syslog(3)*.
     The log facility LOG_DAEMON is used, with identity "unbound".
     The logfile setting is overridden when
-    :ref:`use-syslog:<unbound.conf.use-syslog>` is turned on.
+    :ref:`use-syslog<unbound.conf.use-syslog>` is turned on.
 
     Default: yes
 
@@ -1727,8 +1727,8 @@ log-replies: *<yes or no>*
 
 log-tag-queryreply: *<yes or no>*
     Prints the word 'query' and 'reply' with
-    :ref:`log-queries:<unbound.conf.log-queries>` and
-    :ref:`log-replies:<unbound.conf.log-replies>`.
+    :ref:`log-queries<unbound.conf.log-queries>` and
+    :ref:`log-replies<unbound.conf.log-replies>`.
     This makes filtering logs easier.
 
     Default: no (backwards compatible)
@@ -1832,7 +1832,7 @@ hide-http-user-agent: *<yes or no>*
     Use with caution as some webserver configurations may reject HTTP requests
     lacking this header.
     If needed, it is better to explicitly set the
-    :ref:`http-user-agent:<unbound.conf.http-user-agent>` below.
+    :ref:`http-user-agent<unbound.conf.http-user-agent>` below.
 
     Default: no
 
@@ -1963,7 +1963,7 @@ harden-referral-path: *<yes or no>*
     load that is generated.
     Experimental option.
     If you enable it consider adding more numbers after the
-    :ref:`target-fetch-policy:<unbound.conf.target-fetch-policy>` to increase
+    :ref:`target-fetch-policy<unbound.conf.target-fetch-policy>` to increase
     the max depth that is checked to.
 
     Default: no
@@ -2028,7 +2028,7 @@ caps-exempt: *<domain>*
 .. _unbound.conf.caps-whitelist:
 
 caps-whitelist: *<domain>*
-    Alternate syntax for :ref:`caps-exempt:<unbound.conf.caps-exempt>`.
+    Alternate syntax for :ref:`caps-exempt<unbound.conf.caps-exempt>`.
 
 .. _unbound.conf.qname-minimisation:
 
@@ -2050,7 +2050,7 @@ qname-minimisation-strict: *<yes or no>*
     A lot of domains will not be resolvable when this option in enabled.
     Only use if you know what you are doing.
     This option only has effect when
-    :ref:`qname-minimisation:<unbound.conf.qname-minimisation>` is enabled.
+    :ref:`qname-minimisation<unbound.conf.qname-minimisation>` is enabled.
 
     Default: no
 
@@ -2077,9 +2077,9 @@ private-address: *<IP address or subnet>*
     other parts of your private network.
 
     Some names can be allowed to contain your private addresses, by default all
-    the :ref:`local-data:<unbound.conf.local-data>` that you configured is
+    the :ref:`local-data<unbound.conf.local-data>` that you configured is
     allowed to, and you can specify additional names using
-    :ref:`private-domain:<unbound.conf.private-domain>`.
+    :ref:`private-domain<unbound.conf.private-domain>`.
     No private addresses are enabled by default.
 
     We consider to enable this for the :rfc:`1918` private IP address space by
@@ -2130,7 +2130,7 @@ do-not-query-address: *<IP address>*
 
 do-not-query-localhost: *<yes or no>*
     If yes, localhost is added to the
-    :ref:`do-not-query-address:<unbound.conf.do-not-query-address>` entries,
+    :ref:`do-not-query-address<unbound.conf.do-not-query-address>` entries,
     both IPv6 ``::1`` and IPv4 ``127.0.0.1/8``.
     If no, then localhost can be used to send queries to.
 
@@ -2253,12 +2253,12 @@ auto-trust-anchor-file: *<filename>*
     The probes are run several times per month, thus the machine must be online
     frequently.
     The initial file can be one with contents as described in
-    :ref:`trust-anchor-file:<unbound.conf.trust-anchor-file>`.
+    :ref:`trust-anchor-file<unbound.conf.trust-anchor-file>`.
     The file is written to when the anchor is updated, so the Unbound user must
     have write permission.
     Write permission to the file, but also to the directory it is in (to create
     a temporary file, which is necessary to deal with filesystem full events),
-    it must also be inside the :ref:`chroot:<unbound.conf.chroot>` (if that is
+    it must also be inside the :ref:`chroot<unbound.conf.chroot>` (if that is
     used).
 
     Default: "" (no auto trust anchor file)
@@ -2268,7 +2268,7 @@ auto-trust-anchor-file: *<filename>*
 trust-anchor: *"<Resource Record>"*
     A DS or DNSKEY RR for a key to use for validation.
     Multiple entries can be given to specify multiple trusted keys, in addition
-    to the :ref:`trust-anchor-file:<unbound.conf.trust-anchor-file>`.
+    to the :ref:`trust-anchor-file<unbound.conf.trust-anchor-file>`.
     The resource record is entered in the same format as *dig(1)* or *drill(1)*
     prints them, the same format as in the zone file.
     Has to be on a single line, with ``""`` around it.
@@ -2282,7 +2282,7 @@ trust-anchor: *"<Resource Record>"*
 trusted-keys-file: *<filename>*
     File with trusted keys for validation.
     Specify more than one file with several entries, one file per entry.
-    Like :ref:`trust-anchor-file:<unbound.conf.trust-anchor-file>` but has a
+    Like :ref:`trust-anchor-file<unbound.conf.trust-anchor-file>` but has a
     different file format.
     Format is BIND-9 style format, the ``trusted-keys { name flag proto algo
     "key"; };`` clauses are read.
@@ -2458,11 +2458,11 @@ disable-edns-do: *<yes or no>*
 
 serve-expired: *<yes or no>*
     If enabled, Unbound attempts to serve old responses from cache with a TTL
-    of :ref:`serve-expired-reply-ttl:<unbound.conf.serve-expired-reply-ttl>` in
+    of :ref:`serve-expired-reply-ttl<unbound.conf.serve-expired-reply-ttl>` in
     the response.
     By default the expired answer will be used after a resolution attempt
     errored out or is taking more than
-    :ref:`serve-expired-client-timeout:<unbound.conf.serve-expired-client-timeout>`
+    :ref:`serve-expired-client-timeout<unbound.conf.serve-expired-client-timeout>`
     to resolve.
 
     Default: no
@@ -2473,7 +2473,7 @@ serve-expired-ttl: *<seconds>*
     Limit serving of expired responses to configured seconds after expiration.
     ``0`` disables the limit.
     This option only applies when
-    :ref:`serve-expired:<unbound.conf.serve-expired>` is enabled.
+    :ref:`serve-expired<unbound.conf.serve-expired>` is enabled.
     A suggested value per RFC 8767 is between 86400 (1 day) and 259200 (3 days).
     The default is 86400.
 
@@ -2483,7 +2483,7 @@ serve-expired-ttl: *<seconds>*
 
 serve-expired-ttl-reset: *<yes or no>*
     Set the TTL of expired records to the
-    :ref:`serve-expired-ttl:<unbound.conf.serve-expired-ttl>` value after a
+    :ref:`serve-expired-ttl<unbound.conf.serve-expired-ttl>` value after a
     failed attempt to retrieve the record from upstream.
     This makes sure that the expired records will be served as long as there
     are queries for it.
@@ -2495,7 +2495,7 @@ serve-expired-ttl-reset: *<yes or no>*
 serve-expired-reply-ttl: *<seconds>*
     TTL value to use when replying with expired data.
     If
-    :ref:`serve-expired-client-timeout:<unbound.conf.serve-expired-client-timeout>`
+    :ref:`serve-expired-client-timeout<unbound.conf.serve-expired-client-timeout>`
     is also used then it is RECOMMENDED to use 30 as the value (:rfc:`8767`).
 
     Default: 30
@@ -2531,8 +2531,8 @@ serve-original-ttl: *<yes or no>*
         do not want Unbound to change the TTL obtained from an upstream server.
 
     .. note::
-        The values set using :ref:`cache-min-ttl:<unbound.conf.cache-min-ttl>`
-        and :ref:`cache-max-ttl:<unbound.conf.cache-max-ttl>` are ignored.
+        The values set using :ref:`cache-min-ttl<unbound.conf.cache-min-ttl>`
+        and :ref:`cache-max-ttl<unbound.conf.cache-max-ttl>` are ignored.
 
     Default: no
 
@@ -2568,7 +2568,7 @@ zonemd-permissive-mode: *<yes or no>*
 
 add-holddown: *<seconds>*
     Instruct the
-    :ref:`auto-trust-anchor-file:<unbound.conf.auto-trust-anchor-file>` probe
+    :ref:`auto-trust-anchor-file<unbound.conf.auto-trust-anchor-file>` probe
     mechanism for :rfc:`5011` autotrust updates to add new trust anchors only
     after they have been visible for this time.
 
@@ -2578,7 +2578,7 @@ add-holddown: *<seconds>*
 
 del-holddown: *<seconds>*
     Instruct the
-    :ref:`auto-trust-anchor-file:<unbound.conf.auto-trust-anchor-file>` probe
+    :ref:`auto-trust-anchor-file<unbound.conf.auto-trust-anchor-file>` probe
     mechanism for :rfc:`5011` autotrust updates to remove revoked trust anchors
     after they have been kept in the revoked list for this long.
 
@@ -2588,7 +2588,7 @@ del-holddown: *<seconds>*
 
 keep-missing: *<seconds>*
     Instruct the
-    :ref:`auto-trust-anchor-file:<unbound.conf.auto-trust-anchor-file>` probe
+    :ref:`auto-trust-anchor-file<unbound.conf.auto-trust-anchor-file>` probe
     mechanism for :rfc:`5011` autotrust updates to remove missing trust anchors
     after they have been unseen for this long.
     This cleans up the state file if the target zone does not perform trust
@@ -2659,7 +2659,7 @@ insecure-lan-zones: *<yes or no>*
     If enabled, then reverse lookups in private address space are not
     validated.
     This is usually required whenever
-    :ref:`unblock-lan-zones:<unbound.conf.unblock-lan-zones>` is used.
+    :ref:`unblock-lan-zones<unbound.conf.unblock-lan-zones>` is used.
 
     Default: no
 
@@ -2668,7 +2668,7 @@ insecure-lan-zones: *<yes or no>*
 local-zone: *<zone> <type>*
     Configure a local zone.
     The type determines the answer to give if there is no match from
-    :ref:`local-data:<unbound.conf.local-data>`.
+    :ref:`local-data<unbound.conf.local-data>`.
     The types are
     :ref:`deny<unbound.conf.local-zone.type.deny>`,
     :ref:`refuse<unbound.conf.local-zone.type.refuse>`,
@@ -2688,31 +2688,31 @@ local-zone: *<zone> <type>*
     :ref:`noview<unbound.conf.local-zone.type.noview>`,
     and are explained below.
     After that the default settings are listed.
-    Use :ref:`local-data:<unbound.conf.local-data>` to enter data into the
+    Use :ref:`local-data<unbound.conf.local-data>` to enter data into the
     local zone.
     Answers for local zones are authoritative DNS answers.
     By default the zones are class IN.
 
     If you need more complicated authoritative data, with referrals,
     wildcards, CNAME/DNAME support, or DNSSEC authoritative service,
-    setup a :ref:`stub-zone:<unbound.conf.stub>` for it as detailed in the
+    setup a :ref:`stub-zone<unbound.conf.stub>` for it as detailed in the
     stub zone section below.
-    A :ref:`stub-zone:<unbound.conf.stub>` can be used to have unbound
+    A :ref:`stub-zone<unbound.conf.stub>` can be used to have unbound
     send queries to another server, an authoritative server, to fetch the
     information.
-    With a :ref:`forward-zone:<unbound.conf.forward>`, unbound sends
+    With a :ref:`forward-zone<unbound.conf.forward>`, unbound sends
     queries to a server that is a recursive server to fetch the information.
-    With an :ref:`auth-zone:<unbound.conf.auth>` a zone can be loaded from
+    With an :ref:`auth-zone<unbound.conf.auth>` a zone can be loaded from
     file and used, it can be used like a local zone for users downstream, or
-    the :ref:`auth-zone:<unbound.conf.auth>` information can be used to fetch
+    the :ref:`auth-zone<unbound.conf.auth>` information can be used to fetch
     information from when resolving like it is an upstream server.
-    The :ref:`forward-zone:<unbound.conf.forward>` and
-    :ref:`auth-zone:<unbound.conf.auth>` options are described in their
+    The :ref:`forward-zone<unbound.conf.forward>` and
+    :ref:`auth-zone<unbound.conf.auth>` options are described in their
     sections below.
     If you want to perform filtering of the information that the users can
-    fetch, the :ref:`local-zone:<unbound.conf.local-zone>` and
-    :ref:`local-data:<unbound.conf.local-data>` statements allow for this, but
-    also the :ref:`rpz:<unbound.conf.rpz>` functionality can be used, described
+    fetch, the :ref:`local-zone<unbound.conf.local-zone>` and
+    :ref:`local-data<unbound.conf.local-data>` statements allow for this, but
+    also the :ref:`rpz<unbound.conf.rpz>` functionality can be used, described
     in the RPZ section.
 
     .. _unbound.conf.local-zone.type.deny:
@@ -2733,20 +2733,20 @@ local-zone: *<zone> <type>*
         If there is a match from local data, the query is answered.
         Otherwise, the query is answered with NODATA or NXDOMAIN.
         For a negative answer a SOA is included in the answer if present as
-        :ref:`local-data:<unbound.conf.local-data>` for the zone apex domain.
+        :ref:`local-data<unbound.conf.local-data>` for the zone apex domain.
 
     .. _unbound.conf.local-zone.type.transparent:
 
     transparent
-        If there is a match from :ref:`local-data:<unbound.conf.local-data>`,
+        If there is a match from :ref:`local-data<unbound.conf.local-data>`,
         the query is answered.
         Otherwise if the query has a different name, the query is resolved
         normally.
         If the query is for a name given in
-        :ref:`local-data:<unbound.conf.local-data>` but no such type of data is
+        :ref:`local-data<unbound.conf.local-data>` but no such type of data is
         given in localdata, then a NOERROR NODATA answer is returned.
-        If no :ref:`local-zone:<unbound.conf.local-zone>` is given
-        :ref:`local-data:<unbound.conf.local-data>` causes a transparent zone
+        If no :ref:`local-zone<unbound.conf.local-zone>` is given
+        :ref:`local-data<unbound.conf.local-data>` causes a transparent zone
         to be created by default.
 
     .. _unbound.conf.local-zone.type.typetransparent:
@@ -2860,9 +2860,9 @@ local-zone: *<zone> <type>*
     noview
         Breaks out of that view and moves towards the global local zones for
         answer to the query.
-        If the :ref:`view-first:<unbound.conf.view.view-first>` is no, it'll
+        If the :ref:`view-first<unbound.conf.view.view-first>` is no, it'll
         resolve normally.
-        If :ref:`view-first:<unbound.conf.view.view-first>` is enabled, it'll
+        If :ref:`view-first<unbound.conf.view.view-first>` is enabled, it'll
         break perform that step and check the global answers.
         For when the view has view specific overrides but some zone has to be
         answered from global local zone contents.
@@ -2888,7 +2888,7 @@ local-zone: *<zone> <type>*
     answers.
 
     The defaults can be turned off by specifying your own
-    :ref:`local-zone:<unbound.conf.local-zone>` of that name, or using the
+    :ref:`local-zone<unbound.conf.local-zone>` of that name, or using the
     :ref:`nodefault<unbound.conf.local-zone.type.nodefault>` type.
     Below is a list of the default zone contents.
 
@@ -2965,8 +2965,8 @@ local-zone: *<zone> <type>*
     reverse :rfc:`1918` local use zones
         Reverse data for zones ``10.in-addr.arpa``, ``16.172.in-addr.arpa`` to
         ``31.172.in-addr.arpa``, ``168.192.in-addr.arpa``.
-        The :ref:`local-zone:<unbound.conf.local-zone>` is set static and as
-        :ref:`local-data:<unbound.conf.local-data>` SOA and NS records are
+        The :ref:`local-zone<unbound.conf.local-zone>` is set static and as
+        :ref:`local-data<unbound.conf.local-data>` SOA and NS records are
         provided.
 
     reverse :rfc:`3330` IP4 this, link-local, testnet and broadcast
@@ -2995,7 +2995,7 @@ local-zone: *<zone> <type>*
             local-zone: 8.B.D.0.1.0.0.2.ip6.arpa. nodefault
 
     You can also selectively unblock a part of the zone by making that part
-    transparent with a :ref:`local-zone:<unbound.conf.local-zone>` statement.
+    transparent with a :ref:`local-zone<unbound.conf.local-zone>` statement.
     This also works with the other default zones.
 
 .. _unbound.conf.local-data:
@@ -3003,11 +3003,11 @@ local-zone: *<zone> <type>*
 local-data: *"<resource record string>"*
     Configure local data, which is served in reply to queries for it.
     The query has to match exactly unless you configure the
-    :ref:`local-zone:<unbound.conf.local-zone>` as redirect.
-    If not matched exactly, the :ref:`local-zone:<unbound.conf.local-zone>`
+    :ref:`local-zone<unbound.conf.local-zone>` as redirect.
+    If not matched exactly, the :ref:`local-zone<unbound.conf.local-zone>`
     type determines further processing.
-    If :ref:`local-data:<unbound.conf.local-data>` is configured that is not a
-    subdomain of a :ref:`local-zone:<unbound.conf.local-zone>`, a
+    If :ref:`local-data<unbound.conf.local-data>` is configured that is not a
+    subdomain of a :ref:`local-zone<unbound.conf.local-zone>`, a
     :ref:`transparent local-zone<unbound.conf.local-zone.type.transparent>` is
     configured.
     For record types such as TXT, use single quotes, as in::
@@ -3017,7 +3017,7 @@ local-data: *"<resource record string>"*
     .. note::
         If you need more complicated authoritative data, with referrals,
         wildcards, CNAME/DNAME support, or DNSSEC authoritative service, setup
-        a :ref:`stub-zone:<unbound.conf.stub>` for it as detailed in the stub
+        a :ref:`stub-zone<unbound.conf.stub>` for it as detailed in the stub
         zone section below.
 
 .. _unbound.conf.local-data-ptr:
@@ -3033,12 +3033,12 @@ local-data-ptr: *"IPaddr name"*
 local-zone-tag: *<zone> <"list of tags">*
     Assign tags to local zones.
     Tagged localzones will only be applied when the used
-    :ref:`access-control:<unbound.conf.access-control>` element has a matching
+    :ref:`access-control<unbound.conf.access-control>` element has a matching
     tag.
-    Tags must be defined in :ref:`define-tag:<unbound.conf.define-tag>`.
+    Tags must be defined in :ref:`define-tag<unbound.conf.define-tag>`.
     Enclose list of tags in quotes (``""``) and put spaces between tags.
     When there are multiple tags it checks if the intersection of the list of
-    tags for the query and :ref:`local-zone-tag:<unbound.conf.local-zone-tag>`
+    tags for the query and :ref:`local-zone-tag<unbound.conf.local-zone-tag>`
     is non-empty.
 
 .. _unbound.conf.local-zone-override:
@@ -3047,7 +3047,7 @@ local-zone-override: *<zone> <IP netblock> <type>*
     Override the local zone type for queries from addresses matching netblock.
     Use this localzone type, regardless the type configured for the local zone
     (both tagged and untagged) and regardless the type configured using
-    :ref:`access-control-tag-action:<unbound.conf.access-control-tag-action>`.
+    :ref:`access-control-tag-action<unbound.conf.access-control-tag-action>`.
 
 .. _unbound.conf.response-ip:
 
@@ -3057,15 +3057,15 @@ response-ip: *<IP-netblock> <action>*
     If the IP address in an AAAA or A RR in the answer section of a response
     matches the specified IP netblock, the specified action will apply.
     *<action>* has generally the same semantics as that for
-    :ref:`access-control-tag-action:<unbound.conf.access-control-tag-action>`,
+    :ref:`access-control-tag-action<unbound.conf.access-control-tag-action>`,
     but there are some exceptions.
 
-    Actions for :ref:`response-ip:<unbound.conf.response-ip>` are different
-    from those for :ref:`local-zone:<unbound.conf.local-zone>` in that in case
+    Actions for :ref:`response-ip<unbound.conf.response-ip>` are different
+    from those for :ref:`local-zone<unbound.conf.local-zone>` in that in case
     of the former there is no point of such conditions as "the query matches it
     but there is no local data".
     Because of this difference, the semantics of
-    :ref:`response-ip:<unbound.conf.response-ip>` actions are modified or
+    :ref:`response-ip<unbound.conf.response-ip>` actions are modified or
     simplified as follows: The *static*, *refuse*, *transparent*,
     *typetransparent*, and *nodefault* actions are invalid for *response-ip*.
     Using any of these will cause the configuration to be rejected as faulty.
@@ -3080,16 +3080,16 @@ response-ip-data: *<IP-netblock> <"resource record string">*
     This requires use of the ``respip`` module.
 
     This specifies the action data for
-    :ref:`response-ip:<unbound.conf.response-ip>` with action being to redirect
+    :ref:`response-ip<unbound.conf.response-ip>` with action being to redirect
     as specified by *<"resource record string">*.
     *<"Resource record string">* is similar to that of
-    :ref:`access-control-tag-action:<unbound.conf.access-control-tag-action>`,
+    :ref:`access-control-tag-action<unbound.conf.access-control-tag-action>`,
     but it must be of either AAAA, A or CNAME types.
     If the *<IP-netblock>* is an IPv6/IPv4 prefix, the record must be AAAA/A
     respectively, unless it is a CNAME (which can be used for both versions of
     IP netblocks).
     If it is CNAME there must not be more than one
-    :ref:`response-ip-data:<unbound.conf.response-ip-data>` for the same
+    :ref:`response-ip-data<unbound.conf.response-ip-data>` for the same
     *<IP-netblock>*.
     Also, CNAME and other types of records must not coexist for the same
     *<IP-netblock>*, following the normal rules for CNAME records.
@@ -3106,41 +3106,41 @@ response-ip-tag: *<IP-netblock> <"list of tags">*
     If the IP address in an AAAA or A RR in the answer section of a response
     matches the specified *<IP-netblock>*, the specified tags are assigned to
     the IP address.
-    Then, if an :ref:`access-control-tag:<unbound.conf.access-control-tag>` is
+    Then, if an :ref:`access-control-tag<unbound.conf.access-control-tag>` is
     defined for the client and it includes one of the tags for the response IP,
     the corresponding
-    :ref:`access-control-tag-action:<unbound.conf.access-control-tag-action>`
+    :ref:`access-control-tag-action<unbound.conf.access-control-tag-action>`
     will apply.
     Tag matching rule is the same as that for
-    :ref:`access-control-tag:<unbound.conf.access-control-tag>` and
-    :ref:`local-zone:<unbound.conf.local-zone>`.
-    Unlike :ref:`local-zone-tag:<unbound.conf.local-zone-tag>`,
-    :ref:`response-ip-tag:<unbound.conf.response-ip-tag>` can be defined for an
-    *<IP-netblock>* even if no :ref:`response-ip:<unbound.conf.response-ip>` is
+    :ref:`access-control-tag<unbound.conf.access-control-tag>` and
+    :ref:`local-zone<unbound.conf.local-zone>`.
+    Unlike :ref:`local-zone-tag<unbound.conf.local-zone-tag>`,
+    :ref:`response-ip-tag<unbound.conf.response-ip-tag>` can be defined for an
+    *<IP-netblock>* even if no :ref:`response-ip<unbound.conf.response-ip>` is
     defined for that netblock.
-    If multiple :ref:`response-ip-tag:<unbound.conf.response-ip-tag>` options
+    If multiple :ref:`response-ip-tag<unbound.conf.response-ip-tag>` options
     are specified for the same *<IP-netblock>* in different statements, all but
     the first will be ignored.
     However, this will not be flagged as a configuration error, but the result
     is probably not what was intended.
 
     Actions specified in an
-    :ref:`access-control-tag-action:<unbound.conf.access-control-tag-action>`
+    :ref:`access-control-tag-action<unbound.conf.access-control-tag-action>`
     that has a matching tag with
-    :ref:`response-ip-tag:<unbound.conf.response-ip-tag>` can be those that are
-    "invalid" for :ref:`response-ip:<unbound.conf.response-ip>` listed above,
+    :ref:`response-ip-tag<unbound.conf.response-ip-tag>` can be those that are
+    "invalid" for :ref:`response-ip<unbound.conf.response-ip>` listed above,
     since
-    :ref:`access-control-tag-action:<unbound.conf.access-control-tag-action>`
+    :ref:`access-control-tag-action<unbound.conf.access-control-tag-action>`
     can be shared with local zones.
     For these actions, if they behave differently depending on whether local
     data exists or not in case of local zones, the behavior for
-    :ref:`response-ip-data:<unbound.conf.response-ip-data>` will generally
+    :ref:`response-ip-data<unbound.conf.response-ip-data>` will generally
     result in NOERROR/NODATA instead of NXDOMAIN, since the
-    :ref:`response-ip:<unbound.conf.response-ip>` data are inherently type
+    :ref:`response-ip<unbound.conf.response-ip>` data are inherently type
     specific, and non-existence of data does not indicate anything about the
     existence or non-existence of the qname itself.
     For example, if the matching tag action is static but there is no data for
-    the corresponding :ref:`response-ip:<unbound.conf.response-ip>`
+    the corresponding :ref:`response-ip<unbound.conf.response-ip>`
     configuration, then the result will be NOERROR/NODATA.
     The only case where NXDOMAIN is returned is when an
     :ref:`always_nxdomain<unbound.conf.local-zone.type.always_nxdomain>`
@@ -3214,9 +3214,9 @@ ratelimit-backoff: *<yes or no>*
     When the limit is reached, traffic is ratelimited and demand continues to
     be kept track of for a 2 second rate window.
     No traffic is allowed, except for
-    :ref:`ratelimit-factor:<unbound.conf.ratelimit-factor>`, until demand
+    :ref:`ratelimit-factor<unbound.conf.ratelimit-factor>`, until demand
     decreases below the configured ratelimit for a 2 second rate window.
-    Useful to set :ref:`ratelimit:<unbound.conf.ratelimit>` to a suspicious
+    Useful to set :ref:`ratelimit<unbound.conf.ratelimit>` to a suspicious
     rate to aggressively limit unusually high traffic.
 
     Default: no
@@ -3224,7 +3224,7 @@ ratelimit-backoff: *<yes or no>*
 .. _unbound.conf.ratelimit-for-domain:
 
 ratelimit-for-domain: *<domain> <number qps or 0>*
-    Override the global :ref:`ratelimit:<unbound.conf.ratelimit>` for an exact
+    Override the global :ref:`ratelimit<unbound.conf.ratelimit>` for an exact
     match domain name with the listed number.
     You can give this for any number of names.
     For example, for a top-level-domain you may want to have a higher limit
@@ -3234,13 +3234,13 @@ ratelimit-for-domain: *<domain> <number qps or 0>*
 .. _unbound.conf.ratelimit-below-domain:
 
 ratelimit-below-domain: *<domain> <number qps or 0>*
-    Override the global :ref:`ratelimit:<unbound.conf.ratelimit>` for a domain
+    Override the global :ref:`ratelimit<unbound.conf.ratelimit>` for a domain
     name that ends in this name.
     You can give this multiple times, it then describes different settings in
     different parts of the namespace.
     The closest matching suffix is used to determine the qps limit.
     The rate for the exact matching domain name is not changed, use
-    :ref:`ratelimit-for-domain:<unbound.conf.ratelimit-for-domain>` to set
+    :ref:`ratelimit-for-domain<unbound.conf.ratelimit-for-domain>` to set
     that, you might want to use different settings for a top-level-domain and
     subdomains.
     A value of 0 will disable ratelimiting for domain names that end in this
@@ -3279,7 +3279,7 @@ ip-ratelimit-cookie: *<number or 0>*
     attacks targeting Unbound itself) which are already handled with DNS
     Cookies.
     If used, the value is suggested to be higher than
-    :ref:`ip-ratelimit:<unbound.conf.ip-ratelimit>` e.g., tenfold.
+    :ref:`ip-ratelimit<unbound.conf.ip-ratelimit>` e.g., tenfold.
 
     Default: 0 (disabled)
 
@@ -3328,9 +3328,9 @@ ip-ratelimit-backoff: *<yes or no>*
     When the limit is reached, traffic is ratelimited and demand continues to
     be kept track of for a 2 second rate window.
     No traffic is allowed, except for
-    :ref:`ip-ratelimit-factor:<unbound.conf.ip-ratelimit-factor>`, until demand
+    :ref:`ip-ratelimit-factor<unbound.conf.ip-ratelimit-factor>`, until demand
     decreases below the configured ratelimit for a 2 second rate window.
-    Useful to set :ref:`ip-ratelimit:<unbound.conf.ip-ratelimit>` to a
+    Useful to set :ref:`ip-ratelimit<unbound.conf.ip-ratelimit>` to a
     suspicious rate to aggressively limit unusually high traffic.
 
     Default: no
@@ -3405,11 +3405,11 @@ fast-server-permil: *<number>*
     A value of 900 would pick from the fastest servers 90 percent of the time,
     and would perform normal exploration of random servers for the remaining
     time.
-    When :ref:`prefetch:<unbound.conf.prefetch>` is enabled (or
-    :ref:`serve-expired:<unbound.conf.serve-expired>`), such prefetches are not
+    When :ref:`prefetch<unbound.conf.prefetch>` is enabled (or
+    :ref:`serve-expired<unbound.conf.serve-expired>`), such prefetches are not
     sped up, because there is no one waiting for it, and it presents a good
     moment to perform server exploration.
-    The :ref:`fast-server-num:<unbound.conf.fast-server-num>` option can be
+    The :ref:`fast-server-num<unbound.conf.fast-server-num>` option can be
     used to specify the size of the fastest servers set.
 
     Default: 0
@@ -3419,7 +3419,7 @@ fast-server-permil: *<number>*
 fast-server-num: *<number>*
     Set the number of servers that should be used for fast server selection.
     Only use the fastest specified number of servers with the
-    :ref:`fast-server-permil:<unbound.conf.fast-server-permil>` option, that
+    :ref:`fast-server-permil<unbound.conf.fast-server-permil>` option, that
     turns this on or off.
 
     Default: 3
@@ -3442,7 +3442,7 @@ cookie-secret: *"<128 bit hex string>"*
 
     .. note::
         This option is ignored if a
-        :ref:`cookie-secret-file:<unbound.conf.cookie-secret-file>` is present.
+        :ref:`cookie-secret-file<unbound.conf.cookie-secret-file>` is present.
         In that case the secrets from that file are used in DNS Cookie
         calculations.
 
@@ -3454,7 +3454,7 @@ cookie-secret-file: *<filename>*
     File from which the secrets are read used in DNS Cookie calculations.
     When this file exists, the secrets in this file are used and the secret
     specified by the
-    :ref:`cookie-secret:<unbound.conf.cookie-secret>` option is ignored.
+    :ref:`cookie-secret<unbound.conf.cookie-secret>` option is ignored.
     Enable it by setting a filename, like
     "/usr/local/etc/unbound_cookiesecrets.txt".
     The content of this file must be manipulated with the
@@ -3478,7 +3478,7 @@ edns-client-string: *<IP netblock> <string>*
 
 edns-client-string-opcode: *<opcode>*
     EDNS0 option code for the
-    :ref:`edns-client-string:<unbound.conf.edns-client-string>` option, from 0
+    :ref:`edns-client-string<unbound.conf.edns-client-string>` option, from 0
     to 65535.
     A value from the 'Reserved for Local/Experimental' range (65001-65534)
     should be used.
@@ -3493,7 +3493,7 @@ ede: *<yes or no>*
     These EDEs privide additional information with a response mainly for, but
     not limited to, DNS and DNSSEC errors.
 
-    When the :ref:`val-log-level:<unbound.conf.val-log-level>` option is also
+    When the :ref:`val-log-level<unbound.conf.val-log-level>` option is also
     set to ``2``, responses with Extended DNS Errors concerning DNSSEC failures
     will also contain a descriptive text message about the reason for the
     failure.
@@ -3526,7 +3526,7 @@ dns-error-reporting: *<yes or no>*
     this to work.
 
     It is advised that the
-    :ref:`qname-minimisation:<unbound.conf.qname-minimisation>` option is also
+    :ref:`qname-minimisation<unbound.conf.qname-minimisation>` option is also
     enabled to increase privacy on the outgoing reports.
 
     Default: no
@@ -3592,7 +3592,7 @@ control-port: *<port number>*
 
 control-use-cert: *<yes or no>*
     For localhost
-    :ref:`control-interface:<unbound.conf.remote.control-interface>` you can
+    :ref:`control-interface<unbound.conf.remote.control-interface>` you can
     disable the use of TLS by setting this option to "no".
     For local sockets, TLS is disabled and the value of this option is ignored.
 
@@ -3647,7 +3647,7 @@ Stub Zone Options
 ^^^^^^^^^^^^^^^^^
 
 There may be multiple **stub-zone:** clauses.
-Each with a :ref:`name:<unbound.conf.stub.name>` and zero or more hostnames or
+Each with a :ref:`name<unbound.conf.stub.name>` and zero or more hostnames or
 IP addresses.
 For the stub zone this list of nameservers is used.
 Class IN is assumed.
@@ -3673,8 +3673,8 @@ This setup makes Unbound capable of answering queries for the private zone, and
 can even set the AD bit ('authentic'), but the AA ('authoritative') bit is not
 set on these replies.
 
-Consider adding :ref:`server:<unbound.conf.server>` statements for
-:ref:`domain-insecure:<unbound.conf.domain-insecure>` and for
+Consider adding :ref:`server<unbound.conf.server>` statements for
+:ref:`domain-insecure<unbound.conf.domain-insecure>` and for
 :ref:`local-zone: \<name\> nodefault<unbound.conf.local-zone.type.nodefault>`
 for the zone if it is a locally served zone.
 The insecure clause stops DNSSEC from invalidating the zone.
@@ -3702,7 +3702,7 @@ stub-host: *<domain name>*
 
     If you combine the ``'@'`` and ``'#'``, the ``'@'`` comes first.
     If only ``'#'`` is used the default port is the configured
-    :ref:`tls-port:<unbound.conf.tls-port>`.
+    :ref:`tls-port<unbound.conf.tls-port>`.
 
 .. _unbound.conf.stub.stub-addr:
 
@@ -3718,7 +3718,7 @@ stub-addr: *<IP address>*
 
     If you combine the ``'@'`` and ``'#'``, the ``'@'`` comes first.
     If only ``'#'`` is used the default port is the configured
-    :ref:`tls-port:<unbound.conf.tls-port>`.
+    :ref:`tls-port<unbound.conf.tls-port>`.
 
 .. _unbound.conf.stub.stub-prime:
 
@@ -3751,13 +3751,13 @@ stub-tls-upstream: *<yes or no>*
 
 stub-ssl-upstream: *<yes or no>*
     Alternate syntax for
-    :ref:`stub-tls-upstream:<unbound.conf.stub.stub-tls-upstream>`.
+    :ref:`stub-tls-upstream<unbound.conf.stub.stub-tls-upstream>`.
 
 .. _unbound.conf.stub.stub-tcp-upstream:
 
 stub-tcp-upstream: *<yes or no>*
     If it is set to "yes" then upstream queries use TCP only for transport
-    regardless of global flag :ref:`tcp-upstream:<unbound.conf.tcp-upstream>`.
+    regardless of global flag :ref:`tcp-upstream<unbound.conf.tcp-upstream>`.
 
     Default: no
 
@@ -3775,12 +3775,12 @@ Forward Zone Options
 ^^^^^^^^^^^^^^^^^^^^
 
 There may be multiple **forward-zone:** clauses.
-Each with a :ref:`name:<unbound.conf.forward.name>` and zero or more hostnames
+Each with a :ref:`name<unbound.conf.forward.name>` and zero or more hostnames
 or IP addresses.
 For the forward zone this list of nameservers is used to forward the queries
 to.
-The servers listed as :ref:`forward-host:<unbound.conf.forward.forward-host>`
-and :ref:`forward-addr:<unbound.conf.forward.forward-addr>` have to handle
+The servers listed as :ref:`forward-host<unbound.conf.forward.forward-host>`
+and :ref:`forward-addr<unbound.conf.forward.forward-addr>` have to handle
 further recursion for the query.
 Thus, those servers are not authority servers, but are (just like Unbound is)
 recursive servers too; Unbound does not perform recursion itself for the
@@ -3789,8 +3789,8 @@ Class IN is assumed.
 CNAMEs are chased by Unbound itself, asking the remote server for every name in
 the indirection chain, to protect the local cache from illegal indirect
 referenced items.
-A :ref:`forward-zone:<unbound.conf.forward>` entry with name
-``"."`` and a :ref:`forward-addr:<unbound.conf.forward.forward-addr>` target
+A :ref:`forward-zone<unbound.conf.forward>` entry with name
+``"."`` and a :ref:`forward-addr<unbound.conf.forward.forward-addr>` target
 will forward all queries to that other server (unless it can answer from the
 cache).
 
@@ -3814,7 +3814,7 @@ forward-host: *<domain name>*
 
     If you combine the ``'@'`` and ``'#'``, the ``'@'`` comes first.
     If only ``'#'`` is used the default port is the configured
-    :ref:`tls-port:<unbound.conf.tls-port>`.
+    :ref:`tls-port<unbound.conf.tls-port>`.
 
 .. _unbound.conf.forward.forward-addr:
 
@@ -3830,14 +3830,14 @@ forward-addr: *<IP address>*
 
     If you combine the ``'@'`` and ``'#'``, the ``'@'`` comes first.
     If only ``'#'`` is used the default port is the configured
-    :ref:`tls-port:<unbound.conf.tls-port>`.
+    :ref:`tls-port<unbound.conf.tls-port>`.
 
     At high verbosity it logs the TLS certificate, with TLS enabled.
     If you leave out the ``'#'`` and auth name from the
-    :ref:`forward-addr:<unbound.conf.forward.forward-addr>`, any name is
+    :ref:`forward-addr<unbound.conf.forward.forward-addr>`, any name is
     accepted.
     The cert must also match a CA from the
-    :ref:`tls-cert-bundle:<unbound.conf.tls-cert-bundle>`.
+    :ref:`tls-cert-bundle<unbound.conf.tls-cert-bundle>`.
 
 .. _unbound.conf.forward.forward-first:
 
@@ -3854,8 +3854,8 @@ forward-tls-upstream: *<yes or no>*
     Enabled or disable whether the queries to this forwarder use TLS for
     transport.
     If you enable this, also configure a
-    :ref:`tls-cert-bundle:<unbound.conf.tls-cert-bundle>` or use
-    :ref:`tls-win-cert:<unbound.conf.tls-win-cert>` to load CA certs, otherwise
+    :ref:`tls-cert-bundle<unbound.conf.tls-cert-bundle>` or use
+    :ref:`tls-win-cert<unbound.conf.tls-win-cert>` to load CA certs, otherwise
     the connections cannot be authenticated.
 
     Default: no
@@ -3864,13 +3864,13 @@ forward-tls-upstream: *<yes or no>*
 
 forward-ssl-upstream: *<yes or no>*
     Alternate syntax for
-    :ref:`forward-tls-upstream:<unbound.conf.forward.forward-tls-upstream>`.
+    :ref:`forward-tls-upstream<unbound.conf.forward.forward-tls-upstream>`.
 
 .. _unbound.conf.forward.forward-tcp-upstream:
 
 forward-tcp-upstream: *<yes or no>*
     If it is set to "yes" then upstream queries use TCP only for transport
-    regardless of global flag :ref:`tcp-upstream:<unbound.conf.tcp-upstream>`.
+    regardless of global flag :ref:`tcp-upstream<unbound.conf.tcp-upstream>`.
 
     Default: no
 
@@ -3888,7 +3888,7 @@ Authority Zone Options
 ^^^^^^^^^^^^^^^^^^^^^^
 
 Authority zones are configured with **auth-zone:**, and each one must have a
-:ref:`name:<unbound.conf.auth.name>`.
+:ref:`name<unbound.conf.auth.name>`.
 There can be multiple ones, by listing multiple auth-zone clauses, each with a
 different name, pertaining to that part of the namespace.
 The authority zone with the name closest to the name looked up is used.
@@ -3956,7 +3956,7 @@ primary: *<IP address or host name>*
     If you combine the ``'@'`` and ``'#'``, the ``'@'`` comes first.
     If you point it at another Unbound instance, it would not work because that
     does not support AXFR/IXFR for the zone, but if you used
-    :ref:`url:<unbound.conf.auth.url>` to download the zonefile as a text file
+    :ref:`url<unbound.conf.auth.url>` to download the zonefile as a text file
     from a webserver that would work.
 
     If you specify the hostname, you cannot use the domain from the zonefile,
@@ -3966,7 +3966,7 @@ primary: *<IP address or host name>*
 .. _unbound.conf.auth.master:
 
 master: *<IP address or host name>*
-    Alternate syntax for :ref:`primary:<unbound.conf.auth.primary>`.
+    Alternate syntax for :ref:`primary<unbound.conf.auth.primary>`.
 
 .. _unbound.conf.auth.url:
 
@@ -3986,7 +3986,7 @@ url: *<URL to zone file>*
     downloads.
     If none of the urls work, the primaries are tried with IXFR and AXFR.
 
-    For HTTPS, the :ref:`tls-cert-bundle:<unbound.conf.tls-cert-bundle>` and
+    For HTTPS, the :ref:`tls-cert-bundle<unbound.conf.tls-cert-bundle>` and
     the hostname from the url are used to authenticate the connection.
 
     If you specify a hostname in the URL, you cannot use the domain from the
@@ -4001,7 +4001,7 @@ url: *<URL to zone file>*
 .. _unbound.conf.auth.allow-notify:
 
 allow-notify: *<IP address or host name or netblockIP/prefix>*
-    With :ref:`allow-notify:<unbound.conf.auth.allow-notify>` you can specify
+    With :ref:`allow-notify<unbound.conf.auth.allow-notify>` you can specify
     additional sources of notifies.
     When notified, the server attempts to first probe and then zone transfer.
     If the notify is from a primary, it first attempts that primary.
@@ -4010,8 +4010,8 @@ allow-notify: *<IP address or host name or netblockIP/prefix>*
     notified.
 
     .. note::
-        The primaries from :ref:`primary:<unbound.conf.auth.primary>` and
-        :ref:`url:<unbound.conf.auth.url>` statements are allowed notify by
+        The primaries from :ref:`primary<unbound.conf.auth.primary>` and
+        :ref:`url<unbound.conf.auth.url>` statements are allowed notify by
         default.
 
 .. _unbound.conf.auth.fallback-enabled:
@@ -4077,7 +4077,7 @@ zonemd-reject-absence: *<yes or no>*
     failure.
 
     The action upon failure is controlled by the
-    :ref:`zonemd-permissive-mode:<unbound.conf.zonemd-permissive-mode>` option,
+    :ref:`zonemd-permissive-mode<unbound.conf.zonemd-permissive-mode>` option,
     for log only or also block the zone.
 
     Without the option, absence of a ZONEMD is only a failure when the zone is
@@ -4102,15 +4102,15 @@ View Options
 ^^^^^^^^^^^^
 
 There may be multiple **view:** clauses.
-Each with a :ref:`name:<unbound.conf.view.name>` and zero or more
-:ref:`local-zone:<unbound.conf.view.local-zone>` and
-:ref:`local-data:<unbound.conf.view.local-data>` attributes.
-Views can also contain :ref:`view-first:<unbound.conf.view.view-first>`,
-:ref:`response-ip:<unbound.conf.response-ip>`,
-:ref:`response-ip-data:<unbound.conf.response-ip-data>` and
-:ref:`local-data-ptr:<unbound.conf.view.local-data-ptr>` attributes.
+Each with a :ref:`name<unbound.conf.view.name>` and zero or more
+:ref:`local-zone<unbound.conf.view.local-zone>` and
+:ref:`local-data<unbound.conf.view.local-data>` attributes.
+Views can also contain :ref:`view-first<unbound.conf.view.view-first>`,
+:ref:`response-ip<unbound.conf.response-ip>`,
+:ref:`response-ip-data<unbound.conf.response-ip-data>` and
+:ref:`local-data-ptr<unbound.conf.view.local-data-ptr>` attributes.
 View can be mapped to requests by specifying the view name in an
-:ref:`access-control-view:<unbound.conf.access-control-view>` attribute.
+:ref:`access-control-view<unbound.conf.access-control-view>` attribute.
 Options from matching views will override global options.
 Global options will be used if no matching view is found, or when the matching
 view does not have the option specified.
@@ -4121,21 +4121,21 @@ name: *<view name>*
     Name of the view.
     Must be unique.
     This name is used in the
-    :ref:`access-control-view:<unbound.conf.access-control-view>` attribute.
+    :ref:`access-control-view<unbound.conf.access-control-view>` attribute.
 
 .. _unbound.conf.view.local-zone:
 
 local-zone: *<zone> <type>*
     View specific local zone elements.
     Has the same types and behaviour as the global
-    :ref:`local-zone:<unbound.conf.local-zone>` elements.
+    :ref:`local-zone<unbound.conf.local-zone>` elements.
     When there is at least one *local-zone:* specified and :ref:`view-first:
     no<unbound.conf.view.view-first>`, the default local-zones will be added to
     this view.
     Defaults can be disabled using the nodefault type.
     When :ref:`view-first: yes<unbound.conf.view.view-first>` or when a view
-    does not have a :ref:`local-zone:<unbound.conf.view.local-zone>`, the
-    global :ref:`local-zone:<unbound.conf.local-zone>` will be used including
+    does not have a :ref:`local-zone<unbound.conf.view.local-zone>`, the
+    global :ref:`local-zone<unbound.conf.local-zone>` will be used including
     it's default zones.
 
 .. _unbound.conf.view.local-data:
@@ -4143,21 +4143,21 @@ local-zone: *<zone> <type>*
 local-data: *"<resource record string>"*
     View specific local data elements.
     Has the same behaviour as the global
-    :ref:`local-data:<unbound.conf.local-data>` elements.
+    :ref:`local-data<unbound.conf.local-data>` elements.
 
 .. _unbound.conf.view.local-data-ptr:
 
 local-data-ptr: *"IPaddr name"*
     View specific local-data-ptr elements.
     Has the same behaviour as the global
-    :ref:`local-data-ptr:<unbound.conf.local-data-ptr>` elements.
+    :ref:`local-data-ptr<unbound.conf.local-data-ptr>` elements.
 
 .. _unbound.conf.view.view-first:
 
 view-first: *<yes or no>*
     If enabled, it attempts to use the global
-    :ref:`local-zone:<unbound.conf.local-zone>` and
-    :ref:`local-data:<unbound.conf.local-data>` if there is no match in the
+    :ref:`local-zone<unbound.conf.local-zone>` and
+    :ref:`local-data<unbound.conf.local-data>` if there is no match in the
     view specific options.
 
     Default: no
@@ -4170,15 +4170,15 @@ This module acts like the iterator and validator modules do, on queries and
 answers.
 To enable the script module it has to be compiled into the daemon, and the word
 ``python`` has to be put in the
-:ref:`module-config:<unbound.conf.module-config>` option (usually first, or
+:ref:`module-config<unbound.conf.module-config>` option (usually first, or
 between the validator and iterator).
 Multiple instances of the python module are supported by adding the word
 ``python`` more than once.
 
-If the :ref:`chroot:<unbound.conf.chroot>` option is enabled, you should make
+If the :ref:`chroot<unbound.conf.chroot>` option is enabled, you should make
 sure Python's library directory structure is bind mounted in the new root
 environment, see *mount(8)*.
-Also the :ref:`python-script:<unbound.conf.python.python-script>` path should
+Also the :ref:`python-script<unbound.conf.python.python-script>` path should
 be specified as an absolute path relative to the new root, or as a relative
 path to the working directory.
 
@@ -4187,7 +4187,7 @@ path to the working directory.
 python-script: *<python file>*
     The script file to load.
     Repeat this option for every python module instance added to the
-    :ref:`module-config:<unbound.conf.module-config>` option.
+    :ref:`module-config<unbound.conf.module-config>` option.
 
 Dynamic Library Module Options
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -4197,13 +4197,13 @@ This module is only a very small wrapper that allows dynamic modules to be
 loaded on runtime instead of being compiled into the application.
 To enable the dynlib module it has to be compiled into the daemon, and the word
 ``dynlib`` has to be put in the
-:ref:`module-config:<unbound.conf.module-config>` attribute.
+:ref:`module-config<unbound.conf.module-config>` attribute.
 Multiple instances of dynamic libraries are supported by adding the word
 ``dynlib`` more than once.
 
-The :ref:`dynlib-file:<unbound.conf.dynlib.dynlib-file>` path should be
+The :ref:`dynlib-file<unbound.conf.dynlib.dynlib-file>` path should be
 specified as an absolute path relative to the new path set by
-:ref:`chroot:<unbound.conf.chroot>`, or as a relative path to the working
+:ref:`chroot<unbound.conf.chroot>`, or as a relative path to the working
 directory.
 
 .. _unbound.conf.dynlib.dynlib-file:
@@ -4211,13 +4211,13 @@ directory.
 dynlib-file: *<dynlib file>*
     The dynamic library file to load.
     Repeat this option for every dynlib module instance added to the
-    :ref:`module-config:<unbound.conf.module-config>` option.
+    :ref:`module-config<unbound.conf.module-config>` option.
 
 DNS64 Module Options
 ^^^^^^^^^^^^^^^^^^^^
 
 The ``dns64`` module must be configured in the
-:ref:`module-config:<unbound.conf.module-config>` directive, e.g.:
+:ref:`module-config<unbound.conf.module-config>` directive, e.g.:
 
 .. code-block:: text
 
@@ -4269,7 +4269,7 @@ It is controlled by two options in the
 
 do-nat64: *<yes or no>*
     Use NAT64 to reach IPv4-only servers.
-    Consider also enabling :ref:`prefer-ip6:<unbound.conf.prefer-ip6>`
+    Consider also enabling :ref:`prefer-ip6<unbound.conf.prefer-ip6>`
     to prefer native IPv6 connections to nameservers.
 
     Default: no
@@ -4280,7 +4280,7 @@ nat64-prefix: *<IPv6 prefix>*
     Use a specific NAT64 prefix to reach IPv4-only servers.
     The prefix length must be one of /32, /40, /48, /56, /64 or /96.
 
-    Default: 64:ff9b::/96 (same as :ref:`dns64-prefix:<unbound.conf.dns64.dns64-prefix>`)
+    Default: 64:ff9b::/96 (same as :ref:`dns64-prefix<unbound.conf.dns64.dns64-prefix>`)
 
 DNSCrypt Options
 ^^^^^^^^^^^^^^^^
@@ -4329,7 +4329,7 @@ dnscrypt-secret-key: *<path to secret key file>*
 
 dnscrypt-provider-cert: *<path to cert file>*
     Path to the certificate related to the
-    :ref:`dnscrypt-secret-key:<unbound.conf.dnscrypt.dnscrypt-secret-key>`.
+    :ref:`dnscrypt-secret-key<unbound.conf.dnscrypt.dnscrypt-secret-key>`.
     This option may be specified multiple times.
 
 .. _unbound.conf.dnscrypt.dnscrypt-provider-cert-rotated:
@@ -4337,7 +4337,7 @@ dnscrypt-provider-cert: *<path to cert file>*
 dnscrypt-provider-cert-rotated: *<path to cert file>*
     Path to a certificate that we should be able to serve existing connection
     from but do not want to advertise over
-    :ref:`dnscrypt-provider:<unbound.conf.dnscrypt.dnscrypt-provider>` 's TXT
+    :ref:`dnscrypt-provider<unbound.conf.dnscrypt.dnscrypt-provider>` 's TXT
     record certs distribution.
 
     A typical use case is when rotating certificates, existing clients may
@@ -4403,7 +4403,7 @@ EDNS Client Subnet Module Options
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The ECS module must be configured in the
-:ref:`module-config:<unbound.conf.module-config>` directive, e.g.:
+:ref:`module-config<unbound.conf.module-config>` directive, e.g.:
 
 .. code-block:: text
 
@@ -4424,14 +4424,14 @@ cache.
 Additionally, when a client includes the option in its queries, Unbound will
 forward the option when sending the query to addresses that are explicitly
 allowed in the configuration using
-:ref:`send-client-subnet:<unbound.conf.ecs.send-client-subnet>`.
+:ref:`send-client-subnet<unbound.conf.ecs.send-client-subnet>`.
 The option will always be forwarded, regardless the allowed addresses, when
 :ref:`client-subnet-always-forward:
 yes<unbound.conf.ecs.client-subnet-always-forward>`.
 In this case the lookup in the regular cache is skipped.
 
 The maximum size of the ECS cache is controlled by
-:ref:`msg-cache-size:<unbound.conf.msg-cache-size>` in the configuration file.
+:ref:`msg-cache-size<unbound.conf.msg-cache-size>` in the configuration file.
 On top of that, for each query only 100 different subnets are allowed to be
 stored for each address family.
 Exceeding that number, older entries will be purged from cache.
@@ -4446,8 +4446,8 @@ different networks.
 An example of that is an open resolver installation.
 
 This module does not interact with the
-:ref:`serve-expired\*:<unbound.conf.serve-expired>` and
-:ref:`prefetch:<unbound.conf.prefetch>` options.
+:ref:`serve-expired\*<unbound.conf.serve-expired>` and
+:ref:`prefetch<unbound.conf.prefetch>` options.
 
 .. _unbound.conf.ecs.send-client-subnet:
 
@@ -4458,7 +4458,7 @@ send-client-subnet: *<IP address>*
     Can be given multiple times.
     Authorities not listed will not receive edns-subnet information, unless
     domain in query is specified in
-    :ref:`client-subnet-zone:<unbound.conf.ecs.client-subnet-zone>`.
+    :ref:`client-subnet-zone<unbound.conf.ecs.client-subnet-zone>`.
 
 .. _unbound.conf.ecs.client-subnet-zone:
 
@@ -4467,13 +4467,13 @@ client-subnet-zone: *<domain>*
     Can be given multiple times.
     Zones not listed will not receive edns-subnet information, unless hosted by
     authority specified in
-    :ref:`send-client-subnet:<unbound.conf.ecs.send-client-subnet>`.
+    :ref:`send-client-subnet<unbound.conf.ecs.send-client-subnet>`.
 
 .. _unbound.conf.ecs.client-subnet-always-forward:
 
 client-subnet-always-forward: *<yes or no>*
     Specify whether the ECS address check (configured using
-    :ref:`send-client-subnet:<unbound.conf.ecs.send-client-subnet>`) is applied
+    :ref:`send-client-subnet<unbound.conf.ecs.send-client-subnet>`) is applied
     for all queries, even if the triggering query contains an ECS record, or
     only for queries for which the ECS record is generated using the querier
     address (and therefore did not contain ECS data in the client query).
@@ -4540,7 +4540,7 @@ Opportunistic IPsec Support Module Options
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The IPsec module must be configured in the
-:ref:`module-config:<unbound.conf.module-config>` directive, e.g.:
+:ref:`module-config<unbound.conf.module-config>` directive, e.g.:
 
 .. code-block:: text
 
@@ -4574,12 +4574,12 @@ IPSECKEY
 
 The A/AAAA answer is then cached and returned to the client.
 If the external hook was called the TTL changes to ensure it doesn't surpass
-:ref:`ipsecmod-max-ttl:<unbound.conf.ipsecmod-max-ttl>`.
+:ref:`ipsecmod-max-ttl<unbound.conf.ipsecmod-max-ttl>`.
 
 The same procedure is also followed when :ref:`prefetch:
 yes<unbound.conf.prefetch>` is used, but the A/AAAA answer is given to the
 client before the hook is called.
-:ref:`ipsecmod-max-ttl:<unbound.conf.ipsecmod-max-ttl>` ensures that the A/AAAA
+:ref:`ipsecmod-max-ttl<unbound.conf.ipsecmod-max-ttl>` ensures that the A/AAAA
 answer given from cache is still relevant for opportunistic IPsec.
 
 .. _unbound.conf.ipsecmod-enabled:
@@ -4587,7 +4587,7 @@ answer given from cache is still relevant for opportunistic IPsec.
 ipsecmod-enabled: *<yes or no>*
     Specifies whether the IPsec module is enabled or not.
     The IPsec module still needs to be defined in the
-    :ref:`module-config:<unbound.conf.module-config>` directive.
+    :ref:`module-config<unbound.conf.module-config>` directive.
     This option facilitates turning on/off the module without
     restarting/reloading Unbound.
 
@@ -4601,7 +4601,7 @@ ipsecmod-hook: *<filename>*
     The file needs the proper permissions to be able to be executed by the same
     user that runs Unbound.
     It must be present when the IPsec module is defined in the
-    :ref:`module-config:<unbound.conf.module-config>` directive.
+    :ref:`module-config<unbound.conf.module-config>` directive.
 
 .. _unbound.conf.ipsecmod-strict:
 
@@ -4645,13 +4645,13 @@ ipsecmod-allow: *<domain>*
 .. _unbound.conf.ipsecmod-whitelist:
 
 ipsecmod-whitelist: *<domain>*
-    Alternate syntax for :ref:`ipsecmod-allow:<unbound.conf.ipsecmod-allow>`.
+    Alternate syntax for :ref:`ipsecmod-allow<unbound.conf.ipsecmod-allow>`.
 
 Cache DB Module Options
 ^^^^^^^^^^^^^^^^^^^^^^^
 
 The Cache DB module must be configured in the
-:ref:`module-config:<unbound.conf.module-config>` directive, e.g.:
+:ref:`module-config<unbound.conf.module-config>` directive, e.g.:
 
 .. code-block:: text
 
@@ -4683,7 +4683,7 @@ It can be used as a persistent and/or shared cache backend.
     size, preferably with some kind of least-recently-used eviction policy.
 
 Additionally, the
-:ref:`redis-expire-records:<unbound.conf.cachedb.redis-expire-records>` option
+:ref:`redis-expire-records<unbound.conf.cachedb.redis-expire-records>` option
 can be used in order to set the relative DNS TTL of the message as timeout to
 the Redis records; keep in mind that some additional memory is used per key and
 that the expire information is stored as absolute Unix timestamps in Redis
@@ -4802,7 +4802,7 @@ redis-timeout: *<msec>*
 redis-command-timeout: *<msec>*
     The timeout to use for Redis commands, in milliseconds.
     If ``0``, it uses the
-    :ref:`redis-timeout:<unbound.conf.cachedb.redis-timeout>`
+    :ref:`redis-timeout<unbound.conf.cachedb.redis-timeout>`
     value.
 
     Default: 0
@@ -4812,7 +4812,7 @@ redis-command-timeout: *<msec>*
 redis-connect-timeout: *<msec>*
     The timeout to use for Redis connection set up, in milliseconds.
     If ``0``, it uses the
-    :ref:`redis-timeout:<unbound.conf.cachedb.redis-timeout>`
+    :ref:`redis-timeout<unbound.conf.cachedb.redis-timeout>`
     value.
 
     Default: 0
@@ -4824,7 +4824,7 @@ redis-expire-records: *<yes or no>*
     If yes, Unbound sets timeout for Redis records so that Redis can evict keys
     that have expired automatically.
     If Unbound is configured with
-    :ref:`serve-expired:<unbound.conf.serve-expired>` and
+    :ref:`serve-expired<unbound.conf.serve-expired>` and
     :ref:`serve-expired-ttl: 0<unbound.conf.serve-expired-ttl>`, this option is
     internally reverted to "no".
 
@@ -4859,7 +4859,7 @@ redis-replica-server-host: *<server address or name>*
     (https://redis.io/docs/management/replication/#read-only-replica).
     If specified, all Redis read commands will go to this replica server, while
     the write commands will go to the
-    :ref:`redis-server-host:<unbound.conf.cachedb.redis-server-host>`.
+    :ref:`redis-server-host<unbound.conf.cachedb.redis-server-host>`.
 
     Default: "" (disabled).
 
@@ -4902,7 +4902,7 @@ redis-replica-timeout: *<msec>*
 redis-replica-command-timeout: *<msec>*
     The timeout to use for Redis replica commands, in milliseconds.
     If ``0``, it uses the
-    :ref:`redis-replica-timeout:<unbound.conf.cachedb.redis-replica-timeout>`
+    :ref:`redis-replica-timeout<unbound.conf.cachedb.redis-replica-timeout>`
     value.
 
     Default: 0
@@ -4912,7 +4912,7 @@ redis-replica-command-timeout: *<msec>*
 redis-replica-connect-timeout: *<msec>*
     The timeout to use for Redis replica connection set up, in milliseconds.
     If ``0``, it uses the
-    :ref:`redis-replica-timeout:<unbound.conf.cachedb.redis-replica-timeout>`
+    :ref:`redis-replica-timeout<unbound.conf.cachedb.redis-replica-timeout>`
     value.
 
     Default: 0
@@ -4920,7 +4920,7 @@ redis-replica-connect-timeout: *<msec>*
 .. _unbound.conf.cachedb.redis-replica-logical-db:
 
 redis-replica-logical-db: *<logical database index>*
-    Same as :ref:`redis-logical-db:<unbound.conf.cachedb.redis-logical-db>` but
+    Same as :ref:`redis-logical-db<unbound.conf.cachedb.redis-logical-db>` but
     for the Redis replica server.
 
     Default: 0
@@ -4975,7 +4975,7 @@ dnstap-ip: *<IPaddress[@port]>*
 
 dnstap-tls: *<yes or no>*
     Set this to use TLS to connect to the server specified in
-    :ref:`dnstap-ip:<unbound.conf.dnstap.dnstap-ip>`.
+    :ref:`dnstap-ip<unbound.conf.dnstap.dnstap-ip>`.
     If set to no, TCP is used to connect to the server.
 
     Default: yes
@@ -5105,7 +5105,7 @@ Response Policy Zone Options
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Response Policy Zones are configured with **rpz:**, and each one must have a
-:ref:`name:<unbound.conf.rpz.name>`.
+:ref:`name<unbound.conf.rpz.name>` attribute.
 There can be multiple ones, by listing multiple RPZ clauses, each with a
 different name.
 RPZ clauses are applied in order of configuration and any match from an earlier
@@ -5122,8 +5122,8 @@ QNAME, Response IP Address, nsdname, nsip and clientip triggers are supported.
 Supported actions are: NXDOMAIN, NODATA, PASSTHRU, DROP, Local Data, tcp-only
 and drop.
 RPZ QNAME triggers are applied after any
-:ref:`local-zone:<unbound.conf.local-zone>` and before any
-:ref:`auth-zone:<unbound.conf.auth>`.
+:ref:`local-zone<unbound.conf.local-zone>` and before any
+:ref:`auth-zone<unbound.conf.auth>`.
 
 The RPZ zone is a regular DNS zone formatted with a SOA start record as usual.
 The items in the zone are entries, that specify what to act on (the trigger)
@@ -5193,7 +5193,7 @@ primary: *<IP address or host name>*
     If you combine the ``'@'`` and ``'#'``, the ``'@'`` comes first.
     If you point it at another Unbound instance, it would not work because that
     does not support AXFR/IXFR for the zone, but if you used
-    :ref:`url:<unbound.conf.rpz.url>` to download the zonefile as a text file
+    :ref:`url<unbound.conf.rpz.url>` to download the zonefile as a text file
     from a webserver that would work.
 
     If you specify the hostname, you cannot use the domain from the zonefile,
@@ -5203,7 +5203,7 @@ primary: *<IP address or host name>*
 .. _unbound.conf.rpz.master:
 
 master: *<IP address or host name>*
-    Alternate syntax for :ref:`primary:<unbound.conf.rpz.primary>`.
+    Alternate syntax for :ref:`primary<unbound.conf.rpz.primary>`.
 
 .. _unbound.conf.rpz.url:
 
@@ -5223,13 +5223,13 @@ url: *<url to zonefile>*
     downloads.
     If none of the URLs work, the primaries are tried with IXFR and AXFR.
 
-    For HTTPS, the :ref:`tls-cert-bundle:<unbound.conf.tls-cert-bundle>` and
+    For HTTPS, the :ref:`tls-cert-bundle<unbound.conf.tls-cert-bundle>` and
     the hostname from the url are used to authenticate the connection.
 
 .. _unbound.conf.rpz.allow-notify:
 
 allow-notify: *<IP address or host name or netblockIP/prefix>*
-    With :ref:`allow-notify:<unbound.conf.rpz.allow-notify>` you can specify
+    With :ref:`allow-notify<unbound.conf.rpz.allow-notify>` you can specify
     additional sources of notifies.
     When notified, the server attempts to first probe and then zone transfer.
     If the notify is from a primary, it first attempts that primary.
@@ -5238,8 +5238,8 @@ allow-notify: *<IP address or host name or netblockIP/prefix>*
     notified.
 
     .. note::
-        The primaries from :ref:`primary:<unbound.conf.rpz.primary>` and
-        :ref:`url:<unbound.conf.rpz.url>` statements are allowed notify by
+        The primaries from :ref:`primary<unbound.conf.rpz.primary>` and
+        :ref:`url<unbound.conf.rpz.url>` statements are allowed notify by
         default.
 
 .. _unbound.conf.rpz.zonefile:
@@ -5261,7 +5261,7 @@ rpz-action-override: *<action>*
 
 rpz-cname-override: *<domain>*
     The CNAME target domain to use if the cname action is configured for
-    :ref:`rpz-action-override:<unbound.conf.rpz.rpz-action-override>`.
+    :ref:`rpz-action-override<unbound.conf.rpz.rpz-action-override>`.
 
 .. _unbound.conf.rpz.rpz-log:
 
@@ -5300,10 +5300,10 @@ for-downstream: *<yes or no>*
 tags: *"<list of tags>"*
     Limit the policies from this RPZ clause to clients with a matching tag.
 
-    Tags need to be defined in :ref:`define-tag:<unbound.conf.define-tag>` and
+    Tags need to be defined in :ref:`define-tag<unbound.conf.define-tag>` and
     can be assigned to client addresses using
-    :ref:`access-control-tag:<unbound.conf.access-control-tag>` or
-    :ref:`interface-tag:<unbound.conf.interface-tag>`.
+    :ref:`access-control-tag<unbound.conf.access-control-tag>` or
+    :ref:`interface-tag<unbound.conf.interface-tag>`.
     Enclose list of tags in quotes (``""``) and put spaces between tags.
 
     If no tags are specified the policies from this clause will be applied for
