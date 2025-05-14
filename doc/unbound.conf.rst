@@ -300,7 +300,7 @@ outgoing-interface: *<IPv4/IPv6 address or IPv6 netblock>*
     :ref:`outgoing-interface<unbound.conf.outgoing-interface>` options, but do
     not specify both an individual IPv6 address and an IPv6 netblock, or the
     randomisation will be compromised.
-    Consider combining with :ref:`prefer-ip6<unbound.conf.prefer-ip6>` yes to
+    Consider combining with :ref:`prefer-ip6: yes<unbound.conf.prefer-ip6>` to
     increase the likelihood of IPv6 nameservers being selected for queries.
     On Linux you need these two commands to be able to use the freebind socket
     option to receive traffic for the ip6 netblock:
@@ -474,11 +474,15 @@ jostle-timeout: *<msec>*
     This protects against denial of service by slow queries or high query
     rates.
 
-    The effect is that the qps for long-lasting queries is about::
+    The effect is that the qps for long-lasting queries is about:
+
+    .. code-block:: text
 
         (num-queries-per-thread / 2) / (average time for such long queries) qps
 
-    The qps for short queries can be about::
+    The qps for short queries can be about:
+
+    .. code-block:: text
 
         (num-queries-per-thread / 2) / (jostle-timeout in whole seconds) qps per thread
 
@@ -604,7 +608,9 @@ so-rcvbuf: *<number>*
 so-sndbuf: *<number>*
     If not 0, then set the SO_SNDBUF socket option to get more buffer space on
     UDP port 53 outgoing queries.
-    This for very busy servers handles spikes in answer traffic, otherwise::
+    This for very busy servers handles spikes in answer traffic, otherwise:
+
+    .. code-block:: text
 
         send: resource temporarily unavailable
 
@@ -1218,8 +1224,7 @@ pad-queries-block-size: *<number>*
 tls-use-sni: *<yes or no>*
     Enable or disable sending the SNI extension on TLS connections.
 
-    .. note::
-        Changing the value requires a reload.
+    .. note:: Changing the value requires a reload.
 
     Default: yes
 
@@ -1650,7 +1655,9 @@ directory: *<directory>*
 
 logfile: *<filename>*
     If ``""`` is given, logging goes to stderr, or nowhere once daemonized.
-    The logfile is appended to, in the following format::
+    The logfile is appended to, in the following format:
+
+    .. code-block:: text
 
         [seconds since 1970] unbound[pid:tid]: type: message.
 
@@ -2327,9 +2334,7 @@ domain-insecure: *<domain name>*
 .. _unbound.conf.val-override-date:
 
 val-override-date: *<rrsig-style date spec>*
-    .. warning::
-
-        Debugging feature!
+    .. warning:: Debugging feature!
 
     If enabled by giving a RRSIG style date, that date is used for verifying
     RRSIG inception and expiration dates, instead of the current date.
@@ -2769,7 +2774,9 @@ local-zone: *<zone> <type>*
         This answers queries for the zone, and all subdomains of the zone with
         the local data for the zone.
         It can be used to redirect a domain to return a different address
-        record to the end user, with::
+        record to the end user, with:
+
+        .. code-block:: text
 
             local-zone: "example.com." redirect
             local-data: "example.com. A 127.0.0.1"
@@ -2784,7 +2791,9 @@ local-zone: *<zone> <type>*
         The query is answered normally, same as
         :ref:`transparent<unbound.conf.local-zone.type.transparent>`.
         The client IP address (@portnumber) is printed to the logfile.
-        The log message is::
+        The log message is:
+
+        .. code-block:: text
 
             timestamp, unbound-pid, info: zonename inform IP@port queryname type class.
 
@@ -2896,7 +2905,9 @@ local-zone: *<zone> <type>*
         The IPv4 and IPv6 localhost information is given.
         NS and SOA records are provided for completeness and to satisfy some
         DNS update tools.
-        Default content::
+        Default content:
+
+        .. code-block:: text
 
             local-zone: "localhost." redirect
             local-data: "localhost. 10800 IN NS localhost."
@@ -2905,7 +2916,9 @@ local-zone: *<zone> <type>*
             local-data: "localhost. 10800 IN AAAA ::1"
 
     reverse IPv4 loopback
-        Default content::
+        Default content:
+
+        .. code-block:: text
 
             local-zone: "127.in-addr.arpa." static
             local-data: "127.in-addr.arpa. 10800 IN NS localhost."
@@ -2913,7 +2926,9 @@ local-zone: *<zone> <type>*
             local-data: "1.0.0.127.in-addr.arpa. 10800 IN PTR localhost."
 
     reverse IPv6 loopback
-        Default content::
+        Default content:
+
+        .. code-block:: text
 
             local-zone: "1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.ip6.arpa." static
             local-data: "1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.ip6.arpa. 10800 IN NS localhost."
@@ -2921,42 +2936,54 @@ local-zone: *<zone> <type>*
             local-data: "1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.ip6.arpa. 10800 IN PTR localhost."
 
     home.arpa (:rfc:`8375`)
-        Default content::
+        Default content:
+
+        .. code-block:: text
 
             local-zone: "home.arpa." static
             local-data: "home.arpa. 10800 IN NS localhost."
             local-data: "home.arpa. 10800 IN SOA localhost. nobody.invalid. 1 3600 1200 604800 10800"
 
     resolver.arpa (:rfc:`9462`)
-        Default content::
+        Default content:
+
+        .. code-block:: text
 
             local-zone: "resolver.arpa." static
             local-data: "resolver.arpa. 10800 IN NS localhost."
             local-data: "resolver.arpa. 10800 IN SOA localhost. nobody.invalid. 1 3600 1200 604800 10800"
 
     service.arpa (draft-ietf-dnssd-srp-25)
-        Default content::
+        Default content:
+
+        .. code-block:: text
 
             local-zone: "service.arpa." static
             local-data: "service.arpa. 10800 IN NS localhost."
             local-data: "service.arpa. 10800 IN SOA localhost. nobody.invalid. 1 3600 1200 604800 10800"
 
     onion (:rfc:`7686`)
-        Default content::
+        Default content:
+
+        .. code-block:: text
 
             local-zone: "onion." static
             local-data: "onion. 10800 IN NS localhost."
             local-data: "onion. 10800 IN SOA localhost. nobody.invalid. 1 3600 1200 604800 10800"
 
     test (:rfc:`6761`)
-        Default content::
+        Default content:
+
+        .. code-block:: text
 
             local-zone: "test." static
             local-data: "test. 10800 IN NS localhost."
             local-data: "test. 10800 IN SOA localhost. nobody.invalid. 1 3600 1200 604800 10800"
 
     invalid (:rfc:`6761`)
-        Default content::
+        Default content:
+
+        .. code-block:: text
 
             local-zone: "invalid." static
             local-data: "invalid. 10800 IN NS localhost."
@@ -2990,7 +3017,9 @@ local-zone: *<zone> <type>*
     reverse IPv6 Example Prefix
         Reverse data for zone ``8.B.D.0.1.0.0.2.ip6.arpa``.
         This zone is used for tutorials and examples.
-        You can remove the block on this zone with::
+        You can remove the block on this zone with:
+
+        .. code-block:: text
 
             local-zone: 8.B.D.0.1.0.0.2.ip6.arpa. nodefault
 
@@ -3010,7 +3039,9 @@ local-data: *"<resource record string>"*
     subdomain of a :ref:`local-zone<unbound.conf.local-zone>`, a
     :ref:`transparent local-zone<unbound.conf.local-zone.type.transparent>` is
     configured.
-    For record types such as TXT, use single quotes, as in::
+    For record types such as TXT, use single quotes, as in:
+
+    .. code-block:: text
 
         local-data: 'example. TXT "text"'
 
@@ -3658,7 +3689,9 @@ The stub zone can be used to configure authoritative data to be used by the
 resolver that cannot be accessed using the public internet servers.
 This is useful for company-local data or private zones.
 Setup an authoritative server on a different host (or different port).
-Enter a config entry for Unbound with::
+Enter a config entry for Unbound with:
+
+.. code-block:: text
 
    stub-addr: <ip address of host[@port]>
 
@@ -3973,7 +4006,9 @@ master: *<IP address or host name>*
 url: *<URL to zone file>*
     Where to download a zonefile for the zone.
     With HTTP or HTTPS.
-    An example for the url is::
+    An example for the url is:
+
+    .. code-block:: text
 
         http://www.example.com/example.org.zone
 
@@ -4239,9 +4274,7 @@ dns64-prefix: *<IPv6 prefix>*
 .. _unbound.conf.dns64.dns64-synthall:
 
 dns64-synthall: *<yes or no>*
-    .. warning::
-
-        Debugging feature!
+    .. warning:: Debugging feature!
 
     If enabled, synthesize all AAAA records despite the presence of actual AAAA
     records.
@@ -4313,7 +4346,9 @@ dnscrypt-port: *<port number>*
 
 dnscrypt-provider: *<provider name>*
     The provider name to use to distribute certificates.
-    This is of the form::
+    This is of the form:
+
+    .. code-block:: text
 
         2.dnscrypt-cert.example.com.
 
@@ -5210,7 +5245,9 @@ master: *<IP address or host name>*
 url: *<url to zonefile>*
     Where to download a zonefile for the zone.
     With HTTP or HTTPS.
-    An example for the url is::
+    An example for the url is:
+
+    .. code-block:: text
 
         http://www.example.com/example.org.zone
 
