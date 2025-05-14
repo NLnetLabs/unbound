@@ -11,5 +11,6 @@ documentation).
 The online documentation has its own repository at
 https://github.com/NLnetLabs/unbound-manual.
 
-In the README.md there, there are further simple instructions on how to
-generate the templated man pages there and update them in this repository.
+In the README.md there (branch test-auto for now), there are further simple
+instructions on how to generate the templated man pages there and update them
+in this repository.
