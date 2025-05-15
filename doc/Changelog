@@ -1,3 +1,6 @@
+15 May 2025: Wouter
+	- Fix config of slab values when there is no config file.
+
 13 May 2025: Yorgos
 	- Fix #1284: NULL pointer deref in az_find_nsec_cover() (latent bug)
 	  by adding a log_assert() to safeguard future development.

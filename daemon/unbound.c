@@ -747,6 +747,7 @@ run_daemon(const char* cfgfile, int cmdline_verbose, int debug_mode, int need_pi
 					"the commandline to see more errors, "
 					"or unbound-checkconf", cfgfile);
 			log_warn("Continuing with default config settings");
+			config_auto_slab_values(cfg);
 		}
 		apply_settings(daemon, cfg, cmdline_verbose, debug_mode);
 		if(!done_setup)
