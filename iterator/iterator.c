@@ -3247,13 +3247,19 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 		}
 	}
 	if(type == RESPONSE_TYPE_CNAME &&
-		iq->qchase.qtype == LDNS_RR_TYPE_CNAME &&
+		(iq->qchase.qtype == LDNS_RR_TYPE_CNAME ||
+		  iq->qchase.qtype == LDNS_RR_TYPE_ANY) &&
 		iq->minimisation_state == MINIMISE_STATE &&
 		query_dname_compare(iq->qchase.qname, iq->qinfo_out.qname) == 0) {
 		/* The minimised query for full QTYPE and hidden QTYPE can be
 		 * classified as CNAME response type, even when the original
 		 * QTYPE=CNAME. This should be treated as answer response type.
 		 */
+		/* For QTYPE=ANY, it is also considered the response, that
+		 * is what the classifier would say, if it saw qtype ANY,
+		 * and this same response was returned for that. The response
+		 * can already be treated as such an answer, without having
+		 * to send another query with a new qtype. */
 		type = RESPONSE_TYPE_ANSWER;
 	}
 
@@ -3510,6 +3516,15 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 			iq->num_target_queries = 0;
 			return processDSNSFind(qstate, iq, id);
 		}
+		if(iq->minimisation_state == MINIMISE_STATE &&
+			query_dname_compare(iq->qchase.qname,
+			iq->qinfo_out.qname) != 0) {
+			verbose(VERB_ALGO, "continue query minimisation, "
+				"downwards, after CNAME response for "
+				"intermediate label");
+			/* continue query minimisation, downwards */
+			return next_state(iq, QUERYTARGETS_STATE);
+		}
 		/* Process the CNAME response. */
 		if(!handle_cname_response(qstate, iq, iq->response, 
 			&sname, &snamelen)) {
@@ -3572,10 +3587,7 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 		iq->auth_zone_response = 0;
 		iq->sent_count = 0;
 		iq->dp_target_count = 0;
-		if(iq->minimisation_state != MINIMISE_STATE)
-			/* Only count as query restart when it is not an extra
-			 * query as result of qname minimisation. */
-			iq->query_restart_count++;
+		iq->query_restart_count++;
 		if(qstate->env->cfg->qname_minimisation)
 			iq->minimisation_state = INIT_MINIMISE_STATE;
 
