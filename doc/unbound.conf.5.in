@@ -131,7 +131,7 @@ clauses in the included files and right after this directive.
 These options are part of the \fBserver:\fP clause.
 .INDENT 0.0
 .TP
-.B verbosity: \fI<number>\fP
+.B verbosity: \fI<number>\fP 
 The verbosity level.
 .INDENT 7.0
 .TP
@@ -163,7 +163,7 @@ Default: 1
 .UNINDENT
 .INDENT 0.0
 .TP
-.B statistics\-interval: \fI<seconds>\fP
+.B statistics\-interval: \fI<seconds>\fP 
 The number of seconds between printing statistics to the log for every
 thread.
 Disable with value \fB0\fP or \fB\(dq\(dq\fP\&.
@@ -176,7 +176,7 @@ Default: 0 (disabled)
 .UNINDENT
 .INDENT 0.0
 .TP
-.B statistics\-cumulative: \fI<yes or no>\fP
+.B statistics\-cumulative: \fI<yes or no>\fP 
 If enabled, statistics are cumulative since starting Unbound, without
 clearing the statistics counters after logging the statistics.
 .sp
@@ -184,7 +184,7 @@ Default: no
 .UNINDENT
 .INDENT 0.0
 .TP
-.B extended\-statistics: \fI<yes or no>\fP
+.B extended\-statistics: \fI<yes or no>\fP 
 If enabled, extended statistics are printed from
 \fI\%unbound\-control(8)\fP\&.
 The counters are listed in
@@ -195,7 +195,7 @@ Default: no
 .UNINDENT
 .INDENT 0.0
 .TP
-.B statistics\-inhibit\-zero: \fI<yes or no>\fP
+.B statistics\-inhibit\-zero: \fI<yes or no>\fP 
 If enabled, selected extended statistics with a value of 0 are inhibited
 from printing with
 \fI\%unbound\-control(8)\fP\&.
@@ -207,21 +207,21 @@ Default: yes
 .UNINDENT
 .INDENT 0.0
 .TP
-.B num\-threads: \fI<number>\fP
+.B num\-threads: \fI<number>\fP 
 The number of threads to create to serve clients. Use 1 for no threading.
 .sp
 Default: 1
 .UNINDENT
 .INDENT 0.0
 .TP
-.B port: \fI<port number>\fP
+.B port: \fI<port number>\fP 
 The port number on which the server responds to queries.
 .sp
 Default: 53
 .UNINDENT
 .INDENT 0.0
 .TP
-.B interface: \fI<IP address or interface name[@port]>\fP
+.B interface: \fI<IP address or interface name[@port]>\fP 
 Interface to use to connect to the network.
 This interface is listened to for queries from clients, and answers to
 clients are given from it.
@@ -239,13 +239,13 @@ and port number), if not specified the default port (from
 .UNINDENT
 .INDENT 0.0
 .TP
-.B ip\-address: \fI<IP address or interface name[@port]>\fP
+.B ip\-address: \fI<IP address or interface name[@port]>\fP 
 Same as \fI\%interface\fP (for ease of
 compatibility with \fI\%nsd.conf(5)\fP).
 .UNINDENT
 .INDENT 0.0
 .TP
-.B interface\-automatic: \fI<yes or no>\fP
+.B interface\-automatic: \fI<yes or no>\fP 
 Listen on all addresses on all (current and future) interfaces, detect the
 source interface on UDP queries and copy them to replies.
 This is a lot like \fI\%ip\-transparent\fP, but
@@ -259,7 +259,7 @@ Default: no
 .UNINDENT
 .INDENT 0.0
 .TP
-.B interface\-automatic\-ports: \fI\(dq<string>\(dq\fP
+.B interface\-automatic\-ports: \fI\(dq<string>\(dq\fP 
 List the port numbers that
 \fI\%interface\-automatic\fP listens on.
 If empty, the default port is listened on.
@@ -274,7 +274,7 @@ Default: \(dq\(dq
 .UNINDENT
 .INDENT 0.0
 .TP
-.B outgoing\-interface: \fI<IPv4/IPv6 address or IPv6 netblock>\fP
+.B outgoing\-interface: \fI<IPv4/IPv6 address or IPv6 netblock>\fP 
 Interface to use to connect to the network.
 This interface is used to send queries to authoritative servers and receive
 their replies.
@@ -315,7 +315,7 @@ ip \-6 route add local mynetblock/64 dev lo
 .UNINDENT
 .INDENT 0.0
 .TP
-.B outgoing\-range: \fI<number>\fP
+.B outgoing\-range: \fI<number>\fP 
 Number of ports to open.
 This number of file descriptors can be opened per thread.
 Must be at least 1.
@@ -328,7 +328,7 @@ Default: 4096 (libevent) / 960 (minievent) / 48 (windows)
 .UNINDENT
 .INDENT 0.0
 .TP
-.B outgoing\-port\-permit: \fI<port number or range>\fP
+.B outgoing\-port\-permit: \fI<port number or range>\fP 
 Permit Unbound to open this port or range of ports for use to send queries.
 A larger number of permitted outgoing ports increases resilience against
 spoofing attempts.
@@ -346,7 +346,7 @@ set of allowed ports.
 .UNINDENT
 .INDENT 0.0
 .TP
-.B outgoing\-port\-avoid: \fI<port number or range>\fP
+.B outgoing\-port\-avoid: \fI<port number or range>\fP 
 Do not permit Unbound to open this port or range of ports for use to send
 queries.
 Use this to make sure Unbound does not grab a port that another daemon
@@ -358,7 +358,7 @@ Give a port number or a range of the form \(dqlow\-high\(dq, without spaces.
 .UNINDENT
 .INDENT 0.0
 .TP
-.B outgoing\-num\-tcp: \fI<number>\fP
+.B outgoing\-num\-tcp: \fI<number>\fP 
 Number of outgoing TCP buffers to allocate per thread.
 If set to 0, or if \fI\%do\-tcp: no\fP is set, no TCP
 queries to authoritative servers are done.
@@ -368,7 +368,7 @@ Default: 10
 .UNINDENT
 .INDENT 0.0
 .TP
-.B incoming\-num\-tcp: \fI<number>\fP
+.B incoming\-num\-tcp: \fI<number>\fP 
 Number of incoming TCP buffers to allocate per thread.
 If set to 0, or if \fI\%do\-tcp: no\fP is set, no TCP
 queries from clients are accepted.
@@ -378,7 +378,7 @@ Default: 10
 .UNINDENT
 .INDENT 0.0
 .TP
-.B edns\-buffer\-size: \fI<number>\fP
+.B edns\-buffer\-size: \fI<number>\fP 
 Number of bytes size to advertise as the EDNS reassembly buffer size.
 This is the value put into datagrams over UDP towards peers.
 The actual buffer size is determined by
@@ -394,7 +394,7 @@ Default: 1232 (\fI\%DNS Flag Day 2020 recommendation\fP)
 .UNINDENT
 .INDENT 0.0
 .TP
-.B max\-udp\-size: \fI<number>\fP
+.B max\-udp\-size: \fI<number>\fP 
 Maximum UDP response size (not applied to TCP response).
 65536 disables the UDP response size maximum, and uses the choice from the
 client, always.
@@ -404,7 +404,7 @@ Default: 1232 (same as \fI\%edns\-buffer\-size\fP)
 .UNINDENT
 .INDENT 0.0
 .TP
-.B stream\-wait\-size: \fI<number>\fP
+.B stream\-wait\-size: \fI<number>\fP 
 Number of bytes size maximum to use for waiting stream buffers.
 A plain number is in bytes, append \(aqk\(aq, \(aqm\(aq or \(aqg\(aq for kilobytes, megabytes
 or gigabytes (1024*1024 bytes in a megabyte).
@@ -419,7 +419,7 @@ Default: 4m
 .UNINDENT
 .INDENT 0.0
 .TP
-.B msg\-buffer\-size: \fI<number>\fP
+.B msg\-buffer\-size: \fI<number>\fP 
 Number of bytes size of the message buffers.
 Default is 65552 bytes, enough for 64 Kb packets, the maximum DNS message
 size.
@@ -431,7 +431,7 @@ Default: 65552
 .UNINDENT
 .INDENT 0.0
 .TP
-.B msg\-cache\-size: \fI<number>\fP
+.B msg\-cache\-size: \fI<number>\fP 
 Number of bytes size of the message cache.
 A plain number is in bytes, append \(aqk\(aq, \(aqm\(aq or \(aqg\(aq for kilobytes, megabytes
 or gigabytes (1024*1024 bytes in a megabyte).
@@ -440,7 +440,7 @@ Default: 4m
 .UNINDENT
 .INDENT 0.0
 .TP
-.B msg\-cache\-slabs: \fI<number>\fP
+.B msg\-cache\-slabs: \fI<number>\fP 
 Number of slabs in the message cache.
 Slabs reduce lock contention by threads.
 Must be set to a power of 2.
@@ -452,7 +452,7 @@ Default: (unconfigured)
 .UNINDENT
 .INDENT 0.0
 .TP
-.B num\-queries\-per\-thread: \fI<number>\fP
+.B num\-queries\-per\-thread: \fI<number>\fP 
 The number of queries that every thread will service simultaneously.
 If more queries arrive that need servicing, and no queries can be jostled
 out (see \fI\%jostle\-timeout\fP), then the
@@ -465,7 +465,7 @@ Default: 2048 (libevent) / 512 (minievent) / 24 (windows)
 .UNINDENT
 .INDENT 0.0
 .TP
-.B jostle\-timeout: \fI<msec>\fP
+.B jostle\-timeout: \fI<msec>\fP 
 Timeout used when the server is very busy.
 Set to a value that usually results in one roundtrip to the authority
 servers.
@@ -506,7 +506,7 @@ Default: 200
 .UNINDENT
 .INDENT 0.0
 .TP
-.B delay\-close: \fI<msec>\fP
+.B delay\-close: \fI<msec>\fP 
 Extra delay for timeouted UDP ports before they are closed, in msec.
 This prevents very delayed answer packets from the upstream (recursive)
 servers from bouncing against closed ports and setting off all sort of
@@ -518,7 +518,7 @@ Default: 0 (disabled)
 .UNINDENT
 .INDENT 0.0
 .TP
-.B udp\-connect: \fI<yes or no>\fP
+.B udp\-connect: \fI<yes or no>\fP 
 Perform \fIconnect(2)\fP for UDP sockets that mitigates ICMP side channel
 leakage.
 .sp
@@ -526,7 +526,7 @@ Default: yes
 .UNINDENT
 .INDENT 0.0
 .TP
-.B unknown\-server\-time\-limit: \fI<msec>\fP
+.B unknown\-server\-time\-limit: \fI<msec>\fP 
 The wait time in msec for waiting for an unknown server to reply.
 Increase this if you are behind a slow satellite link, to eg. 1128.
 That would then avoid re\-querying every initial query because it times out.
@@ -535,7 +535,7 @@ Default: 376
 .UNINDENT
 .INDENT 0.0
 .TP
-.B discard\-timeout: \fI<msec>\fP
+.B discard\-timeout: \fI<msec>\fP 
 The wait time in msec where recursion requests are dropped.
 This is to stop a large number of replies from accumulating.
 They receive no reply, the work item continues to recurse.
@@ -549,7 +549,7 @@ Default: 1900
 .UNINDENT
 .INDENT 0.0
 .TP
-.B wait\-limit: \fI<number>\fP
+.B wait\-limit: \fI<number>\fP 
 The number of replies that can wait for recursion, for an IP address.
 This makes a ratelimit per IP address of waiting replies for recursion.
 It stops very large amounts of queries waiting to be returned to one
@@ -560,7 +560,7 @@ Default: 1000
 .UNINDENT
 .INDENT 0.0
 .TP
-.B wait\-limit\-cookie: \fI<number>\fP
+.B wait\-limit\-cookie: \fI<number>\fP 
 The number of replies that can wait for recursion, for an IP address
 that sent the query with a valid DNS Cookie.
 Since the cookie validates the client address, this limit can be higher.
@@ -569,7 +569,7 @@ Default: 10000
 .UNINDENT
 .INDENT 0.0
 .TP
-.B wait\-limit\-netblock: \fI<netblock>\fP \fI<number>\fP
+.B wait\-limit\-netblock: \fI<netblock>\fP \fI<number>\fP 
 The wait limit for the netblock.
 If not given the
 \fI\%wait\-limit\fP
@@ -587,7 +587,7 @@ Default: (none)
 .UNINDENT
 .INDENT 0.0
 .TP
-.B wait\-limit\-cookie\-netblock: \fI<netblock>\fP \fI<number>\fP
+.B wait\-limit\-cookie\-netblock: \fI<netblock>\fP \fI<number>\fP 
 The wait limit for the netblock, when the query has a DNS Cookie.
 If not given, the
 \fI\%wait\-limit\-cookie\fP
@@ -599,7 +599,7 @@ Default: (none)
 .UNINDENT
 .INDENT 0.0
 .TP
-.B so\-rcvbuf: \fI<number>\fP
+.B so\-rcvbuf: \fI<number>\fP 
 If not 0, then set the SO_RCVBUF socket option to get more buffer space on
 UDP port 53 incoming queries.
 So that short spikes on busy servers do not drop packets (see counter in
@@ -619,7 +619,7 @@ Default: 0 (use system value)
 .UNINDENT
 .INDENT 0.0
 .TP
-.B so\-sndbuf: \fI<number>\fP
+.B so\-sndbuf: \fI<number>\fP 
 If not 0, then set the SO_SNDBUF socket option to get more buffer space on
 UDP port 53 outgoing queries.
 This for very busy servers handles spikes in answer traffic, otherwise:
@@ -652,7 +652,7 @@ Default: 4m
 .UNINDENT
 .INDENT 0.0
 .TP
-.B so\-reuseport: \fI<yes or no>\fP
+.B so\-reuseport: \fI<yes or no>\fP 
 If yes, then open dedicated listening sockets for incoming queries for each
 thread and try to set the SO_REUSEPORT socket option on each socket.
 May distribute incoming queries to threads more evenly.
@@ -673,7 +673,7 @@ Default: yes
 .UNINDENT
 .INDENT 0.0
 .TP
-.B ip\-transparent: \fI<yes or no>\fP
+.B ip\-transparent: \fI<yes or no>\fP 
 If yes, then use IP_TRANSPARENT socket option on sockets where Unbound is
 listening for incoming traffic.
 Allows you to bind to non\-local interfaces.
@@ -694,7 +694,7 @@ Default: no
 .UNINDENT
 .INDENT 0.0
 .TP
-.B ip\-freebind: \fI<yes or no>\fP
+.B ip\-freebind: \fI<yes or no>\fP 
 If yes, then use IP_FREEBIND socket option on sockets where Unbound is
 listening to incoming traffic.
 Allows you to bind to IP addresses that are nonlocal or do not exist, like
@@ -708,7 +708,7 @@ Default: no
 .UNINDENT
 .INDENT 0.0
 .TP
-.B ip\-dscp: \fI<number>\fP
+.B ip\-dscp: \fI<number>\fP 
 The value of the Differentiated Services Codepoint (DSCP) in the
 differentiated services field (DS) of the outgoing IP packet headers.
 The field replaces the outdated IPv4 Type\-Of\-Service field and the IPv6
@@ -716,7 +716,7 @@ traffic class field.
 .UNINDENT
 .INDENT 0.0
 .TP
-.B rrset\-cache\-size: \fI<number>\fP
+.B rrset\-cache\-size: \fI<number>\fP 
 Number of bytes size of the RRset cache.
 A plain number is in bytes, append \(aqk\(aq, \(aqm\(aq or \(aqg\(aq for kilobytes, megabytes
 or gigabytes (1024*1024 bytes in a megabyte).
@@ -725,7 +725,7 @@ Default: 4m
 .UNINDENT
 .INDENT 0.0
 .TP
-.B rrset\-cache\-slabs: \fI<number>\fP
+.B rrset\-cache\-slabs: \fI<number>\fP 
 Number of slabs in the RRset cache.
 Slabs reduce lock contention by threads.
 Must be set to a power of 2.
@@ -737,7 +737,7 @@ Default: (unconfigured)
 .UNINDENT
 .INDENT 0.0
 .TP
-.B cache\-max\-ttl: \fI<seconds>\fP
+.B cache\-max\-ttl: \fI<seconds>\fP 
 Time to live maximum for RRsets and messages in the cache.
 When the TTL expires, the cache item has expired.
 Can be set lower to force the resolver to query for data often, and not
@@ -748,7 +748,7 @@ Default: 86400 (1 day)
 .UNINDENT
 .INDENT 0.0
 .TP
-.B cache\-min\-ttl: \fI<seconds>\fP
+.B cache\-min\-ttl: \fI<seconds>\fP 
 Time to live minimum for RRsets and messages in the cache.
 If the minimum kicks in, the data is cached for longer than the domain
 owner intended, and thus less queries are made to look up the data.
@@ -760,7 +760,7 @@ Default: 0 (disabled)
 .UNINDENT
 .INDENT 0.0
 .TP
-.B cache\-max\-negative\-ttl: \fI<seconds>\fP
+.B cache\-max\-negative\-ttl: \fI<seconds>\fP 
 Time to live maximum for negative responses, these have a SOA in the
 authority section that is limited in time.
 This applies to NXDOMAIN and NODATA answers.
@@ -769,7 +769,7 @@ Default: 3600
 .UNINDENT
 .INDENT 0.0
 .TP
-.B cache\-min\-negative\-ttl: \fI<seconds>\fP
+.B cache\-min\-negative\-ttl: \fI<seconds>\fP 
 Time to live minimum for negative responses, these have a SOA in the
 authority section that is limited in time.
 If this is disabled and
@@ -782,7 +782,7 @@ Default: 0 (disabled)
 .UNINDENT
 .INDENT 0.0
 .TP
-.B infra\-host\-ttl: \fI<seconds>\fP
+.B infra\-host\-ttl: \fI<seconds>\fP 
 Time to live for entries in the host cache.
 The host cache contains roundtrip timing, lameness and EDNS support
 information.
@@ -791,7 +791,7 @@ Default: 900
 .UNINDENT
 .INDENT 0.0
 .TP
-.B infra\-cache\-slabs: \fI<number>\fP
+.B infra\-cache\-slabs: \fI<number>\fP 
 Number of slabs in the infrastructure cache.
 Slabs reduce lock contention by threads.
 Must be set to a power of 2.
@@ -803,14 +803,14 @@ Default: (unconfigured)
 .UNINDENT
 .INDENT 0.0
 .TP
-.B infra\-cache\-numhosts: \fI<number>\fP
+.B infra\-cache\-numhosts: \fI<number>\fP 
 Number of hosts for which information is cached.
 .sp
 Default: 10000
 .UNINDENT
 .INDENT 0.0
 .TP
-.B infra\-cache\-min\-rtt: \fI<msec>\fP
+.B infra\-cache\-min\-rtt: \fI<msec>\fP 
 Lower limit for dynamic retransmit timeout calculation in infrastructure
 cache.
 Increase this value if using forwarders needing more time to do recursive
@@ -820,7 +820,7 @@ Default: 50
 .UNINDENT
 .INDENT 0.0
 .TP
-.B infra\-cache\-max\-rtt: \fI<msec>\fP
+.B infra\-cache\-max\-rtt: \fI<msec>\fP 
 Upper limit for dynamic retransmit timeout calculation in infrastructure
 cache.
 .sp
@@ -828,7 +828,7 @@ Default: 120000 (2 minutes)
 .UNINDENT
 .INDENT 0.0
 .TP
-.B infra\-keep\-probing: \fI<yes or no>\fP
+.B infra\-keep\-probing: \fI<yes or no>\fP 
 If enabled the server keeps probing hosts that are down, in the one probe
 at a time regime.
 Hosts that are down, eg. they did not respond during the one probe at a
@@ -840,7 +840,7 @@ Default: no
 .UNINDENT
 .INDENT 0.0
 .TP
-.B define\-tag: \fI\(dq<list of tags>\(dq\fP
+.B define\-tag: \fI\(dq<list of tags>\(dq\fP 
 Define the tags that can be used with
 \fI\%local\-zone\fP and
 \fI\%access\-control\fP\&.
@@ -848,14 +848,14 @@ Enclose the list between quotes (\fB\(dq\(dq\fP) and put spaces between tags.
 .UNINDENT
 .INDENT 0.0
 .TP
-.B do\-ip4: \fI<yes or no>\fP
+.B do\-ip4: \fI<yes or no>\fP 
 Enable or disable whether IPv4 queries are answered or issued.
 .sp
 Default: yes
 .UNINDENT
 .INDENT 0.0
 .TP
-.B do\-ip6: \fI<yes or no>\fP
+.B do\-ip6: \fI<yes or no>\fP 
 Enable or disable whether IPv6 queries are answered or issued.
 If disabled, queries are not answered on IPv6, and queries are not sent on
 IPv6 to the internet nameservers.
@@ -867,7 +867,7 @@ Default: yes
 .UNINDENT
 .INDENT 0.0
 .TP
-.B prefer\-ip4: \fI<yes or no>\fP
+.B prefer\-ip4: \fI<yes or no>\fP 
 If enabled, prefer IPv4 transport for sending DNS queries to internet
 nameservers.
 Useful if the IPv6 netblock the server has, the entire /64 of that is not
@@ -878,7 +878,7 @@ Default: no
 .UNINDENT
 .INDENT 0.0
 .TP
-.B prefer\-ip6: \fI<yes or no>\fP
+.B prefer\-ip6: \fI<yes or no>\fP 
 If enabled, prefer IPv6 transport for sending DNS queries to internet
 nameservers.
 .sp
@@ -886,21 +886,21 @@ Default: no
 .UNINDENT
 .INDENT 0.0
 .TP
-.B do\-udp: \fI<yes or no>\fP
+.B do\-udp: \fI<yes or no>\fP 
 Enable or disable whether UDP queries are answered or issued.
 .sp
 Default: yes
 .UNINDENT
 .INDENT 0.0
 .TP
-.B do\-tcp: \fI<yes or no>\fP
+.B do\-tcp: \fI<yes or no>\fP 
 Enable or disable whether TCP queries are answered or issued.
 .sp
 Default: yes
 .UNINDENT
 .INDENT 0.0
 .TP
-.B tcp\-mss: \fI<number>\fP
+.B tcp\-mss: \fI<number>\fP 
 Maximum segment size (MSS) of TCP socket on which the server responds to
 queries.
 Value lower than common MSS on Ethernet (1220 for example) will address
@@ -911,7 +911,7 @@ between server and client.
 .UNINDENT
 .INDENT 0.0
 .TP
-.B outgoing\-tcp\-mss: \fI<number>\fP
+.B outgoing\-tcp\-mss: \fI<number>\fP 
 Maximum segment size (MSS) of TCP socket for outgoing queries (from Unbound
 to other servers).
 Value lower than common MSS on Ethernet (1220 for example) will address
@@ -922,7 +922,7 @@ between Unbound and other servers.
 .UNINDENT
 .INDENT 0.0
 .TP
-.B tcp\-idle\-timeout: \fI<msec>\fP
+.B tcp\-idle\-timeout: \fI<msec>\fP 
 The period Unbound will wait for a query on a TCP connection.
 If this timeout expires Unbound closes the connection.
 When the number of free incoming TCP buffers falls below 50% of the total
@@ -943,7 +943,7 @@ Default: 30000 (30 seconds)
 .UNINDENT
 .INDENT 0.0
 .TP
-.B tcp\-reuse\-timeout: \fI<msec>\fP
+.B tcp\-reuse\-timeout: \fI<msec>\fP 
 The period Unbound will keep TCP persistent connections open to authority
 servers.
 .sp
@@ -951,7 +951,7 @@ Default: 60000 (60 seconds)
 .UNINDENT
 .INDENT 0.0
 .TP
-.B max\-reuse\-tcp\-queries: \fI<number>\fP
+.B max\-reuse\-tcp\-queries: \fI<number>\fP 
 The maximum number of queries that can be sent on a persistent TCP
 connection.
 .sp
@@ -959,21 +959,21 @@ Default: 200
 .UNINDENT
 .INDENT 0.0
 .TP
-.B tcp\-auth\-query\-timeout: \fI<number>\fP
+.B tcp\-auth\-query\-timeout: \fI<number>\fP 
 Timeout in milliseconds for TCP queries to auth servers.
 .sp
 Default: 3000 (3 seconds)
 .UNINDENT
 .INDENT 0.0
 .TP
-.B edns\-tcp\-keepalive: \fI<yes or no>\fP
+.B edns\-tcp\-keepalive: \fI<yes or no>\fP 
 Enable or disable EDNS TCP Keepalive.
 .sp
 Default: no
 .UNINDENT
 .INDENT 0.0
 .TP
-.B edns\-tcp\-keepalive\-timeout: \fI<msec>\fP
+.B edns\-tcp\-keepalive\-timeout: \fI<msec>\fP 
 Overrides
 \fI\%tcp\-idle\-timeout\fP
 when
@@ -988,7 +988,7 @@ Default: 120000 (2 minutes)
 .UNINDENT
 .INDENT 0.0
 .TP
-.B sock\-queue\-timeout: \fI<sec>\fP
+.B sock\-queue\-timeout: \fI<sec>\fP 
 UDP queries that have waited in the socket buffer for a long time can be
 dropped.
 The time is set in seconds, 3 could be a good value to ignore old queries
@@ -1001,7 +1001,7 @@ Default: 0 (disabled)
 .UNINDENT
 .INDENT 0.0
 .TP
-.B tcp\-upstream: \fI<yes or no>\fP
+.B tcp\-upstream: \fI<yes or no>\fP 
 Enable or disable whether the upstream queries use TCP only for transport.
 Useful in tunneling scenarios.
 If set to no you can specify TCP transport only for selected forward or
@@ -1014,7 +1014,7 @@ Default: no
 .UNINDENT
 .INDENT 0.0
 .TP
-.B udp\-upstream\-without\-downstream: \fI<yes or no>\fP
+.B udp\-upstream\-without\-downstream: \fI<yes or no>\fP 
 Enable UDP upstream even if \fI\%do\-udp: no\fP is set.
 Useful for TLS service providers, that want no UDP downstream but use UDP
 to fetch data upstream.
@@ -1023,7 +1023,7 @@ Default: no (no changes)
 .UNINDENT
 .INDENT 0.0
 .TP
-.B tls\-upstream: \fI<yes or no>\fP
+.B tls\-upstream: \fI<yes or no>\fP 
 Enabled or disable whether the upstream queries use TLS only for transport.
 Useful in tunneling scenarios.
 The TLS contains plain DNS in TCP wireformat.
@@ -1053,13 +1053,13 @@ Default: no
 .UNINDENT
 .INDENT 0.0
 .TP
-.B ssl\-upstream: \fI<yes or no>\fP
+.B ssl\-upstream: \fI<yes or no>\fP 
 Alternate syntax for \fI\%tls\-upstream\fP\&.
 If both are present in the config file the last is used.
 .UNINDENT
 .INDENT 0.0
 .TP
-.B tls\-service\-key: \fI<file>\fP
+.B tls\-service\-key: \fI<file>\fP 
 If enabled, the server provides DNS\-over\-TLS or DNS\-over\-HTTPS service on
 the TCP ports marked implicitly or explicitly for these services with
 \fI\%tls\-port\fP or
@@ -1088,24 +1088,24 @@ Default: \(dq\(dq (disabled)
 .UNINDENT
 .INDENT 0.0
 .TP
-.B ssl\-service\-key: \fI<file>\fP
+.B ssl\-service\-key: \fI<file>\fP 
 Alternate syntax for \fI\%tls\-service\-key\fP\&.
 .UNINDENT
 .INDENT 0.0
 .TP
-.B tls\-service\-pem: \fI<file>\fP
+.B tls\-service\-pem: \fI<file>\fP 
 The public key certificate pem file for the tls service.
 .sp
 Default: \(dq\(dq (disabled)
 .UNINDENT
 .INDENT 0.0
 .TP
-.B ssl\-service\-pem: \fI<file>\fP
+.B ssl\-service\-pem: \fI<file>\fP 
 Alternate syntax for \fI\%tls\-service\-pem\fP\&.
 .UNINDENT
 .INDENT 0.0
 .TP
-.B tls\-port: \fI<number>\fP
+.B tls\-port: \fI<number>\fP 
 The port number on which to provide TCP TLS service.
 Only interfaces configured with that port number as @number get the TLS
 service.
@@ -1114,12 +1114,12 @@ Default: 853
 .UNINDENT
 .INDENT 0.0
 .TP
-.B ssl\-port: \fI<number>\fP
+.B ssl\-port: \fI<number>\fP 
 Alternate syntax for \fI\%tls\-port\fP\&.
 .UNINDENT
 .INDENT 0.0
 .TP
-.B tls\-cert\-bundle: \fI<file>\fP
+.B tls\-cert\-bundle: \fI<file>\fP 
 If null or \fB\(dq\(dq\fP, no file is used.
 Set it to the certificate bundle file, for example
 \fB/etc/pki/tls/certs/ca\-bundle.crt\fP\&.
@@ -1133,12 +1133,12 @@ Default: \(dq\(dq (disabled)
 .UNINDENT
 .INDENT 0.0
 .TP
-.B ssl\-cert\-bundle: \fI<file>\fP
+.B ssl\-cert\-bundle: \fI<file>\fP 
 Alternate syntax for \fI\%tls\-cert\-bundle\fP\&.
 .UNINDENT
 .INDENT 0.0
 .TP
-.B tls\-win\-cert: \fI<yes or no>\fP
+.B tls\-win\-cert: \fI<yes or no>\fP 
 Add the system certificates to the cert bundle certificates for
 authentication.
 If no cert bundle, it uses only these certificates.
@@ -1151,7 +1151,7 @@ Default: no
 .UNINDENT
 .INDENT 0.0
 .TP
-.B tls\-system\-cert: \fI<yes or no>\fP
+.B tls\-system\-cert: \fI<yes or no>\fP 
 This the same attribute as the
 \fI\%tls\-win\-cert\fP attribute, under a
 different name.
@@ -1159,7 +1159,7 @@ Because it is not windows specific.
 .UNINDENT
 .INDENT 0.0
 .TP
-.B tls\-additional\-port: \fI<portnr>\fP
+.B tls\-additional\-port: \fI<portnr>\fP 
 List port numbers as
 \fI\%tls\-additional\-port\fP, and when
 interfaces are defined, eg. with the @port suffix, as this port number,
@@ -1168,7 +1168,7 @@ Can list multiple, each on a new statement.
 .UNINDENT
 .INDENT 0.0
 .TP
-.B tls\-session\-ticket\-keys: \fI<file>\fP
+.B tls\-session\-ticket\-keys: \fI<file>\fP 
 If not \fB\(dq\(dq\fP, lists files with 80 bytes of random contents that are used
 to perform TLS session resumption for clients using the Unbound server.
 These files contain the secret key for the TLS session tickets.
@@ -1200,7 +1200,7 @@ Default: \(dq\(dq
 .UNINDENT
 .INDENT 0.0
 .TP
-.B tls\-ciphers: \fI<string with cipher list>\fP
+.B tls\-ciphers: \fI<string with cipher list>\fP 
 Set the list of ciphers to allow when serving TLS.
 Use \fB\(dq\(dq\fP for default ciphers.
 .sp
@@ -1208,7 +1208,7 @@ Default: \(dq\(dq
 .UNINDENT
 .INDENT 0.0
 .TP
-.B tls\-ciphersuites: \fI<string with ciphersuites list>\fP
+.B tls\-ciphersuites: \fI<string with ciphersuites list>\fP 
 Set the list of ciphersuites to allow when serving TLS.
 This is for newer TLS 1.3 connections.
 Use \fB\(dq\(dq\fP for default ciphersuites.
@@ -1217,7 +1217,7 @@ Default: \(dq\(dq
 .UNINDENT
 .INDENT 0.0
 .TP
-.B pad\-responses: \fI<yes or no>\fP
+.B pad\-responses: \fI<yes or no>\fP 
 If enabled, TLS serviced queries that contained an EDNS Padding option will
 cause responses padded to the closest multiple of the size specified in
 \fI\%pad\-responses\-block\-size\fP\&.
@@ -1226,7 +1226,7 @@ Default: yes
 .UNINDENT
 .INDENT 0.0
 .TP
-.B pad\-responses\-block\-size: \fI<number>\fP
+.B pad\-responses\-block\-size: \fI<number>\fP 
 The block size with which to pad responses serviced over TLS.
 Only responses to padded queries will be padded.
 .sp
@@ -1234,7 +1234,7 @@ Default: 468
 .UNINDENT
 .INDENT 0.0
 .TP
-.B pad\-queries: \fI<yes or no>\fP
+.B pad\-queries: \fI<yes or no>\fP 
 If enabled, all queries sent over TLS upstreams will be padded to the
 closest multiple of the size specified in
 \fI\%pad\-queries\-block\-size\fP\&.
@@ -1243,14 +1243,14 @@ Default: yes
 .UNINDENT
 .INDENT 0.0
 .TP
-.B pad\-queries\-block\-size: \fI<number>\fP
+.B pad\-queries\-block\-size: \fI<number>\fP 
 The block size with which to pad queries sent over TLS upstreams.
 .sp
 Default: 128
 .UNINDENT
 .INDENT 0.0
 .TP
-.B tls\-use\-sni: \fI<yes or no>\fP
+.B tls\-use\-sni: \fI<yes or no>\fP 
 Enable or disable sending the SNI extension on TLS connections.
 .sp
 \fBNOTE:\fP
@@ -1264,7 +1264,7 @@ Default: yes
 .UNINDENT
 .INDENT 0.0
 .TP
-.B https\-port: \fI<number>\fP
+.B https\-port: \fI<number>\fP 
 The port number on which to provide DNS\-over\-HTTPS service.
 Only interfaces configured with that port number as @number get the HTTPS
 service.
@@ -1273,14 +1273,14 @@ Default: 443
 .UNINDENT
 .INDENT 0.0
 .TP
-.B http\-endpoint: \fI<endpoint string>\fP
+.B http\-endpoint: \fI<endpoint string>\fP 
 The HTTP endpoint to provide DNS\-over\-HTTPS service on.
 .sp
 Default: /dns\-query
 .UNINDENT
 .INDENT 0.0
 .TP
-.B http\-max\-streams: \fI<number of streams>\fP
+.B http\-max\-streams: \fI<number of streams>\fP 
 Number used in the SETTINGS_MAX_CONCURRENT_STREAMS parameter in the HTTP/2
 SETTINGS frame for DNS\-over\-HTTPS connections.
 .sp
@@ -1288,7 +1288,7 @@ Default: 100
 .UNINDENT
 .INDENT 0.0
 .TP
-.B http\-query\-buffer\-size: \fI<size in bytes>\fP
+.B http\-query\-buffer\-size: \fI<size in bytes>\fP 
 Maximum number of bytes used for all HTTP/2 query buffers combined.
 These buffers contain (partial) DNS queries waiting for request stream
 completion.
@@ -1300,7 +1300,7 @@ Default: 4m
 .UNINDENT
 .INDENT 0.0
 .TP
-.B http\-response\-buffer\-size: \fI<size in bytes>\fP
+.B http\-response\-buffer\-size: \fI<size in bytes>\fP 
 Maximum number of bytes used for all HTTP/2 response buffers combined.
 These buffers contain DNS responses waiting to be written back to the
 clients.
@@ -1312,7 +1312,7 @@ Default: 4m
 .UNINDENT
 .INDENT 0.0
 .TP
-.B http\-nodelay: \fI<yes or no>\fP
+.B http\-nodelay: \fI<yes or no>\fP 
 Set TCP_NODELAY socket option on sockets used to provide DNS\-over\-HTTPS
 service.
 Ignored if the option is not available.
@@ -1321,7 +1321,7 @@ Default: yes
 .UNINDENT
 .INDENT 0.0
 .TP
-.B http\-notls\-downstream: \fI<yes or no>\fP
+.B http\-notls\-downstream: \fI<yes or no>\fP 
 Disable use of TLS for the downstream DNS\-over\-HTTP connections.
 Useful for local back end servers.
 .sp
@@ -1329,7 +1329,7 @@ Default: no
 .UNINDENT
 .INDENT 0.0
 .TP
-.B proxy\-protocol\-port: \fI<portnr>\fP
+.B proxy\-protocol\-port: \fI<portnr>\fP 
 List port numbers as
 \fI\%proxy\-protocol\-port\fP, and when
 interfaces are defined, eg. with the @port suffix, as this port number,
@@ -1351,7 +1351,7 @@ Can list multiple, each on a new statement.
 .UNINDENT
 .INDENT 0.0
 .TP
-.B quic\-port: \fI<number>\fP
+.B quic\-port: \fI<number>\fP 
 The port number on which to provide DNS\-over\-QUIC service.
 Only interfaces configured with that port number as @number get the QUIC
 service.
@@ -1361,7 +1361,7 @@ Default: 853
 .UNINDENT
 .INDENT 0.0
 .TP
-.B quic\-size: \fI<size in bytes>\fP
+.B quic\-size: \fI<size in bytes>\fP 
 Maximum number of bytes for all QUIC buffers and data combined.
 A plain number is in bytes, append \(aqk\(aq, \(aqm\(aq or \(aqg\(aq for kilobytes, megabytes
 or gigabytes (1024*1024 bytes in a megabyte).
@@ -1372,14 +1372,14 @@ Default: 8m
 .UNINDENT
 .INDENT 0.0
 .TP
-.B use\-systemd: \fI<yes or no>\fP
+.B use\-systemd: \fI<yes or no>\fP 
 Enable or disable systemd socket activation.
 .sp
 Default: no
 .UNINDENT
 .INDENT 0.0
 .TP
-.B do\-daemonize: \fI<yes or no>\fP
+.B do\-daemonize: \fI<yes or no>\fP 
 Enable or disable whether the Unbound server forks into the background as a
 daemon.
 Set the value to no when Unbound runs as systemd service.
@@ -1388,7 +1388,7 @@ Default: yes
 .UNINDENT
 .INDENT 0.0
 .TP
-.B tcp\-connection\-limit: \fI<IP netblock> <limit>\fP
+.B tcp\-connection\-limit: \fI<IP netblock> <limit>\fP 
 Allow up to limit simultaneous TCP connections from the given netblock.
 When at the limit, further connections are accepted but closed immediately.
 This option is experimental at this time.
@@ -1397,7 +1397,7 @@ Default: (disabled)
 .UNINDENT
 .INDENT 0.0
 .TP
-.B access\-control: \fI<IP netblock> <action>\fP
+.B access\-control: \fI<IP netblock> <action>\fP 
 Specify treatment of incoming queries from their originating IP address.
 Queries can be allowed to have access to this server that gives DNS
 answers, or refused, with other actions possible.
@@ -1420,17 +1420,17 @@ The action can be
 \fI\%refuse_non_local\fP\&.
 .INDENT 7.0
 .TP
-.B deny
+.B deny 
 Stops queries from hosts from that netblock.
 .UNINDENT
 .INDENT 7.0
 .TP
-.B refuse
+.B refuse 
 Stops queries too, but sends a DNS rcode REFUSED error message back.
 .UNINDENT
 .INDENT 7.0
 .TP
-.B allow
+.B allow 
 Gives access to clients from that netblock.
 It gives only access for recursion clients (which is what almost all
 clients need).
@@ -1448,7 +1448,7 @@ refused.
 .UNINDENT
 .INDENT 7.0
 .TP
-.B allow_setrd
+.B allow_setrd 
 Ignores the recursion desired (RD) bit and treats all requests as if
 the recursion desired bit is set.
 .sp
@@ -1463,7 +1463,7 @@ the RD bit cleared.
 .UNINDENT
 .INDENT 7.0
 .TP
-.B allow_snoop
+.B allow_snoop 
 Gives non\-recursive access too.
 This gives both recursive and non recursive access.
 The name \fIallow_snoop\fP refers to cache snooping, a technique to use
@@ -1478,7 +1478,7 @@ your administration host.
 .UNINDENT
 .INDENT 7.0
 .TP
-.B allow_cookie
+.B allow_cookie 
 Allows access only to UDP queries that contain a valid DNS Cookie as
 specified in RFC 7873 and RFC 9018, when the
 \fI\%answer\-cookie\fP option is enabled.
@@ -1494,20 +1494,23 @@ flag set, that may trigger fall back to TCP for those clients.
 .UNINDENT
 .INDENT 7.0
 .TP
-.B deny_non_local, refuse_non_local
+.B deny_non_local 
 The
 \fI\%deny_non_local\fP
-and
-\fI\%refuse_non_local\fP
-actions are for hosts that are only allowed to query for the
+action is for hosts that are only allowed to query for the
 authoritative \fI\%local\-data\fP, they are not
 allowed full recursion but only the static data.
-.sp
-With
-\fI\%deny_non_local\fP,
-messages that are disallowed are dropped, with
+Messages that are disallowed are dropped.
+.UNINDENT
+.INDENT 7.0
+.TP
+.B refuse_non_local 
+The
 \fI\%refuse_non_local\fP
-they receive error code REFUSED.
+action is for hosts that are only allowed to query for the
+authoritative \fI\%local\-data\fP, they are not
+allowed full recursion but only the static data.
+Messages that are disallowed receive error code REFUSED.
 .UNINDENT
 .sp
 By default only localhost (the 127.0.0.0/8 IP netblock, not the loopback
@@ -1518,7 +1521,7 @@ and dropping may result in (possibly excessive) retried queries.
 .UNINDENT
 .INDENT 0.0
 .TP
-.B access\-control\-tag: \fI<IP netblock> \(dq<list of tags>\(dq\fP
+.B access\-control\-tag: \fI<IP netblock> \(dq<list of tags>\(dq\fP 
 Assign tags to \fI\%access\-control\fP
 elements.
 Clients using this access control element use localzones that are tagged
@@ -1535,7 +1538,7 @@ is configured for this netblock.
 .UNINDENT
 .INDENT 0.0
 .TP
-.B access\-control\-tag\-action: \fI<IP netblock> <tag> <action>\fP
+.B access\-control\-tag\-action: \fI<IP netblock> <tag> <action>\fP 
 Set action for particular tag for given access control element.
 If you have multiple tag values, the tag used to lookup the action is the
 first tag match between
@@ -1545,17 +1548,17 @@ from the order of the \fI\%define\-tag\fP values.
 .UNINDENT
 .INDENT 0.0
 .TP
-.B access\-control\-tag\-data: \fI<IP netblock> <tag> \(dq<resource record string>\(dq\fP
+.B access\-control\-tag\-data: \fI<IP netblock> <tag> \(dq<resource record string>\(dq\fP 
 Set redirect data for particular tag for given access control element.
 .UNINDENT
 .INDENT 0.0
 .TP
-.B access\-control\-view: \fI<IP netblock> <view name>\fP
+.B access\-control\-view: \fI<IP netblock> <view name>\fP 
 Set view for given access control element.
 .UNINDENT
 .INDENT 0.0
 .TP
-.B interface\-action: \fI<ip address or interface name [@port]> <action>\fP
+.B interface\-action: \fI<ip address or interface name [@port]> <action>\fP 
 Similar to \fI\%access\-control\fP but for
 interfaces.
 .sp
@@ -1583,7 +1586,7 @@ attributes for targeted clients.
 .UNINDENT
 .INDENT 0.0
 .TP
-.B interface\-tag: \fI<ip address or interface name [@port]> <\(dqlist of tags\(dq>\fP
+.B interface\-tag: \fI<ip address or interface name [@port]> <\(dqlist of tags\(dq>\fP 
 Similar to \fI\%access\-control\-tag\fP but
 for interfaces.
 .sp
@@ -1599,7 +1602,7 @@ attributes for targeted clients.
 .UNINDENT
 .INDENT 0.0
 .TP
-.B interface\-tag\-action: \fI<ip address or interface name [@port]> <tag> <action>\fP
+.B interface\-tag\-action: \fI<ip address or interface name [@port]> <tag> <action>\fP 
 Similar to
 \fI\%access\-control\-tag\-action\fP
 but for interfaces.
@@ -1616,7 +1619,7 @@ attributes for targeted clients.
 .UNINDENT
 .INDENT 0.0
 .TP
-.B interface\-tag\-data: \fI<ip address or interface name [@port]> <tag> <\(dqresource record string\(dq>\fP
+.B interface\-tag\-data: \fI<ip address or interface name [@port]> <tag> <\(dqresource record string\(dq>\fP 
 Similar to
 \fI\%access\-control\-tag\-data\fP but
 for interfaces.
@@ -1633,7 +1636,7 @@ attributes for targeted clients.
 .UNINDENT
 .INDENT 0.0
 .TP
-.B interface\-view: \fI<ip address or interface name [@port]> <view name>\fP
+.B interface\-view: \fI<ip address or interface name [@port]> <view name>\fP 
 Similar to \fI\%access\-control\-view\fP
 but for interfaces.
 .sp
@@ -1649,7 +1652,7 @@ attributes for targeted clients.
 .UNINDENT
 .INDENT 0.0
 .TP
-.B chroot: \fI<directory>\fP
+.B chroot: \fI<directory>\fP 
 If \fI\%chroot\fP is enabled, you should pass the
 configfile (from the commandline) as a full path from the original root.
 After the chroot has been performed the now defunct portion of the config
@@ -1679,7 +1682,7 @@ Default: @UNBOUND_CHROOT_DIR@
 .UNINDENT
 .INDENT 0.0
 .TP
-.B username: \fI<name>\fP
+.B username: \fI<name>\fP 
 If given, after binding the port the user privileges are dropped.
 If you give username: \fB\(dq\(dq\fP no user change is performed.
 .sp
@@ -1692,7 +1695,7 @@ Default: @UNBOUND_USERNAME@
 .UNINDENT
 .INDENT 0.0
 .TP
-.B directory: \fI<directory>\fP
+.B directory: \fI<directory>\fP 
 Sets the working directory for the program.
 On Windows the string \(dq%EXECUTABLE%\(dq tries to change to the directory that
 \fBunbound.exe\fP resides in.
@@ -1705,7 +1708,7 @@ Default: @UNBOUND_RUN_DIR@
 .UNINDENT
 .INDENT 0.0
 .TP
-.B logfile: \fI<filename>\fP
+.B logfile: \fI<filename>\fP 
 If \fB\(dq\(dq\fP is given, logging goes to stderr, or nowhere once daemonized.
 The logfile is appended to, in the following format:
 .INDENT 7.0
@@ -1729,7 +1732,7 @@ Default: \(dq\(dq (disabled)
 .UNINDENT
 .INDENT 0.0
 .TP
-.B use\-syslog: \fI<yes or no>\fP
+.B use\-syslog: \fI<yes or no>\fP 
 Sets Unbound to send log messages to the syslogd, using \fIsyslog(3)\fP\&.
 The log facility LOG_DAEMON is used, with identity \(dqunbound\(dq.
 The logfile setting is overridden when
@@ -1739,7 +1742,7 @@ Default: yes
 .UNINDENT
 .INDENT 0.0
 .TP
-.B log\-identity: \fI<string>\fP
+.B log\-identity: \fI<string>\fP 
 If \fB\(dq\(dq\fP is given, then the name of the executable, usually
 \(dqunbound\(dq is used to report to the log.
 Enter a string to override it with that, which is useful on systems that
@@ -1750,7 +1753,7 @@ Default: \(dq\(dq
 .UNINDENT
 .INDENT 0.0
 .TP
-.B log\-time\-ascii: \fI<yes or no>\fP
+.B log\-time\-ascii: \fI<yes or no>\fP 
 Sets logfile lines to use a timestamp in UTC ASCII.
 No effect if using syslog, in that case syslog formats the timestamp
 printed into the log files.
@@ -1759,7 +1762,7 @@ Default: no (prints the seconds since 1970 in brackets)
 .UNINDENT
 .INDENT 0.0
 .TP
-.B log\-time\-iso: \fI<yes or no>\fP
+.B log\-time\-iso: \fI<yes or no>\fP 
 Log time in ISO8601 format, if
 \fI\%log\-time\-ascii: yes\fP
 is also set.
@@ -1768,7 +1771,7 @@ Default: no
 .UNINDENT
 .INDENT 0.0
 .TP
-.B log\-queries: \fI<yes or no>\fP
+.B log\-queries: \fI<yes or no>\fP 
 Prints one line per query to the log, with the log timestamp and IP
 address, name, type and class.
 Note that it takes time to print these lines which makes the server
@@ -1779,7 +1782,7 @@ Default: no
 .UNINDENT
 .INDENT 0.0
 .TP
-.B log\-replies: \fI<yes or no>\fP
+.B log\-replies: \fI<yes or no>\fP 
 Prints one line per reply to the log, with the log timestamp and IP
 address, name, type, class, return code, time to resolve, from cache and
 response size.
@@ -1791,7 +1794,7 @@ Default: no
 .UNINDENT
 .INDENT 0.0
 .TP
-.B log\-tag\-queryreply: \fI<yes or no>\fP
+.B log\-tag\-queryreply: \fI<yes or no>\fP 
 Prints the word \(aqquery\(aq and \(aqreply\(aq with
 \fI\%log\-queries\fP and
 \fI\%log\-replies\fP\&.
@@ -1801,7 +1804,7 @@ Default: no (backwards compatible)
 .UNINDENT
 .INDENT 0.0
 .TP
-.B log\-destaddr: \fI<yes or no>\fP
+.B log\-destaddr: \fI<yes or no>\fP 
 Prints the destination address, port and type in the
 \fI\%log\-replies\fP output.
 This disambiguates what type of traffic, eg. UDP or TCP, and to what local
@@ -1811,7 +1814,7 @@ Default: no
 .UNINDENT
 .INDENT 0.0
 .TP
-.B log\-local\-actions: \fI<yes or no>\fP
+.B log\-local\-actions: \fI<yes or no>\fP 
 Print log lines to inform about local zone actions.
 These lines are like the \fI\%local\-zone type
 inform\fP print outs, but they are also
@@ -1821,7 +1824,7 @@ Default: no
 .UNINDENT
 .INDENT 0.0
 .TP
-.B log\-servfail: \fI<yes or no>\fP
+.B log\-servfail: \fI<yes or no>\fP 
 Print log lines that say why queries return SERVFAIL to clients.
 This is separate from the verbosity debug logs, much smaller, and printed
 at the error level, not the info level of debug info from verbosity.
@@ -1830,7 +1833,7 @@ Default: no
 .UNINDENT
 .INDENT 0.0
 .TP
-.B pidfile: \fI<filename>\fP
+.B pidfile: \fI<filename>\fP 
 The process id is written to the file.
 Default is \fB\(dq@UNBOUND_PIDFILE@\(dq\fP\&.
 So,
@@ -1863,7 +1866,7 @@ Default: @UNBOUND_PIDFILE@
 .UNINDENT
 .INDENT 0.0
 .TP
-.B root\-hints: \fI<filename>\fP
+.B root\-hints: \fI<filename>\fP 
 Read the root hints from this file.
 Default is nothing, using builtin hints for the IN class.
 The file has the format of zone files, with root nameserver names and
@@ -1875,14 +1878,14 @@ Default: \(dq\(dq
 .UNINDENT
 .INDENT 0.0
 .TP
-.B hide\-identity: \fI<yes or no>\fP
+.B hide\-identity: \fI<yes or no>\fP 
 If enabled \(aqid.server\(aq and \(aqhostname.bind\(aq queries are REFUSED.
 .sp
 Default: no
 .UNINDENT
 .INDENT 0.0
 .TP
-.B identity: \fI<string>\fP
+.B identity: \fI<string>\fP 
 Set the identity to report.
 If set to \fB\(dq\(dq\fP, then the hostname of the server is returned.
 .sp
@@ -1890,14 +1893,14 @@ Default: \(dq\(dq
 .UNINDENT
 .INDENT 0.0
 .TP
-.B hide\-version: \fI<yes or no>\fP
+.B hide\-version: \fI<yes or no>\fP 
 If enabled \(aqversion.server\(aq and \(aqversion.bind\(aq queries are REFUSED.
 .sp
 Default: no
 .UNINDENT
 .INDENT 0.0
 .TP
-.B version: \fI<string>\fP
+.B version: \fI<string>\fP 
 Set the version to report.
 If set to \fB\(dq\(dq\fP, then the package version is returned.
 .sp
@@ -1905,7 +1908,7 @@ Default: \(dq\(dq
 .UNINDENT
 .INDENT 0.0
 .TP
-.B hide\-http\-user\-agent: \fI<yes or no>\fP
+.B hide\-http\-user\-agent: \fI<yes or no>\fP 
 If enabled the HTTP header User\-Agent is not set.
 Use with caution as some webserver configurations may reject HTTP requests
 lacking this header.
@@ -1916,7 +1919,7 @@ Default: no
 .UNINDENT
 .INDENT 0.0
 .TP
-.B http\-user\-agent: \fI<string>\fP
+.B http\-user\-agent: \fI<string>\fP 
 Set the HTTP User\-Agent header for outgoing HTTP requests.
 If set to \fB\(dq\(dq\fP, then the package name and version are used.
 .sp
@@ -1924,7 +1927,7 @@ Default: \(dq\(dq
 .UNINDENT
 .INDENT 0.0
 .TP
-.B nsid: \fI<string>\fP
+.B nsid: \fI<string>\fP 
 Add the specified nsid to the EDNS section of the answer when queried with
 an NSID EDNS enabled packet.
 As a sequence of hex characters or with \(aqascii_\(aq prefix and then an ASCII
@@ -1934,14 +1937,14 @@ Default: (disabled)
 .UNINDENT
 .INDENT 0.0
 .TP
-.B hide\-trustanchor: \fI<yes or no>\fP
+.B hide\-trustanchor: \fI<yes or no>\fP 
 If enabled \(aqtrustanchor.unbound\(aq queries are REFUSED.
 .sp
 Default: no
 .UNINDENT
 .INDENT 0.0
 .TP
-.B target\-fetch\-policy: \fI<\(dqlist of numbers\(dq>\fP
+.B target\-fetch\-policy: \fI<\(dqlist of numbers\(dq>\fP 
 Set the target fetch policy used by Unbound to determine if it should fetch
 nameserver target addresses opportunistically.
 The policy is described per dependency depth.
@@ -1962,14 +1965,14 @@ Default:  \(dq3 2 1 0 0\(dq
 .UNINDENT
 .INDENT 0.0
 .TP
-.B harden\-short\-bufsize: \fI<yes or no>\fP
+.B harden\-short\-bufsize: \fI<yes or no>\fP 
 Very small EDNS buffer sizes from queries are ignored.
 .sp
 Default: yes (as described in the standard)
 .UNINDENT
 .INDENT 0.0
 .TP
-.B harden\-large\-queries: \fI<yes or no>\fP
+.B harden\-large\-queries: \fI<yes or no>\fP 
 Very large queries are ignored.
 Default is no, since it is legal protocol wise to send these, and could be
 necessary for operation if TSIG or EDNS payload is very large.
@@ -1978,14 +1981,14 @@ Default: no
 .UNINDENT
 .INDENT 0.0
 .TP
-.B harden\-glue: \fI<yes or no>\fP
+.B harden\-glue: \fI<yes or no>\fP 
 Will trust glue only if it is within the servers authority.
 .sp
 Default: yes
 .UNINDENT
 .INDENT 0.0
 .TP
-.B harden\-unverified\-glue: \fI<yes or no>\fP
+.B harden\-unverified\-glue: \fI<yes or no>\fP 
 Will trust only in\-zone glue.
 Will try to resolve all out of zone (\fIunverified\fP) glue.
 Will fallback to the original glue if unable to resolve.
@@ -1994,7 +1997,7 @@ Default: no
 .UNINDENT
 .INDENT 0.0
 .TP
-.B harden\-dnssec\-stripped: \fI<yes or no>\fP
+.B harden\-dnssec\-stripped: \fI<yes or no>\fP 
 Require DNSSEC data for trust\-anchored zones, if such data is absent, the
 zone becomes bogus.
 If turned off, and no DNSSEC data is received (or the DNSKEY data fails to
@@ -2010,7 +2013,7 @@ Default: yes
 .UNINDENT
 .INDENT 0.0
 .TP
-.B harden\-below\-nxdomain: \fI<yes or no>\fP
+.B harden\-below\-nxdomain: \fI<yes or no>\fP 
 From \fI\%RFC 8020\fP (with title \(dqNXDOMAIN: There Really Is Nothing
 Underneath\(dq), returns NXDOMAIN to queries for a name below another name
 that is already known to be NXDOMAIN.
@@ -2033,7 +2036,7 @@ Default: yes
 .UNINDENT
 .INDENT 0.0
 .TP
-.B harden\-referral\-path: \fI<yes or no>\fP
+.B harden\-referral\-path: \fI<yes or no>\fP 
 Harden the referral path by performing additional queries for
 infrastructure data.
 Validates the replies if trust anchors are configured and the zones are
@@ -2052,7 +2055,7 @@ Default: no
 .UNINDENT
 .INDENT 0.0
 .TP
-.B harden\-algo\-downgrade: \fI<yes or no>\fP
+.B harden\-algo\-downgrade: \fI<yes or no>\fP 
 Harden against algorithm downgrade when multiple algorithms are advertised
 in the DS record.
 This works by first choosing only the strongest DS digest type as per
@@ -2082,7 +2085,7 @@ Default: no
 .UNINDENT
 .INDENT 0.0
 .TP
-.B harden\-unknown\-additional: \fI<yes or no>\fP
+.B harden\-unknown\-additional: \fI<yes or no>\fP 
 Harden against unknown records in the authority section and additional
 section.
 If no, such records are copied from the upstream and presented to the
@@ -2094,7 +2097,7 @@ Default: no
 .UNINDENT
 .INDENT 0.0
 .TP
-.B use\-caps\-for\-id: \fI<yes or no>\fP
+.B use\-caps\-for\-id: \fI<yes or no>\fP 
 Use 0x20\-encoded random bits in the query to foil spoof attempts.
 This perturbs the lowercase and uppercase of query names sent to authority
 servers and checks if the reply still has the correct casing.
@@ -2104,7 +2107,7 @@ Default: no
 .UNINDENT
 .INDENT 0.0
 .TP
-.B caps\-exempt: \fI<domain>\fP
+.B caps\-exempt: \fI<domain>\fP 
 Exempt the domain so that it does not receive caps\-for\-id perturbed
 queries.
 For domains that do not support 0x20 and also fail with fallback because
@@ -2113,12 +2116,12 @@ Can be given multiple times, for different domains.
 .UNINDENT
 .INDENT 0.0
 .TP
-.B caps\-whitelist: \fI<domain>\fP
+.B caps\-whitelist: \fI<domain>\fP 
 Alternate syntax for \fI\%caps\-exempt\fP\&.
 .UNINDENT
 .INDENT 0.0
 .TP
-.B qname\-minimisation: \fI<yes or no>\fP
+.B qname\-minimisation: \fI<yes or no>\fP 
 Send minimum amount of information to upstream servers to enhance privacy.
 Only send minimum required labels of the QNAME and set QTYPE to A when
 possible.
@@ -2130,7 +2133,7 @@ Default: yes
 .UNINDENT
 .INDENT 0.0
 .TP
-.B qname\-minimisation\-strict: \fI<yes or no>\fP
+.B qname\-minimisation\-strict: \fI<yes or no>\fP 
 QNAME minimisation in strict mode.
 Do not fall\-back to sending full QNAME to potentially broken nameservers.
 A lot of domains will not be resolvable when this option in enabled.
@@ -2142,7 +2145,7 @@ Default: no
 .UNINDENT
 .INDENT 0.0
 .TP
-.B aggressive\-nsec: \fI<yes or no>\fP
+.B aggressive\-nsec: \fI<yes or no>\fP 
 Aggressive NSEC uses the DNSSEC NSEC chain to synthesize NXDOMAIN and other
 denials, using information from previous NXDOMAINs answers.
 It helps to reduce the query rate towards targets that get a very high
@@ -2152,7 +2155,7 @@ Default: yes
 .UNINDENT
 .INDENT 0.0
 .TP
-.B private\-address: \fI<IP address or subnet>\fP
+.B private\-address: \fI<IP address or subnet>\fP 
 Give IPv4 of IPv6 addresses or classless subnets.
 These are addresses on your private network, and are not allowed to be
 returned for public internet names.
@@ -2182,7 +2185,7 @@ the filter.
 .UNINDENT
 .INDENT 0.0
 .TP
-.B private\-domain: \fI<domain name>\fP
+.B private\-domain: \fI<domain name>\fP 
 Allow this domain, and all its subdomains to contain private addresses.
 Give multiple times to allow multiple domain names to contain private
 addresses.
@@ -2191,7 +2194,7 @@ Default: (none)
 .UNINDENT
 .INDENT 0.0
 .TP
-.B unwanted\-reply\-threshold: \fI<number>\fP
+.B unwanted\-reply\-threshold: \fI<number>\fP 
 If set, a total number of unwanted replies is kept track of in every
 thread.
 When it reaches the threshold, a defensive action is taken and a warning is
@@ -2204,7 +2207,7 @@ Default: 0 (disabled)
 .UNINDENT
 .INDENT 0.0
 .TP
-.B do\-not\-query\-address: \fI<IP address>\fP
+.B do\-not\-query\-address: \fI<IP address>\fP 
 Do not query the given IP address.
 Can be IPv4 or IPv6.
 Append /num to indicate a classless delegation netblock, for example like
@@ -2214,7 +2217,7 @@ Default: (none)
 .UNINDENT
 .INDENT 0.0
 .TP
-.B do\-not\-query\-localhost: \fI<yes or no>\fP
+.B do\-not\-query\-localhost: \fI<yes or no>\fP 
 If yes, localhost is added to the
 \fI\%do\-not\-query\-address\fP entries,
 both IPv6 \fB::1\fP and IPv4 \fB127.0.0.1/8\fP\&.
@@ -2224,7 +2227,7 @@ Default: yes
 .UNINDENT
 .INDENT 0.0
 .TP
-.B prefetch: \fI<yes or no>\fP
+.B prefetch: \fI<yes or no>\fP 
 If yes, cache hits on message cache elements that are on their last 10
 percent of their TTL value trigger a prefetch to keep the cache up to date.
 Turning it on gives about 10 percent more traffic and load on the machine,
@@ -2234,7 +2237,7 @@ Default: no
 .UNINDENT
 .INDENT 0.0
 .TP
-.B prefetch\-key: \fI<yes or no>\fP
+.B prefetch\-key: \fI<yes or no>\fP 
 If yes, fetch the DNSKEYs earlier in the validation process, when a DS
 record is encountered.
 This lowers the latency of requests.
@@ -2245,7 +2248,7 @@ Default: no
 .UNINDENT
 .INDENT 0.0
 .TP
-.B deny\-any: \fI<yes or no>\fP
+.B deny\-any: \fI<yes or no>\fP 
 If yes, deny queries of type ANY with an empty response.
 If disabled, Unbound responds with a short list of resource records if some
 can be found in the cache and makes the upstream type ANY query if there
@@ -2255,7 +2258,7 @@ Default: no
 .UNINDENT
 .INDENT 0.0
 .TP
-.B rrset\-roundrobin: \fI<yes or no>\fP
+.B rrset\-roundrobin: \fI<yes or no>\fP 
 If yes, Unbound rotates RRSet order in response (the random number is taken
 from the query ID, for speed and thread safety).
 .sp
@@ -2263,7 +2266,7 @@ Default: yes
 .UNINDENT
 .INDENT 0.0
 .TP
-.B minimal\-responses: \fI<yes or no>\fP
+.B minimal\-responses: \fI<yes or no>\fP 
 If yes, Unbound does not insert authority/additional sections into response
 messages when those sections are not required.
 This reduces response size significantly, and may avoid TCP fallback for
@@ -2279,7 +2282,7 @@ Default: yes
 .UNINDENT
 .INDENT 0.0
 .TP
-.B disable\-dnssec\-lame\-check: \fI<yes or no>\fP
+.B disable\-dnssec\-lame\-check: \fI<yes or no>\fP 
 If true, disables the DNSSEC lameness check in the iterator.
 This check sees if RRSIGs are present in the answer, when dnssec is
 expected, and retries another authority if RRSIGs are unexpectedly missing.
@@ -2290,7 +2293,7 @@ Default: no
 .UNINDENT
 .INDENT 0.0
 .TP
-.B module\-config: \fI\(dq<module names>\(dq\fP
+.B module\-config: \fI\(dq<module names>\(dq\fP 
 Module configuration, a list of module names separated by spaces, surround
 the string with quotes (\fB\(dq\(dq\fP).
 The modules can be \fBrespip\fP, \fBvalidator\fP, or \fBiterator\fP (and possibly
@@ -2332,7 +2335,7 @@ Default: \(dqvalidator iterator\(dq
 .UNINDENT
 .INDENT 0.0
 .TP
-.B trust\-anchor\-file: \fI<filename>\fP
+.B trust\-anchor\-file: \fI<filename>\fP 
 File with trusted keys for validation.
 Both DS and DNSKEY entries can appear in the file.
 The format of the file is the standard DNS Zone file format.
@@ -2341,7 +2344,7 @@ Default: \(dq\(dq (no trust anchor file)
 .UNINDENT
 .INDENT 0.0
 .TP
-.B auto\-trust\-anchor\-file: \fI<filename>\fP
+.B auto\-trust\-anchor\-file: \fI<filename>\fP 
 File with trust anchor for one zone, which is tracked with \fI\%RFC 5011\fP
 probes.
 The probes are run several times per month, thus the machine must be online
@@ -2359,7 +2362,7 @@ Default: \(dq\(dq (no auto trust anchor file)
 .UNINDENT
 .INDENT 0.0
 .TP
-.B trust\-anchor: \fI\(dq<Resource Record>\(dq\fP
+.B trust\-anchor: \fI\(dq<Resource Record>\(dq\fP 
 A DS or DNSKEY RR for a key to use for validation.
 Multiple entries can be given to specify multiple trusted keys, in addition
 to the \fI\%trust\-anchor\-file\fP\&.
@@ -2373,7 +2376,7 @@ Default: (none)
 .UNINDENT
 .INDENT 0.0
 .TP
-.B trusted\-keys\-file: \fI<filename>\fP
+.B trusted\-keys\-file: \fI<filename>\fP 
 File with trusted keys for validation.
 Specify more than one file with several entries, one file per entry.
 Like \fI\%trust\-anchor\-file\fP but has a
@@ -2387,21 +2390,21 @@ Default: \(dq\(dq (no trusted keys file)
 .UNINDENT
 .INDENT 0.0
 .TP
-.B trust\-anchor\-signaling: \fI<yes or no>\fP
+.B trust\-anchor\-signaling: \fI<yes or no>\fP 
 Send \fI\%RFC 8145\fP key tag query after trust anchor priming.
 .sp
 Default: yes
 .UNINDENT
 .INDENT 0.0
 .TP
-.B root\-key\-sentinel: \fI<yes or no>\fP
+.B root\-key\-sentinel: \fI<yes or no>\fP 
 Root key trust anchor sentinel.
 .sp
 Default: yes
 .UNINDENT
 .INDENT 0.0
 .TP
-.B domain\-insecure: \fI<domain name>\fP
+.B domain\-insecure: \fI<domain name>\fP 
 Sets \fI<domain name>\fP to be insecure, DNSSEC chain of trust is ignored
 towards the \fI<domain name>\fP\&.
 So a trust anchor above the domain name can not make the domain secure with
@@ -2420,7 +2423,7 @@ Default: (none)
 .UNINDENT
 .INDENT 0.0
 .TP
-.B val\-override\-date: \fI<rrsig\-style date spec>\fP
+.B val\-override\-date: \fI<rrsig\-style date spec>\fP 
 .sp
 \fBWARNING:\fP
 .INDENT 7.0
@@ -2440,7 +2443,7 @@ Default: 0 (disabled)
 .UNINDENT
 .INDENT 0.0
 .TP
-.B val\-sig\-skew\-min: \fI<seconds>\fP
+.B val\-sig\-skew\-min: \fI<seconds>\fP 
 Minimum number of seconds of clock skew to apply to validated signatures.
 A value of 10% of the signature lifetime (expiration \- inception) is used,
 capped by this setting.
@@ -2451,7 +2454,7 @@ Default: 3600 (1 hour)
 .UNINDENT
 .INDENT 0.0
 .TP
-.B val\-sig\-skew\-max: \fI<seconds>\fP
+.B val\-sig\-skew\-max: \fI<seconds>\fP 
 Maximum number of seconds of clock skew to apply to validated signatures.
 A value of 10% of the signature lifetime (expiration \- inception) is used,
 capped by this setting.
@@ -2465,7 +2468,7 @@ Default: 86400 (24 hours)
 .UNINDENT
 .INDENT 0.0
 .TP
-.B val\-max\-restart: \fI<number>\fP
+.B val\-max\-restart: \fI<number>\fP 
 The maximum number the validator should restart validation with another
 authority in case of failed validation.
 .sp
@@ -2473,7 +2476,7 @@ Default: 5
 .UNINDENT
 .INDENT 0.0
 .TP
-.B val\-bogus\-ttl: \fI<seconds>\fP
+.B val\-bogus\-ttl: \fI<seconds>\fP 
 The time to live for bogus data.
 This is data that has failed validation; due to invalid signatures or other
 checks.
@@ -2484,7 +2487,7 @@ Default: 60
 .UNINDENT
 .INDENT 0.0
 .TP
-.B val\-clean\-additional: \fI<yes or no>\fP
+.B val\-clean\-additional: \fI<yes or no>\fP 
 Instruct the validator to remove data from the additional section of secure
 messages that are not signed properly.
 Messages that are insecure, bogus, indeterminate or unchecked are not
@@ -2496,7 +2499,7 @@ Default: yes
 .UNINDENT
 .INDENT 0.0
 .TP
-.B val\-log\-level: \fI<number>\fP
+.B val\-log\-level: \fI<number>\fP 
 Have the validator print validation failures to the log.
 Regardless of the verbosity setting.
 .sp
@@ -2512,7 +2515,7 @@ Default: 0 (disabled)
 .UNINDENT
 .INDENT 0.0
 .TP
-.B val\-permissive\-mode: \fI<yes or no>\fP
+.B val\-permissive\-mode: \fI<yes or no>\fP 
 Instruct the validator to mark bogus messages as indeterminate.
 The security checks are performed, but if the result is bogus (failed
 security), the reply is not withheld from the client with SERVFAIL as
@@ -2525,7 +2528,7 @@ Default: no
 .UNINDENT
 .INDENT 0.0
 .TP
-.B ignore\-cd\-flag: \fI<yes or no>\fP
+.B ignore\-cd\-flag: \fI<yes or no>\fP 
 Instruct Unbound to ignore the CD flag from clients and refuse to return
 bogus answers to them.
 Thus, the CD (Checking Disabled) flag does not disable checking any more.
@@ -2537,7 +2540,7 @@ Default: no
 .UNINDENT
 .INDENT 0.0
 .TP
-.B disable\-edns\-do: \fI<yes or no>\fP
+.B disable\-edns\-do: \fI<yes or no>\fP 
 Disable the EDNS DO flag in upstream requests.
 It breaks DNSSEC validation for Unbound\(aqs clients.
 This results in the upstream name servers to not include DNSSEC records in
@@ -2554,7 +2557,7 @@ Default: no
 .UNINDENT
 .INDENT 0.0
 .TP
-.B serve\-expired: \fI<yes or no>\fP
+.B serve\-expired: \fI<yes or no>\fP 
 If enabled, Unbound attempts to serve old responses from cache with a TTL
 of \fI\%serve\-expired\-reply\-ttl\fP in
 the response.
@@ -2567,7 +2570,7 @@ Default: no
 .UNINDENT
 .INDENT 0.0
 .TP
-.B serve\-expired\-ttl: \fI<seconds>\fP
+.B serve\-expired\-ttl: \fI<seconds>\fP 
 Limit serving of expired responses to configured seconds after expiration.
 \fB0\fP disables the limit.
 This option only applies when
@@ -2579,7 +2582,7 @@ Default: 86400
 .UNINDENT
 .INDENT 0.0
 .TP
-.B serve\-expired\-ttl\-reset: \fI<yes or no>\fP
+.B serve\-expired\-ttl\-reset: \fI<yes or no>\fP 
 Set the TTL of expired records to the
 \fI\%serve\-expired\-ttl\fP value after a
 failed attempt to retrieve the record from upstream.
@@ -2590,7 +2593,7 @@ Default: no
 .UNINDENT
 .INDENT 0.0
 .TP
-.B serve\-expired\-reply\-ttl: \fI<seconds>\fP
+.B serve\-expired\-reply\-ttl: \fI<seconds>\fP 
 TTL value to use when replying with expired data.
 If
 \fI\%serve\-expired\-client\-timeout\fP
@@ -2600,7 +2603,7 @@ Default: 30
 .UNINDENT
 .INDENT 0.0
 .TP
-.B serve\-expired\-client\-timeout: \fI<msec>\fP
+.B serve\-expired\-client\-timeout: \fI<msec>\fP 
 Time in milliseconds before replying to the client with expired data.
 This essentially enables the serve\-stale behavior as specified in
 \fI\%RFC 8767\fP that first tries to resolve before immediately responding with
@@ -2613,7 +2616,7 @@ Default: 1800
 .UNINDENT
 .INDENT 0.0
 .TP
-.B serve\-original\-ttl: \fI<yes or no>\fP
+.B serve\-original\-ttl: \fI<yes or no>\fP 
 If enabled, Unbound will always return the original TTL as received from
 the upstream name server rather than the decrementing TTL as stored in the
 cache.
@@ -2644,7 +2647,7 @@ Default: no
 .UNINDENT
 .INDENT 0.0
 .TP
-.B val\-nsec3\-keysize\-iterations: <\(dqlist of values\(dq>
+.B val\-nsec3\-keysize\-iterations: <\(dqlist of values\(dq> 
 List of keysize and iteration count values, separated by spaces, surrounded
 by quotes.
 This determines the maximum allowed NSEC3 iteration count before a message
@@ -2666,7 +2669,7 @@ Default: \(dq1024 150 2048 150 4096 150\(dq
 .UNINDENT
 .INDENT 0.0
 .TP
-.B zonemd\-permissive\-mode: \fI<yes or no>\fP
+.B zonemd\-permissive\-mode: \fI<yes or no>\fP 
 If enabled the ZONEMD verification failures are only logged and do not
 cause the zone to be blocked and only return servfail.
 Useful for testing out if it works, or if the operator only wants to be
@@ -2676,7 +2679,7 @@ Default: no
 .UNINDENT
 .INDENT 0.0
 .TP
-.B add\-holddown: \fI<seconds>\fP
+.B add\-holddown: \fI<seconds>\fP 
 Instruct the
 \fI\%auto\-trust\-anchor\-file\fP probe
 mechanism for \fI\%RFC 5011\fP autotrust updates to add new trust anchors only
@@ -2686,7 +2689,7 @@ Default: 2592000 (30 days as per the RFC)
 .UNINDENT
 .INDENT 0.0
 .TP
-.B del\-holddown: \fI<seconds>\fP
+.B del\-holddown: \fI<seconds>\fP 
 Instruct the
 \fI\%auto\-trust\-anchor\-file\fP probe
 mechanism for \fI\%RFC 5011\fP autotrust updates to remove revoked trust anchors
@@ -2696,7 +2699,7 @@ Default: 2592000 (30 days as per the RFC)
 .UNINDENT
 .INDENT 0.0
 .TP
-.B keep\-missing: \fI<seconds>\fP
+.B keep\-missing: \fI<seconds>\fP 
 Instruct the
 \fI\%auto\-trust\-anchor\-file\fP probe
 mechanism for \fI\%RFC 5011\fP autotrust updates to remove missing trust anchors
@@ -2710,7 +2713,7 @@ Default: 31622400 (366 days)
 .UNINDENT
 .INDENT 0.0
 .TP
-.B permit\-small\-holddown: \fI<yes or no>\fP
+.B permit\-small\-holddown: \fI<yes or no>\fP 
 Debug option that allows the autotrust 5011 rollover timers to assume very
 small values.
 .sp
@@ -2718,7 +2721,7 @@ Default: no
 .UNINDENT
 .INDENT 0.0
 .TP
-.B key\-cache\-size: \fI<number>\fP
+.B key\-cache\-size: \fI<number>\fP 
 Number of bytes size of the key cache.
 A plain number is in bytes, append \(aqk\(aq, \(aqm\(aq or \(aqg\(aq for kilobytes, megabytes
 or gigabytes (1024*1024 bytes in a megabyte).
@@ -2727,7 +2730,7 @@ Default: 4m
 .UNINDENT
 .INDENT 0.0
 .TP
-.B key\-cache\-slabs: \fI<number>\fP
+.B key\-cache\-slabs: \fI<number>\fP 
 Number of slabs in the key cache.
 Slabs reduce lock contention by threads.
 Must be set to a power of 2.
@@ -2739,7 +2742,7 @@ Default: (unconfigured)
 .UNINDENT
 .INDENT 0.0
 .TP
-.B neg\-cache\-size: \fI<number>\fP
+.B neg\-cache\-size: \fI<number>\fP 
 Number of bytes size of the aggressive negative cache.
 A plain number is in bytes, append \(aqk\(aq, \(aqm\(aq or \(aqg\(aq for kilobytes, megabytes
 or gigabytes (1024*1024 bytes in a megabyte).
@@ -2748,7 +2751,7 @@ Default: 1m
 .UNINDENT
 .INDENT 0.0
 .TP
-.B unblock\-lan\-zones: \fI<yes or no>\fP
+.B unblock\-lan\-zones: \fI<yes or no>\fP 
 If enabled, then for private address space, the reverse lookups are no
 longer filtered.
 This allows Unbound when running as dns service on a host where it provides
@@ -2765,7 +2768,7 @@ Default: no
 .UNINDENT
 .INDENT 0.0
 .TP
-.B insecure\-lan\-zones: \fI<yes or no>\fP
+.B insecure\-lan\-zones: \fI<yes or no>\fP 
 If enabled, then reverse lookups in private address space are not
 validated.
 This is usually required whenever
@@ -2775,7 +2778,7 @@ Default: no
 .UNINDENT
 .INDENT 0.0
 .TP
-.B local\-zone: \fI<zone> <type>\fP
+.B local\-zone: \fI<zone> <type>\fP 
 Configure a local zone.
 The type determines the answer to give if there is no match from
 \fI\%local\-data\fP\&.
@@ -2826,19 +2829,19 @@ also the \fI\%rpz\fP functionality can be used, described
 in the RPZ section.
 .INDENT 7.0
 .TP
-.B deny
+.B deny 
 Do not send an answer, drop the query.
 If there is a match from local data, the query is answered.
 .UNINDENT
 .INDENT 7.0
 .TP
-.B refuse
+.B refuse 
 Send an error message reply, with rcode REFUSED.
 If there is a match from local data, the query is answered.
 .UNINDENT
 .INDENT 7.0
 .TP
-.B static
+.B static 
 If there is a match from local data, the query is answered.
 Otherwise, the query is answered with NODATA or NXDOMAIN.
 For a negative answer a SOA is included in the answer if present as
@@ -2846,7 +2849,7 @@ For a negative answer a SOA is included in the answer if present as
 .UNINDENT
 .INDENT 7.0
 .TP
-.B transparent
+.B transparent 
 If there is a match from \fI\%local\-data\fP,
 the query is answered.
 Otherwise if the query has a different name, the query is resolved
@@ -2860,7 +2863,7 @@ to be created by default.
 .UNINDENT
 .INDENT 7.0
 .TP
-.B typetransparent
+.B typetransparent 
 If there is a match from local data, the query is answered.
 If the query is for a different name, or for the same name but for a
 different type, the query is resolved normally.
@@ -2872,7 +2875,7 @@ queries.
 .UNINDENT
 .INDENT 7.0
 .TP
-.B redirect
+.B redirect 
 The query is answered from the local data for the zone name.
 There may be no local data beneath the zone name.
 This answers queries for the zone, and all subdomains of the zone with
@@ -2897,7 +2900,7 @@ suffix example.com.
 .UNINDENT
 .INDENT 7.0
 .TP
-.B inform
+.B inform 
 The query is answered normally, same as
 \fI\%transparent\fP\&.
 The client IP address (@portnumber) is printed to the logfile.
@@ -2918,7 +2921,7 @@ infected names are logged, eg. to run antivirus on them.
 .UNINDENT
 .INDENT 7.0
 .TP
-.B inform_deny
+.B inform_deny 
 The query is dropped, like
 \fI\%deny\fP, and logged, like
 \fI\%inform\fP\&.
@@ -2926,7 +2929,7 @@ Ie. find infected machines without answering the queries.
 .UNINDENT
 .INDENT 7.0
 .TP
-.B inform_redirect
+.B inform_redirect 
 The query is redirected, like
 \fI\%redirect\fP, and logged,
 like \fI\%inform\fP\&.
@@ -2934,13 +2937,13 @@ Ie. answer queries with fixed data and also log the machines that ask.
 .UNINDENT
 .INDENT 7.0
 .TP
-.B always_transparent
+.B always_transparent 
 Like \fI\%transparent\fP, but
 ignores local data and resolves normally.
 .UNINDENT
 .INDENT 7.0
 .TP
-.B block_a
+.B block_a 
 Like \fI\%transparent\fP, but
 ignores local data and resolves normally all query types excluding A.
 For A queries it unconditionally returns NODATA.
@@ -2949,31 +2952,31 @@ use IPv6 protocol and avoid any queries to IPv4.
 .UNINDENT
 .INDENT 7.0
 .TP
-.B always_refuse
+.B always_refuse 
 Like \fI\%refuse\fP, but ignores
 local data and refuses the query.
 .UNINDENT
 .INDENT 7.0
 .TP
-.B always_nxdomain
+.B always_nxdomain 
 Like \fI\%static\fP, but ignores
 local data and returns NXDOMAIN for the query.
 .UNINDENT
 .INDENT 7.0
 .TP
-.B always_nodata
+.B always_nodata 
 Like \fI\%static\fP, but ignores
 local data and returns NODATA for the query.
 .UNINDENT
 .INDENT 7.0
 .TP
-.B always_deny
+.B always_deny 
 Like \fI\%deny\fP, but ignores local
 data and drops the query.
 .UNINDENT
 .INDENT 7.0
 .TP
-.B always_null
+.B always_null 
 Always returns \fB0.0.0.0\fP or \fB::0\fP for every name in the zone.
 Like \fI\%redirect\fP with zero
 data for A and AAAA.
@@ -2982,7 +2985,7 @@ Used for some block lists.
 .UNINDENT
 .INDENT 7.0
 .TP
-.B noview
+.B noview 
 Breaks out of that view and moves towards the global local zones for
 answer to the query.
 If the \fI\%view\-first\fP is no, it\(aqll
@@ -2994,7 +2997,7 @@ answered from global local zone contents.
 .UNINDENT
 .INDENT 7.0
 .TP
-.B nodefault
+.B nodefault 
 Used to turn off default contents for AS112 zones.
 The other types also turn off default contents for the zone.
 The \fI\%nodefault\fP option has
@@ -3019,7 +3022,7 @@ The defaults can be turned off by specifying your own
 Below is a list of the default zone contents.
 .INDENT 7.0
 .TP
-.B localhost
+.B localhost 
 The IPv4 and IPv6 localhost information is given.
 NS and SOA records are provided for completeness and to satisfy some
 DNS update tools.
@@ -3038,8 +3041,10 @@ local\-data: \(dqlocalhost. 10800 IN AAAA ::1\(dq
 .fi
 .UNINDENT
 .UNINDENT
+.UNINDENT
+.INDENT 7.0
 .TP
-.B reverse IPv4 loopback
+.B reverse IPv4 loopback 
 Default content:
 .INDENT 7.0
 .INDENT 3.5
@@ -3054,8 +3059,10 @@ local\-data: \(dq1.0.0.127.in\-addr.arpa. 10800 IN PTR localhost.\(dq
 .fi
 .UNINDENT
 .UNINDENT
+.UNINDENT
+.INDENT 7.0
 .TP
-.B reverse IPv6 loopback
+.B reverse IPv6 loopback 
 Default content:
 .INDENT 7.0
 .INDENT 3.5
@@ -3070,8 +3077,10 @@ local\-data: \(dq1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0
 .fi
 .UNINDENT
 .UNINDENT
+.UNINDENT
+.INDENT 7.0
 .TP
-home.arpa (\fI\%RFC 8375\fP)
+home.arpa (\fI\%RFC 8375\fP) 
 Default content:
 .INDENT 7.0
 .INDENT 3.5
@@ -3085,8 +3094,10 @@ local\-data: \(dqhome.arpa. 10800 IN SOA localhost. nobody.invalid. 1 3600 1200 
 .fi
 .UNINDENT
 .UNINDENT
+.UNINDENT
+.INDENT 7.0
 .TP
-resolver.arpa (\fI\%RFC 9462\fP)
+resolver.arpa (\fI\%RFC 9462\fP) 
 Default content:
 .INDENT 7.0
 .INDENT 3.5
@@ -3100,8 +3111,10 @@ local\-data: \(dqresolver.arpa. 10800 IN SOA localhost. nobody.invalid. 1 3600 1
 .fi
 .UNINDENT
 .UNINDENT
+.UNINDENT
+.INDENT 7.0
 .TP
-.B service.arpa (draft\-ietf\-dnssd\-srp\-25)
+.B service.arpa (draft\-ietf\-dnssd\-srp\-25) 
 Default content:
 .INDENT 7.0
 .INDENT 3.5
@@ -3115,8 +3128,10 @@ local\-data: \(dqservice.arpa. 10800 IN SOA localhost. nobody.invalid. 1 3600 12
 .fi
 .UNINDENT
 .UNINDENT
+.UNINDENT
+.INDENT 7.0
 .TP
-onion (\fI\%RFC 7686\fP)
+onion (\fI\%RFC 7686\fP) 
 Default content:
 .INDENT 7.0
 .INDENT 3.5
@@ -3130,8 +3145,10 @@ local\-data: \(dqonion. 10800 IN SOA localhost. nobody.invalid. 1 3600 1200 6048
 .fi
 .UNINDENT
 .UNINDENT
+.UNINDENT
+.INDENT 7.0
 .TP
-test (\fI\%RFC 6761\fP)
+test (\fI\%RFC 6761\fP) 
 Default content:
 .INDENT 7.0
 .INDENT 3.5
@@ -3145,8 +3162,10 @@ local\-data: \(dqtest. 10800 IN SOA localhost. nobody.invalid. 1 3600 1200 60480
 .fi
 .UNINDENT
 .UNINDENT
+.UNINDENT
+.INDENT 7.0
 .TP
-invalid (\fI\%RFC 6761\fP)
+invalid (\fI\%RFC 6761\fP) 
 Default content:
 .INDENT 7.0
 .INDENT 3.5
@@ -3160,33 +3179,45 @@ local\-data: \(dqinvalid. 10800 IN SOA localhost. nobody.invalid. 1 3600 1200 60
 .fi
 .UNINDENT
 .UNINDENT
+.UNINDENT
+.INDENT 7.0
 .TP
-reverse \fI\%RFC 1918\fP local use zones
+reverse local use zones (\fI\%RFC 1918\fP) 
 Reverse data for zones \fB10.in\-addr.arpa\fP, \fB16.172.in\-addr.arpa\fP to
 \fB31.172.in\-addr.arpa\fP, \fB168.192.in\-addr.arpa\fP\&.
 The \fI\%local\-zone\fP is set static and as
 \fI\%local\-data\fP SOA and NS records are
 provided.
+.UNINDENT
+.INDENT 7.0
 .TP
-reverse \fI\%RFC 3330\fP IP4 this, link\-local, testnet and broadcast
-Reverse data for zones \fB0.in\-addr.arpa\fP, \fB254.169.in\-addr.arpa\fP,
+special\-use IPv4 Addresses (\fI\%RFC 3330\fP) 
+Reverse data for zones \fB0.in\-addr.arpa\fP (this), \fB254.169.in\-addr.arpa\fP (link\-local),
 \fB2.0.192.in\-addr.arpa\fP (TEST NET 1), \fB100.51.198.in\-addr.arpa\fP
 (TEST NET 2), \fB113.0.203.in\-addr.arpa\fP (TEST NET 3),
-\fB255.255.255.255.in\-addr.arpa\fP\&.
+\fB255.255.255.255.in\-addr.arpa\fP (broadcast).
 And from \fB64.100.in\-addr.arpa\fP to \fB127.100.in\-addr.arpa\fP (Shared
 Address Space).
+.UNINDENT
+.INDENT 7.0
 .TP
-reverse \fI\%RFC 4291\fP IPv6 unspecified
+reverse IPv6 unspecified (\fI\%RFC 4291\fP) 
 Reverse data for zone
 \fB0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.ip6.arpa.\fP
+.UNINDENT
+.INDENT 7.0
 .TP
-reverse \fI\%RFC 4193\fP IPv6 Locally Assigned Local Addresses
+reverse IPv6 Locally Assigned Local Addresses (\fI\%RFC 4193\fP) 
 Reverse data for zone \fBD.F.ip6.arpa\fP\&.
+.UNINDENT
+.INDENT 7.0
 .TP
-reverse \fI\%RFC 4291\fP IPv6 Link Local Addresses
+reverse IPv6 Link Local Addresses (\fI\%RFC 4291\fP) 
 Reverse data for zones \fB8.E.F.ip6.arpa\fP to \fBB.E.F.ip6.arpa\fP\&.
+.UNINDENT
+.INDENT 7.0
 .TP
-.B reverse IPv6 Example Prefix
+.B reverse IPv6 Example Prefix 
 Reverse data for zone \fB8.B.D.0.1.0.0.2.ip6.arpa\fP\&.
 This zone is used for tutorials and examples.
 You can remove the block on this zone with:
@@ -3208,7 +3239,7 @@ This also works with the other default zones.
 .UNINDENT
 .INDENT 0.0
 .TP
-.B local\-data: \fI\(dq<resource record string>\(dq\fP
+.B local\-data: \fI\(dq<resource record string>\(dq\fP 
 Configure local data, which is served in reply to queries for it.
 The query has to match exactly unless you configure the
 \fI\%local\-zone\fP as redirect.
@@ -3242,7 +3273,7 @@ zone section below.
 .UNINDENT
 .INDENT 0.0
 .TP
-.B local\-data\-ptr: \fI\(dqIPaddr name\(dq\fP
+.B local\-data\-ptr: \fI\(dqIPaddr name\(dq\fP 
 Configure local data shorthand for a PTR record with the reversed IPv4 or
 IPv6 address and the host name.
 For example \fB\(dq192.0.2.4 www.example.com\(dq\fP\&.
@@ -3250,7 +3281,7 @@ TTL can be inserted like this: \fB\(dq2001:DB8::4 7200 www.example.com\(dq\fP
 .UNINDENT
 .INDENT 0.0
 .TP
-.B local\-zone\-tag: \fI<zone> <\(dqlist of tags\(dq>\fP
+.B local\-zone\-tag: \fI<zone> <\(dqlist of tags\(dq>\fP 
 Assign tags to local zones.
 Tagged localzones will only be applied when the used
 \fI\%access\-control\fP element has a matching
@@ -3263,7 +3294,7 @@ is non\-empty.
 .UNINDENT
 .INDENT 0.0
 .TP
-.B local\-zone\-override: \fI<zone> <IP netblock> <type>\fP
+.B local\-zone\-override: \fI<zone> <IP netblock> <type>\fP 
 Override the local zone type for queries from addresses matching netblock.
 Use this localzone type, regardless the type configured for the local zone
 (both tagged and untagged) and regardless the type configured using
@@ -3271,7 +3302,7 @@ Use this localzone type, regardless the type configured for the local zone
 .UNINDENT
 .INDENT 0.0
 .TP
-.B response\-ip: \fI<IP\-netblock> <action>\fP
+.B response\-ip: \fI<IP\-netblock> <action>\fP 
 This requires use of the \fBrespip\fP module.
 .sp
 If the IP address in an AAAA or A RR in the answer section of a response
@@ -3296,7 +3327,7 @@ can be used for other queries.
 .UNINDENT
 .INDENT 0.0
 .TP
-.B response\-ip\-data: \fI<IP\-netblock> <\(dqresource record string\(dq>\fP
+.B response\-ip\-data: \fI<IP\-netblock> <\(dqresource record string\(dq>\fP 
 This requires use of the \fBrespip\fP module.
 .sp
 This specifies the action data for
@@ -3319,7 +3350,7 @@ for the name.
 .UNINDENT
 .INDENT 0.0
 .TP
-.B response\-ip\-tag: \fI<IP\-netblock> <\(dqlist of tags\(dq>\fP
+.B response\-ip\-tag: \fI<IP\-netblock> <\(dqlist of tags\(dq>\fP 
 This requires use of the \fBrespip\fP module.
 .sp
 Assign tags to response \fI<IP\-netblock>\fP\&.
@@ -3368,7 +3399,7 @@ action applies.
 .UNINDENT
 .INDENT 0.0
 .TP
-.B ratelimit: \fI<number or 0>\fP
+.B ratelimit: \fI<number or 0>\fP 
 Enable ratelimiting of queries sent to nameserver for performing recursion.
 0 disables the feature.
 This option is experimental at this time.
@@ -3396,7 +3427,7 @@ Default: 0
 .UNINDENT
 .INDENT 0.0
 .TP
-.B ratelimit\-size: \fI<memory size>\fP
+.B ratelimit\-size: \fI<memory size>\fP 
 Give the size of the data structure in which the current ongoing rates are
 kept track in.
 In bytes or use m(mega), k(kilo), g(giga).
@@ -3407,7 +3438,7 @@ Default: 4m
 .UNINDENT
 .INDENT 0.0
 .TP
-.B ratelimit\-slabs: \fI<number>\fP
+.B ratelimit\-slabs: \fI<number>\fP 
 Number of slabs in the ratelimit tracking data structure.
 Slabs reduce lock contention by threads.
 Must be set to a power of 2.
@@ -3419,7 +3450,7 @@ Default: (unconfigured)
 .UNINDENT
 .INDENT 0.0
 .TP
-.B ratelimit\-factor: \fI<number>\fP
+.B ratelimit\-factor: \fI<number>\fP 
 Set the amount of queries to rate limit when the limit is exceeded.
 If set to 0, all queries are dropped for domains where the limit is
 exceeded.
@@ -3433,7 +3464,7 @@ Default: 10
 .UNINDENT
 .INDENT 0.0
 .TP
-.B ratelimit\-backoff: \fI<yes or no>\fP
+.B ratelimit\-backoff: \fI<yes or no>\fP 
 If enabled, the ratelimit is treated as a hard failure instead of the
 default maximum allowed constant rate.
 When the limit is reached, traffic is ratelimited and demand continues to
@@ -3448,7 +3479,7 @@ Default: no
 .UNINDENT
 .INDENT 0.0
 .TP
-.B ratelimit\-for\-domain: \fI<domain> <number qps or 0>\fP
+.B ratelimit\-for\-domain: \fI<domain> <number qps or 0>\fP 
 Override the global \fI\%ratelimit\fP for an exact
 match domain name with the listed number.
 You can give this for any number of names.
@@ -3458,7 +3489,7 @@ A value of 0 will disable ratelimiting for that domain.
 .UNINDENT
 .INDENT 0.0
 .TP
-.B ratelimit\-below\-domain: \fI<domain> <number qps or 0>\fP
+.B ratelimit\-below\-domain: \fI<domain> <number qps or 0>\fP 
 Override the global \fI\%ratelimit\fP for a domain
 name that ends in this name.
 You can give this multiple times, it then describes different settings in
@@ -3473,7 +3504,7 @@ name.
 .UNINDENT
 .INDENT 0.0
 .TP
-.B ip\-ratelimit: \fI<number or 0>\fP
+.B ip\-ratelimit: \fI<number or 0>\fP 
 Enable global ratelimiting of queries accepted per ip address.
 This option is experimental at this time.
 The ratelimit is in queries per second that are allowed.
@@ -3490,7 +3521,7 @@ Default: 0 (disabled)
 .UNINDENT
 .INDENT 0.0
 .TP
-.B ip\-ratelimit\-cookie: \fI<number or 0>\fP
+.B ip\-ratelimit\-cookie: \fI<number or 0>\fP 
 Enable global ratelimiting of queries accepted per IP address with a valid
 DNS Cookie.
 This option is experimental at this time.
@@ -3510,7 +3541,7 @@ Default: 0 (disabled)
 .UNINDENT
 .INDENT 0.0
 .TP
-.B ip\-ratelimit\-size: \fI<memory size>\fP
+.B ip\-ratelimit\-size: \fI<memory size>\fP 
 Give the size of the data structure in which the current ongoing rates are
 kept track in.
 In bytes or use m(mega), k(kilo), g(giga).
@@ -3521,7 +3552,7 @@ Default: 4m
 .UNINDENT
 .INDENT 0.0
 .TP
-.B ip\-ratelimit\-slabs: \fI<number>\fP
+.B ip\-ratelimit\-slabs: \fI<number>\fP 
 Number of slabs in the ip ratelimit tracking data structure.
 Slabs reduce lock contention by threads.
 Must be set to a power of 2.
@@ -3533,7 +3564,7 @@ Default: (unconfigured)
 .UNINDENT
 .INDENT 0.0
 .TP
-.B ip\-ratelimit\-factor: \fI<number>\fP
+.B ip\-ratelimit\-factor: \fI<number>\fP 
 Set the amount of queries to rate limit when the limit is exceeded.
 If set to 0, all queries are dropped for addresses where the limit is
 exceeded.
@@ -3547,7 +3578,7 @@ Default: 10
 .UNINDENT
 .INDENT 0.0
 .TP
-.B ip\-ratelimit\-backoff: \fI<yes or no>\fP
+.B ip\-ratelimit\-backoff: \fI<yes or no>\fP 
 If enabled, the rate limit is treated as a hard failure instead of the
 default maximum allowed constant rate.
 When the limit is reached, traffic is ratelimited and demand continues to
@@ -3562,7 +3593,7 @@ Default: no
 .UNINDENT
 .INDENT 0.0
 .TP
-.B outbound\-msg\-retry: \fI<number>\fP
+.B outbound\-msg\-retry: \fI<number>\fP 
 The number of retries, per upstream nameserver in a delegation, that
 Unbound will attempt in case a throwaway response is received.
 No response (timeout) contributes to the retry counter.
@@ -3573,7 +3604,7 @@ Default: 5
 .UNINDENT
 .INDENT 0.0
 .TP
-.B max\-sent\-count: \fI<number>\fP
+.B max\-sent\-count: \fI<number>\fP 
 Hard limit on the number of outgoing queries Unbound will make while
 resolving a name, making sure large NS sets do not loop.
 Results in SERVFAIL when reached.
@@ -3583,7 +3614,7 @@ Default: 32
 .UNINDENT
 .INDENT 0.0
 .TP
-.B max\-query\-restarts: \fI<number>\fP
+.B max\-query\-restarts: \fI<number>\fP 
 Hard limit on the number of times Unbound is allowed to restart a query
 upon encountering a CNAME record.
 Results in SERVFAIL when reached.
@@ -3594,7 +3625,7 @@ Default: 11
 .UNINDENT
 .INDENT 0.0
 .TP
-.B iter\-scrub\-ns: \fI<number>\fP
+.B iter\-scrub\-ns: \fI<number>\fP 
 Limit on the number of NS records allowed in an rrset of type NS, from the
 iterator scrubber.
 This protects the internals of the resolver from overly large NS sets.
@@ -3603,7 +3634,7 @@ Default: 20
 .UNINDENT
 .INDENT 0.0
 .TP
-.B iter\-scrub\-cname: \fI<number>\fP
+.B iter\-scrub\-cname: \fI<number>\fP 
 Limit on the number of CNAME, DNAME records in an answer, from the iterator
 scrubber.
 This protects the internals of the resolver from overly long indirection
@@ -3614,7 +3645,7 @@ Default: 11
 .UNINDENT
 .INDENT 0.0
 .TP
-.B max\-global\-quota: \fI<number>\fP
+.B max\-global\-quota: \fI<number>\fP 
 Limit on the number of upstream queries sent out for an incoming query and
 its subqueries from recursion.
 It is not reset during the resolution.
@@ -3624,7 +3655,7 @@ Default: 200
 .UNINDENT
 .INDENT 0.0
 .TP
-.B fast\-server\-permil: \fI<number>\fP
+.B fast\-server\-permil: \fI<number>\fP 
 Specify how many times out of 1000 to pick from the set of fastest servers.
 0 turns the feature off.
 A value of 900 would pick from the fastest servers 90 percent of the time,
@@ -3641,7 +3672,7 @@ Default: 0
 .UNINDENT
 .INDENT 0.0
 .TP
-.B fast\-server\-num: \fI<number>\fP
+.B fast\-server\-num: \fI<number>\fP 
 Set the number of servers that should be used for fast server selection.
 Only use the fastest specified number of servers with the
 \fI\%fast\-server\-permil\fP option, that
@@ -3651,7 +3682,7 @@ Default: 3
 .UNINDENT
 .INDENT 0.0
 .TP
-.B answer\-cookie: \fI<yes or no>\fP
+.B answer\-cookie: \fI<yes or no>\fP 
 If enabled, Unbound will answer to requests containing DNS Cookies as
 specified in RFC 7873 and RFC 9018.
 .sp
@@ -3659,7 +3690,7 @@ Default: no
 .UNINDENT
 .INDENT 0.0
 .TP
-.B cookie\-secret: \fI\(dq<128 bit hex string>\(dq\fP
+.B cookie\-secret: \fI\(dq<128 bit hex string>\(dq\fP 
 Server\(aqs secret for DNS Cookie generation.
 Useful to explicitly set for servers in an anycast deployment that need to
 share the secret in order to verify each other\(aqs Server Cookies.
@@ -3679,7 +3710,7 @@ Default: 128 bits random secret generated at startup time
 .UNINDENT
 .INDENT 0.0
 .TP
-.B cookie\-secret\-file: \fI<filename>\fP
+.B cookie\-secret\-file: \fI<filename>\fP 
 File from which the secrets are read used in DNS Cookie calculations.
 When this file exists, the secrets in this file are used and the secret
 specified by the
@@ -3697,7 +3728,7 @@ Default: \(dq\(dq (disabled)
 .UNINDENT
 .INDENT 0.0
 .TP
-.B edns\-client\-string: \fI<IP netblock> <string>\fP
+.B edns\-client\-string: \fI<IP netblock> <string>\fP 
 Include an EDNS0 option containing configured ASCII string in queries with
 destination address matching the configured \fI<IP netblock>\fP\&.
 This configuration option can be used multiple times.
@@ -3705,7 +3736,7 @@ The most specific match will be used.
 .UNINDENT
 .INDENT 0.0
 .TP
-.B edns\-client\-string\-opcode: \fI<opcode>\fP
+.B edns\-client\-string\-opcode: \fI<opcode>\fP 
 EDNS0 option code for the
 \fI\%edns\-client\-string\fP option, from 0
 to 65535.
@@ -3716,7 +3747,7 @@ Default: 65001
 .UNINDENT
 .INDENT 0.0
 .TP
-.B ede: \fI<yes or no>\fP
+.B ede: \fI<yes or no>\fP 
 If enabled, Unbound will respond with Extended DNS Error codes
 (\fI\%RFC 8914\fP).
 These EDEs privide additional information with a response mainly for, but
@@ -3731,7 +3762,7 @@ Default: no
 .UNINDENT
 .INDENT 0.0
 .TP
-.B ede\-serve\-expired: \fI<yes or no>\fP
+.B ede\-serve\-expired: \fI<yes or no>\fP 
 If enabled, Unbound will attach an Extended DNS Error (\fI\%RFC 8914\fP) \fICode 3
 \- Stale Answer\fP as EDNS0 option to the expired response.
 .sp
@@ -3747,7 +3778,7 @@ Default: no
 .UNINDENT
 .INDENT 0.0
 .TP
-.B dns\-error\-reporting: \fI<yes or no>\fP
+.B dns\-error\-reporting: \fI<yes or no>\fP 
 If enabled, Unbound will send DNS Error Reports (\fI\%RFC 9567\fP).
 The name servers need to express support by attaching the Report\-Channel
 EDNS0 option on their replies specifying the reporting agent for the zone.
@@ -3777,7 +3808,7 @@ To setup the correct self\-signed certificates use the
 \fIunbound\-control\-setup(8)\fP utility.
 .INDENT 0.0
 .TP
-.B control\-enable: \fI<yes or no>\fP
+.B control\-enable: \fI<yes or no>\fP 
 The option is used to enable remote control.
 If turned off, the server does not listen for control commands.
 .sp
@@ -3785,7 +3816,7 @@ Default: no
 .UNINDENT
 .INDENT 0.0
 .TP
-.B control\-interface: \fI<IP address or interface name or path>\fP
+.B control\-interface: \fI<IP address or interface name or path>\fP 
 Give IPv4 or IPv6 addresses or local socket path to listen on for control
 commands.
 If an interface name is used instead of an IP address, the list of IP
@@ -3808,7 +3839,7 @@ and restrict access to that directory.
 .UNINDENT
 .INDENT 0.0
 .TP
-.B control\-port: \fI<port number>\fP
+.B control\-port: \fI<port number>\fP 
 The port number to listen on for IPv4 or IPv6 control interfaces.
 .sp
 \fBNOTE:\fP
@@ -3823,7 +3854,7 @@ Default: 8953
 .UNINDENT
 .INDENT 0.0
 .TP
-.B control\-use\-cert: \fI<yes or no>\fP
+.B control\-use\-cert: \fI<yes or no>\fP 
 For localhost
 \fI\%control\-interface\fP you can
 disable the use of TLS by setting this option to \(dqno\(dq.
@@ -3833,7 +3864,7 @@ Default: yes
 .UNINDENT
 .INDENT 0.0
 .TP
-.B server\-key\-file: \fI<private key file>\fP
+.B server\-key\-file: \fI<private key file>\fP 
 Path to the server private key.
 This file is generated by the
 \fI\%unbound\-control\-setup(8)\fP utility.
@@ -3844,7 +3875,7 @@ Default: unbound_server.key
 .UNINDENT
 .INDENT 0.0
 .TP
-.B server\-cert\-file: \fI<certificate file.pem>\fP
+.B server\-cert\-file: \fI<certificate file.pem>\fP 
 Path to the server self signed certificate.
 This file is generated by the
 \fI\%unbound\-control\-setup(8)\fP utility.
@@ -3855,7 +3886,7 @@ Default: unbound_server.pem
 .UNINDENT
 .INDENT 0.0
 .TP
-.B control\-key\-file: \fI<private key file>\fP
+.B control\-key\-file: \fI<private key file>\fP 
 Path to the control client private key.
 This file is generated by the
 \fI\%unbound\-control\-setup(8)\fP utility.
@@ -3865,7 +3896,7 @@ Default: unbound_control.key
 .UNINDENT
 .INDENT 0.0
 .TP
-.B control\-cert\-file: \fI<certificate file.pem>\fP
+.B control\-cert\-file: \fI<certificate file.pem>\fP 
 Path to the control client certificate.
 This certificate has to be signed with the server certificate.
 This file is generated by the
@@ -3921,13 +3952,13 @@ The \fI\%local\-zone: nodefault\fP (or
 (reverse\-) zone bypass Unbound\(aqs filtering of \fI\%RFC 1918\fP zones.
 .INDENT 0.0
 .TP
-.B name: \fI<domain name>\fP
+.B name: \fI<domain name>\fP 
 Name of the stub zone.
 This is the full domain name of the zone.
 .UNINDENT
 .INDENT 0.0
 .TP
-.B stub\-host: \fI<domain name>\fP
+.B stub\-host: \fI<domain name>\fP 
 Name of stub zone nameserver.
 Is itself resolved before it is used.
 .sp
@@ -3943,7 +3974,7 @@ If only \fB\(aq#\(aq\fP is used the default port is the configured
 .UNINDENT
 .INDENT 0.0
 .TP
-.B stub\-addr: \fI<IP address>\fP
+.B stub\-addr: \fI<IP address>\fP 
 IP address of stub zone nameserver.
 Can be IPv4 or IPv6.
 .sp
@@ -3959,7 +3990,7 @@ If only \fB\(aq#\(aq\fP is used the default port is the configured
 .UNINDENT
 .INDENT 0.0
 .TP
-.B stub\-prime: \fI<yes or no>\fP
+.B stub\-prime: \fI<yes or no>\fP 
 If enabled it performs NS set priming, which is similar to root hints,
 where it starts using the list of nameservers currently published by the
 zone.
@@ -3970,7 +4001,7 @@ Default: no
 .UNINDENT
 .INDENT 0.0
 .TP
-.B stub\-first: \fI<yes or no>\fP
+.B stub\-first: \fI<yes or no>\fP 
 If enabled, a query is attempted without the stub clause if it fails.
 The data could not be retrieved and would have caused SERVFAIL because the
 servers are unreachable, instead it is tried without this clause.
@@ -3979,20 +4010,20 @@ Default: no
 .UNINDENT
 .INDENT 0.0
 .TP
-.B stub\-tls\-upstream: \fI<yes or no>\fP
+.B stub\-tls\-upstream: \fI<yes or no>\fP 
 Enabled or disable whether the queries to this stub use TLS for transport.
 .sp
 Default: no
 .UNINDENT
 .INDENT 0.0
 .TP
-.B stub\-ssl\-upstream: \fI<yes or no>\fP
+.B stub\-ssl\-upstream: \fI<yes or no>\fP 
 Alternate syntax for
 \fI\%stub\-tls\-upstream\fP\&.
 .UNINDENT
 .INDENT 0.0
 .TP
-.B stub\-tcp\-upstream: \fI<yes or no>\fP
+.B stub\-tcp\-upstream: \fI<yes or no>\fP 
 If it is set to \(dqyes\(dq then upstream queries use TCP only for transport
 regardless of global flag \fI\%tcp\-upstream\fP\&.
 .sp
@@ -4000,7 +4031,7 @@ Default: no
 .UNINDENT
 .INDENT 0.0
 .TP
-.B stub\-no\-cache: \fI<yes or no>\fP
+.B stub\-no\-cache: \fI<yes or no>\fP 
 If enabled, data inside the stub is not cached.
 This is useful when you want immediate changes to be visible.
 .sp
@@ -4029,13 +4060,13 @@ will forward all queries to that other server (unless it can answer from the
 cache).
 .INDENT 0.0
 .TP
-.B name: \fI<domain name>\fP
+.B name: \fI<domain name>\fP 
 Name of the forward zone.
 This is the full domain name of the zone.
 .UNINDENT
 .INDENT 0.0
 .TP
-.B forward\-host: \fI<domain name>\fP
+.B forward\-host: \fI<domain name>\fP 
 Name of server to forward to.
 Is itself resolved before it is used.
 .sp
@@ -4051,7 +4082,7 @@ If only \fB\(aq#\(aq\fP is used the default port is the configured
 .UNINDENT
 .INDENT 0.0
 .TP
-.B forward\-addr: \fI<IP address>\fP
+.B forward\-addr: \fI<IP address>\fP 
 IP address of server to forward to.
 Can be IPv4 or IPv6.
 .sp
@@ -4074,7 +4105,7 @@ The cert must also match a CA from the
 .UNINDENT
 .INDENT 0.0
 .TP
-.B forward\-first: \fI<yes or no>\fP
+.B forward\-first: \fI<yes or no>\fP 
 If a forwarded query is met with a SERVFAIL error, and this option is
 enabled, Unbound will fall back to normal recursive resolution for this
 query as if no query forwarding had been specified.
@@ -4083,7 +4114,7 @@ Default: no
 .UNINDENT
 .INDENT 0.0
 .TP
-.B forward\-tls\-upstream: \fI<yes or no>\fP
+.B forward\-tls\-upstream: \fI<yes or no>\fP 
 Enabled or disable whether the queries to this forwarder use TLS for
 transport.
 If you enable this, also configure a
@@ -4095,13 +4126,13 @@ Default: no
 .UNINDENT
 .INDENT 0.0
 .TP
-.B forward\-ssl\-upstream: \fI<yes or no>\fP
+.B forward\-ssl\-upstream: \fI<yes or no>\fP 
 Alternate syntax for
 \fI\%forward\-tls\-upstream\fP\&.
 .UNINDENT
 .INDENT 0.0
 .TP
-.B forward\-tcp\-upstream: \fI<yes or no>\fP
+.B forward\-tcp\-upstream: \fI<yes or no>\fP 
 If it is set to \(dqyes\(dq then upstream queries use TCP only for transport
 regardless of global flag \fI\%tcp\-upstream\fP\&.
 .sp
@@ -4109,7 +4140,7 @@ Default: no
 .UNINDENT
 .INDENT 0.0
 .TP
-.B forward\-no\-cache: \fI<yes or no>\fP
+.B forward\-no\-cache: \fI<yes or no>\fP 
 If enabled, data inside the forward is not cached.
 This is useful when you want immediate changes to be visible.
 .sp
@@ -4166,12 +4197,12 @@ accepted from the primary (even if older), and if fallback is enabled, the
 fallback activates to fetch from the upstream instead of the SERVFAIL.
 .INDENT 0.0
 .TP
-.B name: \fI<zone name>\fP
+.B name: \fI<zone name>\fP 
 Name of the authority zone.
 .UNINDENT
 .INDENT 0.0
 .TP
-.B primary: \fI<IP address or host name>\fP
+.B primary: \fI<IP address or host name>\fP 
 Where to download a copy of the zone from, with AXFR and IXFR.
 Multiple primaries can be specified.
 They are all tried if one fails.
@@ -4194,12 +4225,12 @@ IP address to avoid a circular dependency on retrieving that IP address.
 .UNINDENT
 .INDENT 0.0
 .TP
-.B master: \fI<IP address or host name>\fP
+.B master: \fI<IP address or host name>\fP 
 Alternate syntax for \fI\%primary\fP\&.
 .UNINDENT
 .INDENT 0.0
 .TP
-.B url: \fI<URL to zone file>\fP
+.B url: \fI<URL to zone file>\fP 
 Where to download a zonefile for the zone.
 With HTTP or HTTPS.
 An example for the url is:
@@ -4237,7 +4268,7 @@ IP address.
 .UNINDENT
 .INDENT 0.0
 .TP
-.B allow\-notify: \fI<IP address or host name or netblockIP/prefix>\fP
+.B allow\-notify: \fI<IP address or host name or netblockIP/prefix>\fP 
 With \fI\%allow\-notify\fP you can specify
 additional sources of notifies.
 When notified, the server attempts to first probe and then zone transfer.
@@ -4257,7 +4288,7 @@ default.
 .UNINDENT
 .INDENT 0.0
 .TP
-.B fallback\-enabled: \fI<yes or no>\fP
+.B fallback\-enabled: \fI<yes or no>\fP 
 If enabled, Unbound falls back to querying the internet as a resolver for
 this zone when lookups fail.
 For example for DNSSEC validation failures.
@@ -4266,7 +4297,7 @@ Default: no
 .UNINDENT
 .INDENT 0.0
 .TP
-.B for\-downstream: \fI<yes or no>\fP
+.B for\-downstream: \fI<yes or no>\fP 
 If enabled, Unbound serves authority responses to downstream clients for
 this zone.
 This option makes Unbound behave, for the queries with names in this zone,
@@ -4284,7 +4315,7 @@ Default: yes
 .UNINDENT
 .INDENT 0.0
 .TP
-.B for\-upstream: \fI<yes or no>\fP
+.B for\-upstream: \fI<yes or no>\fP 
 If enabled, Unbound fetches data from this data collection for answering
 recursion queries.
 Instead of sending queries over the internet to the authority servers for
@@ -4297,7 +4328,7 @@ Default: yes
 .UNINDENT
 .INDENT 0.0
 .TP
-.B zonemd\-check: \fI<yes or no>\fP
+.B zonemd\-check: \fI<yes or no>\fP 
 Enable this option to check ZONEMD records in the zone.
 The ZONEMD record is a checksum over the zone data.
 This includes glue in the zone and data from the zone file, and excludes
@@ -4308,7 +4339,7 @@ Default: no
 .UNINDENT
 .INDENT 0.0
 .TP
-.B zonemd\-reject\-absence: \fI<yes or no>\fP
+.B zonemd\-reject\-absence: \fI<yes or no>\fP 
 Enable this option to reject the absence of the ZONEMD record.
 Without it, when ZONEMD is not there it is not checked.
 .sp
@@ -4330,7 +4361,7 @@ Default: no
 .UNINDENT
 .INDENT 0.0
 .TP
-.B zonefile: \fI<filename>\fP
+.B zonefile: \fI<filename>\fP 
 The filename where the zone is stored.
 If not given then no zonefile is used.
 If the file does not exist or is empty, Unbound will attempt to fetch zone
@@ -4353,7 +4384,7 @@ Global options will be used if no matching view is found, or when the matching
 view does not have the option specified.
 .INDENT 0.0
 .TP
-.B name: \fI<view name>\fP
+.B name: \fI<view name>\fP 
 Name of the view.
 Must be unique.
 This name is used in the
@@ -4361,7 +4392,7 @@ This name is used in the
 .UNINDENT
 .INDENT 0.0
 .TP
-.B local\-zone: \fI<zone> <type>\fP
+.B local\-zone: \fI<zone> <type>\fP 
 View specific local zone elements.
 Has the same types and behaviour as the global
 \fI\%local\-zone\fP elements.
@@ -4376,21 +4407,21 @@ it\(aqs default zones.
 .UNINDENT
 .INDENT 0.0
 .TP
-.B local\-data: \fI\(dq<resource record string>\(dq\fP
+.B local\-data: \fI\(dq<resource record string>\(dq\fP 
 View specific local data elements.
 Has the same behaviour as the global
 \fI\%local\-data\fP elements.
 .UNINDENT
 .INDENT 0.0
 .TP
-.B local\-data\-ptr: \fI\(dqIPaddr name\(dq\fP
+.B local\-data\-ptr: \fI\(dqIPaddr name\(dq\fP 
 View specific local\-data\-ptr elements.
 Has the same behaviour as the global
 \fI\%local\-data\-ptr\fP elements.
 .UNINDENT
 .INDENT 0.0
 .TP
-.B view\-first: \fI<yes or no>\fP
+.B view\-first: \fI<yes or no>\fP 
 If enabled, it attempts to use the global
 \fI\%local\-zone\fP and
 \fI\%local\-data\fP if there is no match in the
@@ -4418,7 +4449,7 @@ be specified as an absolute path relative to the new root, or as a relative
 path to the working directory.
 .INDENT 0.0
 .TP
-.B python\-script: \fI<python file>\fP
+.B python\-script: \fI<python file>\fP 
 The script file to load.
 Repeat this option for every python module instance added to the
 \fI\%module\-config\fP option.
@@ -4440,7 +4471,7 @@ specified as an absolute path relative to the new path set by
 directory.
 .INDENT 0.0
 .TP
-.B dynlib\-file: \fI<dynlib file>\fP
+.B dynlib\-file: \fI<dynlib file>\fP 
 The dynamic library file to load.
 Repeat this option for every dynlib module instance added to the
 \fI\%module\-config\fP option.
@@ -4470,7 +4501,7 @@ These settings go in the \fI\%server:\fP section.
 .UNINDENT
 .INDENT 0.0
 .TP
-.B dns64\-prefix: \fI<IPv6 prefix>\fP
+.B dns64\-prefix: \fI<IPv6 prefix>\fP 
 This sets the DNS64 prefix to use to synthesize AAAA records with.
 It must be /96 or shorter.
 .sp
@@ -4478,7 +4509,7 @@ Default: 64:ff9b::/96
 .UNINDENT
 .INDENT 0.0
 .TP
-.B dns64\-synthall: \fI<yes or no>\fP
+.B dns64\-synthall: \fI<yes or no>\fP 
 .sp
 \fBWARNING:\fP
 .INDENT 7.0
@@ -4494,7 +4525,7 @@ Default: no
 .UNINDENT
 .INDENT 0.0
 .TP
-.B dns64\-ignore\-aaaa: \fI<domain name>\fP
+.B dns64\-ignore\-aaaa: \fI<domain name>\fP 
 List domain for which the AAAA records are ignored and the A record is used
 by DNS64 processing instead.
 Can be entered multiple times, list a new domain for which it applies, one
@@ -4509,7 +4540,7 @@ It is controlled by two options in the
 \fI\%server:\fP section:
 .INDENT 0.0
 .TP
-.B do\-nat64: \fI<yes or no>\fP
+.B do\-nat64: \fI<yes or no>\fP 
 Use NAT64 to reach IPv4\-only servers.
 Consider also enabling \fI\%prefer\-ip6\fP
 to prefer native IPv6 connections to nameservers.
@@ -4518,7 +4549,7 @@ Default: no
 .UNINDENT
 .INDENT 0.0
 .TP
-.B nat64\-prefix: \fI<IPv6 prefix>\fP
+.B nat64\-prefix: \fI<IPv6 prefix>\fP 
 Use a specific NAT64 prefix to reach IPv4\-only servers.
 The prefix length must be one of /32, /40, /48, /56, /64 or /96.
 .sp
@@ -4534,7 +4565,7 @@ You can use dnscrypt\-wrapper to generate those:
 \fI\%https://github.com/cofyc/dnscrypt\-wrapper/blob/master/README.md#usage\fP
 .INDENT 0.0
 .TP
-.B dnscrypt\-enable: \fI<yes or no>\fP
+.B dnscrypt\-enable: \fI<yes or no>\fP 
 Whether or not the dnscrypt config should be enabled.
 You may define configuration but not activate it.
 .sp
@@ -4542,7 +4573,7 @@ Default: no
 .UNINDENT
 .INDENT 0.0
 .TP
-.B dnscrypt\-port: \fI<port number>\fP
+.B dnscrypt\-port: \fI<port number>\fP 
 On which port should dnscrypt should be activated.
 .sp
 \fBNOTE:\fP
@@ -4555,7 +4586,7 @@ There should be a matching interface option defined in the
 .UNINDENT
 .INDENT 0.0
 .TP
-.B dnscrypt\-provider: \fI<provider name>\fP
+.B dnscrypt\-provider: \fI<provider name>\fP 
 The provider name to use to distribute certificates.
 This is of the form:
 .INDENT 7.0
@@ -4578,20 +4609,20 @@ The name \fIMUST\fP end with a dot.
 .UNINDENT
 .INDENT 0.0
 .TP
-.B dnscrypt\-secret\-key: \fI<path to secret key file>\fP
+.B dnscrypt\-secret\-key: \fI<path to secret key file>\fP 
 Path to the time limited secret key file.
 This option may be specified multiple times.
 .UNINDENT
 .INDENT 0.0
 .TP
-.B dnscrypt\-provider\-cert: \fI<path to cert file>\fP
+.B dnscrypt\-provider\-cert: \fI<path to cert file>\fP 
 Path to the certificate related to the
 \fI\%dnscrypt\-secret\-key\fP\&.
 This option may be specified multiple times.
 .UNINDENT
 .INDENT 0.0
 .TP
-.B dnscrypt\-provider\-cert\-rotated: \fI<path to cert file>\fP
+.B dnscrypt\-provider\-cert\-rotated: \fI<path to cert file>\fP 
 Path to a certificate that we should be able to serve existing connection
 from but do not want to advertise over
 \fI\%dnscrypt\-provider\fP \(aqs TXT
@@ -4612,7 +4643,7 @@ This option may be specified multiple times.
 .UNINDENT
 .INDENT 0.0
 .TP
-.B dnscrypt\-shared\-secret\-cache\-size: \fI<memory size>\fP
+.B dnscrypt\-shared\-secret\-cache\-size: \fI<memory size>\fP 
 Give the size of the data structure in which the shared secret keys are
 kept in.
 In bytes or use m(mega), k(kilo), g(giga).
@@ -4624,7 +4655,7 @@ Default: 4m
 .UNINDENT
 .INDENT 0.0
 .TP
-.B dnscrypt\-shared\-secret\-cache\-slabs: \fI<number>\fP
+.B dnscrypt\-shared\-secret\-cache\-slabs: \fI<number>\fP 
 Number of slabs in the dnscrypt shared secrets cache.
 Slabs reduce lock contention by threads.
 Must be set to a power of 2.
@@ -4636,7 +4667,7 @@ Default: (unconfigured)
 .UNINDENT
 .INDENT 0.0
 .TP
-.B dnscrypt\-nonce\-cache\-size: \fI<memory size>\fP
+.B dnscrypt\-nonce\-cache\-size: \fI<memory size>\fP 
 Give the size of the data structure in which the client nonces are kept in.
 In bytes or use m(mega), k(kilo), g(giga).
 The nonce cache is used to prevent dnscrypt message replaying.
@@ -4646,7 +4677,7 @@ Default: 4m
 .UNINDENT
 .INDENT 0.0
 .TP
-.B dnscrypt\-nonce\-cache\-slabs: \fI<number>\fP
+.B dnscrypt\-nonce\-cache\-slabs: \fI<number>\fP 
 Number of slabs in the dnscrypt nonce cache.
 Slabs reduce lock contention by threads.
 Must be set to a power of 2.
@@ -4716,7 +4747,7 @@ This module does not interact with the
 \fI\%prefetch\fP options.
 .INDENT 0.0
 .TP
-.B send\-client\-subnet: \fI<IP address>\fP
+.B send\-client\-subnet: \fI<IP address>\fP 
 Send client source address to this authority.
 Append /num to indicate a classless delegation netblock, for example like
 \fB10.2.3.4/24\fP or \fB2001::11/64\fP\&.
@@ -4727,7 +4758,7 @@ domain in query is specified in
 .UNINDENT
 .INDENT 0.0
 .TP
-.B client\-subnet\-zone: \fI<domain>\fP
+.B client\-subnet\-zone: \fI<domain>\fP 
 Send client source address in queries for this domain and its subdomains.
 Can be given multiple times.
 Zones not listed will not receive edns\-subnet information, unless hosted by
@@ -4736,7 +4767,7 @@ authority specified in
 .UNINDENT
 .INDENT 0.0
 .TP
-.B client\-subnet\-always\-forward: \fI<yes or no>\fP
+.B client\-subnet\-always\-forward: \fI<yes or no>\fP 
 Specify whether the ECS address check (configured using
 \fI\%send\-client\-subnet\fP) is applied
 for all queries, even if the triggering query contains an ECS record, or
@@ -4750,7 +4781,7 @@ Default: no
 .UNINDENT
 .INDENT 0.0
 .TP
-.B max\-client\-subnet\-ipv6: \fI<number>\fP
+.B max\-client\-subnet\-ipv6: \fI<number>\fP 
 Specifies the maximum prefix length of the client source address we are
 willing to expose to third parties for IPv6.
 .sp
@@ -4758,7 +4789,7 @@ Default: 56
 .UNINDENT
 .INDENT 0.0
 .TP
-.B max\-client\-subnet\-ipv4: \fI<number>\fP
+.B max\-client\-subnet\-ipv4: \fI<number>\fP 
 Specifies the maximum prefix length of the client source address we are
 willing to expose to third parties for IPv4.
 .sp
@@ -4766,7 +4797,7 @@ Default: 24
 .UNINDENT
 .INDENT 0.0
 .TP
-.B min\-client\-subnet\-ipv6: \fI<number>\fP
+.B min\-client\-subnet\-ipv6: \fI<number>\fP 
 Specifies the minimum prefix length of the IPv6 source mask we are willing
 to accept in queries.
 Shorter source masks result in REFUSED answers.
@@ -4776,7 +4807,7 @@ Default: 0
 .UNINDENT
 .INDENT 0.0
 .TP
-.B min\-client\-subnet\-ipv4: \fI<number>\fP
+.B min\-client\-subnet\-ipv4: \fI<number>\fP 
 Specifies the minimum prefix length of the IPv4 source mask we are willing
 to accept in queries.
 Shorter source masks result in REFUSED answers.
@@ -4785,7 +4816,7 @@ Default: 0
 .UNINDENT
 .INDENT 0.0
 .TP
-.B max\-ecs\-tree\-size\-ipv4: \fI<number>\fP
+.B max\-ecs\-tree\-size\-ipv4: \fI<number>\fP 
 Specifies the maximum number of subnets ECS answers kept in the ECS radix
 tree.
 This number applies for each qname/qclass/qtype tuple.
@@ -4794,7 +4825,7 @@ Default: 100
 .UNINDENT
 .INDENT 0.0
 .TP
-.B max\-ecs\-tree\-size\-ipv6: \fI<number>\fP
+.B max\-ecs\-tree\-size\-ipv6: \fI<number>\fP 
 Specifies the maximum number of subnets ECS answers kept in the ECS radix
 tree.
 This number applies for each qname/qclass/qtype tuple.
@@ -4859,7 +4890,7 @@ given to the client before the hook is called.
 answer given from cache is still relevant for opportunistic IPsec.
 .INDENT 0.0
 .TP
-.B ipsecmod\-enabled: \fI<yes or no>\fP
+.B ipsecmod\-enabled: \fI<yes or no>\fP 
 Specifies whether the IPsec module is enabled or not.
 The IPsec module still needs to be defined in the
 \fI\%module\-config\fP directive.
@@ -4870,7 +4901,7 @@ Default: yes
 .UNINDENT
 .INDENT 0.0
 .TP
-.B ipsecmod\-hook: \fI<filename>\fP
+.B ipsecmod\-hook: \fI<filename>\fP 
 Specifies the external hook that Unbound will call with \fIsystem(3)\fP\&.
 The file can be specified as an absolute/relative path.
 The file needs the proper permissions to be able to be executed by the same
@@ -4880,7 +4911,7 @@ It must be present when the IPsec module is defined in the
 .UNINDENT
 .INDENT 0.0
 .TP
-.B ipsecmod\-strict: \fI<yes or no>\fP
+.B ipsecmod\-strict: \fI<yes or no>\fP 
 If enabled Unbound requires the external hook to return a success value of
 0.
 Failing to do so Unbound will reply with SERVFAIL.
@@ -4890,7 +4921,7 @@ Default: no
 .UNINDENT
 .INDENT 0.0
 .TP
-.B ipsecmod\-max\-ttl: \fI<seconds>\fP
+.B ipsecmod\-max\-ttl: \fI<seconds>\fP 
 Time to live maximum for A/AAAA cached records after calling the external
 hook.
 .sp
@@ -4898,7 +4929,7 @@ Default: 3600
 .UNINDENT
 .INDENT 0.0
 .TP
-.B ipsecmod\-ignore\-bogus: \fI<yes or no>\fP
+.B ipsecmod\-ignore\-bogus: \fI<yes or no>\fP 
 Specifies the behaviour of Unbound when the IPSECKEY answer is bogus.
 If set to yes, the hook will be called and the A/AAAA answer will be
 returned to the client.
@@ -4910,7 +4941,7 @@ Default: no
 .UNINDENT
 .INDENT 0.0
 .TP
-.B ipsecmod\-allow: \fI<domain>\fP
+.B ipsecmod\-allow: \fI<domain>\fP 
 Allow the IPsec module functionality for the domain so that the module
 logic will be executed.
 Can be given multiple times, for different domains.
@@ -4919,7 +4950,7 @@ If the option is not specified, all domains are treated as being allowed
 .UNINDENT
 .INDENT 0.0
 .TP
-.B ipsecmod\-whitelist: \fI<domain>\fP
+.B ipsecmod\-whitelist: \fI<domain>\fP 
 Alternate syntax for \fI\%ipsecmod\-allow\fP\&.
 .UNINDENT
 .SS Cache DB Module Options
@@ -4987,7 +5018,7 @@ It\(aqs the administrator\(aqs responsibility to make the assumption hold.
 The \fBcachedb:\fP clause gives custom settings of the cache DB module.
 .INDENT 0.0
 .TP
-.B backend: \fI<backend name>\fP
+.B backend: \fI<backend name>\fP 
 Specify the backend database name.
 The default database is the in\-memory backend named \fBtestframe\fP, which,
 as the name suggests, is not of any practical use.
@@ -4998,7 +5029,7 @@ Default: testframe
 .UNINDENT
 .INDENT 0.0
 .TP
-.B secret\-seed: \fI\(dq<secret string>\(dq\fP
+.B secret\-seed: \fI\(dq<secret string>\(dq\fP 
 Specify a seed to calculate a hash value from query information.
 This value will be used as the key of the corresponding answer for the
 backend database and can be customized if the hash should not be
@@ -5010,7 +5041,7 @@ Default: \(dqdefault\(dq
 .UNINDENT
 .INDENT 0.0
 .TP
-.B cachedb\-no\-store: \fI<yes or no>\fP
+.B cachedb\-no\-store: \fI<yes or no>\fP 
 If the backend should be read from, but not written to.
 This makes this instance not store dns messages in the backend.
 But if data is available it is retrieved.
@@ -5019,7 +5050,7 @@ Default: no
 .UNINDENT
 .INDENT 0.0
 .TP
-.B cachedb\-check\-when\-serve\-expired: \fI<yes or no>\fP
+.B cachedb\-check\-when\-serve\-expired: \fI<yes or no>\fP 
 If enabled, the cachedb is checked before an expired response is returned.
 When
 \fI\%serve\-expired\fP
@@ -5039,7 +5070,7 @@ Default: yes
 The following \fBcachedb:\fP options are specific to the \fBredis\fP backend.
 .INDENT 0.0
 .TP
-.B redis\-server\-host: \fI<server address or name>\fP
+.B redis\-server\-host: \fI<server address or name>\fP 
 The IP (either v6 or v4) address or domain name of the Redis server.
 In general an IP address should be specified as otherwise Unbound will have
 to resolve the name of the server every time it establishes a connection to
@@ -5049,14 +5080,14 @@ Default: 127.0.0.1
 .UNINDENT
 .INDENT 0.0
 .TP
-.B redis\-server\-port: \fI<port number>\fP
+.B redis\-server\-port: \fI<port number>\fP 
 The TCP port number of the Redis server.
 .sp
 Default: 6379
 .UNINDENT
 .INDENT 0.0
 .TP
-.B redis\-server\-path: \fI<unix socket path>\fP
+.B redis\-server\-path: \fI<unix socket path>\fP 
 The unix socket path to connect to the Redis server.
 Unix sockets may have better throughput than the IP address option.
 .sp
@@ -5064,7 +5095,7 @@ Default: \(dq\(dq (disabled)
 .UNINDENT
 .INDENT 0.0
 .TP
-.B redis\-server\-password: \fI\(dq<password>\(dq\fP
+.B redis\-server\-password: \fI\(dq<password>\(dq\fP 
 The Redis AUTH password to use for the Redis server.
 Only relevant if Redis is configured for client password authorisation.
 .sp
@@ -5072,7 +5103,7 @@ Default: \(dq\(dq (disabled)
 .UNINDENT
 .INDENT 0.0
 .TP
-.B redis\-timeout: \fI<msec>\fP
+.B redis\-timeout: \fI<msec>\fP 
 The period until when Unbound waits for a response from the Redis server.
 If this timeout expires Unbound closes the connection, treats it as if the
 Redis server does not have the requested data, and will try to re\-establish
@@ -5082,7 +5113,7 @@ Default: 100
 .UNINDENT
 .INDENT 0.0
 .TP
-.B redis\-command\-timeout: \fI<msec>\fP
+.B redis\-command\-timeout: \fI<msec>\fP 
 The timeout to use for Redis commands, in milliseconds.
 If \fB0\fP, it uses the
 \fI\%redis\-timeout\fP
@@ -5092,7 +5123,7 @@ Default: 0
 .UNINDENT
 .INDENT 0.0
 .TP
-.B redis\-connect\-timeout: \fI<msec>\fP
+.B redis\-connect\-timeout: \fI<msec>\fP 
 The timeout to use for Redis connection set up, in milliseconds.
 If \fB0\fP, it uses the
 \fI\%redis\-timeout\fP
@@ -5102,7 +5133,7 @@ Default: 0
 .UNINDENT
 .INDENT 0.0
 .TP
-.B redis\-expire\-records: \fI<yes or no>\fP
+.B redis\-expire\-records: \fI<yes or no>\fP 
 If Redis record expiration is enabled.
 If yes, Unbound sets timeout for Redis records so that Redis can evict keys
 that have expired automatically.
@@ -5122,7 +5153,7 @@ Default: no
 .UNINDENT
 .INDENT 0.0
 .TP
-.B redis\-logical\-db: \fI<logical database index>\fP
+.B redis\-logical\-db: \fI<logical database index>\fP 
 The logical database in Redis to use.
 These are databases in the same Redis instance sharing the same
 configuration and persisted in the same RDB/AOF file.
@@ -5136,7 +5167,7 @@ Default: 0
 .UNINDENT
 .INDENT 0.0
 .TP
-.B redis\-replica\-server\-host: \fI<server address or name>\fP
+.B redis\-replica\-server\-host: \fI<server address or name>\fP 
 The IP (either v6 or v4) address or domain name of the Redis server.
 In general an IP address should be specified as otherwise Unbound will have
 to resolve the name of the server every time it establishes a connection to
@@ -5152,14 +5183,14 @@ Default: \(dq\(dq (disabled).
 .UNINDENT
 .INDENT 0.0
 .TP
-.B redis\-replica\-server\-port: \fI<port number>\fP
+.B redis\-replica\-server\-port: \fI<port number>\fP 
 The TCP port number of the Redis replica server.
 .sp
 Default: 6379
 .UNINDENT
 .INDENT 0.0
 .TP
-.B redis\-replica\-server\-path: \fI<unix socket path>\fP
+.B redis\-replica\-server\-path: \fI<unix socket path>\fP 
 The unix socket path to connect to the Redis replica server.
 Unix sockets may have better throughput than the IP address option.
 .sp
@@ -5167,7 +5198,7 @@ Default: \(dq\(dq (disabled)
 .UNINDENT
 .INDENT 0.0
 .TP
-.B redis\-replica\-server\-password: \fI\(dq<password>\(dq\fP
+.B redis\-replica\-server\-password: \fI\(dq<password>\(dq\fP 
 The Redis AUTH password to use for the Redis server.
 Only relevant if Redis is configured for client password authorisation.
 .sp
@@ -5175,7 +5206,7 @@ Default: \(dq\(dq (disabled)
 .UNINDENT
 .INDENT 0.0
 .TP
-.B redis\-replica\-timeout: \fI<msec>\fP
+.B redis\-replica\-timeout: \fI<msec>\fP 
 The period until when Unbound waits for a response from the Redis replica
 server.
 If this timeout expires Unbound closes the connection, treats it as if the
@@ -5186,7 +5217,7 @@ Default: 100
 .UNINDENT
 .INDENT 0.0
 .TP
-.B redis\-replica\-command\-timeout: \fI<msec>\fP
+.B redis\-replica\-command\-timeout: \fI<msec>\fP 
 The timeout to use for Redis replica commands, in milliseconds.
 If \fB0\fP, it uses the
 \fI\%redis\-replica\-timeout\fP
@@ -5196,7 +5227,7 @@ Default: 0
 .UNINDENT
 .INDENT 0.0
 .TP
-.B redis\-replica\-connect\-timeout: \fI<msec>\fP
+.B redis\-replica\-connect\-timeout: \fI<msec>\fP 
 The timeout to use for Redis replica connection set up, in milliseconds.
 If \fB0\fP, it uses the
 \fI\%redis\-replica\-timeout\fP
@@ -5206,7 +5237,7 @@ Default: 0
 .UNINDENT
 .INDENT 0.0
 .TP
-.B redis\-replica\-logical\-db: \fI<logical database index>\fP
+.B redis\-replica\-logical\-db: \fI<logical database index>\fP 
 Same as \fI\%redis\-logical\-db\fP but
 for the Redis replica server.
 .sp
@@ -5222,7 +5253,7 @@ If Unbound is compiled without threading it does not spawn a thread, but
 connects per\-process to the destination.
 .INDENT 0.0
 .TP
-.B dnstap\-enable: \fI<yes or no>\fP
+.B dnstap\-enable: \fI<yes or no>\fP 
 If dnstap is enabled.
 If yes, it connects to the DNSTAP server and if any of the
 \fIdnstap\-log\-..\-messages:\fP options is enabled it sends logs for those
@@ -5232,14 +5263,14 @@ Default: no
 .UNINDENT
 .INDENT 0.0
 .TP
-.B dnstap\-bidirectional: \fI<yes or no>\fP
+.B dnstap\-bidirectional: \fI<yes or no>\fP 
 Use frame streams in bidirectional mode to transfer DNSTAP messages.
 .sp
 Default: yes
 .UNINDENT
 .INDENT 0.0
 .TP
-.B dnstap\-socket\-path: \fI<file name>\fP
+.B dnstap\-socket\-path: \fI<file name>\fP 
 Sets the unix socket file name for connecting to the server that is
 listening on that socket.
 .sp
@@ -5247,7 +5278,7 @@ Default: @DNSTAP_SOCKET_PATH@
 .UNINDENT
 .INDENT 0.0
 .TP
-.B dnstap\-ip: \fI<IPaddress[@port]>\fP
+.B dnstap\-ip: \fI<IPaddress[@port]>\fP 
 If \fB\(dq\(dq\fP, the unix socket is used, if set with an IP address (IPv4 or
 IPv6) that address is used to connect to the server.
 .sp
@@ -5255,7 +5286,7 @@ Default: \(dq\(dq
 .UNINDENT
 .INDENT 0.0
 .TP
-.B dnstap\-tls: \fI<yes or no>\fP
+.B dnstap\-tls: \fI<yes or no>\fP 
 Set this to use TLS to connect to the server specified in
 \fI\%dnstap\-ip\fP\&.
 If set to no, TCP is used to connect to the server.
@@ -5264,7 +5295,7 @@ Default: yes
 .UNINDENT
 .INDENT 0.0
 .TP
-.B dnstap\-tls\-server\-name: \fI<name of TLS authentication>\fP
+.B dnstap\-tls\-server\-name: \fI<name of TLS authentication>\fP 
 The TLS server name to authenticate the server with.
 Used when \fI\%dnstap\-tls: yes\fP is set.
 If \fB\(dq\(dq\fP it is ignored.
@@ -5273,7 +5304,7 @@ Default: \(dq\(dq
 .UNINDENT
 .INDENT 0.0
 .TP
-.B dnstap\-tls\-cert\-bundle: \fI<file name of cert bundle>\fP
+.B dnstap\-tls\-cert\-bundle: \fI<file name of cert bundle>\fP 
 The pem file with certs to verify the TLS server certificate.
 If \fB\(dq\(dq\fP the server default cert bundle is used, or the windows cert
 bundle on windows.
@@ -5282,7 +5313,7 @@ Default: \(dq\(dq
 .UNINDENT
 .INDENT 0.0
 .TP
-.B dnstap\-tls\-client\-key\-file: \fI<file name>\fP
+.B dnstap\-tls\-client\-key\-file: \fI<file name>\fP 
 The client key file for TLS client authentication.
 If \fB\(dq\(dq\fP client authentication is not used.
 .sp
@@ -5290,42 +5321,42 @@ Default: \(dq\(dq
 .UNINDENT
 .INDENT 0.0
 .TP
-.B dnstap\-tls\-client\-cert\-file: \fI<file name>\fP
+.B dnstap\-tls\-client\-cert\-file: \fI<file name>\fP 
 The client cert file for TLS client authentication.
 .sp
 Default: \(dq\(dq
 .UNINDENT
 .INDENT 0.0
 .TP
-.B dnstap\-send\-identity: \fI<yes or no>\fP
+.B dnstap\-send\-identity: \fI<yes or no>\fP 
 If enabled, the server identity is included in the log messages.
 .sp
 Default: no
 .UNINDENT
 .INDENT 0.0
 .TP
-.B dnstap\-send\-version: \fI<yes or no>\fP
+.B dnstap\-send\-version: \fI<yes or no>\fP 
 If enabled, the server version if included in the log messages.
 .sp
 Default: no
 .UNINDENT
 .INDENT 0.0
 .TP
-.B dnstap\-identity: \fI<string>\fP
+.B dnstap\-identity: \fI<string>\fP 
 The identity to send with messages, if \fB\(dq\(dq\fP the hostname is used.
 .sp
 Default: \(dq\(dq
 .UNINDENT
 .INDENT 0.0
 .TP
-.B dnstap\-version: \fI<string>\fP
+.B dnstap\-version: \fI<string>\fP 
 The version to send with messages, if \fB\(dq\(dq\fP the package version is used.
 .sp
 Default: \(dq\(dq
 .UNINDENT
 .INDENT 0.0
 .TP
-.B dnstap\-sample\-rate: \fI<number>\fP
+.B dnstap\-sample\-rate: \fI<number>\fP 
 The sample rate for log of messages, it logs only 1/N messages.
 With 0 it is disabled.
 This is useful in a high volume environment, where log functionality would
@@ -5337,7 +5368,7 @@ Default: 0 (disabled)
 .UNINDENT
 .INDENT 0.0
 .TP
-.B dnstap\-log\-resolver\-query\-messages: \fI<yes or no>\fP
+.B dnstap\-log\-resolver\-query\-messages: \fI<yes or no>\fP 
 Enable to log resolver query messages.
 These are messages from Unbound to upstream servers.
 .sp
@@ -5345,7 +5376,7 @@ Default: no
 .UNINDENT
 .INDENT 0.0
 .TP
-.B dnstap\-log\-resolver\-response\-messages: \fI<yes or no>\fP
+.B dnstap\-log\-resolver\-response\-messages: \fI<yes or no>\fP 
 Enable to log resolver response messages.
 These are replies from upstream servers to Unbound.
 .sp
@@ -5353,7 +5384,7 @@ Default: no
 .UNINDENT
 .INDENT 0.0
 .TP
-.B dnstap\-log\-client\-query\-messages: \fI<yes or no>\fP
+.B dnstap\-log\-client\-query\-messages: \fI<yes or no>\fP 
 Enable to log client query messages.
 These are client queries to Unbound.
 .sp
@@ -5361,7 +5392,7 @@ Default: no
 .UNINDENT
 .INDENT 0.0
 .TP
-.B dnstap\-log\-client\-response\-messages: \fI<yes or no>\fP
+.B dnstap\-log\-client\-response\-messages: \fI<yes or no>\fP 
 Enable to log client response messages.
 These are responses from Unbound to clients.
 .sp
@@ -5369,14 +5400,14 @@ Default: no
 .UNINDENT
 .INDENT 0.0
 .TP
-.B dnstap\-log\-forwarder\-query\-messages: \fI<yes or no>\fP
+.B dnstap\-log\-forwarder\-query\-messages: \fI<yes or no>\fP 
 Enable to log forwarder query messages.
 .sp
 Default: no
 .UNINDENT
 .INDENT 0.0
 .TP
-.B dnstap\-log\-forwarder\-response\-messages: \fI<yes or no>\fP
+.B dnstap\-log\-forwarder\-response\-messages: \fI<yes or no>\fP 
 Enable to log forwarder response messages.
 .sp
 Default: no
@@ -5476,12 +5507,12 @@ The RPZ zones can be configured in the config file with these settings in the
 \fBrpz:\fP block.
 .INDENT 0.0
 .TP
-.B name: \fI<zone name>\fP
+.B name: \fI<zone name>\fP 
 Name of the authority zone.
 .UNINDENT
 .INDENT 0.0
 .TP
-.B primary: \fI<IP address or host name>\fP
+.B primary: \fI<IP address or host name>\fP 
 Where to download a copy of the zone from, with AXFR and IXFR.
 Multiple primaries can be specified.
 They are all tried if one fails.
@@ -5504,12 +5535,12 @@ IP address to avoid a circular dependency on retrieving that IP address.
 .UNINDENT
 .INDENT 0.0
 .TP
-.B master: \fI<IP address or host name>\fP
+.B master: \fI<IP address or host name>\fP 
 Alternate syntax for \fI\%primary\fP\&.
 .UNINDENT
 .INDENT 0.0
 .TP
-.B url: \fI<url to zonefile>\fP
+.B url: \fI<url to zonefile>\fP 
 Where to download a zonefile for the zone.
 With HTTP or HTTPS.
 An example for the url is:
@@ -5538,7 +5569,7 @@ the hostname from the url are used to authenticate the connection.
 .UNINDENT
 .INDENT 0.0
 .TP
-.B allow\-notify: \fI<IP address or host name or netblockIP/prefix>\fP
+.B allow\-notify: \fI<IP address or host name or netblockIP/prefix>\fP 
 With \fI\%allow\-notify\fP you can specify
 additional sources of notifies.
 When notified, the server attempts to first probe and then zone transfer.
@@ -5558,7 +5589,7 @@ default.
 .UNINDENT
 .INDENT 0.0
 .TP
-.B zonefile: \fI<filename>\fP
+.B zonefile: \fI<filename>\fP 
 The filename where the zone is stored.
 If not given then no zonefile is used.
 If the file does not exist or is empty, Unbound will attempt to fetch zone
@@ -5566,32 +5597,32 @@ data (eg. from the primary servers).
 .UNINDENT
 .INDENT 0.0
 .TP
-.B rpz\-action\-override: \fI<action>\fP
+.B rpz\-action\-override: \fI<action>\fP 
 Always use this RPZ action for matching triggers from this zone.
 Possible actions are: \fInxdomain\fP, \fInodata\fP, \fIpassthru\fP, \fIdrop\fP, \fIdisabled\fP
 and \fIcname\fP\&.
 .UNINDENT
 .INDENT 0.0
 .TP
-.B rpz\-cname\-override: \fI<domain>\fP
+.B rpz\-cname\-override: \fI<domain>\fP 
 The CNAME target domain to use if the cname action is configured for
 \fI\%rpz\-action\-override\fP\&.
 .UNINDENT
 .INDENT 0.0
 .TP
-.B rpz\-log: \fI<yes or no>\fP
+.B rpz\-log: \fI<yes or no>\fP 
 Log all applied RPZ actions for this RPZ zone.
 .sp
 Default: no
 .UNINDENT
 .INDENT 0.0
 .TP
-.B rpz\-log\-name: \fI<name>\fP
+.B rpz\-log\-name: \fI<name>\fP 
 Specify a string to be part of the log line, for easy referencing.
 .UNINDENT
 .INDENT 0.0
 .TP
-.B rpz\-signal\-nxdomain\-ra: \fI<yes or no>\fP
+.B rpz\-signal\-nxdomain\-ra: \fI<yes or no>\fP 
 Signal when a query is blocked by the RPZ with NXDOMAIN with an unset RA
 flag.
 This allows certain clients, like dnsmasq, to infer that the domain is
@@ -5601,7 +5632,7 @@ Default: no
 .UNINDENT
 .INDENT 0.0
 .TP
-.B for\-downstream: \fI<yes or no>\fP
+.B for\-downstream: \fI<yes or no>\fP 
 If enabled the zone is authoritatively answered for and queries for the RPZ
 zone information are answered to downstream clients.
 This is useful for monitoring scripts, that can then access the SOA
@@ -5611,7 +5642,7 @@ Default: no
 .UNINDENT
 .INDENT 0.0
 .TP
-.B tags: \fI\(dq<list of tags>\(dq\fP
+.B tags: \fI\(dq<list of tags>\(dq\fP 
 Limit the policies from this RPZ clause to clients with a matching tag.
 .sp
 Tags need to be defined in \fI\%define\-tag\fP and

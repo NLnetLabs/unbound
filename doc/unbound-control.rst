@@ -78,9 +78,8 @@ Commands
 
 There are several commands that the server understands.
 
-.. _unbound-control.commands.start:
 
-start
+@@UAHL@unbound-control.commands@start@@
     Start the server.
     Simply execs :doc:`unbound(8)</manpages/unbound>`.
     The ``unbound`` executable is searched for in the **PATH** set in the
@@ -88,29 +87,25 @@ start
     It is started with the config file specified using :option:`-c` or the
     default config file.
 
-.. _unbound-control.commands.stop:
 
-stop
+@@UAHL@unbound-control.commands@stop@@
     Stop the server.
     The server daemon exits.
 
-.. _unbound-control.commands.reload:
 
-reload
+@@UAHL@unbound-control.commands@reload@@
     Reload the server.
     This flushes the cache and reads the config file fresh.
 
-.. _unbound-control.commands.reload_keep_cache:
 
-reload_keep_cache
+@@UAHL@unbound-control.commands@reload_keep_cache@@
     Reload the server but try to keep the RRset and message cache if
     (re)configuration allows for it.
     That means the caches sizes and the number of threads must not change
     between reloads.
 
-.. _unbound-control.commands.fast_reload:
 
-fast_reload [``+dpv``]
+@@UAHL@unbound-control.commands@fast_reload@@ [``+dpv``]
     Reload the server, but keep downtime to a minimum, so that user queries
     keep seeing service.
     This needs the code compiled with threads.
@@ -288,115 +283,100 @@ fast_reload [``+dpv``]
     This is gone when those queries are resolved and finished, or it is
     possible to flush the requestlist with ``+d``.
 
-.. _unbound-control.commands.verbosity:
 
-verbosity *number*
+@@UAHL@unbound-control.commands@verbosity@@ *number*
     Change verbosity value for logging.
     Same values as the **verbosity:** keyword in
     :doc:`unbound.conf(5)</manpages/unbound.conf>`.
     This new setting lasts until the server is issued a reload (taken from
     config file again), or the next verbosity control command.
 
-.. _unbound-control.commands.log_reopen:
 
-log_reopen
+@@UAHL@unbound-control.commands@log_reopen@@
     Reopen the logfile, close and open it.
     Useful for logrotation to make the daemon release the file it is logging
     to.
     If you are using syslog it will attempt to close and open the syslog (which
     may not work if chrooted).
 
-.. _unbound-control.commands.stats:
 
-stats
+@@UAHL@unbound-control.commands@stats@@
     Print statistics.
     Resets the internal counters to zero, this can be controlled using the
     **statistics-cumulative:** config statement.
     Statistics are printed with one ``[name]: [value]`` per line.
 
-.. _unbound-control.commands.stats_noreset:
 
-stats_noreset
+@@UAHL@unbound-control.commands@stats_noreset@@
     Peek at statistics.
     Prints them like the stats command does, but does not reset the internal
     counters to zero.
 
-.. _unbound-control.commands.status:
 
-status
+@@UAHL@unbound-control.commands@status@@
     Display server status.
     Exit code 3 if not running (the connection to the port is refused), 1 on
     error, 0 if running.
 
-.. _unbound-control.commands.local_zone:
 
-local_zone *name type*
+@@UAHL@unbound-control.commands@local_zone@@ *name type*
     Add new local zone with name and type.
     Like local-zone config statement.
     If the zone already exists, the type is changed to the given argument.
 
-.. _unbound-control.commands.local_zone_remove:
 
-local_zone_remove *name*
+@@UAHL@unbound-control.commands@local_zone_remove@@ *name*
     Remove the local zone with the given name.
     Removes all local data inside it.
     If the zone does not exist, the command succeeds.
 
-.. _unbound-control.commands.local_data:
 
-local_data *RR data...*
+@@UAHL@unbound-control.commands@local_data@@ *RR data...*
     Add new local data, the given resource record.
     Like **local-data:** keyword, except for when no covering zone exists.
     In that case this remote control command creates a transparent zone with
     the same name as this record.
 
-.. _unbound-control.commands.local_data_remove:
 
-local_data_remove *name*
+@@UAHL@unbound-control.commands@local_data_remove@@ *name*
     Remove all RR data from local name.
     If the name already has no items, nothing happens.
     Often results in NXDOMAIN for the name (in a static zone), but if the name
     has become an empty nonterminal (there is still data in domain names below
     the removed name), NOERROR nodata answers are the result for that name.
 
-.. _unbound-control.commands.local_zones:
 
-local_zones
+@@UAHL@unbound-control.commands@local_zones@@
     Add local zones read from stdin of unbound-control.
     Input is read per line, with name space type on a line.
     For bulk additions.
 
-.. _unbound-control.commands.local_zones_remove:
 
-local_zones_remove
+@@UAHL@unbound-control.commands@local_zones_remove@@
     Remove local zones read from stdin of unbound-control.
     Input is one name per line.
     For bulk removals.
 
-.. _unbound-control.commands.local_datas:
 
-local_datas
+@@UAHL@unbound-control.commands@local_datas@@
     Add local data RRs read from stdin of unbound-control.
     Input is one RR per line.
     For bulk additions.
 
-.. _unbound-control.commands.local_datas_remove:
 
-local_datas_remove
+@@UAHL@unbound-control.commands@local_datas_remove@@
     Remove local data RRs read from stdin of unbound-control.
     Input is one name per line.
     For bulk removals.
 
-.. _unbound-control.commands.dump_cache:
 
-dump_cache
+@@UAHL@unbound-control.commands@dump_cache@@
     The contents of the cache is printed in a text format to stdout.
     You can redirect it to a file to store the cache in a file.
     Not supported in remote Unbounds in multi-process operation.
 
-.. _unbound-control.commands.load_cache:
 
-load_cache
+@@UAHL@unbound-control.commands@load_cache@@
     The contents of the cache is loaded from stdin.
     Uses the same format as dump_cache uses.
     Loading the cache with old, or wrong data can result in old or wrong data
@@ -405,15 +385,13 @@ load_cache
     debugging.
     Not supported in remote Unbounds in multi-process operation.
 
-.. _unbound-control.commands.lookup:
 
-lookup *name*
+@@UAHL@unbound-control.commands@lookup@@ *name*
     Print to stdout the name servers that would be used to look up the name
     specified.
 
-.. _unbound-control.commands.flush:
 
-flush [``+c``] *name*
+@@UAHL@unbound-control.commands@flush@@ [``+c``] *name*
     Remove the name from the cache.
     Removes the types A, AAAA, NS, SOA, CNAME, DNAME, MX, PTR, SRV, NAPTR,
     SVCB and HTTPS.
@@ -423,17 +401,15 @@ flush [``+c``] *name*
     The ``+c`` option removes the items also from the cachedb cache.
     If cachedb is in use.
 
-.. _unbound-control.commands.flush_type:
 
-flush_type [``+c``] *name type*
+@@UAHL@unbound-control.commands@flush_type@@ [``+c``] *name type*
     Remove the name, type information from the cache.
 
     The ``+c`` option removes the items also from the cachedb cache.
     If cachedb is in use.
 
-.. _unbound-control.commands.flush_zone:
 
-flush_zone [``+c``] name
+@@UAHL@unbound-control.commands@flush_zone@@ [``+c``] name
     Remove all information at or below the name from the cache.
     The rrsets and key entries are removed so that new lookups will be
     performed.
@@ -445,17 +421,15 @@ flush_zone [``+c``] name
     The ``+c`` option removes the items also from the cachedb cache.
     If cachedb is in use.
 
-.. _unbound-control.commands.flush_bogus:
 
-flush_bogus [``+c``]
+@@UAHL@unbound-control.commands@flush_bogus@@ [``+c``]
     Remove all bogus data from the cache.
 
     The ``+c`` option removes the items also from the cachedb cache.
     If cachedb is in use.
 
-.. _unbound-control.commands.flush_negative:
 
-flush_negative [``+c``]
+@@UAHL@unbound-control.commands@flush_negative@@ [``+c``]
     Remove all negative data from the cache.
     This is nxdomain answers, nodata answers and servfail answers.
     Also removes bad key entries (which could be due to failed lookups) from
@@ -465,14 +439,12 @@ flush_negative [``+c``]
     The ``+c`` option removes the items also from the cachedb cache.
     If cachedb is in use.
 
-.. _unbound-control.commands.flush_stats:
 
-flush_stats
+@@UAHL@unbound-control.commands@flush_stats@@
     Reset statistics to zero.
 
-.. _unbound-control.commands.flush_requestlist:
 
-flush_requestlist
+@@UAHL@unbound-control.commands@flush_requestlist@@
     Drop the queries that are worked on.
     Stops working on the queries that the server is working on now.
     The cache is unaffected.
@@ -481,9 +453,8 @@ flush_requestlist
     Useful to make the server restart working on queries with new settings,
     such as a higher verbosity level.
 
-.. _unbound-control.commands.dump_requestlist:
 
-dump_requestlist
+@@UAHL@unbound-control.commands@dump_requestlist@@
     Show what is worked on.
     Prints all queries that the server is currently working on.
     Prints the time that users have been waiting.
@@ -492,22 +463,19 @@ dump_requestlist
     This prints the queries from the first thread, and not queries that are
     being serviced from other threads.
 
-.. _unbound-control.commands.flush_infra:
 
-flush_infra *all|IP*
+@@UAHL@unbound-control.commands@flush_infra@@ *all|IP*
     If all then entire infra cache is emptied.
     If a specific IP address, the entry for that address is removed from the
     cache.
     It contains EDNS, ping and lameness data.
 
-.. _unbound-control.commands.dump_infra:
 
-dump_infra
+@@UAHL@unbound-control.commands@dump_infra@@
     Show the contents of the infra cache.
 
-.. _unbound-control.commands.set_option:
 
-set_option *opt: val*
+@@UAHL@unbound-control.commands@set_option@@ *opt: val*
     Set the option to the given value without a reload.
     The cache is therefore not flushed.
     The option must end with a ``':'`` and whitespace must be between the
@@ -526,9 +494,8 @@ set_option *opt: val*
     ssl-upstream, max-udp-size, ratelimit, ip-ratelimit, cache-max-ttl,
     cache-min-ttl, cache-max-negative-ttl.
 
-.. _unbound-control.commands.get_option:
 
-get_option *opt*
+@@UAHL@unbound-control.commands@get_option@@ *opt*
     Get the value of the option.
     Give the option name without a trailing ``':'``.
     The value is printed.
@@ -543,53 +510,45 @@ get_option *opt*
     Not all options work, see list_stubs, list_forwards, list_local_zones and
     list_local_data for those.
 
-.. _unbound-control.commands.list_stubs:
 
-list_stubs
+@@UAHL@unbound-control.commands@list_stubs@@
     List the stub zones in use.
     These are printed one by one to the output.
     This includes the root hints in use.
 
-.. _unbound-control.commands.list_forwards:
 
-list_forwards
+@@UAHL@unbound-control.commands@list_forwards@@
     List the forward zones in use.
     These are printed zone by zone to the output.
 
-.. _unbound-control.commands.list_insecure:
 
-list_insecure
+@@UAHL@unbound-control.commands@list_insecure@@
     List the zones with domain-insecure.
 
-.. _unbound-control.commands.list_local_zones:
 
-list_local_zones
+@@UAHL@unbound-control.commands@list_local_zones@@
     List the local zones in use.
     These are printed one per line with zone type.
 
-.. _unbound-control.commands.list_local_data:
 
-list_local_data
+@@UAHL@unbound-control.commands@list_local_data@@
     List the local data RRs in use.
     The resource records are printed.
 
-.. _unbound-control.commands.insecure_add:
 
-insecure_add *zone*
+@@UAHL@unbound-control.commands@insecure_add@@ *zone*
     Add a domain-insecure for the given zone, like the statement in
     unbound.conf.
     Adds to the running Unbound without affecting the cache
     contents (which may still be bogus, use flush_zone to remove it), does not
     affect the config file.
 
-.. _unbound-control.commands.insecure_remove:
 
-insecure_remove *zone*
+@@UAHL@unbound-control.commands@insecure_remove@@ *zone*
     Removes domain-insecure for the given zone.
 
-.. _unbound-control.commands.forward_add:
 
-forward_add [``+it``] *zone addr ...*
+@@UAHL@unbound-control.commands@forward_add@@ [``+it``] *zone addr ...*
     Add a new forward zone to running Unbound.
     With ``+i`` option also adds a domain-insecure for the zone (so it can
     resolve insecurely if you have a DNSSEC root trust anchor configured for
@@ -599,15 +558,13 @@ forward_add [``+it``] *zone addr ...*
     The ``+t`` option sets it to use TLS upstream, like
     :ref:`forward-tls-upstream: yes<unbound.conf.forward.forward-tls-upstream>`.
 
-.. _unbound-control.commands.forward_remove:
 
-forward_remove [``+i``] *zone*
+@@UAHL@unbound-control.commands@forward_remove@@ [``+i``] *zone*
     Remove a forward zone from running Unbound.
     The ``+i`` also removes a domain-insecure for the zone.
 
-.. _unbound-control.commands.stub_add:
 
-stub_add [``+ipt``] *zone addr ...*
+@@UAHL@unbound-control.commands@stub_add@@ [``+ipt``] *zone addr ...*
     Add a new stub zone to running Unbound.
     With ``+i`` option also adds a domain-insecure for the zone.
     With ``+p`` the stub zone is set to prime, without it it is set to
@@ -617,15 +574,13 @@ stub_add [``+ipt``] *zone addr ...*
     The ``+t`` option sets it to use TLS upstream, like
     :ref:`stub-tls-upstream: yes<unbound.conf.stub.stub-tls-upstream>`.
 
-.. _unbound-control.commands.stub_remove:
 
-stub_remove [``+i``] *zone*
+@@UAHL@unbound-control.commands@stub_remove@@ [``+i``] *zone*
     Remove a stub zone from running Unbound.
     The ``+i`` also removes a domain-insecure for the zone.
 
-.. _unbound-control.commands.forward:
 
-forward [*off* | *addr ...* ]
+@@UAHL@unbound-control.commands@forward@@ [*off* | *addr ...* ]
     Setup forwarding mode.
     Configures if the server should ask other upstream nameservers, should go
     to the internet root nameservers itself, or show the current config.
@@ -654,9 +609,8 @@ forward [*off* | *addr ...* ]
     The config file is not changed, so after a reload these changes are gone.
     Other forward zones from the config file are not affected by this command.
 
-.. _unbound-control.commands.ratelimit_list:
 
-ratelimit_list [``+a``]
+@@UAHL@unbound-control.commands@ratelimit_list@@ [``+a``]
     List the domains that are ratelimited.
     Printed one per line with current estimated qps and qps limit from config.
     With ``+a`` it prints all domains, not just the ratelimited domains, with
@@ -664,26 +618,23 @@ ratelimit_list [``+a``]
     The ratelimited domains return an error for uncached (new) queries, but
     cached queries work as normal.
 
-.. _unbound-control.commands.ip_ratelimit_list:
 
-ip_ratelimit_list [``+a``]
+@@UAHL@unbound-control.commands@ip_ratelimit_list@@ [``+a``]
     List the ip addresses that are ratelimited.
     Printed one per line with current estimated qps and qps limit from config.
     With ``+a`` it prints all ips, not just the ratelimited ips, with their
     estimated qps.
     The ratelimited ips are dropped before checking the cache.
 
-.. _unbound-control.commands.list_auth_zones:
 
-list_auth_zones
+@@UAHL@unbound-control.commands@list_auth_zones@@
     List the auth zones that are configured.
     Printed one per line with a status, indicating if the zone is expired and
     current serial number.
     Configured RPZ zones are included.
 
-.. _unbound-control.commands.auth_zone_reload:
 
-auth_zone_reload *zone*
+@@UAHL@unbound-control.commands@auth_zone_reload@@ *zone*
     Reload the auth zone (or RPZ zone) from zonefile.
     The zonefile is read in overwriting the current contents of the zone in
     memory.
@@ -691,69 +642,57 @@ auth_zone_reload *zone*
     Such cache contents exists if you set Unbound to validate with
     **for-upstream: yes** and that can be cleared with **flush_zone** *zone*.
 
-.. _unbound-control.commands.auth_zone_transfer:
 
-auth_zone_transfer *zone*
+@@UAHL@unbound-control.commands@auth_zone_transfer@@ *zone*
     Transfer the auth zone (or RPZ zone) from master.
     The auth zone probe sequence is started, where the masters are probed to
     see if they have an updated zone (with the SOA serial check).
     And then the zone is transferred for a newer zone version.
 
-.. _unbound-control.commands.rpz_enable:
 
-rpz_enable *zone*
+@@UAHL@unbound-control.commands@rpz_enable@@ *zone*
     Enable the RPZ zone if it had previously been disabled.
 
-.. _unbound-control.commands.rpz_disable:
 
-rpz_disable *zone*
+@@UAHL@unbound-control.commands@rpz_disable@@ *zone*
     Disable the RPZ zone.
 
-.. _unbound-control.commands.view_list_local_zones:
 
-view_list_local_zones *view*
+@@UAHL@unbound-control.commands@view_list_local_zones@@ *view*
     *list_local_zones* for given view.
 
-.. _unbound-control.commands.view_local_zone:
 
-view_local_zone *view name type*
+@@UAHL@unbound-control.commands@view_local_zone@@ *view name type*
     *local_zone* for given view.
 
-.. _unbound-control.commands.view_local_zone_remove:
 
-view_local_zone_remove *view name*
+@@UAHL@unbound-control.commands@view_local_zone_remove@@ *view name*
     *local_zone_remove* for given view.
 
-.. _unbound-control.commands.view_list_local_data:
 
-view_list_local_data *view*
+@@UAHL@unbound-control.commands@view_list_local_data@@ *view*
     *list_local_data* for given view.
 
-.. _unbound-control.commands.view_local_data:
 
-view_local_data *view RR data...*
+@@UAHL@unbound-control.commands@view_local_data@@ *view RR data...*
     *local_data* for given view.
 
-.. _unbound-control.commands.view_local_data_remove:
 
-view_local_data_remove *view name*
+@@UAHL@unbound-control.commands@view_local_data_remove@@ *view name*
     *local_data_remove* for given view.
 
-.. _unbound-control.commands.view_local_datas_remove:
 
-view_local_datas_remove *view*
+@@UAHL@unbound-control.commands@view_local_datas_remove@@ *view*
     Remove a list of *local_data* for given view from stdin.
     Like *local_datas_remove*.
 
-.. _unbound-control.commands.view_local_datas:
 
-view_local_datas *view*
+@@UAHL@unbound-control.commands@view_local_datas@@ *view*
     Add a list of *local_data* for given view from stdin.
     Like *local_datas*.
 
-.. _unbound-control.commands.add_cookie_secret:
 
-add_cookie_secret *secret*
+@@UAHL@unbound-control.commands@add_cookie_secret@@ *secret*
     Add or replace a cookie secret persistently.
     *secret* needs to be an 128 bit hex string.
 
@@ -788,20 +727,17 @@ add_cookie_secret *secret*
     option in the server section of the config file.
     This is disabled by default, "".
 
-.. _unbound-control.commands.drop_cookie_secret:
 
-drop_cookie_secret
+@@UAHL@unbound-control.commands@drop_cookie_secret@@
     Drop the **staging** cookie secret.
 
-.. _unbound-control.commands.activate_cookie_secret:
 
-activate_cookie_secret
+@@UAHL@unbound-control.commands@activate_cookie_secret@@
     Make the current **staging** cookie secret **active**, and the current
     **active** cookie secret **staging**.
 
-.. _unbound-control.commands.print_cookie_secrets:
 
-print_cookie_secrets
+@@UAHL@unbound-control.commands@print_cookie_secrets@@
     Show the current configured cookie secrets with their status.
 
 Exit Code
@@ -841,81 +777,66 @@ The :ref:`stats<unbound-control.commands.stats>` and
 :ref:`stats_noreset<unbound-control.commands.stats_noreset>` commands show a
 number of statistic counters:
 
-.. _unbound-control.stats.threadX.num.queries:
 
-threadX.num.queries
+@@UAHL@unbound-control.stats@threadX.num.queries@@
     number of queries received by thread
 
-.. _unbound-control.stats.threadX.num.queries_ip_ratelimited:
 
-threadX.num.queries_ip_ratelimited
+@@UAHL@unbound-control.stats@threadX.num.queries_ip_ratelimited@@
     number of queries rate limited by thread
 
-.. _unbound-control.stats.threadX.num.queries_cookie_valid:
 
-threadX.num.queries_cookie_valid
+@@UAHL@unbound-control.stats@threadX.num.queries_cookie_valid@@
     number of queries with a valid DNS Cookie by thread
 
-.. _unbound-control.stats.threadX.num.queries_cookie_client:
 
-threadX.num.queries_cookie_client
+@@UAHL@unbound-control.stats@threadX.num.queries_cookie_client@@
     number of queries with a client part only DNS Cookie by thread
 
-.. _unbound-control.stats.threadX.num.queries_cookie_invalid:
 
-threadX.num.queries_cookie_invalid
+@@UAHL@unbound-control.stats@threadX.num.queries_cookie_invalid@@
     number of queries with an invalid DNS Cookie by thread
 
-.. _unbound-control.stats.threadX.num.queries_discard_timeout:
 
-threadX.num.queries_discard_timeout
+@@UAHL@unbound-control.stats@threadX.num.queries_discard_timeout@@
     number of queries removed due to discard-timeout by thread
 
-.. _unbound-control.stats.threadX.num.queries_wait_limit:
 
-threadX.num.queries_wait_limit
+@@UAHL@unbound-control.stats@threadX.num.queries_wait_limit@@
     number of queries removed due to wait-limit by thread
 
-.. _unbound-control.stats.threadX.num.cachehits:
 
-threadX.num.cachehits
+@@UAHL@unbound-control.stats@threadX.num.cachehits@@
     number of queries that were successfully answered using a cache lookup
 
-.. _unbound-control.stats.threadX.num.cachemiss:
 
-threadX.num.cachemiss
+@@UAHL@unbound-control.stats@threadX.num.cachemiss@@
     number of queries that needed recursive processing
 
-.. _unbound-control.stats.threadX.num.dnscrypt.crypted:
 
-threadX.num.dnscrypt.crypted
+@@UAHL@unbound-control.stats@threadX.num.dnscrypt.crypted@@
     number of queries that were encrypted and successfully decapsulated by
     dnscrypt.
 
-.. _unbound-control.stats.threadX.num.dnscrypt.cert:
 
-threadX.num.dnscrypt.cert
+@@UAHL@unbound-control.stats@threadX.num.dnscrypt.cert@@
     number of queries that were requesting dnscrypt certificates.
 
-.. _unbound-control.stats.threadX.num.dnscrypt.cleartext:
 
-threadX.num.dnscrypt.cleartext
+@@UAHL@unbound-control.stats@threadX.num.dnscrypt.cleartext@@
     number of queries received on dnscrypt port that were cleartext and not a
     request for certificates.
 
-.. _unbound-control.stats.threadX.num.dnscrypt.malformed:
 
-threadX.num.dnscrypt.malformed
+@@UAHL@unbound-control.stats@threadX.num.dnscrypt.malformed@@
     number of request that were neither cleartext, not valid dnscrypt messages.
 
-.. _unbound-control.stats.threadX.num.dns_error_reports:
 
-threadX.num.dns_error_reports
+@@UAHL@unbound-control.stats@threadX.num.dns_error_reports@@
     number of DNS Error Reports generated by thread
 
-.. _unbound-control.stats.threadX.num.prefetch:
 
-threadX.num.prefetch
+@@UAHL@unbound-control.stats@threadX.num.prefetch@@
     number of cache prefetches performed.
     This number is included in cachehits, as the original query had the
     unprefetched answer from cache, and resulted in recursive processing,
@@ -923,77 +844,65 @@ threadX.num.prefetch
     Not part of the recursivereplies (or the histogram thereof) or cachemiss,
     as a cache response was sent.
 
-.. _unbound-control.stats.threadX.num.expired:
 
-threadX.num.expired
+@@UAHL@unbound-control.stats@threadX.num.expired@@
     number of replies that served an expired cache entry.
 
-.. _unbound-control.stats.threadX.num.queries_timed_out:
 
-threadX.num.queries_timed_out
+@@UAHL@unbound-control.stats@threadX.num.queries_timed_out@@
     number of queries that are dropped because they waited in the UDP socket
     buffer for too long.
 
-.. _unbound-control.stats.threadX.query.queue_time_us.max:
 
-threadX.query.queue_time_us.max
+@@UAHL@unbound-control.stats@threadX.query.queue_time_us.max@@
     The maximum wait time for packets in the socket buffer, in microseconds.
     This is only reported when
     :ref:`sock-queue-timeout<unbound.conf.sock-queue-timeout>` is enabled.
 
-.. _unbound-control.stats.threadX.num.recursivereplies:
 
-threadX.num.recursivereplies
+@@UAHL@unbound-control.stats@threadX.num.recursivereplies@@
     The number of replies sent to queries that needed recursive processing.
     Could be smaller than threadX.num.cachemiss if due to timeouts no replies
     were sent for some queries.
 
-.. _unbound-control.stats.threadX.requestlist.avg:
 
-threadX.requestlist.avg
+@@UAHL@unbound-control.stats@threadX.requestlist.avg@@
     The average number of requests in the internal recursive processing request
     list on insert of a new incoming recursive processing query.
 
-.. _unbound-control.stats.threadX.requestlist.max:
 
-threadX.requestlist.max
+@@UAHL@unbound-control.stats@threadX.requestlist.max@@
     Maximum size attained by the internal recursive processing request list.
 
-.. _unbound-control.stats.threadX.requestlist.overwritten:
 
-threadX.requestlist.overwritten
+@@UAHL@unbound-control.stats@threadX.requestlist.overwritten@@
     Number of requests in the request list that were overwritten by newer
     entries.
     This happens if there is a flood of queries that recursive processing and
     the server has a hard time.
 
-.. _unbound-control.stats.threadX.requestlist.exceeded:
 
-threadX.requestlist.exceeded
+@@UAHL@unbound-control.stats@threadX.requestlist.exceeded@@
     Queries that were dropped because the request list was full.
     This happens if a flood of queries need recursive processing, and the
     server can not keep up.
 
-.. _unbound-control.stats.threadX.requestlist.current.all:
 
-threadX.requestlist.current.all
+@@UAHL@unbound-control.stats@threadX.requestlist.current.all@@
     Current size of the request list, includes internally generated queries
     (such as priming queries and glue lookups).
 
-.. _unbound-control.stats.threadX.requestlist.current.user:
 
-threadX.requestlist.current.user
+@@UAHL@unbound-control.stats@threadX.requestlist.current.user@@
     Current size of the request list, only the requests from client queries.
 
-.. _unbound-control.stats.threadX.recursion.time.avg:
 
-threadX.recursion.time.avg
+@@UAHL@unbound-control.stats@threadX.recursion.time.avg@@
     Average time it took to answer queries that needed recursive processing.
     Note that queries that were answered from the cache are not in this average.
 
-.. _unbound-control.stats.threadX.recursion.time.median:
 
-threadX.recursion.time.median
+@@UAHL@unbound-control.stats@threadX.recursion.time.median@@
     The median of the time it took to answer queries that needed recursive
     processing.
     The median means that 50% of the user queries were answered in less than
@@ -1002,387 +911,320 @@ threadX.recursion.time.median
     average can be bigger than the median.
     This median has been calculated by interpolation from a histogram.
 
-.. _unbound-control.stats.threadX.tcpusage:
 
-threadX.tcpusage
+@@UAHL@unbound-control.stats@threadX.tcpusage@@
     The currently held tcp buffers for incoming connections.
     A spot value on the time of the request.
     This helps you spot if the incoming-num-tcp buffers are full.
 
-.. _unbound-control.stats.total.num.queries:
 
-total.num.queries
+@@UAHL@unbound-control.stats@total.num.queries@@
     summed over threads.
 
-.. _unbound-control.stats.total.num.queries_ip_ratelimited:
 
-total.num.queries_ip_ratelimited
+@@UAHL@unbound-control.stats@total.num.queries_ip_ratelimited@@
     summed over threads.
 
-.. _unbound-control.stats.total.num.queries_cookie_valid:
 
-total.num.queries_cookie_valid
+@@UAHL@unbound-control.stats@total.num.queries_cookie_valid@@
     summed over threads.
 
-.. _unbound-control.stats.total.num.queries_cookie_client:
 
-total.num.queries_cookie_client
+@@UAHL@unbound-control.stats@total.num.queries_cookie_client@@
     summed over threads.
 
-.. _unbound-control.stats.total.num.queries_cookie_invalid:
 
-total.num.queries_cookie_invalid
+@@UAHL@unbound-control.stats@total.num.queries_cookie_invalid@@
     summed over threads.
 
-.. _unbound-control.stats.total.num.queries_discard_timeout:
 
-total.num.queries_discard_timeout
+@@UAHL@unbound-control.stats@total.num.queries_discard_timeout@@
     summed over threads.
 
-.. _unbound-control.stats.total.num.queries_wait_limit:
 
-total.num.queries_wait_limit
+@@UAHL@unbound-control.stats@total.num.queries_wait_limit@@
     summed over threads.
 
-.. _unbound-control.stats.total.num.cachehits:
 
-total.num.cachehits
+@@UAHL@unbound-control.stats@total.num.cachehits@@
     summed over threads.
 
-.. _unbound-control.stats.total.num.cachemiss:
 
-total.num.cachemiss
+@@UAHL@unbound-control.stats@total.num.cachemiss@@
     summed over threads.
 
-.. _unbound-control.stats.total.num.dnscrypt.crypted:
 
-total.num.dnscrypt.crypted
+@@UAHL@unbound-control.stats@total.num.dnscrypt.crypted@@
     summed over threads.
 
-.. _unbound-control.stats.total.num.dnscrypt.cert:
 
-total.num.dnscrypt.cert
+@@UAHL@unbound-control.stats@total.num.dnscrypt.cert@@
     summed over threads.
 
-.. _unbound-control.stats.total.num.dnscrypt.cleartext:
 
-total.num.dnscrypt.cleartext
+@@UAHL@unbound-control.stats@total.num.dnscrypt.cleartext@@
     summed over threads.
 
-.. _unbound-control.stats.total.num.dnscrypt.malformed:
 
-total.num.dnscrypt.malformed
+@@UAHL@unbound-control.stats@total.num.dnscrypt.malformed@@
     summed over threads.
 
-.. _unbound-control.stats.total.num.dns_error_reports:
 
-total.num.dns_error_reports
+@@UAHL@unbound-control.stats@total.num.dns_error_reports@@
     summed over threads.
 
-.. _unbound-control.stats.total.num.prefetch:
 
-total.num.prefetch
+@@UAHL@unbound-control.stats@total.num.prefetch@@
     summed over threads.
 
-.. _unbound-control.stats.total.num.expired:
 
-total.num.expired
+@@UAHL@unbound-control.stats@total.num.expired@@
     summed over threads.
 
-.. _unbound-control.stats.total.num.queries_timed_out:
 
-total.num.queries_timed_out
+@@UAHL@unbound-control.stats@total.num.queries_timed_out@@
     summed over threads.
 
-.. _unbound-control.stats.total.query.queue_time_us.max:
 
-total.query.queue_time_us.max
+@@UAHL@unbound-control.stats@total.query.queue_time_us.max@@
     the maximum of the thread values.
 
-.. _unbound-control.stats.total.num.recursivereplies:
 
-total.num.recursivereplies
+@@UAHL@unbound-control.stats@total.num.recursivereplies@@
     summed over threads.
 
-.. _unbound-control.stats.total.requestlist.avg:
 
-total.requestlist.avg
+@@UAHL@unbound-control.stats@total.requestlist.avg@@
     averaged over threads.
 
-.. _unbound-control.stats.total.requestlist.max:
 
-total.requestlist.max
+@@UAHL@unbound-control.stats@total.requestlist.max@@
     the maximum of the thread requestlist.max values.
 
-.. _unbound-control.stats.total.requestlist.overwritten:
 
-total.requestlist.overwritten
+@@UAHL@unbound-control.stats@total.requestlist.overwritten@@
     summed over threads.
 
-.. _unbound-control.stats.total.requestlist.exceeded:
 
-total.requestlist.exceeded
+@@UAHL@unbound-control.stats@total.requestlist.exceeded@@
     summed over threads.
 
-.. _unbound-control.stats.total.requestlist.current.all:
 
-total.requestlist.current.all
+@@UAHL@unbound-control.stats@total.requestlist.current.all@@
     summed over threads.
 
-.. _unbound-control.stats.total.recursion.time.median:
 
-total.recursion.time.median
+@@UAHL@unbound-control.stats@total.recursion.time.median@@
     averaged over threads.
 
-.. _unbound-control.stats.total.tcpusage:
 
-total.tcpusage
+@@UAHL@unbound-control.stats@total.tcpusage@@
     summed over threads.
 
-.. _unbound-control.stats.time.now:
 
-time.now
+@@UAHL@unbound-control.stats@time.now@@
     current time in seconds since 1970.
 
-.. _unbound-control.stats.time.up:
 
-time.up
+@@UAHL@unbound-control.stats@time.up@@
     uptime since server boot in seconds.
 
-.. _unbound-control.stats.time.elapsed:
 
-time.elapsed
+@@UAHL@unbound-control.stats@time.elapsed@@
     time since last statistics printout, in seconds.
 
 Extended Statistics
 -------------------
 
-.. _unbound-control.stats.mem.cache.rrset:
 
-mem.cache.rrset
+@@UAHL@unbound-control.stats@mem.cache.rrset@@
     Memory in bytes in use by the RRset cache.
 
-.. _unbound-control.stats.mem.cache.message:
 
-mem.cache.message
+@@UAHL@unbound-control.stats@mem.cache.message@@
     Memory in bytes in use by the message cache.
 
-.. _unbound-control.stats.mem.cache.dnscrypt_shared_secret:
 
-mem.cache.dnscrypt_shared_secret
+@@UAHL@unbound-control.stats@mem.cache.dnscrypt_shared_secret@@
     Memory in bytes in use by the dnscrypt shared secrets cache.
 
-.. _unbound-control.stats.mem.cache.dnscrypt_nonce:
 
-mem.cache.dnscrypt_nonce
+@@UAHL@unbound-control.stats@mem.cache.dnscrypt_nonce@@
     Memory in bytes in use by the dnscrypt nonce cache.
 
-.. _unbound-control.stats.mem.mod.iterator:
 
-mem.mod.iterator
+@@UAHL@unbound-control.stats@mem.mod.iterator@@
     Memory in bytes in use by the iterator module.
 
-.. _unbound-control.stats.mem.mod.validator:
 
-mem.mod.validator
+@@UAHL@unbound-control.stats@mem.mod.validator@@
     Memory in bytes in use by the validator module.
     Includes the key cache and negative cache.
 
-.. _unbound-control.stats.mem.streamwait:
 
-mem.streamwait
+@@UAHL@unbound-control.stats@mem.streamwait@@
     Memory in bytes in used by the TCP and TLS stream wait buffers.
     These are answers waiting to be written back to the clients.
 
-.. _unbound-control.stats.mem.http.query_buffer:
 
-mem.http.query_buffer
+@@UAHL@unbound-control.stats@mem.http.query_buffer@@
     Memory in bytes used by the HTTP/2 query buffers.
     Containing (partial) DNS queries waiting for request stream completion.
 
-.. _unbound-control.stats.mem.http.response_buffer:
 
-mem.http.response_buffer
+@@UAHL@unbound-control.stats@mem.http.response_buffer@@
     Memory in bytes used by the HTTP/2 response buffers.
     Containing DNS responses waiting to be written back to the clients.
 
-.. _unbound-control.stats.mem.quic:
 
-mem.quic
+@@UAHL@unbound-control.stats@mem.quic@@
     Memory in bytes used by QUIC.
     Containing connection information, stream information, queries read and
     responses written back to the clients.
 
-.. _unbound-control.stats.histogram:
-
-histogram.<sec>.<usec>.to.<sec>.<usec>
+@@UAHL@unbound-control.stats@histogram@@.<sec>.<usec>.to.<sec>.<usec>
     Shows a histogram, summed over all threads.
     Every element counts the recursive queries whose reply time fit between the
     lower and upper bound.
     Times larger or equal to the lowerbound, and smaller than the upper bound.
     There are 40 buckets, with bucket sizes doubling.
 
-.. _unbound-control.stats.num.query.type.A:
 
-num.query.type.A
+@@UAHL@unbound-control.stats@num.query.type.A@@
     The total number of queries over all threads with query type A.
     Printed for the other query types as well, but only for the types for which
     queries were received, thus =0 entries are omitted for brevity.
 
-.. _unbound-control.stats.num.query.type.other:
 
-num.query.type.other
+@@UAHL@unbound-control.stats@num.query.type.other@@
     Number of queries with query types 256-65535.
 
-.. _unbound-control.stats.num.query.class.IN:
 
-num.query.class.IN
+@@UAHL@unbound-control.stats@num.query.class.IN@@
     The total number of queries over all threads with query class IN
     (internet).
     Also printed for other classes (such as CH (CHAOS) sometimes used for
     debugging), or NONE, ANY, used by dynamic update.
     num.query.class.other is printed for classes 256-65535.
 
-.. _unbound-control.stats.num.query.opcode.QUERY:
 
-num.query.opcode.QUERY
+@@UAHL@unbound-control.stats@num.query.opcode.QUERY@@
     The total number of queries over all threads with query opcode QUERY.
     Also printed for other opcodes, UPDATE, ...
 
-.. _unbound-control.stats.num.query.tcp:
 
-num.query.tcp
+@@UAHL@unbound-control.stats@num.query.tcp@@
     Number of queries that were made using TCP towards the Unbound server.
 
-.. _unbound-control.stats.num.query.tcpout:
 
-num.query.tcpout
+@@UAHL@unbound-control.stats@num.query.tcpout@@
     Number of queries that the Unbound server made using TCP outgoing towards
     other servers.
 
-.. _unbound-control.stats.num.query.udpout:
 
-num.query.udpout
+@@UAHL@unbound-control.stats@num.query.udpout@@
     Number of queries that the Unbound server made using UDP outgoing towards
     other servers.
 
-.. _unbound-control.stats.num.query.tls:
 
-num.query.tls
+@@UAHL@unbound-control.stats@num.query.tls@@
     Number of queries that were made using TLS towards the Unbound server.
     These are also counted in num.query.tcp, because TLS uses TCP.
 
-.. _unbound-control.stats.num.query.tls.resume:
 
-num.query.tls.resume
+@@UAHL@unbound-control.stats@num.query.tls.resume@@
     Number of TLS session resumptions, these are queries over TLS towards the
     Unbound server where the client negotiated a TLS session resumption key.
 
-.. _unbound-control.stats.num.query.https:
 
-num.query.https
+@@UAHL@unbound-control.stats@num.query.https@@
     Number of queries that were made using HTTPS towards the Unbound server.
     These are also counted in num.query.tcp and num.query.tls, because HTTPS
     uses TLS and TCP.
 
-.. _unbound-control.stats.num.query.quic:
 
-num.query.quic
+@@UAHL@unbound-control.stats@num.query.quic@@
     Number of queries that were made using QUIC towards the Unbound server.
     These are also counted in num.query.tls, because TLS is used for these
     queries.
 
-.. _unbound-control.stats.num.query.ipv6:
 
-num.query.ipv6
+@@UAHL@unbound-control.stats@num.query.ipv6@@
     Number of queries that were made using IPv6 towards the Unbound server.
 
-.. _unbound-control.stats.num.query.flags.RD:
 
-num.query.flags.RD
+@@UAHL@unbound-control.stats@num.query.flags.RD@@
     The number of queries that had the RD flag set in the header.
     Also printed for flags QR, AA, TC, RA, Z, AD, CD.
     Note that queries with flags QR, AA or TC may have been rejected because of
     that.
 
-.. _unbound-control.stats.num.query.edns.present:
 
-num.query.edns.present
+@@UAHL@unbound-control.stats@num.query.edns.present@@
     number of queries that had an EDNS OPT record present.
 
-.. _unbound-control.stats.num.query.edns.DO:
 
-num.query.edns.DO
+@@UAHL@unbound-control.stats@num.query.edns.DO@@
     number of queries that had an EDNS OPT record with the DO (DNSSEC OK) bit
     set.
     These queries are also included in the num.query.edns.present number.
 
-.. _unbound-control.stats.num.query.ratelimited:
 
-num.query.ratelimited
+@@UAHL@unbound-control.stats@num.query.ratelimited@@
     The number of queries that are turned away from being send to nameserver
     due to ratelimiting.
 
-.. _unbound-control.stats.num.query.dnscrypt.shared_secret.cachemiss:
 
-num.query.dnscrypt.shared_secret.cachemiss
+@@UAHL@unbound-control.stats@num.query.dnscrypt.shared_secret.cachemiss@@
     The number of dnscrypt queries that did not find a shared secret in the
     cache.
     This can be use to compute the shared secret hitrate.
 
-.. _unbound-control.stats.num.query.dnscrypt.replay:
 
-num.query.dnscrypt.replay
+@@UAHL@unbound-control.stats@num.query.dnscrypt.replay@@
     The number of dnscrypt queries that found a nonce hit in the nonce cache
     and hence are considered a query replay.
 
-.. _unbound-control.stats.num.answer.rcode.NXDOMAIN:
 
-num.answer.rcode.NXDOMAIN
+@@UAHL@unbound-control.stats@num.answer.rcode.NXDOMAIN@@
     The number of answers to queries, from cache or from recursion, that had
     the return code NXDOMAIN.
     Also printed for the other return codes.
 
-.. _unbound-control.stats.num.answer.rcode.nodata:
 
-num.answer.rcode.nodata
+@@UAHL@unbound-control.stats@num.answer.rcode.nodata@@
     The number of answers to queries that had the pseudo return code nodata.
     This means the actual return code was NOERROR, but additionally, no data
     was carried in the answer (making what is called a NOERROR/NODATA answer).
     These queries are also included in the num.answer.rcode.NOERROR number.
     Common for AAAA lookups when an A record exists, and no AAAA.
 
-.. _unbound-control.stats.num.answer.secure:
 
-num.answer.secure
+@@UAHL@unbound-control.stats@num.answer.secure@@
     Number of answers that were secure.
     The answer validated correctly.
     The AD bit might have been set in some of these answers, where the client
     signalled (with DO or AD bit in the query) that they were ready to accept
     the AD bit in the answer.
 
-.. _unbound-control.stats.num.answer.bogus:
 
-num.answer.bogus
+@@UAHL@unbound-control.stats@num.answer.bogus@@
     Number of answers that were bogus.
     These answers resulted in SERVFAIL to the client because the answer failed
     validation.
 
-.. _unbound-control.stats.num.rrset.bogus:
 
-num.rrset.bogus
+@@UAHL@unbound-control.stats@num.rrset.bogus@@
     The number of rrsets marked bogus by the validator.
     Increased for every RRset inspection that fails.
 
-.. _unbound-control.stats.unwanted.queries:
 
-unwanted.queries
+@@UAHL@unbound-control.stats@unwanted.queries@@
     Number of queries that were refused or dropped because they failed the
     access control settings.
 
-.. _unbound-control.stats.unwanted.replies:
 
-unwanted.replies
+@@UAHL@unbound-control.stats@unwanted.replies@@
     Replies that were unwanted or unsolicited.
     Could have been random traffic, delayed duplicates, very late answers, or
     could be spoofing attempts.
@@ -1390,52 +1232,45 @@ unwanted.replies
     with the UDP protocol.
     Very high values could indicate a threat (spoofing).
 
-.. _unbound-control.stats.msg.cache.count:
 
-msg.cache.count
+@@UAHL@unbound-control.stats@msg.cache.count@@
     The number of items (DNS replies) in the message cache.
 
-.. _unbound-control.stats.rrset.cache.count:
 
-rrset.cache.count
+@@UAHL@unbound-control.stats@rrset.cache.count@@
     The number of RRsets in the rrset cache.
     This includes rrsets used by the messages in the message cache, but also
     delegation information.
 
-.. _unbound-control.stats.infra.cache.count:
 
-infra.cache.count
+@@UAHL@unbound-control.stats@infra.cache.count@@
     The number of items in the infra cache.
     These are IP addresses with their timing and protocol support information.
 
-.. _unbound-control.stats.key.cache.count:
 
-key.cache.count
+@@UAHL@unbound-control.stats@key.cache.count@@
     The number of items in the key cache.
     These are DNSSEC keys, one item per delegation point, and their validation
     status.
 
-.. _unbound-control.stats.msg.cache.max_collisions:
 
-msg.cache.max_collisions
+@@UAHL@unbound-control.stats@msg.cache.max_collisions@@
     The maximum number of hash table collisions in the msg cache.
     This is the number of hashes that are identical when a new element is
     inserted in the hash table.
     If the value is very large, like hundreds, something is wrong with the
     performance of the hash table, hash values are incorrect or malicious.
 
-.. _unbound-control.stats.rrset.cache.max_collisions:
 
-rrset.cache.max_collisions
+@@UAHL@unbound-control.stats@rrset.cache.max_collisions@@
     The maximum number of hash table collisions in the rrset cache.
     This is the number of hashes that are identical when a new element is
     inserted in the hash table.
     If the value is very large, like hundreds, something is wrong with the
     performance of the hash table, hash values are incorrect or malicious.
 
-.. _unbound-control.stats.dnscrypt_shared_secret.cache.count:
 
-dnscrypt_shared_secret.cache.count
+@@UAHL@unbound-control.stats@dnscrypt_shared_secret.cache.count@@
     The number of items in the shared secret cache.
     These are precomputed shared secrets for a given client public key/server
     secret key pair.
@@ -1443,9 +1278,8 @@ dnscrypt_shared_secret.cache.count
     recomputing the shared secret when multiple dnscrypt queries are sent from
     the same client.
 
-.. _unbound-control.stats.dnscrypt_nonce.cache.count:
 
-dnscrypt_nonce.cache.count
+@@UAHL@unbound-control.stats@dnscrypt_nonce.cache.count@@
     The number of items in the client nonce cache.
     This cache is used to prevent dnscrypt queries replay.
     The client nonce must be unique for each client public key/server secret
@@ -1453,59 +1287,50 @@ dnscrypt_nonce.cache.count
     This cache should be able to host QPS * `replay window` interval keys to
     prevent replay of a query during `replay window` seconds.
 
-.. _unbound-control.stats.num.query.authzone.up:
 
-num.query.authzone.up
+@@UAHL@unbound-control.stats@num.query.authzone.up@@
     The number of queries answered from auth-zone data, upstream queries.
     These queries would otherwise have been sent (with fallback enabled) to the
     internet, but are now answered from the auth zone.
 
-.. _unbound-control.stats.num.query.authzone.down:
 
-num.query.authzone.down
+@@UAHL@unbound-control.stats@num.query.authzone.down@@
     The number of queries for downstream answered from auth-zone data.
     These queries are from downstream clients, and have had an answer from the
     data in the auth zone.
 
-.. _unbound-control.stats.num.query.aggressive.NOERROR:
 
-num.query.aggressive.NOERROR
+@@UAHL@unbound-control.stats@num.query.aggressive.NOERROR@@
     The number of queries answered using cached NSEC records with NODATA RCODE.
     These queries would otherwise have been sent to the internet, but are now
     answered using cached data.
 
-.. _unbound-control.stats.num.query.aggressive.NXDOMAIN:
 
-num.query.aggressive.NXDOMAIN
+@@UAHL@unbound-control.stats@num.query.aggressive.NXDOMAIN@@
     The number of queries answered using cached NSEC records with NXDOMAIN
     RCODE.
     These queries would otherwise have been sent to the internet, but are now
     answered using cached data.
 
-.. _unbound-control.stats.num.query.subnet:
 
-num.query.subnet
+@@UAHL@unbound-control.stats@num.query.subnet@@
     Number of queries that got an answer that contained EDNS client subnet
     data.
 
-.. _unbound-control.stats.num.query.subnet_cache:
 
-num.query.subnet_cache
+@@UAHL@unbound-control.stats@num.query.subnet_cache@@
     Number of queries answered from the edns client subnet cache.
     These are counted as cachemiss by the main counters, but hit the client
     subnet specific cache after getting processed by the edns client subnet
     module.
 
-.. _unbound-control.stats.num.query.cachedb:
 
-num.query.cachedb
+@@UAHL@unbound-control.stats@num.query.cachedb@@
     Number of queries answered from the external cache of cachedb.
     These are counted as cachemiss by the main counters, but hit the cachedb
     external cache after getting processed by the cachedb module.
 
-.. _unbound-control.stats.num.rpz.action.<rpz_action>:
-
-num.rpz.action.<rpz_action>
+@@UAHL@unbound-control.stats@num.rpz.action@@.<rpz_action>
     Number of queries answered using configured RPZ policy, per RPZ action
     type.
     Possible actions are: nxdomain, nodata, passthru, drop, tcp-only,
