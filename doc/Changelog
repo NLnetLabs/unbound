@@ -1,10 +1,13 @@
 20 May 2025: Yorgos
 	- Merge #1285:  RST man pages. It introduces restructuredText man pages
 	  to sync the online and source code man page documentation.
-          The templated man pages (*.in) are still part of the repo but
+	  The templated man pages (*.in) are still part of the repo but
 	  generated with docutils from their .rst counterpart.
 	  Documentation on how to generate those (mainly for core developers)
 	  is in README.man.
+	- Add more checks about respip in unbound-checkconf.
+	  Also fixes #310: unbound-checkconf not reporting RPZ configuration
+	  error.
 
 19 May 2025: Wouter
 	- Fix for cname chain length with qtype ANY and qname minimisation.
