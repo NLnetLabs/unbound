@@ -1,3 +1,7 @@
+21 May 2025: Wouter
+	- Fix #1288: [FR] Improve fuzzing of unbound by adapting the netbound
+	  program.
+
 20 May 2025: Yorgos
 	- Merge #1285:  RST man pages. It introduces restructuredText man pages
 	  to sync the online and source code man page documentation.

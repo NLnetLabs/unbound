@@ -900,8 +900,10 @@ run_scenario(struct replay_runtime* runtime)
 			runtime->now->evt_type == repevt_front_reply) {
 			answer_check_it(runtime);
 			advance_moment(runtime);
-		} else if(pending_matches_range(runtime, &entry, &pending)) {
-			answer_callback_from_entry(runtime, entry, pending);
+		} else if(runtime->now && pending_matches_range(runtime,
+			&entry, &pending)) {
+			if(entry)
+				answer_callback_from_entry(runtime, entry, pending);
 		} else {
 			do_moment_and_advance(runtime);
 		}
@@ -1274,7 +1276,7 @@ struct serviced_query* outnet_serviced_query(struct outside_network* outnet,
 		(flags&~(BIT_RD|BIT_CD))?" MORE":"", (dnssec)?" DO":"");
 
 	/* create packet with EDNS */
-	pend->buffer = sldns_buffer_new(512);
+	pend->buffer = sldns_buffer_new(4096);
 	log_assert(pend->buffer);
 	sldns_buffer_write_u16(pend->buffer, 0); /* id */
 	sldns_buffer_write_u16(pend->buffer, flags);
@@ -1334,7 +1336,13 @@ struct serviced_query* outnet_serviced_query(struct outside_network* outnet,
 		edns.opt_list_in = NULL;
 		edns.opt_list_out = per_upstream_opt_list;
 		edns.opt_list_inplace_cb_out = NULL;
-		attach_edns_record(pend->buffer, &edns);
+		if(sldns_buffer_capacity(pend->buffer) >=
+			sldns_buffer_limit(pend->buffer)
+			+calc_edns_field_size(&edns)) {
+			attach_edns_record(pend->buffer, &edns);
+		} else {
+			verbose(VERB_ALGO, "edns field too large to fit");
+		}
 	}
 	memcpy(&pend->addr, addr, addrlen);
 	pend->addrlen = addrlen;
