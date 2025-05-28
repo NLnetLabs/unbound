@@ -205,6 +205,8 @@ net_test(void)
 		unit_assert(memcmp(&a6.sin6_addr, "\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377\000", 16) == 0);
 		addr_mask((struct sockaddr_storage*)&a6, l6, 64);
 		unit_assert(memcmp(&a6.sin6_addr, "\377\377\377\377\377\377\377\377\000\000\000\000\000\000\000\000", 16) == 0);
+		/* Check that negative value in net is not problematic. */
+		addr_mask((struct sockaddr_storage*)&a6, l6, -100);
 		addr_mask((struct sockaddr_storage*)&a6, l6, 0);
 		unit_assert(memcmp(&a6.sin6_addr, "\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000", 16) == 0);
 	}
@@ -265,6 +267,28 @@ net_test(void)
 				(struct sockaddr_storage*)&a6, i,
 				(struct sockaddr_storage*)&b6, i, l6) == i);
 		}
+	}
+	/* test netblockstrtoaddr */
+	unit_show_func("util/net_help.c", "netblockstrtoaddr");
+	if(1) {
+		struct sockaddr_storage a;
+		socklen_t alen = 0;
+		int net = 0, res;
+		char astr[128];
+		memset(&a, 0, sizeof(a));
+
+		res = netblockstrtoaddr("1.2.3.0/24", 53, &a, &alen, &net);
+		unit_assert(res!=0 && net == 24);
+		addr_to_str(&a, alen, astr, sizeof(astr));
+		unit_assert(strcmp(astr, "1.2.3.0") == 0);
+		unit_assert(ntohs(((struct sockaddr_in*)&a)->sin_port)==53);
+
+		res = netblockstrtoaddr("2001:DB8:33:44::/64", 53,
+			&a, &alen, &net);
+		unit_assert(res!=0 && net == 64);
+		addr_to_str(&a, alen, astr, sizeof(astr));
+		unit_assert(strcmp(astr, "2001:db8:33:44::") == 0);
+		unit_assert(ntohs(((struct sockaddr_in6*)&a)->sin6_port)==53);
 	}
 	/* test sockaddr_cmp_addr */
 	unit_show_func("util/net_help.c", "sockaddr_cmp_addr");
@@ -431,103 +455,6 @@ rtt_test(void)
 	}
 	/* must be the same, timehist bucket is used in stats */
 	unit_assert(UB_STATS_BUCKET_NUM == NUM_BUCKETS_HIST);
-}
-
-#include "services/cache/infra.h"
-
-/* lookup and get key and data structs easily */
-static struct infra_data* infra_lookup_host(struct infra_cache* infra,
-	struct sockaddr_storage* addr, socklen_t addrlen, uint8_t* zone,
-	size_t zonelen, int wr, time_t now, struct infra_key** k)
-{
-	struct infra_data* d;
-	struct lruhash_entry* e = infra_lookup_nottl(infra, addr, addrlen,
-		zone, zonelen, wr);
-	if(!e) return NULL;
-	d = (struct infra_data*)e->data;
-	if(d->ttl < now) {
-		lock_rw_unlock(&e->lock);
-		return NULL;
-	}
-	*k = (struct infra_key*)e->key;
-	return d;
-}
-
-/** test host cache */
-static void
-infra_test(void)
-{
-	struct sockaddr_storage one;
-	socklen_t onelen;
-	uint8_t* zone = (uint8_t*)"\007example\003com\000";
-	size_t zonelen = 13;
-	struct infra_cache* slab;
-	struct config_file* cfg = config_create();
-	time_t now = 0;
-	uint8_t edns_lame;
-	int vs, to;
-	struct infra_key* k;
-	struct infra_data* d;
-	int init = 376;
-
-	unit_show_feature("infra cache");
-	unit_assert(ipstrtoaddr("127.0.0.1", 53, &one, &onelen));
-
-	slab = infra_create(cfg);
-	unit_assert( infra_host(slab, &one, onelen, zone, zonelen, now,
-		&vs, &edns_lame, &to) );
-	unit_assert( vs == 0 && to == init && edns_lame == 0 );
-
-	unit_assert( infra_rtt_update(slab, &one, onelen, zone, zonelen, LDNS_RR_TYPE_A, -1, init, now) );
-	unit_assert( infra_host(slab, &one, onelen, zone, zonelen, 
-			now, &vs, &edns_lame, &to) );
-	unit_assert( vs == 0 && to == init*2 && edns_lame == 0 );
-
-	unit_assert( infra_edns_update(slab, &one, onelen, zone, zonelen, -1, now) );
-	unit_assert( infra_host(slab, &one, onelen, zone, zonelen, 
-			now, &vs, &edns_lame, &to) );
-	unit_assert( vs == -1 && to == init*2  && edns_lame == 1);
-
-	now += cfg->host_ttl + 10;
-	unit_assert( infra_host(slab, &one, onelen, zone, zonelen, 
-			now, &vs, &edns_lame, &to) );
-	unit_assert( vs == 0 && to == init && edns_lame == 0 );
-	
-	unit_assert( infra_set_lame(slab, &one, onelen,
-		zone, zonelen,  now, 0, 0, LDNS_RR_TYPE_A) );
-	unit_assert( (d=infra_lookup_host(slab, &one, onelen, zone, zonelen, 0, now, &k)) );
-	unit_assert( d->ttl == now+cfg->host_ttl );
-	unit_assert( d->edns_version == 0 );
-	unit_assert(!d->isdnsseclame && !d->rec_lame && d->lame_type_A &&
-		!d->lame_other);
-	lock_rw_unlock(&k->entry.lock);
-
-	/* test merge of data */
-	unit_assert( infra_set_lame(slab, &one, onelen,
-		zone, zonelen,  now, 0, 0, LDNS_RR_TYPE_AAAA) );
-	unit_assert( (d=infra_lookup_host(slab, &one, onelen, zone, zonelen, 0, now, &k)) );
-	unit_assert(!d->isdnsseclame && !d->rec_lame && d->lame_type_A &&
-		d->lame_other);
-	lock_rw_unlock(&k->entry.lock);
-
-	/* test that noEDNS cannot overwrite known-yesEDNS */
-	now += cfg->host_ttl + 10;
-	unit_assert( infra_host(slab, &one, onelen, zone, zonelen, 
-			now, &vs, &edns_lame, &to) );
-	unit_assert( vs == 0 && to == init && edns_lame == 0 );
-
-	unit_assert( infra_edns_update(slab, &one, onelen, zone, zonelen, 0, now) );
-	unit_assert( infra_host(slab, &one, onelen, zone, zonelen, 
-			now, &vs, &edns_lame, &to) );
-	unit_assert( vs == 0 && to == init && edns_lame == 1 );
-
-	unit_assert( infra_edns_update(slab, &one, onelen, zone, zonelen, -1, now) );
-	unit_assert( infra_host(slab, &one, onelen, zone, zonelen, 
-			now, &vs, &edns_lame, &to) );
-	unit_assert( vs == 0 && to == init && edns_lame == 1 );
-
-	infra_delete(slab);
-	config_delete(cfg);
 }
 
 #include "util/edns.h"

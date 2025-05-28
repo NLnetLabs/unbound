@@ -111,7 +111,7 @@ static void zonemd_generate_test(const char* zname, char* zfile,
 		digestdup[i] = toupper((unsigned char)digestdup[i]);
 	}
 	if(verbosity >= VERB_ALGO) {
-		char zname[255+1];
+		char zname[LDNS_MAX_DOMAINLEN];
 		dname_str(z->name, zname);
 		printf("zonemd generated for %s in %s with "
 			"scheme=%d hashalgo=%d\n", zname, z->zonefile,
@@ -267,6 +267,7 @@ static void zonemd_verify_test(char* zname, char* zfile, char* tastr,
 	env.cfg = config_create();
 	if(!env.cfg)
 		fatal_exit("out of memory");
+	config_auto_slab_values(env.cfg);
 	env.now = &now;
 	env.cfg->val_date_override = cfg_convert_timeval(date_override);
 	if(!env.cfg->val_date_override)

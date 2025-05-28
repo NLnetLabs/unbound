@@ -900,8 +900,10 @@ run_scenario(struct replay_runtime* runtime)
 			runtime->now->evt_type == repevt_front_reply) {
 			answer_check_it(runtime);
 			advance_moment(runtime);
-		} else if(pending_matches_range(runtime, &entry, &pending)) {
-			answer_callback_from_entry(runtime, entry, pending);
+		} else if(runtime->now && pending_matches_range(runtime,
+			&entry, &pending)) {
+			if(entry)
+				answer_callback_from_entry(runtime, entry, pending);
 		} else {
 			do_moment_and_advance(runtime);
 		}
@@ -938,11 +940,11 @@ listen_create(struct comm_base* base, struct listen_port* ATTR_UNUSED(ports),
 	char* ATTR_UNUSED(http_endpoint),
 	int ATTR_UNUSED(http_notls),
 	struct tcl_list* ATTR_UNUSED(tcp_conn_limit),
-	void* ATTR_UNUSED(sslctx), struct dt_env* ATTR_UNUSED(dtenv),
+	void* ATTR_UNUSED(dot_sslctx), void* ATTR_UNUSED(doh_sslctx),
+	void* ATTR_UNUSED(quic_ssl),
+	struct dt_env* ATTR_UNUSED(dtenv),
 	struct doq_table* ATTR_UNUSED(table),
 	struct ub_randstate* ATTR_UNUSED(rnd),
-	const char* ATTR_UNUSED(ssl_service_key),
-	const char* ATTR_UNUSED(ssl_service_pem),
 	struct config_file* ATTR_UNUSED(cfg),
 	comm_point_callback_type* cb, void *cb_arg)
 {
@@ -1264,7 +1266,7 @@ struct serviced_query* outnet_serviced_query(struct outside_network* outnet,
 	struct replay_runtime* runtime = (struct replay_runtime*)outnet->base;
 	struct fake_pending* pend = (struct fake_pending*)calloc(1,
 		sizeof(struct fake_pending));
-	char z[256];
+	char z[LDNS_MAX_DOMAINLEN];
 	log_assert(pend);
 	log_nametypeclass(VERB_OPS, "pending serviced query",
 		qinfo->qname, qinfo->qtype, qinfo->qclass);
@@ -1274,7 +1276,7 @@ struct serviced_query* outnet_serviced_query(struct outside_network* outnet,
 		(flags&~(BIT_RD|BIT_CD))?" MORE":"", (dnssec)?" DO":"");
 
 	/* create packet with EDNS */
-	pend->buffer = sldns_buffer_new(512);
+	pend->buffer = sldns_buffer_new(4096);
 	log_assert(pend->buffer);
 	sldns_buffer_write_u16(pend->buffer, 0); /* id */
 	sldns_buffer_write_u16(pend->buffer, flags);
@@ -1334,7 +1336,13 @@ struct serviced_query* outnet_serviced_query(struct outside_network* outnet,
 		edns.opt_list_in = NULL;
 		edns.opt_list_out = per_upstream_opt_list;
 		edns.opt_list_inplace_cb_out = NULL;
-		attach_edns_record(pend->buffer, &edns);
+		if(sldns_buffer_capacity(pend->buffer) >=
+			sldns_buffer_limit(pend->buffer)
+			+calc_edns_field_size(&edns)) {
+			attach_edns_record(pend->buffer, &edns);
+		} else {
+			verbose(VERB_ALGO, "edns field too large to fit");
+		}
 	}
 	memcpy(&pend->addr, addr, addrlen);
 	pend->addrlen = addrlen;
@@ -1480,6 +1488,11 @@ size_t outnet_get_mem(struct outside_network* ATTR_UNUSED(outnet))
 }
 
 size_t comm_point_get_mem(struct comm_point* ATTR_UNUSED(c))
+{
+	return 0;
+}
+
+size_t comm_timer_get_mem(struct comm_timer* ATTR_UNUSED(timer))
 {
 	return 0;
 }
@@ -1939,7 +1952,8 @@ int comm_point_send_udp_msg(struct comm_point *c, sldns_buffer* packet,
 }
 
 int outnet_get_tcp_fd(struct sockaddr_storage* ATTR_UNUSED(addr),
-	socklen_t ATTR_UNUSED(addrlen), int ATTR_UNUSED(tcp_mss), int ATTR_UNUSED(dscp))
+	socklen_t ATTR_UNUSED(addrlen), int ATTR_UNUSED(tcp_mss),
+	int ATTR_UNUSED(dscp), int ATTR_UNUSED(nodelay))
 {
 	log_assert(0);
 	return -1;
@@ -1991,6 +2005,26 @@ void http2_stream_add_meshstate(struct http2_stream* ATTR_UNUSED(h2_stream),
 
 void http2_stream_remove_mesh_state(struct http2_stream* ATTR_UNUSED(h2_stream))
 {
+}
+
+void fast_reload_service_cb(int ATTR_UNUSED(fd), short ATTR_UNUSED(event),
+	void* ATTR_UNUSED(arg))
+{
+	log_assert(0);
+}
+
+void fast_reload_thread_stop(
+	struct fast_reload_thread* ATTR_UNUSED(fast_reload_thread))
+{
+	/* nothing */
+}
+
+int fast_reload_client_callback(struct comm_point* ATTR_UNUSED(c),
+	void* ATTR_UNUSED(arg), int ATTR_UNUSED(error),
+        struct comm_reply* ATTR_UNUSED(repinfo))
+{
+	log_assert(0);
+	return 0;
 }
 
 /*********** End of Dummy routines ***********/

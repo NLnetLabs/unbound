@@ -221,7 +221,9 @@ acl_interface_insert(struct acl_list* acl_interface,
 	struct sockaddr_storage* addr, socklen_t addrlen,
 	enum acl_access control)
 {
-	return acl_find_or_create(acl_interface, addr, addrlen, control);
+	struct acl_addr* node = acl_find_or_create(acl_interface, addr, addrlen, control);
+	node->is_interface = 1;
+	return node;
 }
 
 /** apply acl_tag string */
@@ -805,10 +807,23 @@ log_acl_action(const char* action, struct sockaddr_storage* addr,
 		addr_to_str(&acladdr->node.addr, acladdr->node.addrlen,
 			n, sizeof(n));
 		verbose(VERB_ALGO, "%s query from %s port %d because of "
-			"%s/%d %s", action, a, (int)port, n, acladdr->node.net,
+			"%s/%d %s%s", action, a, (int)port, n,
+			acladdr->node.net,
+			acladdr->is_interface?"(ACL on interface IP) ":"",
 			acl_access_to_str(acl));
 	} else {
 		verbose(VERB_ALGO, "%s query from %s port %d", action, a,
 			(int)port);
 	}
+}
+
+void acl_list_swap_tree(struct acl_list* acl, struct acl_list* data)
+{
+	/* swap tree and region */
+	rbtree_type oldtree = acl->tree;
+	struct regional* oldregion = acl->region;
+	acl->tree = data->tree;
+	acl->region = data->region;
+	data->tree = oldtree;
+	data->region = oldregion;
 }
