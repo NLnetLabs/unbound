@@ -3029,28 +3029,39 @@ If \fI\%view\-first\fP is enabled, it\(aqll
 break perform that step and check the global answers.
 For when the view has view specific overrides but some zone has to be
 answered from global local zone contents.
-.TP 10
-\h'5'\fInodefault\fR
-Used to turn off default contents for AS112 zones. The other types
-also turn off default contents for the zone. The 'nodefault' option
-has no other effect than turning off default contents for the
-given zone.  Use \fInodefault\fR if you use exactly that zone, if you want to
-use a subzone, use \fItransparent\fR.
-.TP 10
-\h'5'\fInodefault\fR
+.UNINDENT
+.INDENT 7.0
+.TP
+.B ipset
 Used to specify an ipset to insert resolved addresses into. If the deprecated
-global \fIipset\fR block is used, then it can be referenced using the form
+global \fIipset\fR block is used, then it can be referenced using the form:
+.INDENT 7.0
+.INDENT 3.5
+.sp
 .nf
+.ft C
 server:
     lcoal\-zone: "example.com." ipset
 ipset:
     name\-v4: <ipset name>
+.ft P
 .fi
+.UNINDENT
+.UNINDENT
+.sp
 However, per-rule declarations are also supported where delineation of
 addresses is required. This is done via the form:
+.INDENT 7.0
+.INDENT 3.5
+.sp
 .nf
+.ft C
 local\-zone: "example.net." ipset <protocol> <ipset name> <tll | no\-ttl>
+.ft P
 .fi
+.UNINDENT
+.UNINDENT
+.sp
 Here you can specify the \fIprotocol\fR as \fIipv4\fR or \fIipv6\fR, the
 name of the ipset and finally whether to use the DNS record TTL as an
 auto-expiry on the inserted ipset entry. When declaring a local-zone with
@@ -3060,30 +3071,40 @@ Note that on a BSD distribution, where the server is compiled with the packet
 filter framework, there is no support for TTLs to be set on individual table
 entries. The only support that pf provides is invoking manual expiry of table
 entries past a delta of \fIn\fR seconds via the \fIpfctl -t <table> -T expire <seconds>\fR
-flag. See \fIpftcl\fR(8) Thus no support is added there for TTLs and a suitable
+flag (See \fIpftcl\fR(8)). Thus no support is added there for TTLs and a suitable
 warning is raised from the parser when the config is checked.
-.P
-The default zones are localhost, reverse 127.0.0.1 and ::1, the home.arpa,
-the onion, test, invalid and the AS112 zones. The AS112 zones are reverse
-DNS zones for private use and reserved IP addresses for which the servers
-on the internet cannot provide correct answers. They are configured by
-default to give nxdomain (no reverse information) answers. The defaults
-can be turned off by specifying your own local\-zone of that name, or
-using the 'nodefault' type. Below is a list of the default zone contents.
-.TP 10
-\h'5'\fIlocalhost\fR
-The IP4 and IP6 localhost information is given. NS and SOA records are provided
-for completeness and to satisfy some DNS update tools. Default content:
-.nf
-local\-zone: "localhost." redirect
-local\-data: "localhost. 10800 IN NS localhost."
-local\-data: "localhost. 10800 IN
-    SOA localhost. nobody.invalid. 1 3600 1200 604800 10800"
-local\-data: "localhost. 10800 IN A 127.0.0.1"
-local\-data: "localhost. 10800 IN AAAA ::1"
-.fi
-.TP 10
-\h'5'\fIreverse IPv4 loopback\fR
+.UNINDENT
+.INDENT 7.0
+.TP
+.B nodefault 
+Used to turn off default contents for AS112 zones.
+The other types also turn off default contents for the zone.
+The \fI\%nodefault\fP option has
+no other effect than turning off default contents for the given zone.
+Use \fI\%nodefault\fP if you use
+exactly that zone, if you want to use a subzone, use
+\fI\%transparent\fP\&.
+.UNINDENT
+.sp
+The default zones are localhost, reverse \fB127.0.0.1\fP and \fB::1\fP, the
+\fBhome.arpa\fP, \fBresolver.arpa\fP, \fBservice.arpa\fP, \fBonion\fP, \fBtest\fP,
+\fBinvalid\fP and the AS112 zones.
+The AS112 zones are reverse DNS zones for private use and reserved IP
+addresses for which the servers on the internet cannot provide correct
+answers.
+They are configured by default to give NXDOMAIN (no reverse information)
+answers.
+.sp
+The defaults can be turned off by specifying your own
+\fI\%local\-zone\fP of that name, or using the
+\fI\%nodefault\fP type.
+Below is a list of the default zone contents.
+.INDENT 7.0
+.TP
+.B localhost 
+The IPv4 and IPv6 localhost information is given.
+NS and SOA records are provided for completeness and to satisfy some
+DNS update tools.
 Default content:
 .INDENT 7.0
 .INDENT 3.5
