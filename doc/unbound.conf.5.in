@@ -2321,18 +2321,12 @@ Adding \fBrespip\fP to the front will cause RPZ processing to be done on all
 queries.
 .sp
 Most modules that need to be listed here have to be listed at the beginning
-of the line.  The subnetcachedb module has to be listed just before
-the iterator.
-The python module can be listed in different places, it then processes the
-output of the module it is just before. The dynlib module can be listed pretty
-much anywhere, it is only a very thin wrapper that allows dynamic libraries to
-run in its place.
-.IP
+of the line.
+.sp
 When the server is built with ipset support and has is run with the \fICAP_NET_ADMIN\fR
-capability, the ipset module can be utilised. Example configuration for this is
+capability, the \fBipset\fP module can be utilised. Example configuration for this is
 "\fIipset iterator\fR". It can easily be combined with any other module without
 any issues.
-of the line.
 .sp
 The \fBsubnetcache\fP module has to be listed just before the iterator.
 .sp
