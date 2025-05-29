@@ -1148,6 +1148,8 @@ print_ext(RES* ssl, struct ub_stats_info* s, int inhibit_zero)
 		(unsigned long)s->svr.ans_bogus)) return 0;
 	if(!ssl_printf(ssl, "num.rrset.bogus"SQ"%lu\n",
 		(unsigned long)s->svr.rrset_bogus)) return 0;
+	if(!ssl_printf(ssl, "num.valops"SQ"%lu\n",
+		(unsigned long)s->svr.val_ops)) return 0;
 	if(!ssl_printf(ssl, "num.query.aggressive.NOERROR"SQ"%lu\n",
 		(unsigned long)s->svr.num_neg_cache_noerror)) return 0;
 	if(!ssl_printf(ssl, "num.query.aggressive.NXDOMAIN"SQ"%lu\n",
