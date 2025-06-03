@@ -2025,8 +2025,8 @@ These options are part of the **server:** clause.
 
 
 @@UAHL@unbound.conf@disable-dnssec-lame-check@@: *<yes or no>*
-    If true, disables the DNSSEC lameness check in the iterator.
-    This check sees if RRSIGs are present in the answer, when dnssec is
+    If yes, disables the DNSSEC lameness check in the iterator.
+    This check sees if RRSIGs are present in the answer, when DNSSEC is
     expected, and retries another authority if RRSIGs are unexpectedly missing.
     The validator will insist in RRSIGs for DNSSEC signed domains regardless of
     this setting, if a trust anchor is loaded.

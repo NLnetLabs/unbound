@@ -1,3 +1,6 @@
+3 June 2025: Yorgos
+	- Small manpage corrections for the 'disable-dnssec-lame-check' option.
+
 21 May 2025: Wouter
 	- Fix #1288: [FR] Improve fuzzing of unbound by adapting the netbound
 	  program.
