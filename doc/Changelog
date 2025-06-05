@@ -1,6 +1,7 @@
 5 June 2025: Wouter
 	- Fix unbound-anchor certificate file read for line ends and end of
 	  file.
+	- Fix comment for the dname_remove_label_limit_len function.
 
 3 June 2025: Yorgos
 	- Small manpage corrections for the 'disable-dnssec-lame-check' option.
