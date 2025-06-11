@@ -4630,7 +4630,7 @@ comm_point_tcp_handle_callback(int fd, short event, void* arg)
 	}
 #endif
 
-	if(event&UB_EV_TIMEOUT) {
+	if((event&UB_EV_TIMEOUT)) {
 		verbose(VERB_QUERY, "tcp took too long, dropped");
 		reclaim_tcp_handler(c);
 		if(!c->tcp_do_close) {
@@ -4640,7 +4640,7 @@ comm_point_tcp_handle_callback(int fd, short event, void* arg)
 		}
 		return;
 	}
-	if(event&UB_EV_READ
+	if((event&UB_EV_READ)
 #ifdef USE_MSG_FASTOPEN
 		&& !(c->tcp_do_fastopen && (event&UB_EV_WRITE))
 #endif
@@ -4665,7 +4665,7 @@ comm_point_tcp_handle_callback(int fd, short event, void* arg)
 			tcp_more_read_again(fd, c);
 		return;
 	}
-	if(event&UB_EV_WRITE) {
+	if((event&UB_EV_WRITE)) {
 		int has_tcpq = (c->tcp_req_info != NULL);
 		int* morewrite = c->tcp_more_write_again;
 		if(!comm_point_tcp_handle_write(fd, c)) {
@@ -5648,7 +5648,7 @@ comm_point_http_handle_callback(int fd, short event, void* arg)
 	log_assert(c->type == comm_http);
 	ub_comm_base_now(c->ev->base);
 
-	if(event&UB_EV_TIMEOUT) {
+	if((event&UB_EV_TIMEOUT)) {
 		verbose(VERB_QUERY, "http took too long, dropped");
 		reclaim_http_handler(c);
 		if(!c->tcp_do_close) {
@@ -5658,7 +5658,7 @@ comm_point_http_handle_callback(int fd, short event, void* arg)
 		}
 		return;
 	}
-	if(event&UB_EV_READ) {
+	if((event&UB_EV_READ)) {
 		if(!comm_point_http_handle_read(fd, c)) {
 			reclaim_http_handler(c);
 			if(!c->tcp_do_close) {
@@ -5670,7 +5670,7 @@ comm_point_http_handle_callback(int fd, short event, void* arg)
 		}
 		return;
 	}
-	if(event&UB_EV_WRITE) {
+	if((event&UB_EV_WRITE)) {
 		if(!comm_point_http_handle_write(fd, c)) {
 			reclaim_http_handler(c);
 			if(!c->tcp_do_close) {
@@ -5691,7 +5691,7 @@ void comm_point_local_handle_callback(int fd, short event, void* arg)
 	log_assert(c->type == comm_local);
 	ub_comm_base_now(c->ev->base);
 
-	if(event&UB_EV_READ) {
+	if((event&UB_EV_READ)) {
 		if(!comm_point_tcp_handle_read(fd, c, 1)) {
 			fptr_ok(fptr_whitelist_comm_point(c->callback));
 			(void)(*c->callback)(c, c->cb_arg, NETEVENT_CLOSED,
@@ -5710,7 +5710,7 @@ void comm_point_raw_handle_callback(int ATTR_UNUSED(fd),
 	log_assert(c->type == comm_raw);
 	ub_comm_base_now(c->ev->base);
 
-	if(event&UB_EV_TIMEOUT)
+	if((event&UB_EV_TIMEOUT))
 		err = NETEVENT_TIMEOUT;
 	fptr_ok(fptr_whitelist_comm_point_raw(c->callback));
 	(void)(*c->callback)(c, c->cb_arg, err, NULL);
