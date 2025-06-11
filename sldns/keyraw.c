@@ -124,7 +124,7 @@ uint16_t sldns_calc_keytag_raw(uint8_t* key, size_t keysize)
 		size_t i;
 		uint32_t ac32 = 0;
 		for (i = 0; i < keysize; ++i) {
-			ac32 += (i & 1) ? key[i] : key[i] << 8;
+			ac32 += ((i & 1)) ? key[i] : key[i] << 8;
 		}
 		ac32 += (ac32 >> 16) & 0xFFFF;
 		return (uint16_t) (ac32 & 0xFFFF);

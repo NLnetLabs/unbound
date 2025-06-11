@@ -1,5 +1,6 @@
 11 June 2025: Wouter
 	- Fix bitwise operators in conditional expressions with parentheses.
+	- Fix conditional expressions with parentheses for bitwise and.
 
 5 June 2025: Wouter
 	- Fix unbound-anchor certificate file read for line ends and end of

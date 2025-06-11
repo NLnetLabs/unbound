@@ -1021,7 +1021,7 @@ reply_info_answer_encode(struct query_info* qinf, struct reply_info* rep,
 		flags |= BIT_AA;
 		flags &= ~BIT_AD;
 	}
-	log_assert(flags & BIT_QR); /* QR bit must be on in our replies */
+	log_assert((flags & BIT_QR)); /* QR bit must be on in our replies */
 	if(udpsize < LDNS_HEADER_SIZE)
 		return 0;
 	/* currently edns does not change during calculations;

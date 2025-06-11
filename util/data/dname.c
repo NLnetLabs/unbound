@@ -57,7 +57,7 @@ query_dname_len(sldns_buffer* query)
 		if(sldns_buffer_remaining(query) < 1)
 			return 0; /* parse error, need label len */
 		labellen = sldns_buffer_read_u8(query);
-		if(labellen&0xc0)
+		if((labellen&0xc0))
 			return 0; /* no compression allowed in queries */
 		len += labellen + 1;
 		if(len > LDNS_MAX_DOMAINLEN)
@@ -79,7 +79,7 @@ dname_valid(uint8_t* dname, size_t maxlen)
 		return 0; /* too short, shortest is '0' root label */
 	labellen = *dname++;
 	while(labellen) {
-		if(labellen&0xc0)
+		if((labellen&0xc0))
 			return 0; /* no compression ptrs allowed */
 		len += labellen + 1;
 		if(len >= LDNS_MAX_DOMAINLEN)

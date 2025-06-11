@@ -399,7 +399,7 @@ needs_validation(struct module_qstate* qstate, int ret_rc,
 	 * For DNS64 bit_cd signals no dns64 processing, but we want to
 	 * provide validation there too */
 	/*
-	if(qstate->query_flags & BIT_CD) {
+	if((qstate->query_flags & BIT_CD)) {
 		verbose(VERB_ALGO, "not validating response due to CD bit");
 		return 0;
 	}
@@ -2594,7 +2594,7 @@ processFinished(struct module_qstate* qstate, struct val_qstate* vq,
 	/* Update rep->reason_bogus as it is the one being cached */
 	update_reason_bogus(vq->orig_msg->rep, errinf_to_reason_bogus(qstate));
 	/* store results in cache */
-	if(qstate->query_flags&BIT_RD) {
+	if((qstate->query_flags&BIT_RD)) {
 		/* if secure, this will override cache anyway, no need
 		 * to check if from parentNS */
 		if(!qstate->no_cache_store) {

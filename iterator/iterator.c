@@ -4159,7 +4159,7 @@ processFinished(struct module_qstate* qstate, struct iter_qstate* iq,
 		/* store message with the finished prepended items,
 		 * but only if we did recursion. The nonrecursion referral
 		 * from cache does not need to be stored in the msg cache. */
-		if(!qstate->no_cache_store && qstate->query_flags&BIT_RD) {
+		if(!qstate->no_cache_store && (qstate->query_flags&BIT_RD)) {
 			iter_dns_store(qstate->env, &qstate->qinfo, 
 				iq->response->rep, 0, qstate->prefetch_leeway,
 				iq->dp&&iq->dp->has_parent_side_NS,

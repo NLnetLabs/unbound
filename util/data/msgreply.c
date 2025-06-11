@@ -251,7 +251,7 @@ rdata_copy(sldns_buffer* pkt, struct packed_rrset_data* data, uint8_t* to,
 
 	*rr_ttl = sldns_read_uint32(rr->ttl_data);
 	/* RFC 2181 Section 8. if msb of ttl is set treat as if zero. */
-	if(*rr_ttl & 0x80000000U)
+	if((*rr_ttl & 0x80000000U))
 		*rr_ttl = 0;
 	if(type == LDNS_RR_TYPE_SOA && section == LDNS_SECTION_AUTHORITY) {
 		/* negative response. see if TTL of SOA record larger than the
