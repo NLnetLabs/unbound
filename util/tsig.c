@@ -108,11 +108,14 @@ tsig_verify(sldns_buffer* pkt, const uint8_t* name, const uint8_t* alg,
 	uint64_t time_signed;
 	uint16_t fudge;
 	const EVP_MD* digester;
-	uint8_t* tsig_name;
+	uint8_t* tsig_name, *tsig_algo;
 	uint16_t rdlength;
+	uint16_t current_query_id;
 
-	if(sldns_buffer_limit(pkt) < LDNS_HEADER_SIZE)
+	if(sldns_buffer_limit(pkt) < LDNS_HEADER_SIZE) {
+		verbose(VERB_ALGO, "No TSIG, packet too short");
 		return -1;
+	}
 	if(LDNS_ARCOUNT(sldns_buffer_begin(pkt)) < 1) {
 		verbose(VERB_ALGO, "No TSIG found, ARCOUNT == 0");
 		return -1;
@@ -127,50 +130,136 @@ tsig_verify(sldns_buffer* pkt, const uint8_t* name, const uint8_t* alg,
 	sldns_buffer_skip(pkt, LDNS_HEADER_SIZE);
 
 	/* Skip qnames. */
-	if(!skip_pkt_query_rrs(pkt, LDNS_QDCOUNT(sldns_buffer_begin(pkt))))
+	if(!skip_pkt_query_rrs(pkt, LDNS_QDCOUNT(sldns_buffer_begin(pkt)))) {
+		verbose(VERB_ALGO, "No TSIG, query section RRs malformed");
 		return -1;
+	}
 	/* Skip all rrs. */
-	if(!skip_pkt_rrs(pkt, n_rrs))
+	if(!skip_pkt_rrs(pkt, n_rrs)) {
+		verbose(VERB_ALGO, "No TSIG, packet RRs are malformed");
 		return -1;
+	}
 	end_of_message = sldns_buffer_position(pkt);
 
 	/* Skip TSIG name. */
-	if(sldns_buffer_remaining(pkt) < 1)
+	if(sldns_buffer_remaining(pkt) < 1) {
+		verbose(VERB_ALGO, "No TSIG, no tsig name");
+		sldns_buffer_set_position(pkt, end_of_message);
 		return -1;
+	}
 	tsig_name = sldns_buffer_current(pkt);
-	if(!pkt_dname_len(pkt))
+	if(!pkt_dname_len(pkt)) {
+		verbose(VERB_ALGO, "No TSIG, tsig name malformed");
+		sldns_buffer_set_position(pkt, end_of_message);
 		return -1;
-	if(dname_pkt_compare(pkt, tsig_name, (uint8_t*)name) != 0)
+	}
+	if(dname_pkt_compare(pkt, tsig_name, (uint8_t*)name) != 0) {
+		sldns_buffer_set_position(pkt, end_of_message);
 		return LDNS_TSIG_ERROR_BADKEY;
+	}
 	pos = sldns_buffer_position(pkt);             /* Append pos */
 
 	/* Skip type, class, TTL and rdlength */
-	if(sldns_buffer_remaining(pkt) < 2+2+4+2 /* type class TTL rdlen */)
+	if(sldns_buffer_remaining(pkt) < 2 /* type */ + 2 /* class */
+		+ 4 /* TTL */ + 2 /* rdlength */) {
+		verbose(VERB_ALGO, "No TSIG, TSIG RR malformed, packet too short");
+		sldns_buffer_set_position(pkt, end_of_message);
 		return -1;
+	}
 	if(sldns_buffer_read_u16(pkt) != LDNS_RR_TYPE_TSIG) {
 		verbose(VERB_ALGO, "No TSIG found, wrong RR type");
+		sldns_buffer_set_position(pkt, end_of_message);
 		return -1;
 	}
 	sldns_buffer_skip(pkt, sizeof(uint16_t)       /* skip class */
 	                     + sizeof(uint32_t));     /* skip TTL */
 	rdlength = sldns_buffer_read_u16(pkt);        /* read rdlength */
-	if(sldns_buffer_remaining(pkt) < rdlength)
+	if(sldns_buffer_remaining(pkt) < rdlength) {
+		verbose(VERB_ALGO, "TSIG rdlength wrong, packet too short");
+		sldns_buffer_set_position(pkt, end_of_message);
 		return -1;
+	}
 
 	/* Read the TSIG rdata. */
-	if(query_dname_compare(alg, sldns_buffer_current(pkt)))
+	if(rdlength < 18 /* Rdata length with '.' names, zero lengths. */) {
+		verbose(VERB_ALGO, "TSIG rdata too short");
+		sldns_buffer_set_position(pkt, end_of_message);
+		return -1;
+	}
+	tsig_algo = sldns_buffer_current(pkt);
+	/* The algorithm name MUST be uncompressed wireformat (RFC8945),
+	 * check that it is. Fails on malformed and skips the name. */
+	if(!(algname_size = query_dname_len(pkt))) {
+		verbose(VERB_ALGO, "TSIG algorithm name malformed");
+		sldns_buffer_set_position(pkt, end_of_message);
+		return -1;
+	}
+	if(query_dname_compare(alg, tsig_algo) != 0) {
+		sldns_buffer_set_position(pkt, end_of_message);
 		return LDNS_TSIG_ERROR_BADKEY;
-	algname_size = pkt_dname_len(pkt);            /* skip alg name */
+	}
+	if(rdlength < algname_size + 6 /* time */ + 2 /* fudge */
+		+ 2 /* mac size */) {
+		verbose(VERB_ALGO, "TSIG rdata too short for timestamp");
+		sldns_buffer_set_position(pkt, end_of_message);
+		return -1;
+	}
 	time_signed = sldns_buffer_read_u48(pkt);     /* time signed */
 	fudge = sldns_buffer_read_u16(pkt);           /* fudge */
 	mac_sz = sldns_buffer_read_u16(pkt);          /* mac size */
+
+	if(rdlength < algname_size + 6 /* time */ + 2 /* fudge */
+		+ 2 /* mac size */ + mac_sz + 2 /* origid */
+		+ 2 /* error_code */ + 2 /* otherlen */) {
+		verbose(VERB_ALGO, "TSIG rdata too short for mac");
+		sldns_buffer_set_position(pkt, end_of_message);
+		return -1;
+	}
+	if(mac_sz > 16384) {
+		/* the hash should not be too big, really 512/8=64 bytes */
+		verbose(VERB_ALGO, "TSIG mac too large");
+		sldns_buffer_set_position(pkt, end_of_message);
+		return -1;
+	}
+	if(mac_sz > sizeof(mac)) {
+		verbose(VERB_ALGO, "TSIG mac too large for buffer");
+		sldns_buffer_set_position(pkt, end_of_message);
+		return -1;
+	}
 	memcpy(mac,sldns_buffer_current(pkt),mac_sz); /* copy mac */
 	sldns_buffer_skip(pkt, mac_sz);               /* skip mac */
+
 	/* Set ID to original ID */
+	current_query_id = sldns_buffer_read_u16_at(pkt, 0);
 	sldns_buffer_write_u16_at(pkt, 0, sldns_buffer_read_u16(pkt));
 	sldns_buffer_skip(pkt, sizeof(uint16_t));     /* skip error */
 	other_len = sldns_buffer_read_u16(pkt);       /* other len */
+	if(rdlength < algname_size + 6 /* time */ + 2 /* fudge */
+		+ 2 /* mac size */ + mac_sz + 2 /* origid */
+		+ 2 /* error_code */ + 2 /* otherlen */ + other_len) {
+		verbose(VERB_ALGO, "TSIG rdata too short for Other Data");
+		sldns_buffer_write_u16_at(pkt, 0, current_query_id);
+		sldns_buffer_set_position(pkt, end_of_message);
+		return -1;
+	}
+	if(rdlength > algname_size + 6 /* time */ + 2 /* fudge */
+		+ 2 /* mac size */ + mac_sz + 2 /* origid */
+		+ 2 /* error_code */ + 2 /* otherlen */ + other_len) {
+		/* Trailing data in TSIG RR */
+		verbose(VERB_ALGO, "TSIG rdata wrong, it has trailing data");
+		sldns_buffer_write_u16_at(pkt, 0, current_query_id);
+		sldns_buffer_set_position(pkt, end_of_message);
+		return -1;
+	}
+	if(other_len > 16) {
+		verbose(VERB_ALGO, "TSIG Other Len too large");
+		sldns_buffer_write_u16_at(pkt, 0, current_query_id);
+		sldns_buffer_set_position(pkt, end_of_message);
+		return -1;
+	}
 
+	/* The buffer for the packet is used for the digest buffer
+	 * for this message. It fits in the buffer. */
 	/* move CLASS (uint16_t) and TTL (uint32_t) -> TYPE position */
 	memmove( sldns_buffer_at(pkt, pos)
 	       , sldns_buffer_at(pkt, pos + sizeof(uint16_t) /* type */)
@@ -196,13 +285,16 @@ tsig_verify(sldns_buffer* pkt, const uint8_t* name, const uint8_t* alg,
 	HMAC( digester, secret, secret_len, sldns_buffer_begin(pkt), pos
 	    , hmac_result, &hmac_result_len);
 	if(CRYPTO_memcmp(mac, hmac_result, hmac_result_len) == 0) {
+		/* Restore the query id of the packet. */
+		sldns_buffer_write_u16_at(pkt, 0, current_query_id);
+		sldns_buffer_set_position(pkt, end_of_message);
+		/* The TSIG has verified. */
 		return now > time_signed ?
 		     ( time_signed - now > fudge ? LDNS_TSIG_ERROR_BADTIME : 0 )
 		     : now - time_signed > fudge ? LDNS_TSIG_ERROR_BADTIME : 0 ;
-		sldns_buffer_set_position(pkt, end_of_message);
-		/* The TSIG has verified. */
-		return 0;
 	}
+	/* Restore the query id of the packet. */
+	sldns_buffer_write_u16_at(pkt, 0, current_query_id);
 	sldns_buffer_set_position(pkt, end_of_message);
 	return LDNS_TSIG_ERROR_BADSIG;
 }
