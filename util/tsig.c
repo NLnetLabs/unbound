@@ -61,7 +61,6 @@ tsig_verify(sldns_buffer* pkt, const uint8_t* name, const uint8_t* alg,
 {
 	size_t   n_rrs;
 	size_t   end_of_message;
-	uint16_t rdlength;
 	uint8_t  mac[1024];
 	uint16_t mac_sz;
 	uint8_t  hmac_result[1024];
