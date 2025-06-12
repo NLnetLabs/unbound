@@ -41,6 +41,8 @@
 
 #ifndef UTIL_TSIG_H
 #define UTIL_TSIG_H
+#include "util/locks.h"
+#include "util/rbtree.h"
 struct sldns_buffer;
 
 /**
@@ -95,10 +97,10 @@ struct tsig_algorithm {
  * TSIG key. This is used to sign and verify packets.
  */
 struct tsig_key {
+	/** the rbtree node */
+	rbnode_type node;
 	/** name of the key as string */
 	char* name_str;
-	/** algorithm string */
-	char* algo_str;
 	/** the algorithm structure */
 	struct tsig_algorithm* algo;
 	/**
@@ -117,11 +119,43 @@ struct tsig_key {
 };
 
 /**
+ * The TSIG key storage. Keys are stored by name.
+ * They are read from config.
+ */
+struct tsig_key_table {
+	/* Lock on the tsig key table and all keys. */
+	lock_rw_type lock;
+	/* Tree of tsig keys, by wireformat name. */
+	struct rbtree_type* tree;
+};
+
+/**
+ * Create TSIG key table.
+ * @return NULL on alloc failure.
+ */
+struct tsig_key_table* tsig_key_table_create(void);
+
+/**
+ * Delete TSIG key table. And the keys in it.
+ * @param key_table: to delete.
+ */
+void tsig_key_table_delete(struct tsig_key_table* key_table);
+
+/**
+ * Delete TSIG key.
+ * @param key: to delete
+ */
+void tsig_key_delete(struct tsig_key* key);
+
+/**
  * Verify pkt with the name (domain name), algorithm and key.
  * out 0 on success, an error code otherwise.
  */
 int tsig_verify(struct sldns_buffer* pkt, const uint8_t* name,
 	const uint8_t* alg, const uint8_t* secret, size_t secret_len,
 	uint64_t now);
+
+/** Compare function for the key table keys. */
+int tsig_key_compare(const void* v1, const void* v2);
 
 #endif /* UTIL_TSIG_H */

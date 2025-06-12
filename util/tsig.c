@@ -50,6 +50,69 @@
 #include <openssl/evp.h>
 #include <openssl/hmac.h>
 
+int
+tsig_key_compare(const void* v1, const void* v2)
+{
+	struct tsig_key* a = (struct tsig_key*)v1;
+	struct tsig_key* b = (struct tsig_key*)v2;
+
+	return query_dname_compare(a->name, b->name);
+}
+
+struct tsig_key_table*
+tsig_key_table_create(void)
+{
+	struct tsig_key_table* key_table;
+	key_table = (struct tsig_key_table*)calloc(1, sizeof(*key_table));
+	if(!key_table)
+		return NULL;
+	key_table->tree = rbtree_create(&tsig_key_compare);
+	if(!key_table->tree) {
+		free(key_table);
+		return NULL;
+	}
+	lock_rw_init(&key_table->lock);
+	lock_protect(&key_table->lock, key_table->tree,
+		sizeof(*key_table->tree));
+	return key_table;
+}
+
+/** Delete the tsig key table key. */
+static void
+tsig_key_table_delete_key(rbnode_type* node, void* ATTR_UNUSED(arg))
+{
+	struct tsig_key* key = (struct tsig_key*)node->key;
+	tsig_key_delete(key);
+}
+
+void
+tsig_key_table_delete(struct tsig_key_table* key_table)
+{
+	if(!key_table)
+		return;
+	lock_rw_destroy(&key_table->lock);
+	if(key_table->tree) {
+		traverse_postorder(key_table->tree, &tsig_key_table_delete_key,
+			NULL);
+		free(key_table->tree);
+	}
+	free(key_table);
+}
+
+void tsig_key_delete(struct tsig_key* key)
+{
+	if(!key)
+		return;
+	free(key->name_str);
+	free(key->name);
+	if(key->data) {
+		/* The secret data is removed. */
+		explicit_bzero(key->data, key->data_len);
+		free(key->data);
+	}
+	free(key);
+}
+
 /**
  * Skip packet query rr.
  * @param pkt: the packet, position before the rr, ends after the rr.

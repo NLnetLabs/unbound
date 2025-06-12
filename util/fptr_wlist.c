@@ -72,6 +72,7 @@
 #include "libunbound/libworker.h"
 #include "libunbound/context.h"
 #include "libunbound/worker.h"
+#include "util/tsig.h"
 #include "util/tube.h"
 #include "util/config_file.h"
 #include "daemon/remote.h"
@@ -262,6 +263,7 @@ fptr_whitelist_rbtree_cmp(int (*fptr) (const void *, const void *))
 	else if(fptr == &auth_zone_cmp) return 1;
 	else if(fptr == &auth_data_cmp) return 1;
 	else if(fptr == &auth_xfer_cmp) return 1;
+	else if(fptr == &tsig_key_compare) return 1;
 #ifdef HAVE_NGTCP2
 	else if(fptr == &doq_conn_cmp) return 1;
 	else if(fptr == &doq_conid_cmp) return 1;
