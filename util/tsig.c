@@ -50,6 +50,43 @@
 #include <openssl/evp.h>
 #include <openssl/hmac.h>
 
+/**
+ * Skip packet query rr.
+ * @param pkt: the packet, position before the rr, ends after the rr.
+ * @return 0 on failure.
+ */
+static int
+skip_pkt_query_rr(struct sldns_buffer* pkt)
+{
+	/* skip qname */
+	if(sldns_buffer_remaining(pkt) < 1)
+		return 0;
+	if(!pkt_dname_len(pkt))
+		return 0; /* malformed qname */
+	if(sldns_buffer_remaining(pkt) < 4)
+		return 0;
+	/* skip type and class */
+	sldns_buffer_skip(pkt, 2 * sizeof(uint16_t));
+	return 1;
+}
+
+/**
+ * Skip the packet query rrs. The position must be after the header.
+ * @param pkt: the packet. The end position is after the number of query
+ *	section records.
+ * @param num: Limit of the number of records we want to parse.
+ * @return 1 on success, 0 on failure.
+ */
+static int
+skip_pkt_query_rrs(struct sldns_buffer* pkt, int num)
+{
+	int i;
+	for(i=0; i<num; i++) {
+		if(!skip_pkt_query_rr(pkt))
+			return 0;
+	}
+	return 1;
+}
 
 /**
  * Verify pkt with the name (domain name), algorithm and key in Base64.
@@ -71,11 +108,13 @@ tsig_verify(sldns_buffer* pkt, const uint8_t* name, const uint8_t* alg,
 	uint64_t time_signed;
 	uint16_t fudge;
 	const EVP_MD* digester;
+	uint8_t* tsig_name;
+	uint16_t rdlength;
 
-	assert(LDNS_QDCOUNT(sldns_buffer_begin(pkt)) == 1);
-
+	if(sldns_buffer_limit(pkt) < LDNS_HEADER_SIZE)
+		return -1;
 	if(LDNS_ARCOUNT(sldns_buffer_begin(pkt)) < 1) {
-		log_err("No TSIG found (ARCOUNT == 0)");
+		verbose(VERB_ALGO, "No TSIG found, ARCOUNT == 0");
 		return -1;
 	}
 	LDNS_ARCOUNT_SET( sldns_buffer_begin(pkt)
@@ -86,22 +125,39 @@ tsig_verify(sldns_buffer* pkt, const uint8_t* name, const uint8_t* alg,
 
 	sldns_buffer_rewind(pkt);
 	sldns_buffer_skip(pkt, LDNS_HEADER_SIZE);
-	pkt_dname_len(pkt);                           /* skip qname */
-	sldns_buffer_skip(pkt, 2 * sizeof(uint16_t)); /* skip type and class */
-	if(!skip_pkt_rrs(pkt, n_rrs))                 /* skip all rrs */
+
+	/* Skip qnames. */
+	if(!skip_pkt_query_rrs(pkt, LDNS_QDCOUNT(sldns_buffer_begin(pkt))))
+		return -1;
+	/* Skip all rrs. */
+	if(!skip_pkt_rrs(pkt, n_rrs))
 		return -1;
 	end_of_message = sldns_buffer_position(pkt);
-	if(query_dname_compare(name, sldns_buffer_current(pkt)))
+
+	/* Skip TSIG name. */
+	if(sldns_buffer_remaining(pkt) < 1)
+		return -1;
+	tsig_name = sldns_buffer_current(pkt);
+	if(!pkt_dname_len(pkt))
+		return -1;
+	if(dname_pkt_compare(pkt, tsig_name, (uint8_t*)name) != 0)
 		return LDNS_TSIG_ERROR_BADKEY;
-	pkt_dname_len(pkt);                           /* skip TSIG name */
 	pos = sldns_buffer_position(pkt);             /* Append pos */
+
+	/* Skip type, class, TTL and rdlength */
+	if(sldns_buffer_remaining(pkt) < 2+2+4+2 /* type class TTL rdlen */)
+		return -1;
 	if(sldns_buffer_read_u16(pkt) != LDNS_RR_TYPE_TSIG) {
-		log_err("No TSIG found!");
+		verbose(VERB_ALGO, "No TSIG found, wrong RR type");
 		return -1;
 	}
 	sldns_buffer_skip(pkt, sizeof(uint16_t)       /* skip class */
-	                     + sizeof(uint32_t)       /* skip TTLS */
-			     + sizeof(uint16_t));     /* skip rdlength */
+	                     + sizeof(uint32_t));     /* skip TTL */
+	rdlength = sldns_buffer_read_u16(pkt);        /* read rdlength */
+	if(sldns_buffer_remaining(pkt) < rdlength)
+		return -1;
+
+	/* Read the TSIG rdata. */
 	if(query_dname_compare(alg, sldns_buffer_current(pkt)))
 		return LDNS_TSIG_ERROR_BADKEY;
 	algname_size = pkt_dname_len(pkt);            /* skip alg name */
@@ -144,7 +200,9 @@ tsig_verify(sldns_buffer* pkt, const uint8_t* name, const uint8_t* alg,
 		     ( time_signed - now > fudge ? LDNS_TSIG_ERROR_BADTIME : 0 )
 		     : now - time_signed > fudge ? LDNS_TSIG_ERROR_BADTIME : 0 ;
 		sldns_buffer_set_position(pkt, end_of_message);
+		/* The TSIG has verified. */
 		return 0;
 	}
+	sldns_buffer_set_position(pkt, end_of_message);
 	return LDNS_TSIG_ERROR_BADSIG;
 }
