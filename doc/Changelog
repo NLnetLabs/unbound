@@ -1,3 +1,7 @@
+12 June 2025: Wouter
+	- Fix header return value description for skip_pkt_rrs and
+	  parse_edns_from_query_pkt.
+
 11 June 2025: Wouter
 	- Fix bitwise operators in conditional expressions with parentheses.
 	- Fix conditional expressions with parentheses for bitwise and.
