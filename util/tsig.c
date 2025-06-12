@@ -36,7 +36,7 @@
 /**
  * \file
  *
- * This file contains functions for dealing with TSIG records and signatures.
+ * This file provides functions to create and verify TSIG RRs.
  */
 
 #include "config.h"
