@@ -278,7 +278,7 @@ delegpt_count_addr(struct delegpt* dp, size_t* numaddr, size_t* numres,
 
 void delegpt_log(enum verbosity_value v, struct delegpt* dp)
 {
-	char buf[LDNS_MAX_DOMAINLEN+1];
+	char buf[LDNS_MAX_DOMAINLEN];
 	struct delegpt_ns* ns;
 	struct delegpt_addr* a;
 	size_t missing=0, numns=0, numaddr=0, numres=0, numavail=0;
@@ -319,6 +319,45 @@ void delegpt_log(enum verbosity_value v, struct delegpt* dp)
 			log_addr(VERB_ALGO, s, &a->addr, a->addrlen);
 		}
 	}
+}
+
+int
+delegpt_addr_on_result_list(struct delegpt* dp, struct delegpt_addr* find)
+{
+	struct delegpt_addr* a = dp->result_list;
+	while(a) {
+		if(a == find)
+			return 1;
+		a = a->next_result;
+	}
+	return 0;
+}
+
+void
+delegpt_usable_list_remove_addr(struct delegpt* dp, struct delegpt_addr* del)
+{
+	struct delegpt_addr* usa = dp->usable_list, *prev = NULL;
+	while(usa) {
+		if(usa == del) {
+			/* snip off the usable list */
+			if(prev)
+				prev->next_usable = usa->next_usable;
+			else	dp->usable_list = usa->next_usable;
+			return;
+		}
+		prev = usa;
+		usa = usa->next_usable;
+	}
+}
+
+void
+delegpt_add_to_result_list(struct delegpt* dp, struct delegpt_addr* a)
+{
+	if(delegpt_addr_on_result_list(dp, a))
+		return;
+	delegpt_usable_list_remove_addr(dp, a);
+	a->next_result = dp->result_list;
+	dp->result_list = a;
 }
 
 void 

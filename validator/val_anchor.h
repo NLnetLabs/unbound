@@ -58,7 +58,7 @@ struct sldns_buffer;
  * on a trust anchor and look it up again to delete it.
  */
 struct val_anchors {
-	/** lock on trees */
+	/** lock on trees. It is locked in order after stubs. */
 	lock_basic_type lock;
 	/**
 	 * Anchors are store in this tree. Sort order is chosen, so that
@@ -239,5 +239,21 @@ size_t anchor_list_keytags(struct trust_anchor* ta, uint16_t* list, size_t num);
  */
 int anchor_has_keytag(struct val_anchors* anchors, uint8_t* name, int namelabs,
 	size_t namelen, uint16_t dclass, uint16_t keytag);
+
+/**
+ * Find an anchor that is not an insecure point, if any, or there are no
+ * DNSSEC verification anchors if none.
+ * @param anchors: anchor storage
+ * @return trust anchor or NULL. It is locked.
+ */
+struct trust_anchor* anchors_find_any_noninsecure(struct val_anchors* anchors);
+
+/**
+ * Swap internal tree with preallocated entries.
+ * @param anchors: anchor storage.
+ * @param data: the data structure used to take elements from. This contains
+ * 	the old elements on return.
+ */
+void anchors_swap_tree(struct val_anchors* anchors, struct val_anchors* data);
 
 #endif /* VALIDATOR_VAL_ANCHOR_H */

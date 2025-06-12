@@ -129,7 +129,7 @@ config_file
    
    .. attribute:: ifs
    
-      Interface description strings (IP addresses).
+      List of interface description strings (IP addresses).
 
    .. attribute:: num_out_ifs
    
@@ -138,7 +138,7 @@ config_file
 
    .. attribute:: out_ifs
    
-      Outgoing interface description strings (IP addresses).
+      List of outgoing interface description strings (IP addresses).
       
    .. attribute:: root_hints
    
@@ -176,6 +176,10 @@ config_file
    
       Harden against spoofed glue (out of zone data).
    
+   .. attribute:: harden_unverified_glue
+
+      Harden against unverified glue.
+
    .. attribute:: harden_dnssec_stripped
    
       Harden against receiving no DNSSEC data for trust anchor.
@@ -339,4 +343,5 @@ config_file
 
    .. attribute:: python_script
    
-      Python script file.
+      Linked list of Python script files.
+      Deprecated; `mod_env['script']` should be used instead.

@@ -72,7 +72,7 @@ static const sldns_rdf_type type_nsap_wireformat[] = {
 	LDNS_RDF_TYPE_NSAP
 };
 static const sldns_rdf_type type_nsap_ptr_wireformat[] = {
-	LDNS_RDF_TYPE_STR
+	LDNS_RDF_TYPE_UNQUOTED
 };
 static const sldns_rdf_type type_sig_wireformat[] = {
 	LDNS_RDF_TYPE_TYPE, LDNS_RDF_TYPE_ALG, LDNS_RDF_TYPE_INT8, LDNS_RDF_TYPE_INT32,
@@ -86,7 +86,7 @@ static const sldns_rdf_type type_px_wireformat[] = {
 	LDNS_RDF_TYPE_INT16, LDNS_RDF_TYPE_DNAME, LDNS_RDF_TYPE_DNAME
 };
 static const sldns_rdf_type type_gpos_wireformat[] = {
-	LDNS_RDF_TYPE_STR, LDNS_RDF_TYPE_STR, LDNS_RDF_TYPE_STR
+	LDNS_RDF_TYPE_UNQUOTED, LDNS_RDF_TYPE_UNQUOTED, LDNS_RDF_TYPE_UNQUOTED
 };
 static const sldns_rdf_type type_aaaa_wireformat[] = { LDNS_RDF_TYPE_AAAA };
 static const sldns_rdf_type type_loc_wireformat[] = { LDNS_RDF_TYPE_LOC };
@@ -617,6 +617,12 @@ static sldns_rr_descriptor rdata_field_descriptors[] = {
 {(enum sldns_enum_rr_type)0, "TYPE258", 1, 1, type_0_wireformat, LDNS_RDF_TYPE_NONE, LDNS_RR_NO_COMPRESS, 0 },
 #endif
 
+{(enum sldns_enum_rr_type)0, "TYPE259", 1, 1, type_0_wireformat, LDNS_RDF_TYPE_NONE, LDNS_RR_NO_COMPRESS, 0 },
+{(enum sldns_enum_rr_type)0, "TYPE260", 1, 1, type_0_wireformat, LDNS_RDF_TYPE_NONE, LDNS_RR_NO_COMPRESS, 0 },
+
+	/* 261 */
+	{LDNS_RR_TYPE_RESINFO,  "RESINFO", 1, 0, NULL, LDNS_RDF_TYPE_UNQUOTED, LDNS_RR_NO_COMPRESS, 0 },
+
 /* split in array, no longer contiguous */
 
 #ifdef DRAFT_RRTYPES
@@ -702,7 +708,11 @@ sldns_get_rr_type_by_name(const char *name)
 
 	/* TYPEXX representation */
 	if (strlen(name) > 4 && strncasecmp(name, "TYPE", 4) == 0) {
-		return atoi(name + 4);
+		unsigned int a = atoi(name + 4);
+		if (a > LDNS_RR_TYPE_LAST) {
+			return (enum sldns_enum_rr_type)0;
+		}
+		return a;
 	}
 
 	/* Normal types */
@@ -740,7 +750,11 @@ sldns_get_rr_class_by_name(const char *name)
 
 	/* CLASSXX representation */
 	if (strlen(name) > 5 && strncasecmp(name, "CLASS", 5) == 0) {
-		return atoi(name + 5);
+		unsigned int a = atoi(name + 5);
+		if (a > LDNS_RR_CLASS_LAST) {
+			return (enum sldns_enum_rr_class)0;
+		}
+		return a;
 	}
 
 	/* Normal types */

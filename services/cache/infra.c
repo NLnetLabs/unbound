@@ -52,20 +52,31 @@
 #include "util/config_file.h"
 #include "iterator/iterator.h"
 
-/** Timeout when only a single probe query per IP is allowed. */
-#define PROBE_MAXRTO 12000 /* in msec */
-
-/** number of timeouts for a type when the domain can be blocked ;
- * even if another type has completely rtt maxed it, the different type
- * can do this number of packets (until those all timeout too) */
-#define TIMEOUT_COUNT_MAX 3
-
 /** ratelimit value for delegation point */
 int infra_dp_ratelimit = 0;
 
 /** ratelimit value for client ip addresses,
  *  in queries per second. */
 int infra_ip_ratelimit = 0;
+
+/** ratelimit value for client ip addresses,
+ *  in queries per second.
+ *  For clients with a valid DNS Cookie. */
+int infra_ip_ratelimit_cookie = 0;
+
+/** Minus 1000 because that is outside of the RTTBAND, so
+ * blacklisted servers stay blacklisted if this is chosen.
+ * If USEFUL_SERVER_TOP_TIMEOUT is below 1000 (configured via RTT_MAX_TIMEOUT,
+ * infra-cache-max-rtt) change it to just above the RTT_BAND. */
+int
+still_useful_timeout()
+{
+	return
+	USEFUL_SERVER_TOP_TIMEOUT < 1000 ||
+	USEFUL_SERVER_TOP_TIMEOUT - 1000 <= RTT_BAND
+		?RTT_BAND + 1
+		:USEFUL_SERVER_TOP_TIMEOUT - 1000;
+}
 
 size_t 
 infra_sizefunc(void* k, void* ATTR_UNUSED(d))
@@ -150,7 +161,7 @@ rate_deldatafunc(void* d, void* ATTR_UNUSED(arg))
 
 /** find or create element in domainlimit tree */
 static struct domain_limit_data* domain_limit_findcreate(
-	struct infra_cache* infra, char* name)
+	struct rbtree_type* domain_limits, char* name)
 {
 	uint8_t* nm;
 	int labs;
@@ -166,8 +177,8 @@ static struct domain_limit_data* domain_limit_findcreate(
 	labs = dname_count_labels(nm);
 
 	/* can we find it? */
-	d = (struct domain_limit_data*)name_tree_find(&infra->domain_limits,
-		nm, nmlen, labs, LDNS_RR_CLASS_IN);
+	d = (struct domain_limit_data*)name_tree_find(domain_limits, nm,
+		nmlen, labs, LDNS_RR_CLASS_IN);
 	if(d) {
 		free(nm);
 		return d;
@@ -186,8 +197,8 @@ static struct domain_limit_data* domain_limit_findcreate(
 	d->node.dclass = LDNS_RR_CLASS_IN;
 	d->lim = -1;
 	d->below = -1;
-	if(!name_tree_insert(&infra->domain_limits, &d->node, nm, nmlen,
-		labs, LDNS_RR_CLASS_IN)) {
+	if(!name_tree_insert(domain_limits, &d->node, nm, nmlen, labs,
+		LDNS_RR_CLASS_IN)) {
 		log_err("duplicate element in domainlimit tree");
 		free(nm);
 		free(d);
@@ -197,19 +208,19 @@ static struct domain_limit_data* domain_limit_findcreate(
 }
 
 /** insert rate limit configuration into lookup tree */
-static int infra_ratelimit_cfg_insert(struct infra_cache* infra,
+static int infra_ratelimit_cfg_insert(struct rbtree_type* domain_limits,
 	struct config_file* cfg)
 {
 	struct config_str2list* p;
 	struct domain_limit_data* d;
 	for(p = cfg->ratelimit_for_domain; p; p = p->next) {
-		d = domain_limit_findcreate(infra, p->str);
+		d = domain_limit_findcreate(domain_limits, p->str);
 		if(!d)
 			return 0;
 		d->lim = atoi(p->str2);
 	}
 	for(p = cfg->ratelimit_below_domain; p; p = p->next) {
-		d = domain_limit_findcreate(infra, p->str);
+		d = domain_limit_findcreate(domain_limits, p->str);
 		if(!d)
 			return 0;
 		d->below = atoi(p->str2);
@@ -217,15 +228,117 @@ static int infra_ratelimit_cfg_insert(struct infra_cache* infra,
 	return 1;
 }
 
-/** setup domain limits tree (0 on failure) */
-static int
-setup_domain_limits(struct infra_cache* infra, struct config_file* cfg)
+int
+setup_domain_limits(struct rbtree_type* domain_limits, struct config_file* cfg)
 {
-	name_tree_init(&infra->domain_limits);
-	if(!infra_ratelimit_cfg_insert(infra, cfg)) {
+	name_tree_init(domain_limits);
+	if(!infra_ratelimit_cfg_insert(domain_limits, cfg)) {
 		return 0;
 	}
-	name_tree_init_parents(&infra->domain_limits);
+	name_tree_init_parents(domain_limits);
+	return 1;
+}
+
+/** find or create element in wait limit netblock tree */
+static struct wait_limit_netblock_info*
+wait_limit_netblock_findcreate(struct rbtree_type* tree, char* str)
+{
+	struct sockaddr_storage addr;
+	int net;
+	socklen_t addrlen;
+	struct wait_limit_netblock_info* d;
+
+	if(!netblockstrtoaddr(str, 0, &addr, &addrlen, &net)) {
+		log_err("cannot parse wait limit netblock '%s'", str);
+		return 0;
+	}
+
+	/* can we find it? */
+	d = (struct wait_limit_netblock_info*)addr_tree_find(tree, &addr,
+		addrlen, net);
+	if(d)
+		return d;
+
+	/* create it */
+	d = (struct wait_limit_netblock_info*)calloc(1, sizeof(*d));
+	if(!d)
+		return NULL;
+	d->limit = -1;
+	if(!addr_tree_insert(tree, &d->node, &addr, addrlen, net)) {
+		log_err("duplicate element in domainlimit tree");
+		free(d);
+		return NULL;
+	}
+	return d;
+}
+
+
+/** insert wait limit information into lookup tree */
+static int
+infra_wait_limit_netblock_insert(rbtree_type* wait_limits_netblock,
+        rbtree_type* wait_limits_cookie_netblock, struct config_file* cfg)
+{
+	struct config_str2list* p;
+	struct wait_limit_netblock_info* d;
+	for(p = cfg->wait_limit_netblock; p; p = p->next) {
+		d = wait_limit_netblock_findcreate(wait_limits_netblock,
+			p->str);
+		if(!d)
+			return 0;
+		d->limit = atoi(p->str2);
+	}
+	for(p = cfg->wait_limit_cookie_netblock; p; p = p->next) {
+		d = wait_limit_netblock_findcreate(wait_limits_cookie_netblock,
+			p->str);
+		if(!d)
+			return 0;
+		d->limit = atoi(p->str2);
+	}
+	return 1;
+}
+
+/** Add a default wait limit netblock */
+static int
+wait_limit_netblock_default(struct rbtree_type* tree, char* str, int limit)
+{
+	struct wait_limit_netblock_info* d;
+	d = wait_limit_netblock_findcreate(tree, str);
+	if(!d)
+		return 0;
+	d->limit = limit;
+	return 1;
+}
+
+int
+setup_wait_limits(rbtree_type* wait_limits_netblock,
+	rbtree_type* wait_limits_cookie_netblock, struct config_file* cfg)
+{
+	addr_tree_init(wait_limits_netblock);
+	addr_tree_init(wait_limits_cookie_netblock);
+
+	/* Insert defaults */
+	/* The loopback address is separated from the rest of the network. */
+	/* wait-limit-netblock: 127.0.0.0/8 -1 */
+	if(!wait_limit_netblock_default(wait_limits_netblock, "127.0.0.0/8",
+		-1))
+		return 0;
+	/* wait-limit-netblock: ::1/128 -1 */
+	if(!wait_limit_netblock_default(wait_limits_netblock, "::1/128", -1))
+		return 0;
+	/* wait-limit-cookie-netblock: 127.0.0.0/8 -1 */
+	if(!wait_limit_netblock_default(wait_limits_cookie_netblock,
+		"127.0.0.0/8", -1))
+		return 0;
+	/* wait-limit-cookie-netblock: ::1/128 -1 */
+	if(!wait_limit_netblock_default(wait_limits_cookie_netblock,
+		"::1/128", -1))
+		return 0;
+
+	if(!infra_wait_limit_netblock_insert(wait_limits_netblock,
+		wait_limits_cookie_netblock, cfg))
+		return 0;
+	addr_tree_init_parents(wait_limits_netblock);
+	addr_tree_init_parents(wait_limits_cookie_netblock);
 	return 1;
 }
 
@@ -258,11 +371,17 @@ infra_create(struct config_file* cfg)
 		return NULL;
 	}
 	/* insert config data into ratelimits */
-	if(!setup_domain_limits(infra, cfg)) {
+	if(!setup_domain_limits(&infra->domain_limits, cfg)) {
+		infra_delete(infra);
+		return NULL;
+	}
+	if(!setup_wait_limits(&infra->wait_limits_netblock,
+		&infra->wait_limits_cookie_netblock, cfg)) {
 		infra_delete(infra);
 		return NULL;
 	}
 	infra_ip_ratelimit = cfg->ip_ratelimit;
+	infra_ip_ratelimit_cookie = cfg->ip_ratelimit_cookie;
 	infra->client_ip_rates = slabhash_create(cfg->ip_ratelimit_slabs,
 	    INFRA_HOST_STARTSIZE, cfg->ip_ratelimit_size, &ip_rate_sizefunc,
 	    &ip_rate_compfunc, &ip_rate_delkeyfunc, &ip_rate_deldatafunc, NULL);
@@ -282,6 +401,29 @@ static void domain_limit_free(rbnode_type* n, void* ATTR_UNUSED(arg))
 	}
 }
 
+void
+domain_limits_free(struct rbtree_type* domain_limits)
+{
+	if(!domain_limits)
+		return;
+	traverse_postorder(domain_limits, domain_limit_free, NULL);
+}
+
+/** delete wait_limit_netblock_info entries */
+static void wait_limit_netblock_del(rbnode_type* n, void* ATTR_UNUSED(arg))
+{
+	free(n);
+}
+
+void
+wait_limits_free(struct rbtree_type* wait_limits_tree)
+{
+	if(!wait_limits_tree)
+		return;
+	traverse_postorder(wait_limits_tree, wait_limit_netblock_del,
+		NULL);
+}
+
 void 
 infra_delete(struct infra_cache* infra)
 {
@@ -289,8 +431,10 @@ infra_delete(struct infra_cache* infra)
 		return;
 	slabhash_delete(infra->hosts);
 	slabhash_delete(infra->domain_rates);
-	traverse_postorder(&infra->domain_limits, domain_limit_free, NULL);
+	domain_limits_free(&infra->domain_limits);
 	slabhash_delete(infra->client_ip_rates);
+	wait_limits_free(&infra->wait_limits_netblock);
+	wait_limits_free(&infra->wait_limits_cookie_netblock);
 	free(infra);
 }
 
@@ -304,6 +448,7 @@ infra_adjust(struct infra_cache* infra, struct config_file* cfg)
 	infra->infra_keep_probing = cfg->infra_keep_probing;
 	infra_dp_ratelimit = cfg->ratelimit;
 	infra_ip_ratelimit = cfg->ip_ratelimit;
+	infra_ip_ratelimit_cookie = cfg->ip_ratelimit_cookie;
 	maxmem = cfg->infra_cache_numhosts * (sizeof(struct infra_key)+
 		sizeof(struct infra_data)+INFRA_BYTES_NAME);
 	/* divide cachesize by slabs and multiply by slabs, because if the
@@ -320,7 +465,7 @@ infra_adjust(struct infra_cache* infra, struct config_file* cfg)
 		/* reapply domain limits */
 		traverse_postorder(&infra->domain_limits, domain_limit_free,
 			NULL);
-		if(!setup_domain_limits(infra, cfg)) {
+		if(!setup_domain_limits(&infra->domain_limits, cfg)) {
 			infra_delete(infra);
 			return NULL;
 		}
@@ -562,7 +707,7 @@ infra_update_tcp_works(struct infra_cache* infra,
 	if(data->rtt.rto >= RTT_MAX_TIMEOUT)
 		/* do not disqualify this server altogether, it is better
 		 * than nothing */
-		data->rtt.rto = RTT_MAX_TIMEOUT-1000;
+		data->rtt.rto = still_useful_timeout();
 	lock_rw_unlock(&e->lock);
 }
 
@@ -702,7 +847,7 @@ infra_get_lame_rtt(struct infra_cache* infra,
 		&& infra->infra_keep_probing) {
 		/* single probe, keep probing */
 		if(*rtt >= USEFUL_SERVER_TOP_TIMEOUT)
-			*rtt = USEFUL_SERVER_TOP_TIMEOUT-1000;
+			*rtt = still_useful_timeout();
 	} else if(host->rtt.rto >= PROBE_MAXRTO && timenow < host->probedelay
 		&& rtt_notimeout(&host->rtt)*4 <= host->rtt.rto) {
 		/* single probe for this domain, and we are not probing */
@@ -710,26 +855,23 @@ infra_get_lame_rtt(struct infra_cache* infra,
 		if(qtype == LDNS_RR_TYPE_A) {
 			if(host->timeout_A >= TIMEOUT_COUNT_MAX)
 				*rtt = USEFUL_SERVER_TOP_TIMEOUT;
-			else	*rtt = USEFUL_SERVER_TOP_TIMEOUT-1000;
+			else	*rtt = still_useful_timeout();
 		} else if(qtype == LDNS_RR_TYPE_AAAA) {
 			if(host->timeout_AAAA >= TIMEOUT_COUNT_MAX)
 				*rtt = USEFUL_SERVER_TOP_TIMEOUT;
-			else	*rtt = USEFUL_SERVER_TOP_TIMEOUT-1000;
+			else	*rtt = still_useful_timeout();
 		} else {
 			if(host->timeout_other >= TIMEOUT_COUNT_MAX)
 				*rtt = USEFUL_SERVER_TOP_TIMEOUT;
-			else	*rtt = USEFUL_SERVER_TOP_TIMEOUT-1000;
+			else	*rtt = still_useful_timeout();
 		}
 	}
 	/* expired entry */
 	if(timenow > host->ttl) {
-
 		/* see if this can be a re-probe of an unresponsive server */
-		/* minus 1000 because that is outside of the RTTBAND, so
-		 * blacklisted servers stay blacklisted if this is chosen */
 		if(host->rtt.rto >= USEFUL_SERVER_TOP_TIMEOUT) {
 			lock_rw_unlock(&e->lock);
-			*rtt = USEFUL_SERVER_TOP_TIMEOUT-1000;
+			*rtt = still_useful_timeout();
 			*lame = 0;
 			*dnsseclame = 0;
 			*reclame = 0;
@@ -875,7 +1017,8 @@ static void infra_create_ratedata(struct infra_cache* infra,
 
 /** create rate data item for ip address */
 static void infra_ip_create_ratedata(struct infra_cache* infra,
-	struct sockaddr_storage* addr, socklen_t addrlen, time_t timenow)
+	struct sockaddr_storage* addr, socklen_t addrlen, time_t timenow,
+	int mesh_wait)
 {
 	hashvalue_type h = hash_addr(addr, addrlen, 0);
 	struct ip_rate_key* k = (struct ip_rate_key*)calloc(1, sizeof(*k));
@@ -893,6 +1036,7 @@ static void infra_ip_create_ratedata(struct infra_cache* infra,
 	k->entry.data = d;
 	d->qps[0] = 1;
 	d->timestamp[0] = timenow;
+	d->mesh_wait = mesh_wait;
 	slabhash_insert(infra->client_ip_rates, h, &k->entry, d, NULL);
 }
 
@@ -976,7 +1120,8 @@ int infra_ratelimit_inc(struct infra_cache* infra, uint8_t* name,
 		lock_rw_unlock(&entry->lock);
 
 		if(premax <= lim && max > lim) {
-			char buf[257], qnm[257], ts[12], cs[12], ip[128];
+			char buf[LDNS_MAX_DOMAINLEN], qnm[LDNS_MAX_DOMAINLEN];
+			char ts[12], cs[12], ip[128];
 			dname_str(name, buf);
 			dname_str(qinfo->qname, qnm);
 			sldns_wire2str_type_buf(qinfo->qtype, ts, sizeof(ts));
@@ -1051,9 +1196,50 @@ infra_get_mem(struct infra_cache* infra)
 	return s;
 }
 
+/* Returns 1 if the limit has not been exceeded, 0 otherwise. */
+static int
+check_ip_ratelimit(struct sockaddr_storage* addr, socklen_t addrlen,
+	struct sldns_buffer* buffer, int premax, int max, int has_cookie)
+{
+	int limit;
+
+	if(has_cookie) limit = infra_ip_ratelimit_cookie;
+	else           limit = infra_ip_ratelimit;
+
+	/* Disabled */
+	if(limit == 0) return 1;
+
+	if(premax <= limit && max > limit) {
+		char client_ip[128], qnm[LDNS_MAX_DOMAINLEN+1+12+12];
+		addr_to_str(addr, addrlen, client_ip, sizeof(client_ip));
+		qnm[0]=0;
+		if(sldns_buffer_limit(buffer)>LDNS_HEADER_SIZE &&
+			LDNS_QDCOUNT(sldns_buffer_begin(buffer))!=0) {
+			(void)sldns_wire2str_rrquestion_buf(
+				sldns_buffer_at(buffer, LDNS_HEADER_SIZE),
+				sldns_buffer_limit(buffer)-LDNS_HEADER_SIZE,
+				qnm, sizeof(qnm));
+			if(strlen(qnm)>0 && qnm[strlen(qnm)-1]=='\n')
+				qnm[strlen(qnm)-1] = 0; /*remove newline*/
+			if(strchr(qnm, '\t'))
+				*strchr(qnm, '\t') = ' ';
+			if(strchr(qnm, '\t'))
+				*strchr(qnm, '\t') = ' ';
+			verbose(VERB_OPS, "ip_ratelimit exceeded %s %d%s %s",
+				client_ip, limit,
+				has_cookie?"(cookie)":"", qnm);
+		} else {
+			verbose(VERB_OPS, "ip_ratelimit exceeded %s %d%s (no query name)",
+				client_ip, limit,
+				has_cookie?"(cookie)":"");
+		}
+	}
+	return (max <= limit);
+}
+
 int infra_ip_ratelimit_inc(struct infra_cache* infra,
 	struct sockaddr_storage* addr, socklen_t addrlen, time_t timenow,
-	int backoff, struct sldns_buffer* buffer)
+	int has_cookie, int backoff, struct sldns_buffer* buffer)
 {
 	int max;
 	struct lruhash_entry* entry;
@@ -1070,34 +1256,86 @@ int infra_ip_ratelimit_inc(struct infra_cache* infra,
 		(*cur)++;
 		max = infra_rate_max(entry->data, timenow, backoff);
 		lock_rw_unlock(&entry->lock);
-
-		if(premax <= infra_ip_ratelimit && max > infra_ip_ratelimit) {
-			char client_ip[128], qnm[LDNS_MAX_DOMAINLEN+1+12+12];
-			addr_to_str(addr, addrlen, client_ip, sizeof(client_ip));
-			qnm[0]=0;
-			if(sldns_buffer_limit(buffer)>LDNS_HEADER_SIZE &&
-				LDNS_QDCOUNT(sldns_buffer_begin(buffer))!=0) {
-				(void)sldns_wire2str_rrquestion_buf(
-					sldns_buffer_at(buffer, LDNS_HEADER_SIZE),
-					sldns_buffer_limit(buffer)-LDNS_HEADER_SIZE,
-					qnm, sizeof(qnm));
-				if(strlen(qnm)>0 && qnm[strlen(qnm)-1]=='\n')
-					qnm[strlen(qnm)-1] = 0; /*remove newline*/
-				if(strchr(qnm, '\t'))
-					*strchr(qnm, '\t') = ' ';
-				if(strchr(qnm, '\t'))
-					*strchr(qnm, '\t') = ' ';
-				verbose(VERB_OPS, "ip_ratelimit exceeded %s %d %s",
-					client_ip, infra_ip_ratelimit, qnm);
-			} else {
-				verbose(VERB_OPS, "ip_ratelimit exceeded %s %d (no query name)",
-					client_ip, infra_ip_ratelimit);
-			}
-		}
-		return (max <= infra_ip_ratelimit);
+		return check_ip_ratelimit(addr, addrlen, buffer, premax, max,
+			has_cookie);
 	}
 
 	/* create */
-	infra_ip_create_ratedata(infra, addr, addrlen, timenow);
+	infra_ip_create_ratedata(infra, addr, addrlen, timenow, 0);
 	return 1;
+}
+
+int infra_wait_limit_allowed(struct infra_cache* infra, struct comm_reply* rep,
+	int cookie_valid, struct config_file* cfg)
+{
+	struct lruhash_entry* entry;
+	if(cfg->wait_limit == 0)
+		return 1;
+
+	entry = infra_find_ip_ratedata(infra, &rep->client_addr,
+		rep->client_addrlen, 0);
+	if(entry) {
+		rbtree_type* tree;
+		struct wait_limit_netblock_info* w;
+		struct rate_data* d = (struct rate_data*)entry->data;
+		int mesh_wait = d->mesh_wait;
+		lock_rw_unlock(&entry->lock);
+
+		/* have the wait amount, check how much is allowed */
+		if(cookie_valid)
+			tree = &infra->wait_limits_cookie_netblock;
+		else	tree = &infra->wait_limits_netblock;
+		w = (struct wait_limit_netblock_info*)addr_tree_lookup(tree,
+			&rep->client_addr, rep->client_addrlen);
+		if(w) {
+			if(w->limit != -1 && mesh_wait > w->limit)
+				return 0;
+		} else {
+			/* if there is no IP netblock specific information,
+			 * use the configured value. */
+			if(mesh_wait > (cookie_valid?cfg->wait_limit_cookie:
+				cfg->wait_limit))
+				return 0;
+		}
+	}
+	return 1;
+}
+
+void infra_wait_limit_inc(struct infra_cache* infra, struct comm_reply* rep,
+	time_t timenow, struct config_file* cfg)
+{
+	struct lruhash_entry* entry;
+	if(cfg->wait_limit == 0)
+		return;
+
+	/* Find it */
+	entry = infra_find_ip_ratedata(infra, &rep->client_addr,
+		rep->client_addrlen, 1);
+	if(entry) {
+		struct rate_data* d = (struct rate_data*)entry->data;
+		d->mesh_wait++;
+		lock_rw_unlock(&entry->lock);
+		return;
+	}
+
+	/* Create it */
+	infra_ip_create_ratedata(infra, &rep->client_addr,
+		rep->client_addrlen, timenow, 1);
+}
+
+void infra_wait_limit_dec(struct infra_cache* infra, struct comm_reply* rep,
+	struct config_file* cfg)
+{
+	struct lruhash_entry* entry;
+	if(cfg->wait_limit == 0)
+		return;
+
+	entry = infra_find_ip_ratedata(infra, &rep->client_addr,
+		rep->client_addrlen, 1);
+	if(entry) {
+		struct rate_data* d = (struct rate_data*)entry->data;
+		if(d->mesh_wait > 0)
+			d->mesh_wait--;
+		lock_rw_unlock(&entry->lock);
+	}
 }

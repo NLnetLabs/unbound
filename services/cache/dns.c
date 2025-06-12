@@ -80,6 +80,7 @@ store_rrsets(struct module_env* env, struct reply_info* rep, time_t now,
 	struct regional* region, time_t qstarttime)
 {
 	size_t i;
+	time_t ttl, min_ttl = rep->ttl;
 	/* see if rrset already exists in cache, if not insert it. */
 	for(i=0; i<rep->rrset_count; i++) {
 		rep->ref[i].key = rep->rrsets[i];
@@ -87,7 +88,7 @@ store_rrsets(struct module_env* env, struct reply_info* rep, time_t now,
 		/* update ref if it was in the cache */
 		switch(rrset_cache_update(env->rrset_cache, &rep->ref[i],
 				env->alloc, ((ntohs(rep->ref[i].key->rk.type)==
-				LDNS_RR_TYPE_NS && !pside)?qstarttime:now + leeway))) {
+				LDNS_RR_TYPE_NS && !pside)?qstarttime:now) + leeway)) {
 		case 0: /* ref unchanged, item inserted */
 			break;
 		case 2: /* ref updated, cache is superior */
@@ -95,7 +96,8 @@ store_rrsets(struct module_env* env, struct reply_info* rep, time_t now,
 				struct ub_packed_rrset_key* ck;
 				lock_rw_rdlock(&rep->ref[i].key->entry.lock);
 				/* if deleted rrset, do not copy it */
-				if(rep->ref[i].key->id == 0)
+				if(rep->ref[i].key->id == 0 ||
+					rep->ref[i].id != rep->ref[i].key->id)
 					ck = NULL;
 				else 	ck = packed_rrset_copy_region(
 					rep->ref[i].key, region, now);
@@ -108,10 +110,27 @@ store_rrsets(struct module_env* env, struct reply_info* rep, time_t now,
 			/* no break: also copy key item */
 			/* the line below is matched by gcc regex and silences
 			 * the fallthrough warning */
+			ATTR_FALLTHROUGH
 			/* fallthrough */
 		case 1: /* ref updated, item inserted */
 			rep->rrsets[i] = rep->ref[i].key;
+			/* ref was updated; make sure the message ttl is
+			 * updated to the minimum of the current rrsets. */
+			lock_rw_rdlock(&rep->ref[i].key->entry.lock);
+			/* if deleted, skip ttl update. */
+			if(rep->ref[i].key->id != 0 &&
+				rep->ref[i].id == rep->ref[i].key->id) {
+				ttl = ((struct packed_rrset_data*)
+				    rep->rrsets[i]->entry.data)->ttl;
+				if(ttl < min_ttl) min_ttl = ttl;
+			}
+			lock_rw_unlock(&rep->ref[i].key->entry.lock);
 		}
+	}
+	if(min_ttl < rep->ttl) {
+		rep->ttl = min_ttl;
+		rep->prefetch_ttl = PREFETCH_TTL_CALC(rep->ttl);
+		rep->serve_expired_ttl = rep->ttl + SERVE_EXPIRED_TTL;
 	}
 }
 
@@ -132,31 +151,6 @@ msg_cache_remove(struct module_env* env, uint8_t* qname, size_t qnamelen,
 	slabhash_remove(env->msg_cache, h, &k);
 }
 
-/** remove servfail msg cache entry */
-static void
-msg_del_servfail(struct module_env* env, struct query_info* qinfo,
-	uint32_t flags)
-{
-	struct msgreply_entry* e;
-	/* see if the entry is servfail, and then remove it, so that
-	 * lookups move from the cacheresponse stage to the recursionresponse
-	 * stage */
-	e = msg_cache_lookup(env, qinfo->qname, qinfo->qname_len,
-		qinfo->qtype, qinfo->qclass, flags, 0, 0);
-	if(!e) return;
-	/* we don't check for the ttl here, also expired servfail entries
-	 * are removed.  If the user uses serve-expired, they would still be
-	 * used to answer from cache */
-	if(FLAGS_GET_RCODE(((struct reply_info*)e->entry.data)->flags)
-		!= LDNS_RCODE_SERVFAIL) {
-		lock_rw_unlock(&e->entry.lock);
-		return;
-	}
-	lock_rw_unlock(&e->entry.lock);
-	msg_cache_remove(env, qinfo->qname, qinfo->qname_len, qinfo->qtype,
-		qinfo->qclass, flags);
-}
-
 void 
 dns_cache_store_msg(struct module_env* env, struct query_info* qinfo,
 	hashvalue_type hash, struct reply_info* rep, time_t leeway, int pside,
@@ -168,7 +162,7 @@ dns_cache_store_msg(struct module_env* env, struct query_info* qinfo,
 	size_t i;
 
 	/* store RRsets */
-        for(i=0; i<rep->rrset_count; i++) {
+	for(i=0; i<rep->rrset_count; i++) {
 		rep->ref[i].key = rep->rrsets[i];
 		rep->ref[i].id = rep->rrsets[i]->id;
 	}
@@ -182,13 +176,20 @@ dns_cache_store_msg(struct module_env* env, struct query_info* qinfo,
 		/* we do not store the message, but we did store the RRs,
 		 * which could be useful for delegation information */
 		verbose(VERB_ALGO, "TTL 0: dropped msg from cache");
-		free(rep);
-		/* if the message is SERVFAIL in cache, remove that SERVFAIL,
+		reply_info_delete(rep, NULL);
+		/* if the message is in the cache, remove that msg,
 		 * so that the TTL 0 response can be returned for future
-		 * responses (i.e. don't get answered by the servfail from
+		 * responses (i.e. don't get answered from
 		 * cache, but instead go to recursion to get this TTL0
-		 * response). */
-		msg_del_servfail(env, qinfo, flags);
+		 * response).
+		 * Possible messages that could be in the cache:
+		 * - SERVFAIL
+		 * - NXDOMAIN
+		 * - NODATA
+		 * - an older record that is expired
+		 * - an older record that did not yet expire */
+		msg_cache_remove(env, qinfo->qname, qinfo->qname_len,
+			qinfo->qtype, qinfo->qclass, flags);
 		return;
 	}
 
@@ -196,49 +197,10 @@ dns_cache_store_msg(struct module_env* env, struct query_info* qinfo,
 	reply_info_sortref(rep);
 	if(!(e = query_info_entrysetup(qinfo, rep, hash))) {
 		log_err("store_msg: malloc failed");
+		reply_info_delete(rep, NULL);
 		return;
 	}
 	slabhash_insert(env->msg_cache, hash, &e->entry, rep, env->alloc);
-}
-
-/** see if an rrset is expired above the qname, return upper qname. */
-static int
-rrset_expired_above(struct module_env* env, uint8_t** qname, size_t* qnamelen,
-	uint16_t searchtype, uint16_t qclass, time_t now, uint8_t* expiretop,
-	size_t expiretoplen)
-{
-	struct ub_packed_rrset_key *rrset;
-	uint8_t lablen;
-
-	while(*qnamelen > 0) {
-		/* look one label higher */
-		lablen = **qname;
-		*qname += lablen + 1;
-		*qnamelen -= lablen + 1;
-		if(*qnamelen <= 0)
-			break;
-
-		/* looks up with a time of 0, to see expired entries */
-		if((rrset = rrset_cache_lookup(env->rrset_cache, *qname,
-			*qnamelen, searchtype, qclass, 0, 0, 0))) {
-			struct packed_rrset_data* data =
-				(struct packed_rrset_data*)rrset->entry.data;
-			if(now > data->ttl) {
-				/* it is expired, this is not wanted */
-				lock_rw_unlock(&rrset->entry.lock);
-				log_nametypeclass(VERB_ALGO, "this rrset is expired", *qname, searchtype, qclass);
-				return 1;
-			}
-			/* it is not expired, continue looking */
-			lock_rw_unlock(&rrset->entry.lock);
-		}
-
-		/* do not look above the expiretop. */
-		if(expiretop && *qnamelen == expiretoplen &&
-			query_dname_compare(*qname, expiretop)==0)
-			break;
-	}
-	return 0;
 }
 
 /** find closest NS or DNAME and returns the rrset (locked) */
@@ -274,12 +236,12 @@ find_closest_of_type(struct module_env* env, uint8_t* qname, size_t qnamelen,
 			/* check for expiry, but we have to let go of the rrset
 			 * for the lock ordering */
 			lock_rw_unlock(&rrset->entry.lock);
-			/* the expired_above function always takes off one
-			 * label (if qnamelen>0) and returns the final qname
-			 * where it searched, so we can continue from there
-			 * turning the O N*N search into O N. */
-			if(!rrset_expired_above(env, &qname, &qnamelen,
-				searchtype, qclass, now, expiretop,
+			/* the rrset_cache_expired_above function always takes
+			 * off one label (if qnamelen>0) and returns the final
+			 * qname where it searched, so we can continue from
+			 * there turning the O N*N search into O N. */
+			if(!rrset_cache_expired_above(env->rrset_cache, &qname,
+				&qnamelen, searchtype, qclass, now, expiretop,
 				expiretoplen)) {
 				/* we want to return rrset, but it may be
 				 * gone from cache, if so, just loop like
@@ -385,6 +347,13 @@ find_add_addrs(struct module_env* env, uint16_t qclass,
 			 * not use dns64 translation */
 			neg = msg_cache_lookup(env, ns->name, ns->namelen,
 				LDNS_RR_TYPE_AAAA, qclass, 0, now, 0);
+			/* Because recursion for lookup uses BIT_CD, check
+			 * for that so it stops the recursion lookup, if a
+			 * negative answer is cached. Because the cache uses
+			 * the CD flag for type AAAA. */
+			if(!neg)
+				neg = msg_cache_lookup(env, ns->name, ns->namelen,
+					LDNS_RR_TYPE_AAAA, qclass, BIT_CD, now, 0);
 			if(neg) {
 				delegpt_add_neg_msg(dp, neg);
 				lock_rw_unlock(&neg->entry.lock);
@@ -397,7 +366,7 @@ find_add_addrs(struct module_env* env, uint16_t qclass,
 /** find and add A and AAAA records for missing nameservers in delegpt */
 int
 cache_fill_missing(struct module_env* env, uint16_t qclass, 
-	struct regional* region, struct delegpt* dp)
+	struct regional* region, struct delegpt* dp, uint32_t flags)
 {
 	struct delegpt_ns* ns;
 	struct msgreply_entry* neg;
@@ -408,7 +377,7 @@ cache_fill_missing(struct module_env* env, uint16_t qclass,
 			continue;
 		ns->cache_lookup_count++;
 		akey = rrset_cache_lookup(env->rrset_cache, ns->name, 
-			ns->namelen, LDNS_RR_TYPE_A, qclass, 0, now, 0);
+			ns->namelen, LDNS_RR_TYPE_A, qclass, flags, now, 0);
 		if(akey) {
 			if(!delegpt_add_rrset_A(dp, region, akey, ns->lame,
 				NULL)) {
@@ -429,7 +398,7 @@ cache_fill_missing(struct module_env* env, uint16_t qclass,
 			}
 		}
 		akey = rrset_cache_lookup(env->rrset_cache, ns->name, 
-			ns->namelen, LDNS_RR_TYPE_AAAA, qclass, 0, now, 0);
+			ns->namelen, LDNS_RR_TYPE_AAAA, qclass, flags, now, 0);
 		if(akey) {
 			if(!delegpt_add_rrset_AAAA(dp, region, akey, ns->lame,
 				NULL)) {
@@ -444,6 +413,13 @@ cache_fill_missing(struct module_env* env, uint16_t qclass,
 			 * not use dns64 translation */
 			neg = msg_cache_lookup(env, ns->name, ns->namelen,
 				LDNS_RR_TYPE_AAAA, qclass, 0, now, 0);
+			/* Because recursion for lookup uses BIT_CD, check
+			 * for that so it stops the recursion lookup, if a
+			 * negative answer is cached. Because the cache uses
+			 * the CD flag for type AAAA. */
+			if(!neg)
+				neg = msg_cache_lookup(env, ns->name, ns->namelen,
+					LDNS_RR_TYPE_AAAA, qclass, BIT_CD, now, 0);
 			if(neg) {
 				delegpt_add_neg_msg(dp, neg);
 				lock_rw_unlock(&neg->entry.lock);
@@ -610,6 +586,7 @@ gen_dns_msg(struct regional* region, struct query_info* q, size_t num)
 	if(!msg->rep)
 		return NULL;
 	msg->rep->reason_bogus = LDNS_EDE_NONE;
+	msg->rep->reason_bogus_str = NULL;
 	if(num > RR_COUNT_MAX)
 		return NULL; /* integer overflow protection */
 	msg->rep->rrsets = (struct ub_packed_rrset_key**)
@@ -631,22 +608,8 @@ tomsg(struct module_env* env, struct query_info* q, struct reply_info* r,
 	time_t now_control = now;
 	if(now > r->ttl) {
 		/* Check if we are allowed to serve expired */
-		if(allow_expired) {
-			if(env->cfg->serve_expired_ttl &&
-				r->serve_expired_ttl < now) {
-				return NULL;
-			}
-			/* Ignore expired failure answers */
-			if(FLAGS_GET_RCODE(r->flags) !=
-				LDNS_RCODE_NOERROR &&
-				FLAGS_GET_RCODE(r->flags) !=
-				LDNS_RCODE_NXDOMAIN &&
-				FLAGS_GET_RCODE(r->flags) !=
-				LDNS_RCODE_YXDOMAIN)
-				return 0;
-		} else {
+		if(!allow_expired || !reply_info_can_answer_expired(r, now))
 			return NULL;
-		}
 		/* Change the current time so we can pass the below TTL checks when
 		 * serving expired data. */
 		now_control = r->ttl - env->cfg->serve_expired_reply_ttl;
@@ -665,6 +628,7 @@ tomsg(struct module_env* env, struct query_info* q, struct reply_info* r,
 	else
 		msg->rep->prefetch_ttl = PREFETCH_TTL_CALC(msg->rep->ttl);
 	msg->rep->serve_expired_ttl = msg->rep->ttl + SERVE_EXPIRED_TTL;
+	msg->rep->serve_expired_norec_ttl = 0;
 	msg->rep->security = r->security;
 	msg->rep->an_numrrsets = r->an_numrrsets;
 	msg->rep->ns_numrrsets = r->ns_numrrsets;
@@ -672,6 +636,10 @@ tomsg(struct module_env* env, struct query_info* q, struct reply_info* r,
 	msg->rep->rrset_count = r->rrset_count;
 	msg->rep->authoritative = r->authoritative;
 	msg->rep->reason_bogus = r->reason_bogus;
+	if(r->reason_bogus_str) {
+		msg->rep->reason_bogus_str = regional_strdup(region, r->reason_bogus_str);
+	}
+
 	if(!rrset_array_lock(r->ref, r->rrset_count, now_control)) {
 		return NULL;
 	}
@@ -703,6 +671,28 @@ tomsg(struct module_env* env, struct query_info* q, struct reply_info* r,
 	return msg;
 }
 
+struct dns_msg*
+dns_msg_deepcopy_region(struct dns_msg* origin, struct regional* region)
+{
+	size_t i;
+	struct dns_msg* res = NULL;
+	res = gen_dns_msg(region, &origin->qinfo, origin->rep->rrset_count);
+	if(!res) return NULL;
+	*res->rep = *origin->rep;
+	if(origin->rep->reason_bogus_str) {
+		res->rep->reason_bogus_str = regional_strdup(region,
+			origin->rep->reason_bogus_str);
+	}
+	for(i=0; i<res->rep->rrset_count; i++) {
+		res->rep->rrsets[i] = packed_rrset_copy_region(
+			origin->rep->rrsets[i], region, 0);
+		if(!res->rep->rrsets[i]) {
+			return NULL;
+		}
+	}
+	return res;
+}
+
 /** synthesize RRset-only response from cached RRset item */
 static struct dns_msg*
 rrset_msg(struct ub_packed_rrset_key* rrset, struct regional* region, 
@@ -722,6 +712,7 @@ rrset_msg(struct ub_packed_rrset_key* rrset, struct regional* region,
 	msg->rep->ttl = d->ttl - now;
 	msg->rep->prefetch_ttl = PREFETCH_TTL_CALC(msg->rep->ttl);
 	msg->rep->serve_expired_ttl = msg->rep->ttl + SERVE_EXPIRED_TTL;
+	msg->rep->serve_expired_norec_ttl = 0;
 	msg->rep->security = sec_status_unchecked;
 	msg->rep->an_numrrsets = 1;
 	msg->rep->ns_numrrsets = 0;
@@ -761,6 +752,7 @@ synth_dname_msg(struct ub_packed_rrset_key* rrset, struct regional* region,
 	msg->rep->ttl = d->ttl - now;
 	msg->rep->prefetch_ttl = PREFETCH_TTL_CALC(msg->rep->ttl);
 	msg->rep->serve_expired_ttl = msg->rep->ttl + SERVE_EXPIRED_TTL;
+	msg->rep->serve_expired_norec_ttl = 0;
 	msg->rep->security = sec_status_unchecked;
 	msg->rep->an_numrrsets = 1;
 	msg->rep->ns_numrrsets = 0;
@@ -809,7 +801,7 @@ synth_dname_msg(struct ub_packed_rrset_key* rrset, struct regional* region,
 	if(!newd)
 		return NULL;
 	ck->entry.data = newd;
-	newd->ttl = 0; /* 0 for synthesized CNAME TTL */
+	newd->ttl = d->ttl - now; /* RFC6672: synth CNAME TTL == DNAME TTL */
 	newd->count = 1;
 	newd->rrsig_count = 0;
 	newd->trust = rrset_trust_ans_noAA;
@@ -1064,10 +1056,76 @@ dns_cache_lookup(struct module_env* env,
 
 int
 dns_cache_store(struct module_env* env, struct query_info* msgqinf,
-        struct reply_info* msgrep, int is_referral, time_t leeway, int pside,
-	struct regional* region, uint32_t flags, time_t qstarttime)
+	struct reply_info* msgrep, int is_referral, time_t leeway, int pside,
+	struct regional* region, uint32_t flags, time_t qstarttime,
+	int is_valrec)
 {
 	struct reply_info* rep = NULL;
+	if(SERVE_EXPIRED) {
+		/* We are serving expired records. Before caching, check if a
+		 * useful expired record exists. */
+		struct msgreply_entry* e = msg_cache_lookup(env,
+			msgqinf->qname, msgqinf->qname_len, msgqinf->qtype,
+			msgqinf->qclass, flags, 0, 1);
+		if(e) {
+			struct reply_info* cached = e->entry.data;
+			if(cached->ttl < *env->now
+				&& reply_info_could_use_expired(cached, *env->now)
+				/* If we are validating make sure only
+				 * validating modules can update such messages.
+				 * In that case don't cache it and let a
+				 * subsequent module handle the caching. For
+				 * example, the iterator should not replace an
+				 * expired secure answer with a fresh unchecked
+				 * one and let the validator manage caching. */
+				&& cached->security != sec_status_bogus
+				&& (env->need_to_validate &&
+				msgrep->security == sec_status_unchecked)
+				/* Exceptions to that rule are:
+				 * o recursions that don't need validation but
+				 *   need to update the cache for coherence
+				 *   (delegation information while iterating,
+				 *   DNSKEY and DS lookups from validator)
+				 * o explicit RRSIG queries that are not
+				 *   validated. */
+				&& !is_valrec
+				&& msgqinf->qtype != LDNS_RR_TYPE_RRSIG) {
+				if((int)FLAGS_GET_RCODE(msgrep->flags) !=
+					LDNS_RCODE_NOERROR &&
+					(int)FLAGS_GET_RCODE(msgrep->flags) !=
+					LDNS_RCODE_NXDOMAIN) {
+					/* The current response has an
+					 * erroneous rcode. Adjust norec time
+					 * so that additional lookups are not
+					 * performed for some time. */
+					verbose(VERB_ALGO, "set "
+						"serve-expired-norec-ttl for "
+						"response in cache");
+					cached->serve_expired_norec_ttl =
+						NORR_TTL + *env->now;
+					if(env->cfg->serve_expired_ttl_reset &&
+					    cached->serve_expired_ttl
+					    < *env->now +
+					    env->cfg->serve_expired_ttl) {
+						/* Reset serve-expired-ttl for
+						 * valid response in cache. */
+						verbose(VERB_ALGO, "reset "
+							"serve-expired-ttl "
+							"for response in cache");
+						cached->serve_expired_ttl =
+						    *env->now +
+						    env->cfg->serve_expired_ttl;
+					}
+				}
+				verbose(VERB_ALGO, "a validated expired entry "
+					"could be overwritten, skip caching "
+					"the new message at this stage");
+				lock_rw_unlock(&e->entry.lock);
+				return 1;
+			}
+			lock_rw_unlock(&e->entry.lock);
+		}
+	}
 	/* alloc, malloc properly (not in region, like msg is) */
 	rep = reply_info_copy(msgrep, env->alloc, NULL);
 	if(!rep)
@@ -1075,7 +1133,6 @@ dns_cache_store(struct module_env* env, struct query_info* msgqinf,
 	/* ttl must be relative ;i.e. 0..86400 not  time(0)+86400.
 	 * the env->now is added to message and RRsets in this routine. */
 	/* the leeway is used to invalidate other rrsets earlier */
-
 	if(is_referral) {
 		/* store rrsets */
 		struct rrset_ref ref;
@@ -1092,7 +1149,7 @@ dns_cache_store(struct module_env* env, struct query_info* msgqinf,
 				((ntohs(ref.key->rk.type)==LDNS_RR_TYPE_NS
 				 && !pside) ? qstarttime:*env->now + leeway));
 		}
-		free(rep);
+		reply_info_delete(rep, NULL);
 		return 1;
 	} else {
 		/* store msg, and rrsets */

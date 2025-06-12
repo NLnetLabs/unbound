@@ -166,8 +166,7 @@ dump_msg_ref(RES* ssl, struct ub_packed_rrset_key* k)
 
 /** dump message entry */
 static int
-dump_msg(RES* ssl, struct query_info* k, struct reply_info* d, 
-	time_t now)
+dump_msg(RES* ssl, struct query_info* k, struct reply_info* d, time_t now)
 {
 	size_t i;
 	char* nm, *tp, *cl;
@@ -192,13 +191,15 @@ dump_msg(RES* ssl, struct query_info* k, struct reply_info* d,
 	}
 	
 	/* meta line */
-	if(!ssl_printf(ssl, "msg %s %s %s %d %d " ARG_LL "d %d %u %u %u\n",
+	if(!ssl_printf(ssl, "msg %s %s %s %d %d " ARG_LL "d %d %u %u %u %d %s\n",
 			nm, cl, tp,
 			(int)d->flags, (int)d->qdcount, 
 			(long long)(d->ttl-now), (int)d->security,
-			(unsigned)d->an_numrrsets, 
+			(unsigned)d->an_numrrsets,
 			(unsigned)d->ns_numrrsets,
-			(unsigned)d->ar_numrrsets)) {
+			(unsigned)d->ar_numrrsets,
+			(int)d->reason_bogus,
+			d->reason_bogus_str?d->reason_bogus_str:"")) {
 		free(nm);
 		free(tp);
 		free(cl);
@@ -633,6 +634,9 @@ load_msg(RES* ssl, sldns_buffer* buf, struct worker* worker)
 	long long ttl;
 	size_t i;
 	int go_on = 1;
+	int ede;
+	int consumed = 0;
+	char* ede_str = NULL;
 
 	regional_free_all(region);
 
@@ -647,11 +651,16 @@ load_msg(RES* ssl, sldns_buffer* buf, struct worker* worker)
 	}
 
 	/* read remainder of line */
-	if(sscanf(s, " %u %u " ARG_LL "d %u %u %u %u", &flags, &qdcount, &ttl, 
-		&security, &an, &ns, &ar) != 7) {
+	/* note the last space before any possible EDE text */
+	if(sscanf(s, " %u %u " ARG_LL "d %u %u %u %u %d %n", &flags, &qdcount, &ttl,
+		&security, &an, &ns, &ar, &ede, &consumed) != 8) {
 		log_warn("error cannot parse numbers: %s", s);
 		return 0;
 	}
+	/* there may be EDE text after the numbers */
+	if(consumed > 0 && (size_t)consumed < strlen(s))
+		ede_str = s + consumed;
+	memset(&rep, 0, sizeof(rep));
 	rep.flags = (uint16_t)flags;
 	rep.qdcount = (uint16_t)qdcount;
 	rep.ttl = (time_t)ttl;
@@ -666,6 +675,8 @@ load_msg(RES* ssl, sldns_buffer* buf, struct worker* worker)
 	rep.ns_numrrsets = (size_t)ns;
 	rep.ar_numrrsets = (size_t)ar;
 	rep.rrset_count = (size_t)an+(size_t)ns+(size_t)ar;
+	rep.reason_bogus = (sldns_ede_code)ede;
+	rep.reason_bogus_str = ede_str?(char*)regional_strdup(region, ede_str):NULL;
 	rep.rrsets = (struct ub_packed_rrset_key**)regional_alloc_zero(
 		region, sizeof(struct ub_packed_rrset_key*)*rep.rrset_count);
 
@@ -681,7 +692,7 @@ load_msg(RES* ssl, sldns_buffer* buf, struct worker* worker)
 		return 1; /* skip this one, not all references satisfied */
 
 	if(!dns_cache_store(&worker->env, &qinf, &rep, 0, 0, 0, NULL, flags,
-		*worker->env.now)) {
+		*worker->env.now, 1)) {
 		log_warn("error out of memory");
 		return 0;
 	}
@@ -825,9 +836,10 @@ int print_deleg_lookup(RES* ssl, struct worker* worker, uint8_t* nm,
 	struct delegpt* dp;
 	struct dns_msg* msg;
 	struct regional* region = worker->scratchpad;
-	char b[260];
+	char b[LDNS_MAX_DOMAINLEN];
 	struct query_info qinfo;
 	struct iter_hints_stub* stub;
+	int nolock = 0;
 	regional_free_all(region);
 	qinfo.qname = nm;
 	qinfo.qname_len = nmlen;
@@ -839,13 +851,16 @@ int print_deleg_lookup(RES* ssl, struct worker* worker, uint8_t* nm,
 	if(!ssl_printf(ssl, "The following name servers are used for lookup "
 		"of %s\n", b)) 
 		return 0;
-	
-	dp = forwards_lookup(worker->env.fwds, nm, qinfo.qclass);
+
+	dp = forwards_lookup(worker->env.fwds, nm, qinfo.qclass, nolock);
 	if(dp) {
-		if(!ssl_printf(ssl, "forwarding request:\n"))
+		if(!ssl_printf(ssl, "forwarding request:\n")) {
+			lock_rw_unlock(&worker->env.fwds->lock);
 			return 0;
+		}
 		print_dp_main(ssl, dp, NULL);
 		print_dp_details(ssl, worker, dp);
+		lock_rw_unlock(&worker->env.fwds->lock);
 		return 1;
 	}
 	
@@ -860,7 +875,8 @@ int print_deleg_lookup(RES* ssl, struct worker* worker, uint8_t* nm,
 		/* go up? */
 		if(iter_dp_is_useless(&qinfo, BIT_RD, dp,
 			(worker->env.cfg->do_ip4 && worker->back->num_ip4 != 0),
-			(worker->env.cfg->do_ip6 && worker->back->num_ip6 != 0))) {
+			(worker->env.cfg->do_ip6 && worker->back->num_ip6 != 0),
+			worker->env.cfg->do_nat64)) {
 			print_dp_main(ssl, dp, msg);
 			print_dp_details(ssl, worker, dp);
 			if(!ssl_printf(ssl, "cache delegation was "
@@ -880,21 +896,26 @@ int print_deleg_lookup(RES* ssl, struct worker* worker, uint8_t* nm,
 					return 0;
 				continue;
 			}
-		} 
+		}
 		stub = hints_lookup_stub(worker->env.hints, nm, qinfo.qclass,
-			dp);
+			dp, nolock);
 		if(stub) {
 			if(stub->noprime) {
 				if(!ssl_printf(ssl, "The noprime stub servers "
-					"are used:\n"))
+					"are used:\n")) {
+					lock_rw_unlock(&worker->env.hints->lock);
 					return 0;
+				}
 			} else {
 				if(!ssl_printf(ssl, "The stub is primed "
-						"with servers:\n"))
+						"with servers:\n")) {
+					lock_rw_unlock(&worker->env.hints->lock);
 					return 0;
+				}
 			}
 			print_dp_main(ssl, stub->dp, NULL);
 			print_dp_details(ssl, worker, stub->dp);
+			lock_rw_unlock(&worker->env.hints->lock);
 		} else {
 			print_dp_main(ssl, dp, msg);
 			print_dp_details(ssl, worker, dp);

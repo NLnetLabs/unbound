@@ -58,6 +58,7 @@ struct msg_parse;
 struct rrset_parse;
 struct local_rrset;
 struct dns_msg;
+enum comm_point_type;
 
 /** calculate the prefetch TTL as 90% of original. Calculation
  * without numerical overflow (uin32_t) */
@@ -144,7 +145,7 @@ struct reply_info {
 	/** 32 bit padding to pad struct member alignment to 64 bits. */
 	uint32_t padding;
 
-	/** 
+	/**
 	 * TTL of the entire reply (for negative caching).
 	 * only for use when there are 0 RRsets in this message.
 	 * if there are RRsets, check those instead.
@@ -157,11 +158,23 @@ struct reply_info {
 	 */
 	time_t prefetch_ttl;
 
-	/** 
+	/**
 	 * Reply TTL extended with serve expired TTL, to limit time to serve
 	 * expired message.
 	 */
 	time_t serve_expired_ttl;
+
+	/**
+	 * TTL for an expired entry to be used without attempting recursion
+	 * since a previous recursion attempt failed to update the message.
+	 * This is just an efficiency timer when serve-expired-client-timeout
+	 * is configured. It will make Unbound immediately reply with the
+	 * expired entry instead of trying resolution first.
+	 * It is set on cached entries by modules that identified problems
+	 * while resolving, e.g., failed upstreams from Iterator, or failed
+	 * validation from Validator.
+	 */
+	time_t serve_expired_norec_ttl;
 
 	/**
 	 * The security status from DNSSEC validation of this message.
@@ -170,8 +183,16 @@ struct reply_info {
 
 	/**
 	 * EDE (rfc8914) code with reason for DNSSEC bogus status.
+	 * Used for caching the EDE.
 	 */
 	sldns_ede_code reason_bogus;
+
+        /**
+         * EDE (rfc8914) NULL-terminated string with human-readable reason
+	 * for DNSSEC bogus status.
+	 * Used for caching the EDE.
+         */
+        char* reason_bogus_str;
 
 	/**
 	 * Number of RRsets in each section.
@@ -235,18 +256,21 @@ struct msgreply_entry {
  * @param ttl: TTL of replyinfo
  * @param prettl: prefetch ttl
  * @param expttl: serve expired ttl
+ * @param norecttl: serve expired no recursion ttl
  * @param an: an count
  * @param ns: ns count
  * @param ar: ar count
  * @param total: total rrset count (presumably an+ns+ar).
  * @param sec: security status of the reply info.
+ * @param reason_bogus: the Extended DNS Error for DNSSEC bogus status
  * @return the reply_info base struct with the array for putting the rrsets
  * in.  The array has been zeroed.  Returns NULL on malloc failure.
  */
 struct reply_info*
 construct_reply_info_base(struct regional* region, uint16_t flags, size_t qd,
-		time_t ttl, time_t prettl, time_t expttl, size_t an, size_t ns,
-		size_t ar, size_t total, enum sec_status sec);
+	time_t ttl, time_t prettl, time_t expttl, time_t norecttl, size_t an,
+	size_t ns, size_t ar, size_t total, enum sec_status sec,
+	sldns_ede_code reason_bogus);
 
 /** 
  * Parse wire query into a queryinfo structure, return 0 on parse error. 
@@ -388,6 +412,24 @@ struct reply_info* reply_info_copy(struct reply_info* rep,
 int reply_info_alloc_rrset_keys(struct reply_info* rep,
 	struct alloc_cache* alloc, struct regional* region);
 
+/**
+ * Check if an *expired* (checked by the caller already) reply info can be used
+ * as an expired answer.
+ * @param rep: expired reply info to check.
+ * @param timenow: the current time.
+ * @return 1 if it can be used as an answer, 0 otherwise.
+ */
+int reply_info_can_answer_expired(struct reply_info* rep, time_t timenow);
+
+/**
+ * Check if an *expired* (checked by the caller already) reply info could be
+ * useful data to stay in the cache.
+ * @param rep: expired reply info to check.
+ * @param timenow: the current time.
+ * @return 1 if it is useful, 0 otherwise.
+ */
+int reply_info_could_use_expired(struct reply_info* rep, time_t timenow);
+
 /*
  * Create a new reply_info based on 'rep'.  The new info is based on
  * the passed 'rep', but ignores any rrsets except for the first 'an_numrrsets'
@@ -510,10 +552,15 @@ void log_dns_msg(const char* str, struct query_info* qinfo,
  * @param cached: whether or not the reply is coming from
  *                    the cache, or an outside network.
  * @param rmsg: sldns buffer packet.
+ * @param daddr: if not NULL, the destination address and port are logged.
+ * @param tp: type of the comm point for logging destination connection type.
+ * @param ssl: the SSL pointer of the connection, to see if the connection
+ *	type is tcp or dot.
  */
 void log_reply_info(enum verbosity_value v, struct query_info *qinf,
 	struct sockaddr_storage *addr, socklen_t addrlen, struct timeval dur,
-	int cached, struct sldns_buffer *rmsg);
+	int cached, struct sldns_buffer *rmsg, struct sockaddr_storage* daddr,
+	enum comm_point_type tp, void* ssl);
 
 /**
  * Print string with neat domain name, type, class from query info.
@@ -566,6 +613,16 @@ int edns_opt_list_append(struct edns_option** list, uint16_t code, size_t len,
  */
 int edns_opt_list_append_ede(struct edns_option** list, struct regional* region,
 	sldns_ede_code code, const char *txt);
+
+/**
+ * Append edns keep alive option to edns options list
+ * @param list: the edns option list to append the edns option to.
+ * @param msec: the duration in msecs for the keep alive.
+ * @param region: region to allocate the new edns option.
+ * @return false on failure.
+ */
+int edns_opt_list_append_keepalive(struct edns_option** list, int msec,
+	struct regional* region);
 
 /**
  * Remove any option found on the edns option list that matches the code.
@@ -717,6 +774,12 @@ int inplace_cb_query_response_call(struct module_env* env,
  */
 struct edns_option* edns_opt_copy_region(struct edns_option* list,
 	struct regional* region);
+
+/**
+ * Copy a filtered edns option list allocated to the new region
+ */
+struct edns_option* edns_opt_copy_filter_region(struct edns_option* list,
+	uint16_t* filter_list, size_t filter_list_len, struct regional* region);
 
 /**
  * Copy edns option list allocated with malloc

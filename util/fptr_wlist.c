@@ -47,6 +47,7 @@
 #include "util/fptr_wlist.h"
 #include "util/mini_event.h"
 #include "services/outside_network.h"
+#include "services/listen_dnsport.h"
 #include "services/mesh.h"
 #include "services/localzone.h"
 #include "services/authzone.h"
@@ -73,6 +74,7 @@
 #include "libunbound/worker.h"
 #include "util/tube.h"
 #include "util/config_file.h"
+#include "daemon/remote.h"
 #ifdef UB_ON_WINDOWS
 #include "winrc/win_svc.h"
 #endif
@@ -120,6 +122,7 @@ fptr_whitelist_comm_point_raw(comm_point_callback_type *fptr)
 	else if(fptr == &tube_handle_write) return 1;
 	else if(fptr == &remote_accept_callback) return 1;
 	else if(fptr == &remote_control_callback) return 1;
+	else if(fptr == &fast_reload_client_callback) return 1;
 	return 0;
 }
 
@@ -131,6 +134,10 @@ fptr_whitelist_comm_timer(void (*fptr)(void*))
 	else if(fptr == &pending_udp_timer_delay_cb) return 1;
 	else if(fptr == &worker_stat_timer_cb) return 1;
 	else if(fptr == &worker_probe_timer_cb) return 1;
+	else if(fptr == &validate_suspend_timer_cb) return 1;
+#ifdef HAVE_NGTCP2
+	else if(fptr == &doq_timer_cb) return 1;
+#endif
 #ifdef UB_ON_WINDOWS
 	else if(fptr == &wsvc_cron_cb) return 1;
 #endif
@@ -168,7 +175,9 @@ int
 fptr_whitelist_event(void (*fptr)(int, short, void *))
 {
 	if(fptr == &comm_point_udp_callback) return 1;
+#if defined(AF_INET6) && defined(IPV6_PKTINFO) && defined(HAVE_RECVMSG)
 	else if(fptr == &comm_point_udp_ancil_callback) return 1;
+#endif
 	else if(fptr == &comm_point_tcp_accept_callback) return 1;
 	else if(fptr == &comm_point_tcp_handle_callback) return 1;
 	else if(fptr == &comm_timer_callback) return 1;
@@ -178,6 +187,10 @@ fptr_whitelist_event(void (*fptr)(int, short, void *))
 	else if(fptr == &tube_handle_signal) return 1;
 	else if(fptr == &comm_base_handle_slow_accept) return 1;
 	else if(fptr == &comm_point_http_handle_callback) return 1;
+#ifdef HAVE_NGTCP2
+	else if(fptr == &comm_point_doq_callback) return 1;
+#endif
+	else if(fptr == &fast_reload_service_cb) return 1;
 #ifdef USE_DNSTAP
 	else if(fptr == &dtio_output_cb) return 1;
 	else if(fptr == &dtio_cmd_cb) return 1;
@@ -186,6 +199,10 @@ fptr_whitelist_event(void (*fptr)(int, short, void *))
 	else if(fptr == &dtio_stop_ev_cb) return 1;
 	else if(fptr == &dtio_tap_callback) return 1;
 	else if(fptr == &dtio_mainfdcallback) return 1;
+#endif
+#ifdef HAVE_NGTCP2
+	else if(fptr == &doq_client_event_cb) return 1;
+	else if(fptr == &doq_client_timer_cb) return 1;
 #endif
 #ifdef UB_ON_WINDOWS
 	else if(fptr == &worker_win_stop_cb) return 1;
@@ -245,6 +262,12 @@ fptr_whitelist_rbtree_cmp(int (*fptr) (const void *, const void *))
 	else if(fptr == &auth_zone_cmp) return 1;
 	else if(fptr == &auth_data_cmp) return 1;
 	else if(fptr == &auth_xfer_cmp) return 1;
+#ifdef HAVE_NGTCP2
+	else if(fptr == &doq_conn_cmp) return 1;
+	else if(fptr == &doq_conid_cmp) return 1;
+	else if(fptr == &doq_timer_cmp) return 1;
+	else if(fptr == &doq_stream_cmp) return 1;
+#endif
 	return 0;
 }
 
@@ -389,7 +412,7 @@ fptr_whitelist_modenv_detect_cycle(int (*fptr)(
 	return 0;
 }
 
-int 
+int
 fptr_whitelist_mod_init(int (*fptr)(struct module_env* env, int id))
 {
 	if(fptr == &iter_init) return 1;
@@ -417,7 +440,7 @@ fptr_whitelist_mod_init(int (*fptr)(struct module_env* env, int id))
 	return 0;
 }
 
-int 
+int
 fptr_whitelist_mod_deinit(void (*fptr)(struct module_env* env, int id))
 {
 	if(fptr == &iter_deinit) return 1;
@@ -441,6 +464,28 @@ fptr_whitelist_mod_deinit(void (*fptr)(struct module_env* env, int id))
 #endif
 #ifdef USE_IPSET
 	else if(fptr == &ipset_deinit) return 1;
+#endif
+	return 0;
+}
+
+int
+fptr_whitelist_mod_startup(int (*fptr)(struct module_env* env, int id))
+{
+#ifdef USE_IPSET
+	if(fptr == &ipset_startup) return 1;
+#else
+	(void)fptr;
+#endif
+	return 0;
+}
+
+int
+fptr_whitelist_mod_destartup(void (*fptr)(struct module_env* env, int id))
+{
+#ifdef USE_IPSET
+	if(fptr == &ipset_destartup) return 1;
+#else
+	(void)fptr;
 #endif
 	return 0;
 }
@@ -659,6 +704,10 @@ int fptr_whitelist_inplace_cb_edns_back_parsed(
 #else
 	(void)fptr;
 #endif
+#ifdef WITH_PYTHONMODULE
+    if(fptr == &python_inplace_cb_edns_back_parsed_call)
+        return 1;
+#endif
 #ifdef WITH_DYNLIBMODULE
     if(fptr == &dynlib_inplace_cb_edns_back_parsed)
             return 1;
@@ -674,6 +723,10 @@ int fptr_whitelist_inplace_cb_query_response(
 		return 1;
 #else
 	(void)fptr;
+#endif
+#ifdef WITH_PYTHONMODULE
+    if(fptr == &python_inplace_cb_query_response)
+        return 1;
 #endif
 #ifdef WITH_DYNLIBMODULE
     if(fptr == &dynlib_inplace_cb_query_response)

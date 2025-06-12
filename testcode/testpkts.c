@@ -21,7 +21,6 @@
  */
 
 #include "config.h"
-struct sockaddr_storage;
 #include <errno.h>
 #include <stdarg.h>
 #include <ctype.h>
@@ -140,6 +139,10 @@ static void matchline(char* line, struct entry* e)
 			e->match_noedns = 1;
 		} else if(str_keyword(&parse, "ednsdata")) {
 			e->match_ednsdata_raw = 1;
+		} else if(str_keyword(&parse, "client_cookie")) {
+			e->match_client_cookie = 1;
+		} else if(str_keyword(&parse, "server_cookie")) {
+			e->match_server_cookie = 1;
 		} else if(str_keyword(&parse, "UDP")) {
 			e->match_transport = transport_udp;
 		} else if(str_keyword(&parse, "TCP")) {
@@ -467,6 +470,7 @@ get_origin(const char* name, struct sldns_file_parse_state* pstate, char* parse)
 	store = *end;
 	*end = 0;
 	verbose(3, "parsing '%s'\n", parse);
+	pstate->origin_len = sizeof(pstate->origin);
 	status = sldns_str2wire_dname_buf(parse, pstate->origin,
 		&pstate->origin_len);
 	*end = store;
@@ -905,37 +909,68 @@ get_do_flag(uint8_t* pkt, size_t len)
 	return (int)(edns_bits&LDNS_EDNS_MASK_DO_BIT);
 }
 
-/** Snips the EDE option out of the OPT record and returns the EDNS EDE
- *  INFO-CODE if found, else -1 */
+/** Snips the specified EDNS option out of the OPT record and puts it in the
+ *  provided buffer. The buffer should be able to hold any opt data ie 65535.
+ *  Returns the length of the option written,
+ *  or 0 if not found, else -1 on error. */
 static int
-extract_ede(uint8_t* pkt, size_t len)
+pkt_snip_edns_option(uint8_t* pkt, size_t len, sldns_edns_option code,
+	uint8_t* buf)
 {
 	uint8_t *rdata, *opt_position = pkt;
 	uint16_t rdlen, optlen;
 	size_t remaining = len;
-	int ede_code;
-	if(!pkt_find_edns_opt(&opt_position, &remaining)) return -1;
+	if(!pkt_find_edns_opt(&opt_position, &remaining)) return 0;
 	if(remaining < 8) return -1; /* malformed */
 	rdlen = sldns_read_uint16(opt_position+6);
+	if(remaining < ((size_t)rdlen)+8)
+		return -1; /* malformed */
 	rdata = opt_position + 8;
 	while(rdlen > 0) {
 		if(rdlen < 4) return -1; /* malformed */
 		optlen = sldns_read_uint16(rdata+2);
-		if(sldns_read_uint16(rdata) == LDNS_EDNS_EDE) {
-			if(rdlen < 6) return -1; /* malformed */
-			ede_code = sldns_read_uint16(rdata+4);
+		if((size_t)rdlen < 4+((size_t)optlen))
+			return -1; /* malformed */
+		if(sldns_read_uint16(rdata) == code) {
+			/* save data to buf for caller inspection */
+			memmove(buf, rdata+4, optlen);
 			/* snip option from packet; assumes len is correct */
 			memmove(rdata, rdata+4+optlen,
 				(pkt+len)-(rdata+4+optlen));
 			/* update OPT size */
 			sldns_write_uint16(opt_position+6,
 				sldns_read_uint16(opt_position+6)-(4+optlen));
-			return ede_code;
+			return optlen;
 		}
 		rdlen -= 4 + optlen;
 		rdata += 4 + optlen;
 	}
-	return -1;
+	return 0;
+}
+
+/** Snips the EDE option out of the OPT record and returns the EDNS EDE
+ *  INFO-CODE if found, else -1 */
+static int
+extract_ede(uint8_t* pkt, size_t len)
+{
+	uint8_t buf[65535];
+	int buflen = pkt_snip_edns_option(pkt, len, LDNS_EDNS_EDE, buf);
+	if(buflen < 2 /*ede without text at minimum*/) return -1;
+	return sldns_read_uint16(buf);
+}
+
+/** Snips the DNS Cookie option out of the OPT record and puts it in the
+ *  provided cookie buffer (should be at least 24 octets).
+ *  Returns the length of the cookie if found, else -1. */
+static int
+extract_cookie(uint8_t* pkt, size_t len, uint8_t* cookie)
+{
+	uint8_t buf[65535];
+	int buflen = pkt_snip_edns_option(pkt, len, LDNS_EDNS_COOKIE, buf);
+	if(buflen != 8 /*client cookie*/ &&
+		buflen != 8 + 16 /*server cookie*/) return -1;
+	memcpy(cookie, buf, buflen);
+	return buflen;
 }
 
 /** zero TTLs in packet */
@@ -1103,8 +1138,9 @@ static void lowercase_dname(uint8_t** p, size_t* remain)
 	while(**p != 0) {
 		/* compressed? */
 		if((**p & 0xc0) == 0xc0) {
-			*p += 2;
-			*remain -= 2;
+			llen = *remain < 2 ? (unsigned int)*remain : 2;
+			*p += llen;
+			*remain -= llen;
 			return;
 		}
 		llen = (unsigned int)**p;
@@ -1147,6 +1183,12 @@ static void lowercase_rdata(uint8_t** p, size_t* remain,
 			uint8_t len;
 			if(rdataremain == 0) return;
 			len = **p;
+			if(rdataremain < ((size_t)len)+1) {
+				/* malformed LDNS_RDF_TYPE_STR, skip remainder */
+				*p += rdataremain;
+				*remain -= rdatalen;
+				return;
+			}
 			*p += len+1;
 			rdataremain -= len+1;
 		} else {
@@ -1175,6 +1217,12 @@ static void lowercase_rdata(uint8_t** p, size_t* remain,
 				len = 16;
 				break;
 			default: error("bad rdf type in lowercase %d", (int)f);
+			}
+			if (rdataremain < (size_t)len) {
+				/* malformed RDF, skip remainder */
+				*p += rdataremain;
+				*remain -= rdatalen;
+				return;
 			}
 			*p += len;
 			rdataremain -= len;
@@ -1527,6 +1575,27 @@ find_match(struct entry* entries, uint8_t* query_pkt, size_t len,
 				verbose(3, "bad EDE INFO-CODE. Expected: %d, "
 					"and got: %d\n", (int)p->ede_info_code,
 					info_code);
+				continue;
+			}
+		}
+		/* Cookies could also modify the query_pkt; keep them early */
+		if(p->match_client_cookie || p->match_server_cookie) {
+			uint8_t cookie[24];
+			int cookie_len = extract_cookie(query_pkt, len,
+				cookie);
+			if(cookie_len == -1) {
+				verbose(3, "bad DNS Cookie. "
+					"Expected but not found\n");
+				continue;
+			} else if(p->match_client_cookie &&
+				cookie_len != 8) {
+				verbose(3, "bad DNS Cookie. Expected client "
+					"cookie of length 8.");
+				continue;
+			} else if((p->match_server_cookie) &&
+				cookie_len != 24) {
+				verbose(3, "bad DNS Cookie. Expected server "
+					"cookie of length 24.");
 				continue;
 			}
 		}

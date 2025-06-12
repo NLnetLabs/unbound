@@ -84,5 +84,9 @@ void authzone_test(void);
 void zonemd_test(void);
 /** unit test for tcp_reuse functions */
 void tcpreuse_test(void);
+/** unit test for doq functions */
+void doq_test(void);
+/** unit test for infra cache functions */
+void infra_test(void);
 
 #endif /* TESTCODE_UNITMAIN_H */

@@ -6,6 +6,7 @@ server:
 	fake-sha1: yes
 	trust-anchor-signaling: no
 	ede: yes
+	access-control: 127.0.0.0/8 allow_snoop
 
 stub-zone:
 	name: "."
@@ -133,6 +134,23 @@ STEP 10 CHECK_ANSWER
 ENTRY_BEGIN
 MATCH all ede=12
 REPLY QR RD RA DO SERVFAIL
+SECTION QUESTION
+ns1.example.        IN MX
+SECTION ANSWER
+ENTRY_END
+
+; Redo the query without RD to check EDE caching.
+STEP 11 QUERY
+ENTRY_BEGIN
+REPLY DO
+SECTION QUESTION
+ns1.example.        IN MX
+ENTRY_END
+
+STEP 12 CHECK_ANSWER
+ENTRY_BEGIN
+MATCH all ede=12
+REPLY QR RA DO SERVFAIL
 SECTION QUESTION
 ns1.example.        IN MX
 SECTION ANSWER

@@ -79,6 +79,8 @@ static void usage(char* argv[])
 	printf("-d secs		delay after connection before sending query\n");
 	printf("-s		use ssl\n");
 	printf("-h 		this help text\n");
+	printf("IXFR=N 		for the type, sends ixfr query with serial N.\n");
+	printf("NOTIFY[=N] 	for the type, sends notify. Can set new zone serial N.\n");
 	exit(1);
 }
 
@@ -115,6 +117,29 @@ open_svr(const char* svr, int udp, struct sockaddr_storage* addr,
 	return fd;
 }
 
+/** Append a SOA record with serial number */
+static void
+write_soa_serial_to_buf(sldns_buffer* buf, struct query_info* qinfo,
+	uint32_t serial)
+{
+	sldns_buffer_set_position(buf, sldns_buffer_limit(buf));
+	sldns_buffer_set_limit(buf, sldns_buffer_capacity(buf));
+	/* Write compressed reference to the query */
+	sldns_buffer_write_u16(buf, PTR_CREATE(LDNS_HEADER_SIZE));
+	sldns_buffer_write_u16(buf, LDNS_RR_TYPE_SOA);
+	sldns_buffer_write_u16(buf, qinfo->qclass);
+	sldns_buffer_write_u32(buf, 3600); /* TTL */
+	sldns_buffer_write_u16(buf, 1+1+4*5); /* rdatalen */
+	sldns_buffer_write_u8(buf, 0); /* primary "." */
+	sldns_buffer_write_u8(buf, 0); /* email "." */
+	sldns_buffer_write_u32(buf, serial); /* serial */
+	sldns_buffer_write_u32(buf, 0); /* refresh */
+	sldns_buffer_write_u32(buf, 0); /* retry */
+	sldns_buffer_write_u32(buf, 0); /* expire */
+	sldns_buffer_write_u32(buf, 0); /* minimum */
+	sldns_buffer_flip(buf);
+}
+
 /** write a query over the TCP fd */
 static void
 write_q(int fd, int udp, SSL* ssl, sldns_buffer* buf, uint16_t id,
@@ -123,6 +148,8 @@ write_q(int fd, int udp, SSL* ssl, sldns_buffer* buf, uint16_t id,
 {
 	struct query_info qinfo;
 	size_t proxy_buf_limit = sldns_buffer_limit(proxy_buf);
+	int have_serial = 0, is_notify = 0;
+	uint32_t serial = 0;
 	/* qname */
 	qinfo.qname = sldns_str2wire_dname(strname, &qinfo.qname_len);
 	if(!qinfo.qname) {
@@ -130,9 +157,32 @@ write_q(int fd, int udp, SSL* ssl, sldns_buffer* buf, uint16_t id,
 		exit(1);
 	}
 
-	/* qtype and qclass */
-	qinfo.qtype = sldns_get_rr_type_by_name(strtype);
+	/* qtype */
+	if(strncasecmp(strtype, "IXFR=", 5) == 0) {
+		serial = (uint32_t)atoi(strtype+5);
+		have_serial = 1;
+		qinfo.qtype = LDNS_RR_TYPE_IXFR;
+	} else if(strcasecmp(strtype, "NOTIFY") == 0) {
+		is_notify = 1;
+		qinfo.qtype = LDNS_RR_TYPE_SOA;
+	} else if(strncasecmp(strtype, "NOTIFY=", 7) == 0) {
+		serial = (uint32_t)atoi(strtype+7);
+		have_serial = 1;
+		is_notify = 1;
+		qinfo.qtype = LDNS_RR_TYPE_SOA;
+	} else {
+		qinfo.qtype = sldns_get_rr_type_by_name(strtype);
+		if(qinfo.qtype == 0 && strcmp(strtype, "TYPE0") != 0) {
+			printf("cannot parse query type: '%s'\n", strtype);
+			exit(1);
+		}
+	}
+	/* qclass */
 	qinfo.qclass = sldns_get_rr_class_by_name(strclass);
+	if(qinfo.qclass == 0 && strcmp(strclass, "CLASS0") != 0) {
+		printf("cannot parse query class: '%s'\n", strclass);
+		exit(1);
+	}
 
 	/* clear local alias */
 	qinfo.local_alias = NULL;
@@ -141,6 +191,21 @@ write_q(int fd, int udp, SSL* ssl, sldns_buffer* buf, uint16_t id,
 	qinfo_query_encode(buf, &qinfo);
 	sldns_buffer_write_u16_at(buf, 0, id);
 	sldns_buffer_write_u16_at(buf, 2, BIT_RD);
+
+	if(have_serial && qinfo.qtype == LDNS_RR_TYPE_IXFR) {
+		/* Attach serial to SOA record in the authority section. */
+		write_soa_serial_to_buf(buf, &qinfo, serial);
+		LDNS_NSCOUNT_SET(sldns_buffer_begin(buf), 1);
+	}
+	if(is_notify) {
+		LDNS_OPCODE_SET(sldns_buffer_begin(buf), LDNS_PACKET_NOTIFY);
+		LDNS_RD_CLR(sldns_buffer_begin(buf));
+		LDNS_AA_SET(sldns_buffer_begin(buf));
+		if(have_serial) {
+			write_soa_serial_to_buf(buf, &qinfo, serial);
+			LDNS_ANCOUNT_SET(sldns_buffer_begin(buf), 1);
+		}
+	}
 
 	if(1) {
 		/* add EDNS DO */
@@ -353,6 +418,7 @@ static int parse_pp2_client(const char* pp2_client, int udp,
 	sldns_buffer* proxy_buf)
 {
 	struct sockaddr_storage pp2_addr;
+	size_t bytes_written;
 	socklen_t pp2_addrlen = 0;
 	memset(&pp2_addr, 0, sizeof(pp2_addr));
 	if(*pp2_client == 0) return 0;
@@ -361,7 +427,9 @@ static int parse_pp2_client(const char* pp2_client, int udp,
 		exit(1);
 	}
 	sldns_buffer_clear(proxy_buf);
-	pp2_write_to_buf(proxy_buf, &pp2_addr, !udp);
+	bytes_written = pp2_write_to_buf(sldns_buffer_begin(proxy_buf),
+		sldns_buffer_remaining(proxy_buf), &pp2_addr, !udp);
+	sldns_buffer_set_position(proxy_buf, bytes_written);
 	sldns_buffer_flip(proxy_buf);
 	return 1;
 }
@@ -371,15 +439,19 @@ static void
 send_em(const char* svr, const char* pp2_client, int udp, int usessl,
 	int noanswer, int onarrival, int delay, int num, char** qs)
 {
-	sldns_buffer* buf = sldns_buffer_new(65553);
-	sldns_buffer* proxy_buf = sldns_buffer_new(65553);
 	struct sockaddr_storage svr_addr;
 	socklen_t svr_addrlen;
 	int fd = open_svr(svr, udp, &svr_addr, &svr_addrlen);
 	int i, wait_results = 0, pp2_parsed;
 	SSL_CTX* ctx = NULL;
 	SSL* ssl = NULL;
-	if(!buf) fatal_exit("out of memory");
+	sldns_buffer* buf = sldns_buffer_new(65553);
+	sldns_buffer* proxy_buf = sldns_buffer_new(65553);
+	if(!buf || !proxy_buf) {
+		sldns_buffer_free(buf);
+		sldns_buffer_free(proxy_buf);
+		fatal_exit("out of memory");
+	}
 	pp2_parsed = parse_pp2_client(pp2_client, udp, proxy_buf);
 	if(usessl) {
 		ctx = connect_sslctx_create(NULL, NULL, NULL, 0);
@@ -394,12 +466,16 @@ send_em(const char* svr, const char* pp2_client, int udp, int usessl,
 			r = SSL_get_error(ssl, r);
 			if(r != SSL_ERROR_WANT_READ &&
 				r != SSL_ERROR_WANT_WRITE) {
-				log_crypto_err("could not ssl_handshake");
+				log_crypto_err_io("could not ssl_handshake", r);
 				exit(1);
 			}
 		}
 		if(1) {
+#ifdef HAVE_SSL_GET1_PEER_CERTIFICATE
+			X509* x = SSL_get1_peer_certificate(ssl);
+#else
 			X509* x = SSL_get_peer_certificate(ssl);
+#endif
 			if(!x) printf("SSL: no peer certificate\n");
 			else {
 				X509_print_fp(stdout, x);
@@ -529,6 +605,8 @@ int main(int argc, char** argv)
 				break;
 			case 'p':
 				pp2_client = optarg;
+				pp_init(&sldns_write_uint16,
+					&sldns_write_uint32);
 				break;
 			case 'a':
 				onarrival = 1;

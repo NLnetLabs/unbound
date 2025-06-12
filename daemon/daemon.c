@@ -91,6 +91,8 @@
 #include "util/net_help.h"
 #include "sldns/keyraw.h"
 #include "respip/respip.h"
+#include "iterator/iter_fwd.h"
+#include "iterator/iter_hints.h"
 #include <signal.h>
 
 #ifdef HAVE_SYSTEMD
@@ -98,6 +100,9 @@
 #endif
 #ifdef HAVE_NETDB_H
 #include <netdb.h>
+#endif
+#ifdef USE_CACHEDB
+#include "cachedb/cachedb.h"
 #endif
 
 /** How many quit requests happened. */
@@ -260,6 +265,7 @@ daemon_init(void)
 		free(daemon);
 		return NULL;
 	}
+	daemon->env->modstack = &daemon->mods;
 	/* init edns_known_options */
 	if(!edns_known_options_init(daemon->env)) {
 		free(daemon->env);
@@ -317,21 +323,18 @@ daemon_init(void)
 	return daemon;	
 }
 
-static int setup_acl_for_ports(struct acl_list* list,
-	struct listen_port* port_list)
+int setup_acl_for_ports(struct acl_list* list, struct listen_port* port_list)
 {
 	struct acl_addr* acl_node;
-	struct addrinfo* addr;
 	for(; port_list; port_list=port_list->next) {
 		if(!port_list->socket) {
 			/* This is mainly for testbound where port_list is
 			 * empty. */
 			continue;
 		}
-		addr = port_list->socket->addr;
 		if(!(acl_node = acl_interface_insert(list,
-			(struct sockaddr_storage*)addr->ai_addr,
-			(socklen_t)addr->ai_addrlen,
+			(struct sockaddr_storage*)port_list->socket->addr,
+			port_list->socket->addrlen,
 			acl_refuse))) {
 			return 0;
 		}
@@ -340,7 +343,7 @@ static int setup_acl_for_ports(struct acl_list* list,
 	return 1;
 }
 
-int 
+int
 daemon_open_shared_ports(struct daemon* daemon)
 {
 	log_assert(daemon);
@@ -440,6 +443,19 @@ daemon_open_shared_ports(struct daemon* daemon)
 	return 1;
 }
 
+int
+daemon_privileged(struct daemon* daemon)
+{
+	daemon->env->cfg = daemon->cfg;
+	daemon->env->alloc = &daemon->superalloc;
+	daemon->env->worker = NULL;
+	if(!modstack_call_startup(&daemon->mods, daemon->cfg->module_conf,
+		daemon->env)) {
+		fatal_exit("failed to startup modules");
+	}
+	return 1;
+}
+
 /**
  * Setup modules. setup module stack.
  * @param daemon: the daemon
@@ -449,11 +465,15 @@ static void daemon_setup_modules(struct daemon* daemon)
 	daemon->env->cfg = daemon->cfg;
 	daemon->env->alloc = &daemon->superalloc;
 	daemon->env->worker = NULL;
-	daemon->env->need_to_validate = 0; /* set by module init below */
-	if(!modstack_setup(&daemon->mods, daemon->cfg->module_conf, 
-		daemon->env)) {
-		fatal_exit("failed to setup modules");
+	if(daemon->mods_inited) {
+		modstack_call_deinit(&daemon->mods, daemon->env);
 	}
+	daemon->env->need_to_validate = 0; /* set by module init below */
+	if(!modstack_call_init(&daemon->mods, daemon->cfg->module_conf,
+		daemon->env)) {
+		fatal_exit("failed to init modules");
+	}
+	daemon->mods_inited = 1;
 	log_edns_known_options(VERB_ALGO, daemon->env);
 }
 
@@ -499,7 +519,10 @@ daemon_clear_allocs(struct daemon* daemon)
 {
 	int i;
 
-	for(i=0; i<daemon->num; i++) {
+	/* daemon->num may be different during reloads (after configuration
+	 * read). Use old_num which has the correct value used to setup the
+	 * worker_allocs */
+	for(i=0; i<daemon->old_num; i++) {
 		alloc_clear(daemon->worker_allocs[i]);
 		free(daemon->worker_allocs[i]);
 	}
@@ -533,6 +556,12 @@ daemon_create_workers(struct daemon* daemon)
 		fatal_exit("out of memory during daemon init");
 	numport = daemon_get_shufport(daemon, shufport);
 	verbose(VERB_ALGO, "total of %d outgoing ports available", numport);
+
+#ifdef HAVE_NGTCP2
+	daemon->doq_table = doq_table_create(daemon->cfg, daemon->rand);
+	if(!daemon->doq_table)
+		fatal_exit("could not create doq_table: out of memory");
+#endif
 	
 	daemon->num = (daemon->cfg->num_threads?daemon->cfg->num_threads:1);
 	if(daemon->reuseport && (int)daemon->num < (int)daemon->num_ports) {
@@ -687,16 +716,16 @@ daemon_fork(struct daemon* daemon)
 #endif
 
 	log_assert(daemon);
-	if(!(daemon->views = views_create()))
+	if(!(daemon->env->views = views_create()))
 		fatal_exit("Could not create views: out of memory");
 	/* create individual views and their localzone/data trees */
-	if(!views_apply_cfg(daemon->views, daemon->cfg))
+	if(!views_apply_cfg(daemon->env->views, daemon->cfg))
 		fatal_exit("Could not set up views");
 
-	if(!acl_list_apply_cfg(daemon->acl, daemon->cfg, daemon->views))
+	if(!acl_list_apply_cfg(daemon->acl, daemon->cfg, daemon->env->views))
 		fatal_exit("Could not setup access control list");
 	if(!acl_interface_apply_cfg(daemon->acl_interface, daemon->cfg,
-		daemon->views))
+		daemon->env->views))
 		fatal_exit("Could not setup interface control list");
 	if(!tcl_list_apply_cfg(daemon->tcl, daemon->cfg))
 		fatal_exit("Could not setup TCP connection limits");
@@ -711,22 +740,36 @@ daemon_fork(struct daemon* daemon)
 				   "dnscrypt support");
 #endif
 	}
+	if(daemon->cfg->cookie_secret_file &&
+		daemon->cfg->cookie_secret_file[0]) {
+		if(!(daemon->cookie_secrets = cookie_secrets_create()))
+			fatal_exit("Could not create cookie_secrets: out of memory");
+		if(!cookie_secrets_apply_cfg(daemon->cookie_secrets,
+			daemon->cfg->cookie_secret_file))
+			fatal_exit("Could not setup cookie_secrets");
+	}
 	/* create global local_zones */
 	if(!(daemon->local_zones = local_zones_create()))
 		fatal_exit("Could not create local zones: out of memory");
 	if(!local_zones_apply_cfg(daemon->local_zones, daemon->cfg))
 		fatal_exit("Could not set up local zones");
+	if(!(daemon->env->fwds = forwards_create()) ||
+		!forwards_apply_cfg(daemon->env->fwds, daemon->cfg))
+		fatal_exit("Could not set forward zones");
+	if(!(daemon->env->hints = hints_create()) ||
+		!hints_apply_cfg(daemon->env->hints, daemon->cfg))
+		fatal_exit("Could not set root or stub hints");
 
 	/* process raw response-ip configuration data */
-	if(!(daemon->respip_set = respip_set_create()))
+	if(!(daemon->env->respip_set = respip_set_create()))
 		fatal_exit("Could not create response IP set");
-	if(!respip_global_apply_cfg(daemon->respip_set, daemon->cfg))
+	if(!respip_global_apply_cfg(daemon->env->respip_set, daemon->cfg))
 		fatal_exit("Could not set up response IP set");
-	if(!respip_views_apply_cfg(daemon->views, daemon->cfg,
+	if(!respip_views_apply_cfg(daemon->env->views, daemon->cfg,
 		&have_view_respip_cfg))
 		fatal_exit("Could not set up per-view response IP sets");
-	daemon->use_response_ip = !respip_set_is_empty(daemon->respip_set) ||
-		have_view_respip_cfg;
+	daemon->use_response_ip = !respip_set_is_empty(
+		daemon->env->respip_set) || have_view_respip_cfg;
 
 	/* setup modules */
 	daemon_setup_modules(daemon);
@@ -740,6 +783,10 @@ daemon_fork(struct daemon* daemon)
 	if(!edns_strings_apply_cfg(daemon->env->edns_strings, daemon->cfg))
 		fatal_exit("Could not set up EDNS strings");
 
+#ifdef USE_CACHEDB
+	daemon->env->cachedb_enabled = cachedb_is_enabled(&daemon->mods,
+		daemon->env);
+#endif
 	/* response-ip-xxx options don't work as expected without the respip
 	 * module.  To avoid run-time operational surprise we reject such
 	 * configuration. */
@@ -832,16 +879,24 @@ daemon_cleanup(struct daemon* daemon)
 		slabhash_clear(daemon->env->msg_cache);
 	}
 	daemon->old_num = daemon->num; /* save the current num */
+	forwards_delete(daemon->env->fwds);
+	daemon->env->fwds = NULL;
+	hints_delete(daemon->env->hints);
+	daemon->env->hints = NULL;
 	local_zones_delete(daemon->local_zones);
 	daemon->local_zones = NULL;
-	respip_set_delete(daemon->respip_set);
-	daemon->respip_set = NULL;
-	views_delete(daemon->views);
-	daemon->views = NULL;
+	respip_set_delete(daemon->env->respip_set);
+	daemon->env->respip_set = NULL;
+	views_delete(daemon->env->views);
+	daemon->env->views = NULL;
 	if(daemon->env->auth_zones)
 		auth_zones_cleanup(daemon->env->auth_zones);
-	/* key cache is cleared by module desetup during next daemon_fork() */
+	/* key cache is cleared by module deinit during next daemon_fork() */
 	daemon_remote_clear(daemon->rc);
+	if(daemon->fast_reload_thread)
+		fast_reload_thread_stop(daemon->fast_reload_thread);
+	if(daemon->fast_reload_printq_list)
+		fast_reload_printq_list_delete(daemon->fast_reload_printq_list);
 	for(i=0; i<daemon->num; i++)
 		worker_delete(daemon->workers[i]);
 	free(daemon->workers);
@@ -861,6 +916,10 @@ daemon_cleanup(struct daemon* daemon)
 	dnsc_delete(daemon->dnscenv);
 	daemon->dnscenv = NULL;
 #endif
+#ifdef HAVE_NGTCP2
+	doq_table_delete(daemon->doq_table);
+	daemon->doq_table = NULL;
+#endif
 	daemon->cfg = NULL;
 }
 
@@ -870,7 +929,9 @@ daemon_delete(struct daemon* daemon)
 	size_t i;
 	if(!daemon)
 		return;
-	modstack_desetup(&daemon->mods, daemon->env);
+	modstack_call_deinit(&daemon->mods, daemon->env);
+	modstack_call_destartup(&daemon->mods, daemon->env);
+	modstack_free(&daemon->mods);
 	daemon_remote_delete(daemon->rc);
 	for(i = 0; i < daemon->num_ports; i++)
 		listening_ports_free(daemon->ports[i]);
@@ -889,14 +950,20 @@ daemon_delete(struct daemon* daemon)
 	acl_list_delete(daemon->acl);
 	acl_list_delete(daemon->acl_interface);
 	tcl_list_delete(daemon->tcl);
+	cookie_secrets_delete(daemon->cookie_secrets);
 	listen_desetup_locks();
 	free(daemon->chroot);
 	free(daemon->pidfile);
+	free(daemon->cfgfile);
 	free(daemon->env);
 #ifdef HAVE_SSL
 	listen_sslctx_delete_ticket_keys();
-	SSL_CTX_free((SSL_CTX*)daemon->listen_sslctx);
-	SSL_CTX_free((SSL_CTX*)daemon->connect_sslctx);
+	SSL_CTX_free((SSL_CTX*)daemon->listen_dot_sslctx);
+	SSL_CTX_free((SSL_CTX*)daemon->listen_doh_sslctx);
+	SSL_CTX_free((SSL_CTX*)daemon->connect_dot_sslctx);
+#endif
+#ifdef HAVE_NGTCP2
+	SSL_CTX_free((SSL_CTX*)daemon->listen_quic_sslctx);
 #endif
 	free(daemon);
 	/* lex cleanup */

@@ -220,7 +220,7 @@ perfsetup(struct perfinfo* info)
 #endif
 		signal(SIGTERM, perf_sigh) == SIG_ERR)
 		fatal_exit("could not bind to signal");
-	info->io = (struct perfio*)calloc(sizeof(struct perfio), info->io_num);
+	info->io = (struct perfio*)calloc(info->io_num, sizeof(struct perfio));
 	if(!info->io) fatal_exit("out of memory");
 #ifndef S_SPLINT_S
 	FD_ZERO(&info->rset);
@@ -458,9 +458,17 @@ qlist_parse_line(sldns_buffer* buf, char* p)
 	if(strcmp(tp, "IN") == 0 || strcmp(tp, "CH") == 0) {
 		qinfo.qtype = sldns_get_rr_type_by_name(cl);
 		qinfo.qclass = sldns_get_rr_class_by_name(tp);
+		if((qinfo.qtype == 0 && strcmp(cl, "TYPE0") != 0) ||
+			(qinfo.qclass == 0 && strcmp(tp, "CLASS0") != 0)) {
+			return 0;
+		}
 	} else {
 		qinfo.qtype = sldns_get_rr_type_by_name(tp);
 		qinfo.qclass = sldns_get_rr_class_by_name(cl);
+		if((qinfo.qtype == 0 && strcmp(tp, "TYPE0") != 0) ||
+			(qinfo.qclass == 0 && strcmp(cl, "CLASS0") != 0)) {
+			return 0;
+		}
 	}
 	if(fl[0] == '+') rec = 1;
 	else if(fl[0] == '-') rec = 0;
@@ -493,8 +501,8 @@ qlist_grow_capacity(struct perfinfo* info)
 {
 	size_t newcap = (size_t)((info->qlist_capacity==0)?16:
 		info->qlist_capacity*2);
-	uint8_t** d = (uint8_t**)calloc(sizeof(uint8_t*), newcap);
-	size_t* l = (size_t*)calloc(sizeof(size_t), newcap);
+	uint8_t** d = (uint8_t**)calloc(newcap, sizeof(uint8_t*));
+	size_t* l = (size_t*)calloc(newcap, sizeof(size_t));
 	if(!d || !l) fatal_exit("out of memory");
 	if(info->qlist_data && info->qlist_capacity)
 		memcpy(d, info->qlist_data, sizeof(uint8_t*)*

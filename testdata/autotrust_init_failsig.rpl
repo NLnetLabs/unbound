@@ -6,6 +6,7 @@ server:
 	fake-sha1: yes
 	trust-anchor-signaling: no
 	ede: yes
+	access-control: 127.0.0.0/8 allow_snoop
 
 stub-zone:
 	name: "."
@@ -138,10 +139,29 @@ SECTION QUESTION
 www.example.com. IN A
 ENTRY_END
 
+; ede=6 with sha1, and ede=7 without, due to the fake-sha1 option it picks
+; a different error cause, the signature expiry or crypto mismatch.
 STEP 20 CHECK_ANSWER
 ENTRY_BEGIN
-MATCH all ede=6
+MATCH all ede=any
 REPLY QR RD RA DO SERVFAIL
+SECTION QUESTION
+www.example.com. IN A
+SECTION ANSWER
+ENTRY_END
+
+; Redo the query without RD to check EDE caching.
+STEP 21 QUERY
+ENTRY_BEGIN
+REPLY DO
+SECTION QUESTION
+www.example.com. IN A
+ENTRY_END
+
+STEP 22 CHECK_ANSWER
+ENTRY_BEGIN
+MATCH all ede=any
+REPLY QR RA DO SERVFAIL
 SECTION QUESTION
 www.example.com. IN A
 SECTION ANSWER
