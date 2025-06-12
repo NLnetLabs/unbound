@@ -140,7 +140,7 @@ tsig_verify(sldns_buffer* pkt, const uint8_t* name, const uint8_t* alg,
 	hmac_result_len = sizeof(hmac_result);
 	HMAC( digester, secret, secret_len, sldns_buffer_begin(pkt), pos
 	    , hmac_result, &hmac_result_len);
-	if(memcmp(mac, hmac_result, hmac_result_len) == 0) {
+	if(CRYPTO_memcmp(mac, hmac_result, hmac_result_len) == 0) {
 		return now > time_signed ?
 		     ( time_signed - now > fudge ? LDNS_TSIG_ERROR_BADTIME : 0 )
 		     : now - time_signed > fudge ? LDNS_TSIG_ERROR_BADTIME : 0 ;
