@@ -41,6 +41,7 @@
 
 #ifndef UTIL_TSIG_H
 #define UTIL_TSIG_H
+struct sldns_buffer;
 
 /**
  * TSIG record, the RR that is in the packet.
@@ -114,5 +115,13 @@ struct tsig_key {
 	/** the size of the data */
 	size_t data_len;
 };
+
+/**
+ * Verify pkt with the name (domain name), algorithm and key.
+ * out 0 on success, an error code otherwise.
+ */
+int tsig_verify(struct sldns_buffer* pkt, const uint8_t* name,
+	const uint8_t* alg, const uint8_t* secret, size_t secret_len,
+	uint64_t now);
 
 #endif /* UTIL_TSIG_H */
