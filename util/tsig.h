@@ -44,6 +44,7 @@
 #include "util/locks.h"
 #include "util/rbtree.h"
 struct sldns_buffer;
+struct config_file;
 
 /**
  * TSIG record, the RR that is in the packet.
@@ -145,6 +146,15 @@ struct tsig_key_table* tsig_key_table_create(void);
  * @param key_table: to delete.
  */
 void tsig_key_table_delete(struct tsig_key_table* key_table);
+
+/**
+ * Apply config to the tsig key table.
+ * @param key_table: the tsig key table.
+ * @param cfg: the config to read.
+ * @return false on failure.
+ */
+int tsig_key_table_apply_cfg(struct tsig_key_table* key_table,
+	struct config_file* cfg);
 
 /**
  * Delete TSIG key.

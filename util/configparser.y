@@ -47,7 +47,9 @@
 #include "util/configyyrename.h"
 #include "util/config_file.h"
 #include "util/net_help.h"
+#include "util/tsig.h"
 #include "sldns/str2wire.h"
+#include "sldns/parseutil.h"
 
 int ub_c_lex(void);
 void ub_c_error(const char *message);
@@ -215,6 +217,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_LOG_DESTADDR VAR_CACHEDB_CHECK_WHEN_SERVE_EXPIRED
 %token VAR_COOKIE_SECRET_FILE VAR_ITER_SCRUB_NS VAR_ITER_SCRUB_CNAME
 %token VAR_MAX_GLOBAL_QUOTA VAR_HARDEN_UNVERIFIED_GLUE VAR_LOG_TIME_ISO
+%token VAR_TSIG_KEY VAR_ALGORITHM VAR_SECRET
 
 %%
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
@@ -223,7 +226,7 @@ toplevelvar: serverstart contents_server | stub_clause |
 	rcstart contents_rc | dtstart contents_dt | view_clause |
 	dnscstart contents_dnsc | cachedbstart contents_cachedb |
 	ipsetstart contents_ipset | authstart contents_auth |
-	rpzstart contents_rpz | dynlibstart contents_dl |
+	rpzstart contents_rpz | dynlibstart contents_dl | tsig_key_clause |
 	force_toplevel
 	;
 force_toplevel: VAR_FORCE_TOPLEVEL
@@ -3732,6 +3735,82 @@ dl_file: VAR_DYNLIB_FILE STRING_ARG
 			yyerror("out of memory");
 	}
 	;
+tsig_key_clause: tsig_key_start contents_tsig_key
+	{
+		/* tsig-key end */
+		if(cfg_parser->cfg->tsig_keys) {
+			if(!cfg_parser->cfg->tsig_keys->name)
+				yyerror("tsig-key without name");
+			else if(!cfg_parser->cfg->tsig_keys->algorithm)
+				ub_c_error_msg("tsig-key %s has no algorithm",
+					cfg_parser->cfg->tsig_keys->name);
+			else if(!cfg_parser->cfg->tsig_keys->secret)
+				ub_c_error_msg("tsig-key %s has no secret blob",
+					cfg_parser->cfg->tsig_keys->name);
+		}
+	}
+	;
+tsig_key_start: VAR_TSIG_KEY
+	{
+		struct config_tsig_key* s;
+		OUTYY(("\nP(tsig-key:)\n"));
+		cfg_parser->started_toplevel = 1;
+		s = (struct config_tsig_key*)calloc(1,
+			sizeof(struct config_tsig_key));
+		if(s) {
+			s->next = cfg_parser->cfg->tsig_keys;
+			cfg_parser->cfg->tsig_keys = s;
+		} else {
+			yyerror("out of memory");
+		}
+	}
+	;
+contents_tsig_key: contents_tsig_key content_tsig_key
+	| ;
+content_tsig_key: tsig_key_name | tsig_key_algorithm | tsig_key_secret
+	;
+tsig_key_name: VAR_NAME STRING_ARG
+	{
+		uint8_t buf[LDNS_MAX_DOMAINLEN+1];
+		size_t len = sizeof(buf);
+		int r;
+
+		OUTYY(("P(name:%s)\n", $2));
+		free(cfg_parser->cfg->tsig_keys->name);
+		cfg_parser->cfg->tsig_keys->name = $2;
+
+		if((r=sldns_str2wire_dname_buf($2, buf, &len))!=0)
+			ub_c_error_msg("could not parse tsig key name"
+				" '%s':%d: %s", $2, LDNS_WIREPARSE_OFFSET(r),
+				sldns_get_errorstr_parse(r));
+	}
+tsig_key_algorithm: VAR_ALGORITHM STRING_ARG
+	{
+		OUTYY(("P(algorithm:%s)\n", $2));
+		free(cfg_parser->cfg->tsig_keys->algorithm);
+		cfg_parser->cfg->tsig_keys->algorithm = $2;
+		if(!tsig_algo_check_name($2))
+			ub_c_error_msg("could not parse tsig key algorithm '%s'",
+				$2);
+	}
+tsig_key_secret: VAR_SECRET STRING_ARG
+	{
+		uint8_t data[16384];
+		int size;
+
+		OUTYY(("P(secret:%s)\n", $2));
+		free(cfg_parser->cfg->tsig_keys->secret);
+		cfg_parser->cfg->tsig_keys->secret = $2;
+
+		size = sldns_b64_pton($2, data, sizeof(data));
+		if(size == -1) {
+			ub_c_error_msg("cannot base64 decode tsig secret %s",
+				cfg_parser->cfg->tsig_keys->name?
+				cfg_parser->cfg->tsig_keys->name:"");
+		} else if(size != 0) {
+			explicit_bzero(data, size);
+		}
+	}
 server_disable_dnssec_lame_check: VAR_DISABLE_DNSSEC_LAME_CHECK STRING_ARG
 	{
 		OUTYY(("P(disable_dnssec_lame_check:%s)\n", $2));

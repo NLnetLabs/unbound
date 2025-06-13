@@ -41,10 +41,13 @@
 
 #include "config.h"
 #include "util/tsig.h"
+#include "util/config_file.h"
 #include "util/log.h"
+#include "sldns/parseutil.h"
 #include "sldns/pkthdr.h"
 #include "sldns/rrdef.h"
 #include "sldns/sbuffer.h"
+#include "sldns/str2wire.h"
 #include "util/data/msgparse.h"
 #include "util/data/dname.h"
 #include <openssl/evp.h>
@@ -114,6 +117,95 @@ tsig_key_table_delete(struct tsig_key_table* key_table)
 	free(key_table);
 }
 
+/** Create a tsig_key */
+static struct tsig_key*
+tsig_key_create(const char* name, const char* algorithm, const char* secret)
+{
+	struct tsig_key* key = (struct tsig_key*)calloc(1, sizeof(*key));
+	int ret;
+	if(!key) {
+		log_err("out of memory");
+		return NULL;
+	}
+	key->node.key = key;
+	key->name_str = strdup(name);
+	if(!key->name_str) {
+		log_err("out of memory");
+		tsig_key_delete(key);
+		return NULL;
+	}
+	key->algo = tsig_algo_find_name(algorithm);
+	if(!key->algo) {
+		log_err("tsig key %s could not parse algorithm '%s'",
+			name, algorithm);
+		tsig_key_delete(key);
+		return NULL;
+	}
+	key->name = sldns_str2wire_dname(name, &key->name_len);
+	if(!key->name) {
+		log_err("tsig key %s could not parse name into wireformat",
+			name);
+		tsig_key_delete(key);
+		return NULL;
+	}
+
+	key->data_len = sldns_b64_pton_calculate_size(strlen(secret));
+	if(key->data_len == 0)
+		key->data = NULL;
+	else	key->data = malloc(key->data_len);
+	if(!key->data) {
+		log_err("out of memory");
+		tsig_key_delete(key);
+		return NULL;
+	}
+	ret = sldns_b64_pton(secret, key->data, key->data_len);
+	if(ret == -1 || ret > (int)key->data_len) {
+		log_err("tsig key %s could not base64 decode secret blob",
+			name);
+		tsig_key_delete(key);
+		return NULL;
+	}
+	key->data_len = ret;
+
+	return key;
+}
+
+/** Add a key to the TSIG key table. */
+static int
+tsig_key_table_add_key(struct tsig_key_table* key_table,
+	struct config_tsig_key* s)
+{
+	struct tsig_key* key;
+	key = tsig_key_create(s->name, s->algorithm, s->secret);
+	if(!key)
+		return 0;
+	/* Wipe the secret from config, it is in the key_table. */
+	if(s->secret[0] != 0)
+		explicit_bzero(s->secret, strlen(s->secret));
+
+	lock_rw_wrlock(&key_table->lock);
+	if(!rbtree_insert(key_table->tree, &key->node)) {
+		log_warn("duplicate tsig-key: %s", key->name_str);
+		lock_rw_unlock(&key_table->lock);
+		tsig_key_delete(key);
+		return 0;
+	}
+	lock_rw_unlock(&key_table->lock);
+	return 1;
+}
+
+int
+tsig_key_table_apply_cfg(struct tsig_key_table* key_table,
+	struct config_file* cfg)
+{
+	struct config_tsig_key* s;
+	for(s = cfg->tsig_keys; s; s = s->next) {
+		if(!tsig_key_table_add_key(key_table, s))
+			return 0;
+	}
+	return 1;
+}
+
 void tsig_key_delete(struct tsig_key* key)
 {
 	if(!key)
@@ -122,7 +214,8 @@ void tsig_key_delete(struct tsig_key* key)
 	free(key->name);
 	if(key->data) {
 		/* The secret data is removed. */
-		explicit_bzero(key->data, key->data_len);
+		if(key->data_len > 0)
+			explicit_bzero(key->data, key->data_len);
 		free(key->data);
 	}
 	free(key);
