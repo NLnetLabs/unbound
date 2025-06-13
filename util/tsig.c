@@ -199,10 +199,6 @@ tsig_algo_find_name(const char* algo_name)
 	if(strncasecmp(algo_name, "hmac-", 5) != 0) {
 		snprintf(buf, sizeof(buf), "hmac-%s", algo_name);
 		lookfor = buf;
-		if(buf[strlen(buf)-1] == '.') {
-			/* Remove trailing '.' */
-			buf[strlen(buf)-1] = 0;
-		}
 	} else {
 		if(algo_name[strlen(algo_name)-1] == '.') {
 			/* Remove trailing '.' */
@@ -211,9 +207,9 @@ tsig_algo_find_name(const char* algo_name)
 			lookfor = buf;
 		}
 		if(strcasecmp(lookfor, "hmac-md5.sig-alg.reg.int") == 0)
-			lookfor = "hmac-md5";
+			lookfor = "hmac-md5"; /* Look for short name. */
 	}
-	
+
 	for(i=0; i<sizeof(tsig_algorithm_table)/sizeof(*tsig_algorithm_table);
 	    i++) {
 		if(strcasecmp(tsig_algorithm_table[i].short_name, lookfor)
