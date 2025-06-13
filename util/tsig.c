@@ -50,6 +50,21 @@
 #include <openssl/evp.h>
 #include <openssl/hmac.h>
 
+/**
+ * The list of TSIG algorithms. It has short_name, wireformat_name,
+ * wireformat_name_len, digest, max_digest_size.
+ */
+static struct tsig_algorithm tsig_algorithm_table[] = {
+	{ "hmac-md5",
+	  (uint8_t*)"\x08hmac-md5\x07sig-alg\x03reg\x03int\x00", 26,
+	  "md5", 16 },
+	{ "hmac-sha1", (uint8_t*)"\x09hmac-sha1\x00", 11, "sha1", 20 },
+	{ "hmac-sha224", (uint8_t*)"\x0Bhmac-sha224\x00", 13, "sha224", 28 },
+	{ "hmac-sha256", (uint8_t*)"\x0Bhmac-sha256\x00", 13, "sha256", 32 },
+	{ "hmac-sha384", (uint8_t*)"\x0Bhmac-sha384\x00", 13, "sha384", 48 },
+	{ "hmac-sha512", (uint8_t*)"\x0Bhmac-sha512\x00", 13, "sha512", 64 }
+};
+
 int
 tsig_key_compare(const void* v1, const void* v2)
 {
@@ -111,6 +126,101 @@ void tsig_key_delete(struct tsig_key* key)
 		free(key->data);
 	}
 	free(key);
+}
+
+int
+tsig_algo_check_name(const char* algo_name)
+{
+	/* It is either the long name for md5, "hmac-md5.sig-alg.reg.int."
+	 * or a short name, "hmac-sha256", or a digest name "sha256".
+	 * The name is case insensitive. */
+	if(strncasecmp(algo_name, "hmac-", 5) == 0) {
+		/* The name starts with 'hmac-'. */
+		if(strncasecmp(algo_name+5, "sha", 3) == 0) {
+			/* sha1 */
+			if(strcasecmp(algo_name+8, "1") == 0 ||
+				strcasecmp(algo_name+8, "1.") == 0)
+				return 1;
+			/* sha224 */
+			if(strcasecmp(algo_name+8, "224") == 0 ||
+				strcasecmp(algo_name+8, "224.") == 0)
+				return 1;
+			/* sha256 */
+			if(strcasecmp(algo_name+8, "256") == 0 ||
+				strcasecmp(algo_name+8, "256.") == 0)
+				return 1;
+			/* sha384 */
+			if(strcasecmp(algo_name+8, "384") == 0 ||
+				strcasecmp(algo_name+8, "384.") == 0)
+				return 1;
+			/* sha512 */
+			if(strcasecmp(algo_name+8, "512") == 0 ||
+				strcasecmp(algo_name+8, "512.") == 0)
+				return 1;
+		}
+		if(strncasecmp(algo_name+5, "md5", 3) == 0) {
+			/* 'hmac-md5' or 'hmac-md5.' */
+			if(strcasecmp(algo_name+8, "") == 0 ||
+				strcasecmp(algo_name+8, ".") == 0)
+				return 1;
+			if(strcasecmp(algo_name,
+				"hmac-md5.sig-alg.reg.int.") == 0
+			  || strcasecmp(algo_name,
+			  	"hmac-md5.sig-alg.reg.int") == 0)
+				return 1;
+		}
+	}
+	if(strncasecmp(algo_name, "sha", 3) == 0) {
+		if(strcasecmp(algo_name+3, "1") == 0)
+			return 1;
+		if(strcasecmp(algo_name+3, "224") == 0)
+			return 1;
+		if(strcasecmp(algo_name+3, "256") == 0)
+			return 1;
+		if(strcasecmp(algo_name+3, "384") == 0)
+			return 1;
+		if(strcasecmp(algo_name+3, "512") == 0)
+			return 1;
+	}
+	if(strcasecmp(algo_name, "md5") == 0)
+		return 1;
+	return 0;
+}
+
+struct tsig_algorithm*
+tsig_algo_find_name(const char* algo_name)
+{
+	size_t i;
+	char buf[40];
+	const char* lookfor = algo_name;
+	if(algo_name == NULL || algo_name[0] == 0 ||
+		strlen(algo_name)+5 >= sizeof(buf))
+		return NULL;
+	if(strncasecmp(algo_name, "hmac-", 5) != 0) {
+		snprintf(buf, sizeof(buf), "hmac-%s", algo_name);
+		lookfor = buf;
+		if(buf[strlen(buf)-1] == '.') {
+			/* Remove trailing '.' */
+			buf[strlen(buf)-1] = 0;
+		}
+	} else {
+		if(algo_name[strlen(algo_name)-1] == '.') {
+			/* Remove trailing '.' */
+			snprintf(buf, sizeof(buf), "%s", algo_name);
+			buf[strlen(buf)-1] = 0;
+			lookfor = buf;
+		}
+		if(strcasecmp(lookfor, "hmac-md5.sig-alg.reg.int") == 0)
+			lookfor = "hmac-md5";
+	}
+	
+	for(i=0; i<sizeof(tsig_algorithm_table)/sizeof(*tsig_algorithm_table);
+	    i++) {
+		if(strcasecmp(tsig_algorithm_table[i].short_name, lookfor)
+			== 0)
+			return &tsig_algorithm_table[i];
+	}
+	return NULL;
 }
 
 /**

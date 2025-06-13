@@ -91,6 +91,11 @@ struct tsig_algorithm {
 	uint8_t* wireformat_name;
 	/** length of the wireformat_name */
 	size_t wireformat_name_len;
+	/** digest name, like "md5" */
+	const char* digest;
+	/** the maximum size of the digest from the algorithm, in bytes,
+	 * like 16 for MD5, and 20 for SHA1. */
+	size_t max_digest_size;
 };
 
 /**
@@ -146,6 +151,20 @@ void tsig_key_table_delete(struct tsig_key_table* key_table);
  * @param key: to delete
  */
 void tsig_key_delete(struct tsig_key* key);
+
+/**
+ * See if an algorithm name is in the list of accepted algorithm names.
+ * @param algo_name: string to check
+ * @return 0 on failure.
+ */
+int tsig_algo_check_name(const char* algo_name);
+
+/**
+ * Get the TSIG algorithm for the algorithm name.
+ * @param algo_name: string to find.
+ * @return NULL on failure, tsig algorithm structure.
+ */
+struct tsig_algorithm* tsig_algo_find_name(const char* algo_name);
 
 /**
  * Verify pkt with the name (domain name), algorithm and key.
