@@ -454,6 +454,39 @@ ifautomaticportschecks(char* ifautomaticports)
 	}
 }
 
+/** check control interface strings */
+static void
+controlinterfacechecks(struct config_file* cfg)
+{
+	struct config_strlist* p;
+	for(p = cfg->control_ifs.first; p; p = p->next) {
+		struct sockaddr_storage a;
+		socklen_t alen;
+		char** rcif = NULL;
+		int i, num_rcif = 0;
+		/* See if it is a local socket, starts with a '/'. */
+		if(p->str && p->str[0] == '/')
+			continue;
+		if(!resolve_interface_names(&p->str, 1, NULL, &rcif,
+			&num_rcif)) {
+			fatal_exit("could not resolve interface names, for control-interface: %s",
+				p->str);
+		}
+		for(i=0; i<num_rcif; i++) {
+			if(!extstrtoaddr(rcif[i], &a, &alen,
+				cfg->control_port)) {
+				if(strcmp(p->str, rcif[i])!=0)
+					fatal_exit("cannot parse control-interface address '%s' from the control-interface specified as '%s'",
+						rcif[i], p->str);
+				else
+					fatal_exit("cannot parse control-interface specified as '%s'",
+						p->str);
+			}
+		}
+		config_del_strarray(rcif, num_rcif);
+	}
+}
+
 /** check acl ips */
 static void
 aclchecks(struct config_file* cfg)
@@ -932,6 +965,8 @@ morechecks(struct config_file* cfg)
 			fatal_exit("control-cert-file: \"%s\" does not exist",
 				cfg->control_cert_file);
 	}
+	if(cfg->remote_control_enable)
+		controlinterfacechecks(cfg);
 
 	donotquerylocalhostcheck(cfg);
 	localzonechecks(cfg);
