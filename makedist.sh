@@ -539,6 +539,12 @@ if [ "$DOWIN" = "yes" ]; then
     if test -f "$sspdll"; then
 	    cp "$sspdll" libunbound/.
     fi
+    if test "$W64" = "no"; then
+	# This could be solved with -static -static-libgcc -static-libstdc++.
+	# The dependency on c++ is probably due to libexpat. But the copy
+	# of the dll should work too. It may be needed for the libunbound.dll.
+	cp /usr/i686-w64-mingw32/sys-root/mingw/bin/libgcc_s_dw2-1.dll libunbound/.
+    fi
     # zipfile
     zip -r ../$file LICENSE README.txt unbound.exe unbound-anchor.exe unbound-host.exe unbound-control.exe unbound-checkconf.exe unbound-service-install.exe unbound-service-remove.exe unbound-control-setup.cmd example.conf service.conf root.key unbound-website.url create_unbound_ad_servers.cmd warmup.cmd unbound_cache.cmd Changelog libunbound
     info "Testing $file"
