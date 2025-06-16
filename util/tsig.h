@@ -178,7 +178,9 @@ struct tsig_algorithm* tsig_algo_find_name(const char* algo_name);
 
 /**
  * Verify pkt with the name (domain name), algorithm and key.
- * out 0 on success, an error code otherwise.
+ * out 0 on success, on failure:
+ * -1 for malformed, no tsig RR, or too large for buffer.
+ * >0 rcode with a TSIG error code otherwise.
  */
 int tsig_verify(struct sldns_buffer* pkt, const uint8_t* name,
 	const uint8_t* alg, const uint8_t* secret, size_t secret_len,
