@@ -80,6 +80,23 @@ struct tsig_record {
 };
 
 /**
+ * TSIG data. This keeps track of the information between packets,
+ * for the TSIG signature, and state, errors, key.
+ */
+struct tsig_data {
+	/** The key name, in wireformat */
+	uint8_t* key_name;
+	/** length of the key name */
+	size_t key_name_len;
+	/** length of the algorithm name */
+	size_t algorithm_name_len;
+	/** mac size */
+	size_t mac_size;
+	/** digest buffer */
+	uint8_t* mac;
+};
+
+/**
  * TSIG algorithm. This is the HMAC algorithm used for the TSIG mac.
  */
 struct tsig_algorithm {
@@ -157,6 +174,17 @@ int tsig_key_table_apply_cfg(struct tsig_key_table* key_table,
 	struct config_file* cfg);
 
 /**
+ * Find key in key table. Caller must hold lock on the table.
+ * @param key_table: the tsig key table.
+ * @param name: name to look for in wireformat.
+ * @param namelen: length of name.
+ * @return the found key or NULL if not found. The item is locked
+ * by the key_table lock.
+ */
+struct tsig_key* tsig_key_table_search(struct tsig_key_table* key_table,
+	uint8_t* name, size_t namelen);
+
+/**
  * Delete TSIG key.
  * @param key: to delete
  */
@@ -188,5 +216,30 @@ int tsig_verify(struct sldns_buffer* pkt, const uint8_t* name,
 
 /** Compare function for the key table keys. */
 int tsig_key_compare(const void* v1, const void* v2);
+
+/**
+ * Find tsig key and create new tsig data.
+ * @param key_table: the tsig key table.
+ * @param name: key name in wireformat.
+ * @param namelen: length of name.
+ * @return NULL if not found, or alloc failure.
+ */
+struct tsig_data* tsig_create(struct tsig_key_table* key_table,
+	uint8_t* name, size_t namelen);
+
+/**
+ * Find tsig key and create new tsig data.
+ * @param key_table: the tsig key table.
+ * @param name: key name string.
+ * @return NULL if not found, or alloc failure, or could not parse string.
+ */
+struct tsig_data* tsig_create_fromstr(struct tsig_key_table* key_table,
+	char* name);
+
+/**
+ * Delete tsig data.
+ * @param tsig: the tsig data to delete.
+ */
+void tsig_delete(struct tsig_data* tsig);
 
 #endif /* UTIL_TSIG_H */

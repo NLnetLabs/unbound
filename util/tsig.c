@@ -43,6 +43,7 @@
 #include "util/tsig.h"
 #include "util/config_file.h"
 #include "util/log.h"
+#include "util/net_help.h"
 #include "sldns/parseutil.h"
 #include "sldns/pkthdr.h"
 #include "sldns/rrdef.h"
@@ -204,6 +205,20 @@ tsig_key_table_apply_cfg(struct tsig_key_table* key_table,
 			return 0;
 	}
 	return 1;
+}
+
+struct tsig_key*
+tsig_key_table_search(struct tsig_key_table* key_table, uint8_t* name,
+	size_t namelen)
+{
+	rbnode_type* node;
+	struct tsig_key k;
+	k.node.key = &k;
+	k.name = name;
+	k.name_len = namelen;
+	node = rbtree_search(key_table->tree, &k);
+	if(!node) return NULL;
+	return (struct tsig_key*)node->key;
 }
 
 void tsig_key_delete(struct tsig_key* key)
@@ -559,4 +574,65 @@ tsig_verify(sldns_buffer* pkt, const uint8_t* name, const uint8_t* alg,
 	sldns_buffer_write_u16_at(pkt, 0, current_query_id);
 	sldns_buffer_set_position(pkt, end_of_message);
 	return LDNS_TSIG_ERROR_BADSIG;
+}
+
+struct tsig_data*
+tsig_create(struct tsig_key_table* key_table, uint8_t* name, size_t namelen)
+{
+	struct tsig_key* key;
+	struct tsig_data* tsig;
+	lock_rw_rdlock(&key_table->lock);
+	key = tsig_key_table_search(key_table, name, namelen);
+	if(!key) {
+		lock_rw_unlock(&key_table->lock);
+		return NULL;
+	}
+	/* the key table lock is also on the returned key */
+
+	tsig = calloc(1, sizeof(*tsig));
+	if(!tsig) {
+		lock_rw_unlock(&key_table->lock);
+		log_err("out of memory");
+		return NULL;
+	}
+	tsig->key_name_len = key->name_len;
+	tsig->key_name = memdup(key->name, key->name_len);
+	if(!tsig->key_name) {
+		lock_rw_unlock(&key_table->lock);
+		tsig_delete(tsig);
+		log_err("out of memory");
+		return NULL;
+	}
+	tsig->algorithm_name_len = key->algo->wireformat_name_len;
+	tsig->mac_size = key->algo->max_digest_size;
+	tsig->mac = calloc(1, tsig->mac_size);
+	if(!tsig->mac) {
+		lock_rw_unlock(&key_table->lock);
+		tsig_delete(tsig);
+		log_err("out of memory");
+		return NULL;
+	}
+	lock_rw_unlock(&key_table->lock);
+	return tsig;
+}
+
+struct tsig_data*
+tsig_create_fromstr(struct tsig_key_table* key_table, char* name)
+{
+	uint8_t buf[LDNS_MAX_DOMAINLEN+1];
+	size_t len = sizeof(buf);
+	if(!sldns_str2wire_dname_buf(name, buf, &len)) {
+		log_err("could not parse '%s'", name);
+		return NULL;
+	}
+	return tsig_create(key_table, buf, len);
+}
+
+void
+tsig_delete(struct tsig_data* tsig)
+{
+	if(!tsig) return;
+	free(tsig->key_name);
+	free(tsig->mac);
+	free(tsig);
 }
