@@ -550,9 +550,10 @@ int auth_zones_lookup(struct auth_zones* az, struct query_info* qinfo,
  * @param temp: temporary storage region.
  * @return false if not answered
  */
-int auth_zones_answer(struct auth_zones* az, struct module_env* env,
+int auth_zones_downstream_answer(struct auth_zones* az, struct module_env* env,
 	struct query_info* qinfo, struct edns_data* edns,
-	struct comm_reply* repinfo, struct sldns_buffer* buf, struct regional* temp);
+	struct comm_reply* repinfo, struct sldns_buffer* buf,
+	struct regional* temp);
 
 /** 
  * Find the auth zone that is above the given qname.

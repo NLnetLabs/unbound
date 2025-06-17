@@ -801,4 +801,14 @@ int edns_opt_compare(struct edns_option* p, struct edns_option* q);
  */
 int edns_opt_list_compare(struct edns_option* p, struct edns_option* q);
 
+/**
+ * Swallow copy the local_alias into the given qname and qname_len.
+ * @param local_alias: the local_alias.
+ * @param qname: the qname to copy to.
+ * @param qname_len: the qname_len to copy to.
+ * @return false on current local_alias assumptions, true otherwise.
+ */
+int local_alias_shallow_copy_qname(struct local_rrset* local_alias, uint8_t** qname,
+	size_t* qname_len);
+
 #endif /* UTIL_DATA_MSGREPLY_H */
