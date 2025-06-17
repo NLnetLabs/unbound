@@ -1,3 +1,7 @@
+17 June 2025: Yorgos
+	- Fix for consistent use of local zone CNAME alias for configured auth
+	  zones. Now it also applies to downstream configured auth zones.
+
 16 June 2025: Wouter
 	- Fix to check control-interface addresses in unbound-checkconf.
 	- Fix #1295: Windows 32-bit binaries download seems to be missing dll
