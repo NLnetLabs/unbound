@@ -45,6 +45,7 @@
 #include "util/rbtree.h"
 struct sldns_buffer;
 struct config_file;
+struct regional;
 
 /**
  * TSIG record, the RR that is in the packet.
@@ -241,5 +242,70 @@ struct tsig_data* tsig_create_fromstr(struct tsig_key_table* key_table,
  * @param tsig: the tsig data to delete.
  */
 void tsig_delete(struct tsig_data* tsig);
+
+/**
+ * Sign a query with TSIG. Appends the TSIG record.
+ * @param tsig: the tsig data, keeps state to verify reply.
+ * @param pkt: query packet. position must be at end of packet.
+ * @return false on failure.
+ */
+int tsig_sign_query(struct tsig_data* tsig, struct sldns_buffer* pkt);
+
+/**
+ * Verify a query with TSIG.
+ * @param tsig: the tsig data, keep state to sign reply.
+ * @param pkt: the query packet.
+ * @return false on failure. There must be a TSIG with the key or it fails.
+ */
+int tsig_verify_query(struct tsig_data* tsig, struct sldns_buffer* pkt);
+
+/**
+ * Look up key from TSIG in packet.
+ * @param key_table: the tsig key table.
+ * @param pkt: the packet to look at TSIG.
+ * @param tsig: the tsig key is returned here. Or it can be NULL, no TSIG.
+ * @param region: if nonNULL used to allocate.
+ * @return fail for alloc failure servfail or wireformat malformed formerr,
+ *	success has 0 NOERROR, for no TSIG in packet with tsig returned NULL,
+ *	and for key not found with tsig returned with a tsig error in it,
+ *	and for key found with tsig returned with tsig in it.
+ * After this call, the return value is the rcode for failure. Then the
+ * tsig, is NULL for no TSIG, or nonNULL, with a TSIG error or content that
+ * can be verified with tsig_verify_query.
+ */
+int tsig_parse_query(struct tsig_key_table* key_table,
+	struct sldns_buffer* pkt, struct tsig_data** tsig,
+	struct regional* region);
+
+/**
+ * Parse and verify the TSIG in query packet.
+ * @param key_table: the tsig key table.
+ * @param pkt: the packet
+ * @param tsig: the tsig key is returned. Or it can be NULL.
+ * @param region: if nonNULL used to allocate.
+ * @return rcode with failure for alloc failure or malformed wireformat.
+ *	0 NOERROR is success, if tsig is nonNULL it has either verified
+ *	or contains a TSIG error.
+ */
+int tsig_parse_verify_query(struct tsig_key_table* key_table,
+	struct sldns_buffer* pkt, struct tsig_data** tsig,
+	struct regional* region);
+
+/**
+ * Sign a reply with TSIG. Appends the TSIG record.
+ * @param tsig: the tsig data.
+ * @param pkt: the packet to sign.
+ * @return false on failure.
+ */
+int tsig_sign_reply(struct tsig_data* tsig, struct sldns_buffer* pkt);
+
+/**
+ * Verify a reply with TSIG.
+ * @param tsig: the tsig data.
+ * @param pkt: the reply to verify.
+ * @return false on failure, like
+ *	alloc failure, wireformat malformed, did not verify.
+ */
+int tsig_verify_reply(struct tsig_data* tsig, struct sldns_buffer* pkt);
 
 #endif /* UTIL_TSIG_H */
