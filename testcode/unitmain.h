@@ -88,5 +88,7 @@ void tcpreuse_test(void);
 void doq_test(void);
 /** unit test for infra cache functions */
 void infra_test(void);
+/** unit test for tsig functions */
+void tsig_test(void);
 
 #endif /* TESTCODE_UNITMAIN_H */

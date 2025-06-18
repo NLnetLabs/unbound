@@ -179,11 +179,12 @@ testcode/unitlruhash.c testcode/unitmain.c testcode/unitmsgparse.c \
 testcode/unitneg.c testcode/unitregional.c testcode/unitslabhash.c \
 testcode/unitverify.c testcode/readhex.c testcode/testpkts.c testcode/unitldns.c \
 testcode/unitecs.c testcode/unitauth.c testcode/unitzonemd.c \
-testcode/unittcpreuse.c testcode/unitdoq.c testcode/unitinfra.c
+testcode/unittcpreuse.c testcode/unitdoq.c testcode/unitinfra.c \
+testcode/unittsig.c
 UNITTEST_OBJ=unitanchor.lo unitdname.lo unitlruhash.lo unitmain.lo \
 unitmsgparse.lo unitneg.lo unitregional.lo unitslabhash.lo unitverify.lo \
 readhex.lo testpkts.lo unitldns.lo unitecs.lo unitauth.lo unitzonemd.lo \
-unittcpreuse.lo unitdoq.lo unitinfra.lo
+unittcpreuse.lo unitdoq.lo unitinfra.lo unittsig.lo
 UNITTEST_OBJ_LINK=$(UNITTEST_OBJ) worker_cb.lo $(COMMON_OBJ) $(SLDNS_OBJ) \
 $(COMPAT_OBJ)
 DAEMON_SRC=daemon/acl_list.c daemon/cachedump.c daemon/daemon.c \
@@ -1267,6 +1268,7 @@ unitzonemd.lo unitzonemd.o: $(srcdir)/testcode/unitzonemd.c config.h $(srcdir)/u
 unittcpreuse.lo unittcpreuse.o: $(srcdir)/testcode/unittcpreuse.c config.h $(srcdir)/services/outside_network.h \
 $(srcdir)/util/random.h
 unitinfra.lo unitinfra.o: $(srcdir)/testcode/unitinfra.c config.h $(srcdir)/util/config_file.h $(srcdir)/util/net_help.h $(srcdir)/iterator/iterator.h
+unittsig.lo unittsig.o: $(srcdir)/testcode/unittsig.c config.h $(srcdir)/util/tsig.h $(srcdir)/testcode/unitmain.h
 acl_list.lo acl_list.o: $(srcdir)/daemon/acl_list.c config.h $(srcdir)/daemon/acl_list.h \
  $(srcdir)/util/storage/dnstree.h $(srcdir)/util/rbtree.h $(srcdir)/services/view.h $(srcdir)/util/locks.h \
  $(srcdir)/util/log.h $(srcdir)/util/regional.h $(srcdir)/util/config_file.h $(srcdir)/util/net_help.h \

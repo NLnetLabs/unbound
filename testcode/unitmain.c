@@ -1333,6 +1333,7 @@ main(int argc, char* argv[])
 	if(NSS_NoDB_Init(".") != SECSuccess)
 		fatal_exit("could not init NSS");
 #endif /* HAVE_SSL or HAVE_NSS*/
+	tsig_test();
 	authzone_test();
 	neg_test();
 	rnd_test();

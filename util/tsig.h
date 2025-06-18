@@ -95,6 +95,22 @@ struct tsig_data {
 	size_t mac_size;
 	/** digest buffer */
 	uint8_t* mac;
+	/** original query ID */
+	uint16_t original_query_id;
+	/** the TSIG class */
+	uint16_t klass;
+	/** the TSIG TTL */
+	uint16_t ttl;
+	/** the time signed, 48bit */
+	uint64_t time_signed;
+	/** fudge amount of time_signed */
+	uint16_t fudge;
+	/** the TSIG error code */
+	uint16_t error;
+	/** other data length, 6 for other_time as failed time. */
+	uint16_t other_len;
+	/** if other len 6, this is 48bit time of error. */
+	uint64_t other_time;
 };
 
 /**
@@ -247,9 +263,12 @@ void tsig_delete(struct tsig_data* tsig);
  * Sign a query with TSIG. Appends the TSIG record.
  * @param tsig: the tsig data, keeps state to verify reply.
  * @param pkt: query packet. position must be at end of packet.
+ * @param key_table: the tsig key table is used to fetch the key details.
+ * @param now: time to sign the query, the current time.
  * @return false on failure.
  */
-int tsig_sign_query(struct tsig_data* tsig, struct sldns_buffer* pkt);
+int tsig_sign_query(struct tsig_data* tsig, struct sldns_buffer* pkt,
+	struct tsig_key_table* key_table, uint64_t now);
 
 /**
  * Verify a query with TSIG.
@@ -307,5 +326,12 @@ int tsig_sign_reply(struct tsig_data* tsig, struct sldns_buffer* pkt);
  *	alloc failure, wireformat malformed, did not verify.
  */
 int tsig_verify_reply(struct tsig_data* tsig, struct sldns_buffer* pkt);
+
+/**
+ * Calculate reserved space for TSIG.
+ * @param tsig: the tsig data
+ * @return number of bytes to keep reserved for the TSIG added.
+ */
+size_t tsig_reserved_space(struct tsig_data* tsig);
 
 #endif /* UTIL_TSIG_H */

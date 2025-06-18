@@ -54,6 +54,9 @@
 #include <openssl/evp.h>
 #include <openssl/hmac.h>
 
+/** Fudge time to allow in signed time for TSIG records. In seconds. */
+#define TSIG_FUDGE_TIME 300
+
 /**
  * The list of TSIG algorithms. It has short_name, wireformat_name,
  * wireformat_name_len, digest, max_digest_size.
@@ -613,6 +616,15 @@ tsig_create(struct tsig_key_table* key_table, uint8_t* name, size_t namelen)
 		return NULL;
 	}
 	lock_rw_unlock(&key_table->lock);
+
+	tsig->original_query_id = 0;
+	tsig->klass = LDNS_RR_CLASS_ANY;
+	tsig->ttl = 0;
+	tsig->time_signed = 0;
+	tsig->fudge = TSIG_FUDGE_TIME; /* seconds */
+	tsig->error = 0;
+	tsig->other_len = 0;
+	tsig->other_time = 0;
 	return tsig;
 }
 
@@ -635,4 +647,160 @@ tsig_delete(struct tsig_data* tsig)
 	free(tsig->key_name);
 	free(tsig->mac);
 	free(tsig);
+}
+
+size_t
+tsig_reserved_space(struct tsig_data* tsig)
+{
+	if(!tsig)
+		return 0;
+	return
+		tsig->key_name_len	/* Owner */
+		+ sizeof(uint16_t)	/* Type */
+		+ sizeof(uint16_t)	/* Class */
+		+ sizeof(uint32_t)	/* TTL */
+		+ sizeof(uint16_t)	/* RDATA length */
+		+ tsig->algorithm_name_len /* Algorithm */
+		+ 6 /* 48bit */		/* Signed time */
+		+ sizeof(uint16_t)	/* Fudge */
+		+ sizeof(uint16_t)	/* Mac size */
+		+ tsig->mac_size	/* Mac data */
+		+ sizeof(uint16_t)	/* Original query ID */
+		+ sizeof(uint16_t)	/* Error code */
+		+ sizeof(uint16_t)	/* Other size */
+		+ 6;			/* 48bit in case of Other data */
+}
+
+/**
+ * Calculate the digest for the TSIG algorithm over the packet.
+ * Called must hold locks, on key. This routine performs one-host
+ * calculation.
+ * @param key: the key, and algorithm.
+ * @param pkt: packet with contents.
+ * @param tsig: where to store the result.
+ * @return false on failure.
+ */
+static int
+tsig_algo_calc(struct tsig_key* key, struct sldns_buffer* pkt,
+	struct tsig_data* tsig)
+{
+	const EVP_MD* evp_md;
+	unsigned int hmac_result_len;
+	unsigned char* hmac_result;
+
+	/* Setup digester algorithm */
+	evp_md = EVP_get_digestbyname(key->algo->digest);
+	if(!evp_md) {
+		/* Could not fetch algorithm. */
+		char name[256], buf[1024];
+		dname_str(key->name, name);
+		snprintf(buf, sizeof(buf), "EVP_get_digestbyname failed for %s %s",
+			name, key->algo->digest);
+		log_crypto_err(buf);
+		return 0;
+	}
+
+	/* Perform calculation */
+	hmac_result_len = tsig->mac_size;
+	hmac_result = HMAC(evp_md, key->data, key->data_len,
+		sldns_buffer_begin(pkt), sldns_buffer_position(pkt),
+		tsig->mac, &hmac_result_len);
+	if(!hmac_result) {
+		/* The HMAC calculation failed. */
+		char name[256], buf[1024];
+		dname_str(key->name, name);
+		snprintf(buf, sizeof(buf), "HMAC failed for %s %s",
+			name, key->algo->digest);
+		log_crypto_err(buf);
+		return 0;
+	}
+	return 1;
+}
+
+int
+tsig_sign_query(struct tsig_data* tsig, struct sldns_buffer* pkt,
+	struct tsig_key_table* key_table, uint64_t now)
+{
+	size_t aftername_pos;
+	struct tsig_key* key;
+	if(!tsig)
+		return 0;
+	tsig->time_signed = now;
+	tsig->fudge = TSIG_FUDGE_TIME; /* seconds */
+	if(sldns_buffer_remaining(pkt) < tsig_reserved_space(tsig)) {
+		/* Not enough space in buffer for packet and TSIG. */
+		return 0;
+	}
+	lock_rw_rdlock(&key_table->lock);
+	key = tsig_key_table_search(key_table, tsig->key_name,
+		tsig->key_name_len);
+	if(!key) {
+		/* The tsig key has disappeared from the key table. */
+		lock_rw_unlock(&key_table->lock);
+		return 0;
+	}
+
+	tsig->original_query_id = sldns_buffer_read_u16_at(pkt, 0);
+
+	/* What is signed is this buffer:
+	 * <packet with original query id and ARCOUNT without TSIG>
+	 * <name> TSIG owner is key name
+	 * u16 class, u32 TTL, <name> algorithm_name, u48 time_signed,
+	 * u16 fudge, u16 error, u16 other_len, <data> other_data. */
+	/* That fits in the current buffer, since the reserved space for
+	 * the TSIG record is larger. */
+
+	/* Write uncompressed TSIG owner, it is the key name. */
+	sldns_buffer_write(pkt, tsig->key_name, tsig->key_name_len);
+	aftername_pos = sldns_buffer_position(pkt);
+	sldns_buffer_write_u16(pkt, tsig->klass);
+	sldns_buffer_write_u32(pkt, tsig->ttl);
+	sldns_buffer_write(pkt, key->algo->wireformat_name,
+		key->algo->wireformat_name_len);
+	sldns_buffer_write_u48(pkt, tsig->time_signed);
+	sldns_buffer_write_u16(pkt, tsig->fudge);
+	sldns_buffer_write_u16(pkt, tsig->error);
+	sldns_buffer_write_u16(pkt, tsig->other_len);
+	if(tsig->other_len != 0)
+		sldns_buffer_write_u48(pkt, tsig->other_time);
+
+	/* Sign it */
+	if(!tsig_algo_calc(key, pkt, tsig)) {
+		/* Failure to calculate digest. */
+		lock_rw_unlock(&key_table->lock);
+		return 0;
+	}
+
+	/* Append TSIG record */
+	/* The record appended consists of:
+	 * owner name, u16 type, u16 class, u32 TTL, u16 rdlength,
+	 * algo name, u48 signed_time, u16 fudge, u16 mac_len, mac data,
+	 * u16 original_query_id, u16 error, u16 other_len, other data.
+	 */
+	sldns_buffer_set_position(pkt, aftername_pos);
+	sldns_buffer_write_u16(pkt, LDNS_RR_TYPE_TSIG);
+	sldns_buffer_write_u16(pkt, tsig->klass);
+	sldns_buffer_write_u32(pkt, tsig->ttl);
+
+	/* rdlength */
+	sldns_buffer_write_u16(pkt, key->algo->wireformat_name_len
+		+ 6 + 2 + 2 /* time,fudge,maclen */ + tsig->mac_size
+		+ 2 + 2 + 2 /* id,error,otherlen */ + tsig->other_len);
+	sldns_buffer_write(pkt, key->algo->wireformat_name,
+		key->algo->wireformat_name_len);
+	sldns_buffer_write_u48(pkt, tsig->time_signed);
+	sldns_buffer_write_u16(pkt, tsig->fudge);
+	sldns_buffer_write_u16(pkt, tsig->mac_size);
+	sldns_buffer_write(pkt, tsig->mac, tsig->mac_size);
+	sldns_buffer_write_u16(pkt, tsig->original_query_id);
+	sldns_buffer_write_u16(pkt, tsig->error);
+	sldns_buffer_write_u16(pkt, tsig->other_len);
+	if(tsig->other_len == 6)
+		sldns_buffer_write_u48(pkt, tsig->other_time);
+
+	LDNS_ARCOUNT_SET(sldns_buffer_begin(pkt),
+		LDNS_ARCOUNT(sldns_buffer_begin(pkt))+1);
+
+	lock_rw_unlock(&key_table->lock);
+	return 1;
 }
