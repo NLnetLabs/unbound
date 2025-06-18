@@ -771,6 +771,13 @@ tsig_sign_query(struct tsig_data* tsig, struct sldns_buffer* pkt,
 	 * u16 fudge, u16 error, u16 other_len, <data> other_data. */
 	/* That fits in the current buffer, since the reserved space for
 	 * the TSIG record is larger. */
+	if(!sldns_buffer_available(pkt, tsig->key_name_len + 2 + 4
+		+ key->algo->wireformat_name_len + 6 + 2 + 2
+		+ 2 + tsig->other_len)) {
+		/* Buffer is too small */
+		lock_rw_unlock(&key_table->lock);
+		return 0;
+	}
 
 	/* Write uncompressed TSIG owner, it is the key name. */
 	sldns_buffer_write(pkt, tsig->key_name, tsig->key_name_len);
