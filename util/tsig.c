@@ -174,8 +174,7 @@ tsig_key_create(const char* name, const char* algorithm, const char* secret)
 	return key;
 }
 
-/** Add a key to the TSIG key table. */
-static int
+int
 tsig_key_table_add_key(struct tsig_key_table* key_table,
 	struct config_tsig_key* s)
 {
@@ -196,6 +195,29 @@ tsig_key_table_add_key(struct tsig_key_table* key_table,
 	}
 	lock_rw_unlock(&key_table->lock);
 	return 1;
+}
+
+void
+tsig_key_table_del_key_fromstr(struct tsig_key_table* key_table,
+	char* name)
+{
+	uint8_t buf[LDNS_MAX_DOMAINLEN+1];
+	size_t len = sizeof(buf);
+	struct tsig_key k, *key;
+	rbnode_type* node;
+	if(!sldns_str2wire_dname_buf(name, buf, &len)) {
+		log_err("could not parse '%s'", name);
+		return;
+	}
+
+	k.node.key = &k;
+	k.name = buf;
+	k.name_len = len;
+	node = rbtree_delete(key_table->tree, &k);
+	if(!node)
+		return;
+	key = (struct tsig_key*)node->key;
+	tsig_key_delete(key);
 }
 
 int

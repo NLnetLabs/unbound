@@ -45,6 +45,7 @@
 #include "util/rbtree.h"
 struct sldns_buffer;
 struct config_file;
+struct config_tsig_key;
 struct regional;
 
 /**
@@ -180,6 +181,14 @@ struct tsig_key_table* tsig_key_table_create(void);
  * @param key_table: to delete.
  */
 void tsig_key_table_delete(struct tsig_key_table* key_table);
+
+/** Add a key to the TSIG key table. */
+int tsig_key_table_add_key(struct tsig_key_table* key_table,
+	struct config_tsig_key* s);
+
+/** Delete a key from the TSIG key table. */
+void tsig_key_table_del_key_fromstr(struct tsig_key_table* key_table,
+	char* name);
 
 /**
  * Apply config to the tsig key table.
