@@ -1,6 +1,7 @@
 19 June 2025: Wouter
 	- Fix #1296: DNS over QUIC depends on a very outdated version of
 	  ngtcp2. Fixed so it works with ngtcp2 1.13.0 and OpenSSL 3.5.0.
+	- Merge #1297: edns-subnet: fix NULL_AFTER_DEREF on subnetmod.
 
 17 June 2025: Yorgos
 	- Fix for consistent use of local zone CNAME alias for configured auth
