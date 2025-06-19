@@ -90,10 +90,13 @@
 #ifdef HAVE_NGTCP2
 #include <ngtcp2/ngtcp2.h>
 #include <ngtcp2/ngtcp2_crypto.h>
-#ifdef HAVE_NGTCP2_NGTCP2_CRYPTO_QUICTLS_H
+#ifdef HAVE_NGTCP2_NGTCP2_CRYPTO_OSSL_H
+#include <ngtcp2/ngtcp2_crypto_ossl.h>
+#elif defined(HAVE_NGTCP2_NGTCP2_CRYPTO_QUICTLS_H)
 #include <ngtcp2/ngtcp2_crypto_quictls.h>
-#else
+#elif defined(HAVE_NGTCP2_NGTCP2_CRYPTO_OPENSSL_H)
 #include <ngtcp2/ngtcp2_crypto_openssl.h>
+#define MAKE_QUIC_METHOD 1
 #endif
 #endif
 
@@ -3258,6 +3261,21 @@ doq_table_create(struct config_file* cfg, struct ub_randstate* rnd)
 	struct doq_table* table = calloc(1, sizeof(*table));
 	if(!table)
 		return NULL;
+#ifdef USE_NGTCP2_CRYPTO_OSSL
+	/* Initialize the ossl crypto, it is harmless to call twice,
+	 * and this is before use of doq connections. */
+	if(ngtcp2_crypto_ossl_init() != 0) {
+		log_err("ngtcp2_crypto_oss_init failed");
+		free(table);
+		return NULL;
+	}
+#elif defined(HAVE_NGTCP2_CRYPTO_QUICTLS_INIT)
+	if(ngtcp2_crypto_quictls_init() != 0) {
+		log_err("ngtcp2_crypto_quictls_init failed");
+		free(table);
+		return NULL;
+	}
+#endif
 	table->idle_timeout = ((uint64_t)cfg->tcp_idle_timeout)*
 		NGTCP2_MILLISECONDS;
 	table->sv_scidlen = 16;
@@ -3597,12 +3615,18 @@ doq_conn_delete(struct doq_conn* conn, struct doq_table* table)
 	lock_rw_wrlock(&conn->table->conid_lock);
 	doq_conn_clear_conids(conn);
 	lock_rw_unlock(&conn->table->conid_lock);
-	ngtcp2_conn_del(conn->conn);
+	/* Remove the app data from ngtcp2 before SSL_free of conn->ssl,
+	 * because the ngtcp2 conn is deleted. */
+	SSL_set_app_data(conn->ssl, NULL);
 	if(conn->stream_tree.count != 0) {
 		traverse_postorder(&conn->stream_tree, stream_tree_del, table);
 	}
 	free(conn->key.dcid);
 	SSL_free(conn->ssl);
+#ifdef USE_NGTCP2_CRYPTO_OSSL
+	ngtcp2_crypto_ossl_ctx_del(conn->ossl_ctx);
+#endif
+	ngtcp2_conn_del(conn->conn);
 	free(conn->close_pkt);
 	free(conn);
 }
@@ -4460,7 +4484,7 @@ doq_log_printf_cb(void* ATTR_UNUSED(user_data), const char* fmt, ...)
 	va_end(ap);
 }
 
-#ifndef HAVE_NGTCP2_CRYPTO_QUICTLS_CONFIGURE_SERVER_CONTEXT
+#ifdef MAKE_QUIC_METHOD
 /** the doq application tx key callback, false on failure */
 static int
 doq_application_tx_key_cb(struct doq_conn* conn)
@@ -4494,7 +4518,9 @@ doq_set_encryption_secrets(SSL *ssl, OSSL_ENCRYPTION_LEVEL ossl_level,
 	ngtcp2_crypto_level
 #endif
 		level =
-#ifdef HAVE_NGTCP2_CRYPTO_QUICTLS_FROM_OSSL_ENCRYPTION_LEVEL
+#ifdef USE_NGTCP2_CRYPTO_OSSL
+		ngtcp2_crypto_ossl_from_ossl_encryption_level(ossl_level);
+#elif defined(HAVE_NGTCP2_CRYPTO_QUICTLS_FROM_OSSL_ENCRYPTION_LEVEL)
 		ngtcp2_crypto_quictls_from_ossl_encryption_level(ossl_level);
 #else
 		ngtcp2_crypto_openssl_from_ossl_encryption_level(ossl_level);
@@ -4540,7 +4566,9 @@ doq_add_handshake_data(SSL *ssl, OSSL_ENCRYPTION_LEVEL ossl_level,
 	ngtcp2_crypto_level
 #endif
 		level =
-#ifdef HAVE_NGTCP2_CRYPTO_QUICTLS_FROM_OSSL_ENCRYPTION_LEVEL
+#ifdef USE_NGTCP2_CRYPTO_OSSL
+		ngtcp2_crypto_ossl_from_ossl_encryption_level(ossl_level);
+#elif defined(HAVE_NGTCP2_CRYPTO_QUICTLS_FROM_OSSL_ENCRYPTION_LEVEL)
 		ngtcp2_crypto_quictls_from_ossl_encryption_level(ossl_level);
 #else
 		ngtcp2_crypto_openssl_from_ossl_encryption_level(ossl_level);
@@ -4575,7 +4603,7 @@ doq_send_alert(SSL *ssl, enum ssl_encryption_level_t ATTR_UNUSED(level),
 	doq_conn->tls_alert = alert;
 	return 1;
 }
-#endif /* HAVE_NGTCP2_CRYPTO_QUICTLS_CONFIGURE_SERVER_CONTEXT */
+#endif /* MAKE_QUIC_METHOD */
 
 /** ALPN select callback for the doq SSL context */
 static int
@@ -4597,7 +4625,7 @@ void* quic_sslctx_create(char* key, char* pem, char* verifypem)
 {
 #ifdef HAVE_NGTCP2
 	char* sid_ctx = "unbound server";
-#ifndef HAVE_NGTCP2_CRYPTO_QUICTLS_CONFIGURE_SERVER_CONTEXT
+#ifdef MAKE_QUIC_METHOD
 	SSL_QUIC_METHOD* quic_method;
 #endif
 	SSL_CTX* ctx = SSL_CTX_new(TLS_server_method());
@@ -4670,7 +4698,7 @@ void* quic_sslctx_create(char* key, char* pem, char* verifypem)
 		SSL_CTX_free(ctx);
 		return NULL;
 	}
-#else /* HAVE_NGTCP2_CRYPTO_QUICTLS_CONFIGURE_SERVER_CONTEXT */
+#elif defined(MAKE_QUIC_METHOD)
 	/* The quic_method needs to remain valid during the SSL_CTX
 	 * lifetime, so we allocate it. It is freed with the
 	 * doq_server_socket. */
@@ -4705,12 +4733,29 @@ static ngtcp2_conn* doq_conn_ref_get_conn(ngtcp2_crypto_conn_ref* conn_ref)
 static SSL*
 doq_ssl_server_setup(SSL_CTX* ctx, struct doq_conn* conn)
 {
+#ifdef USE_NGTCP2_CRYPTO_OSSL
+	int ret;
+#endif
 	SSL* ssl = SSL_new(ctx);
 	if(!ssl) {
 		log_crypto_err("doq: SSL_new failed");
 		return NULL;
 	}
-#ifdef HAVE_NGTCP2_CRYPTO_QUICTLS_CONFIGURE_SERVER_CONTEXT
+#ifdef USE_NGTCP2_CRYPTO_OSSL
+	if((ret=ngtcp2_crypto_ossl_ctx_new(&conn->ossl_ctx, NULL)) != 0) {
+		log_err("doq: ngtcp2_crypto_ossl_ctx_new failed: %s",
+			ngtcp2_strerror(ret));
+		SSL_free(ssl);
+		return NULL;
+	}
+	ngtcp2_crypto_ossl_ctx_set_ssl(conn->ossl_ctx, ssl);
+	if(ngtcp2_crypto_ossl_configure_server_session(ssl) != 0) {
+		log_err("doq: ngtcp2_crypto_ossl_configure_server_session failed");
+		SSL_free(ssl);
+		return NULL;
+	}
+#endif
+#if defined(USE_NGTCP2_CRYPTO_OSSL) || defined(HAVE_NGTCP2_CRYPTO_QUICTLS_CONFIGURE_SERVER_CONTEXT)
 	conn->conn_ref.get_conn = &doq_conn_ref_get_conn;
 	conn->conn_ref.user_data = conn;
 	SSL_set_app_data(ssl, &conn->conn_ref);
@@ -4718,7 +4763,11 @@ doq_ssl_server_setup(SSL_CTX* ctx, struct doq_conn* conn)
 	SSL_set_app_data(ssl, conn);
 #endif
 	SSL_set_accept_state(ssl);
+#ifdef USE_NGTCP2_CRYPTO_OSSL
+	SSL_set_quic_tls_early_data_enabled(ssl, 1);
+#else
 	SSL_set_quic_early_data_enabled(ssl, 1);
+#endif
 	return ssl;
 }
 
@@ -4839,7 +4888,11 @@ doq_conn_setup(struct doq_conn* conn, uint8_t* scid, size_t scidlen,
 		log_err("doq_ssl_server_setup failed");
 		return 0;
 	}
+#ifdef USE_NGTCP2_CRYPTO_OSSL
+	ngtcp2_conn_set_tls_native_handle(conn->conn, conn->ossl_ctx);
+#else
 	ngtcp2_conn_set_tls_native_handle(conn->conn, conn->ssl);
+#endif
 	doq_conn_write_enable(conn);
 	return 1;
 }
