@@ -232,13 +232,13 @@ subnetmod_init(struct module_env *env, int id)
 		HASH_DEFAULT_STARTARRAY, env->cfg->msg_cache_size,
 		msg_cache_sizefunc, query_info_compare, query_entry_delete,
 		subnet_data_delete, NULL);
-	slabhash_setmarkdel(sn_env->subnet_msg_cache, &subnet_markdel);
 	if(!sn_env->subnet_msg_cache) {
 		log_err("subnetcache: could not create cache");
 		free(sn_env);
 		env->modinfo[id] = NULL;
 		return 0;
 	}
+	slabhash_setmarkdel(sn_env->subnet_msg_cache, &subnet_markdel);
 	/* whitelist for edns subnet capable servers */
 	sn_env->whitelist = ecs_whitelist_create();
 	if(!sn_env->whitelist ||
