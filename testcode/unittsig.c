@@ -531,7 +531,7 @@ tsig_test_one(const char* fname)
 }
 
 /** test tsig code */
-void 
+void
 tsig_test(void)
 {
 	unit_show_feature("tsig");

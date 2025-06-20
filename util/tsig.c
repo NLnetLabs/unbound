@@ -299,7 +299,7 @@ tsig_algo_check_name(const char* algo_name)
 			if(strcasecmp(algo_name,
 				"hmac-md5.sig-alg.reg.int.") == 0
 			  || strcasecmp(algo_name,
-			  	"hmac-md5.sig-alg.reg.int") == 0)
+				"hmac-md5.sig-alg.reg.int") == 0)
 				return 1;
 		}
 	}
