@@ -2593,6 +2593,15 @@ processFinished(struct module_qstate* qstate, struct val_qstate* vq,
 
 	/* Update rep->reason_bogus as it is the one being cached */
 	update_reason_bogus(vq->orig_msg->rep, errinf_to_reason_bogus(qstate));
+	if(vq->orig_msg->rep->security != sec_status_bogus &&
+		vq->orig_msg->rep->security != sec_status_secure_sentinel_fail
+		&& vq->orig_msg->rep->reason_bogus == LDNS_EDE_DNSSEC_BOGUS) {
+		/* Not interested in any DNSSEC EDE here, validator by default
+		 * uses LDNS_EDE_DNSSEC_BOGUS;
+		 * TODO revisit default value for the module */
+		vq->orig_msg->rep->reason_bogus = LDNS_EDE_NONE;
+	}
+
 	/* store results in cache */
 	if((qstate->query_flags&BIT_RD)) {
 		/* if secure, this will override cache anyway, no need
