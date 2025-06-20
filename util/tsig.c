@@ -792,9 +792,12 @@ tsig_sign_query(struct tsig_data* tsig, struct sldns_buffer* pkt,
 	sldns_buffer_write_u48(pkt, tsig->time_signed);
 	sldns_buffer_write_u16(pkt, tsig->fudge);
 	sldns_buffer_write_u16(pkt, tsig->error);
-	sldns_buffer_write_u16(pkt, tsig->other_len);
-	if(tsig->other_len != 0)
+	if(tsig->other_len == 6) {
+		sldns_buffer_write_u16(pkt, tsig->other_len);
 		sldns_buffer_write_u48(pkt, tsig->other_time);
+	} else {
+		sldns_buffer_write_u16(pkt, 0);
+	}
 
 	/* Sign it */
 	if(!tsig_algo_calc(key, pkt, tsig)) {
@@ -827,9 +830,12 @@ tsig_sign_query(struct tsig_data* tsig, struct sldns_buffer* pkt,
 	sldns_buffer_write(pkt, tsig->mac, tsig->mac_size);
 	sldns_buffer_write_u16(pkt, tsig->original_query_id);
 	sldns_buffer_write_u16(pkt, tsig->error);
-	sldns_buffer_write_u16(pkt, tsig->other_len);
-	if(tsig->other_len == 6)
+	if(tsig->other_len == 6) {
+		sldns_buffer_write_u16(pkt, tsig->other_len);
 		sldns_buffer_write_u48(pkt, tsig->other_time);
+	} else {
+		sldns_buffer_write_u16(pkt, 0);
+	}
 
 	LDNS_ARCOUNT_SET(sldns_buffer_begin(pkt),
 		LDNS_ARCOUNT(sldns_buffer_begin(pkt))+1);
