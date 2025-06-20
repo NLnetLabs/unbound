@@ -294,7 +294,7 @@ static int
 read_packet_hex(char* line, struct sldns_buffer* buf, FILE* in,
 	const char* fname)
 {
-	char l[1024];
+	char l[102400];
 	char* s;
 	sldns_buffer_clear(buf);
 	if(!read_hex_segment(line, buf)) {
@@ -302,7 +302,7 @@ read_packet_hex(char* line, struct sldns_buffer* buf, FILE* in,
 		return 0;
 	}
 	while(fgets(l, sizeof(l), in)) {
-		line[sizeof(l)-1]=0;
+		l[sizeof(l)-1]=0;
 		s = get_keyword(l);
 		if(strcmp(s, "endpacket") == 0)
 			break;
@@ -459,6 +459,8 @@ handle_tsig_sign_query(char* line, struct tsig_key_table* key_table,
 				ret, expected_result);
 	}
 	unit_assert(ret == expected_result);
+
+	tsig_delete(tsig);
 }
 
 /** Handle one line from the TSIG test file */
@@ -534,4 +536,9 @@ tsig_test(void)
 {
 	unit_show_feature("tsig");
 	tsig_test_one(SRCDIRSTR "/testdata/tsig_test.1");
+	tsig_test_one(SRCDIRSTR "/testdata/tsig_test.2");
+	tsig_test_one(SRCDIRSTR "/testdata/tsig_test.3");
+	tsig_test_one(SRCDIRSTR "/testdata/tsig_test.4");
+	tsig_test_one(SRCDIRSTR "/testdata/tsig_test.5");
+	tsig_test_one(SRCDIRSTR "/testdata/tsig_test.6");
 }
