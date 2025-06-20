@@ -1333,7 +1333,6 @@ main(int argc, char* argv[])
 	if(NSS_NoDB_Init(".") != SECSuccess)
 		fatal_exit("could not init NSS");
 #endif /* HAVE_SSL or HAVE_NSS*/
-	tsig_test();
 	authzone_test();
 	neg_test();
 	rnd_test();
@@ -1363,6 +1362,7 @@ main(int argc, char* argv[])
 #ifdef HAVE_NGTCP2
 	doq_test();
 #endif /* HAVE_NGTCP2 */
+	tsig_test();
 	if(log_get_lock()) {
 		lock_basic_destroy((lock_basic_type*)log_get_lock());
 	}

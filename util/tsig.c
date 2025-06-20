@@ -205,7 +205,7 @@ tsig_key_table_del_key_fromstr(struct tsig_key_table* key_table,
 	size_t len = sizeof(buf);
 	struct tsig_key k, *key;
 	rbnode_type* node;
-	if(!sldns_str2wire_dname_buf(name, buf, &len)) {
+	if(sldns_str2wire_dname_buf(name, buf, &len) != 0) {
 		log_err("could not parse '%s'", name);
 		return;
 	}
@@ -655,7 +655,7 @@ tsig_create_fromstr(struct tsig_key_table* key_table, char* name)
 {
 	uint8_t buf[LDNS_MAX_DOMAINLEN+1];
 	size_t len = sizeof(buf);
-	if(!sldns_str2wire_dname_buf(name, buf, &len)) {
+	if(sldns_str2wire_dname_buf(name, buf, &len) != 0) {
 		log_err("could not parse '%s'", name);
 		return NULL;
 	}
@@ -751,6 +751,7 @@ tsig_sign_query(struct tsig_data* tsig, struct sldns_buffer* pkt,
 	tsig->fudge = TSIG_FUDGE_TIME; /* seconds */
 	if(sldns_buffer_remaining(pkt) < tsig_reserved_space(tsig)) {
 		/* Not enough space in buffer for packet and TSIG. */
+		verbose(VERB_ALGO, "tsig_sign_query: not enough buffer space");
 		return 0;
 	}
 	lock_rw_rdlock(&key_table->lock);
@@ -759,6 +760,7 @@ tsig_sign_query(struct tsig_data* tsig, struct sldns_buffer* pkt,
 	if(!key) {
 		/* The tsig key has disappeared from the key table. */
 		lock_rw_unlock(&key_table->lock);
+		verbose(VERB_ALGO, "tsig_sign_query: key not in table");
 		return 0;
 	}
 
@@ -776,6 +778,7 @@ tsig_sign_query(struct tsig_data* tsig, struct sldns_buffer* pkt,
 		+ 2 + tsig->other_len)) {
 		/* Buffer is too small */
 		lock_rw_unlock(&key_table->lock);
+		verbose(VERB_ALGO, "tsig_sign_query: not enough buffer space");
 		return 0;
 	}
 
@@ -797,6 +800,7 @@ tsig_sign_query(struct tsig_data* tsig, struct sldns_buffer* pkt,
 	if(!tsig_algo_calc(key, pkt, tsig)) {
 		/* Failure to calculate digest. */
 		lock_rw_unlock(&key_table->lock);
+		verbose(VERB_ALGO, "tsig_sign_query: failed to calculate digest");
 		return 0;
 	}
 
