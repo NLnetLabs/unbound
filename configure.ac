@@ -996,7 +996,7 @@ else
 	AC_MSG_RESULT([no])
 fi
 AC_CHECK_HEADERS([openssl/conf.h openssl/engine.h openssl/bn.h openssl/dh.h openssl/dsa.h openssl/rsa.h openssl/core_names.h openssl/param_build.h],,, [AC_INCLUDES_DEFAULT])
-AC_CHECK_FUNCS([OPENSSL_config EVP_sha1 EVP_sha256 EVP_sha512 FIPS_mode EVP_default_properties_is_fips_enabled EVP_MD_CTX_new OpenSSL_add_all_digests OPENSSL_init_crypto EVP_cleanup ENGINE_cleanup ERR_load_crypto_strings CRYPTO_cleanup_all_ex_data ERR_free_strings RAND_cleanup DSA_SIG_set0 EVP_dss1 EVP_DigestVerify EVP_aes_256_cbc EVP_EncryptInit_ex HMAC_Init_ex CRYPTO_THREADID_set_callback EVP_MAC_CTX_set_params OSSL_PARAM_BLD_new BIO_set_callback_ex SSL_CTX_set_tmp_ecdh])
+AC_CHECK_FUNCS([OPENSSL_config EVP_sha1 EVP_sha256 EVP_sha512 FIPS_mode EVP_default_properties_is_fips_enabled EVP_MD_CTX_new OpenSSL_add_all_digests OPENSSL_init_crypto EVP_cleanup ENGINE_cleanup ERR_load_crypto_strings CRYPTO_cleanup_all_ex_data ERR_free_strings RAND_cleanup DSA_SIG_set0 EVP_dss1 EVP_DigestVerify EVP_aes_256_cbc EVP_EncryptInit_ex HMAC_Init_ex CRYPTO_THREADID_set_callback EVP_MAC_CTX_set_params OSSL_PARAM_BLD_new BIO_set_callback_ex SSL_CTX_set_tmp_ecdh HMAC_CTX_new EVP_MAC_CTX_new])
 
 # these check_funcs need -lssl
 BAKLIBS="$LIBS"

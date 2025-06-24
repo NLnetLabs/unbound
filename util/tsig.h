@@ -61,10 +61,8 @@ struct tsig_record {
 	uint8_t* algorithm_name;
 	/** length of the algorithm_name */
 	size_t algorithm_name_len;
-	/** the signed time, high part */
-	uint16_t signed_time_high;
-	/** the signed time, low part */
-	uint32_t signed_time_low;
+	/** the signed time, 48bits on the wire */
+	uint64_t signed_time;
 	/** the fudge time */
 	uint16_t fudge_time;
 	/** the mac size, uint16_t on the wire */
@@ -79,6 +77,8 @@ struct tsig_record {
 	size_t other_size;
 	/** the other data */
 	uint8_t* other_data;
+	/** if the other size is 48bit, the timestamp in it. */
+	uint64_t other_time;
 };
 
 /**
@@ -283,16 +283,25 @@ int tsig_sign_query(struct tsig_data* tsig, struct sldns_buffer* pkt,
  * Verify a query with TSIG.
  * @param tsig: the tsig data, keep state to sign reply.
  * @param pkt: the query packet.
- * @return false on failure. There must be a TSIG with the key or it fails.
+ * @param key: the key with algorithm, caller must hold lock.
+ * @param rr: the tsig record parsed from the query.
+ * @param now: time that is used, the current time.
+ * @return rcode with failure for alloc failure or malformed wireformat.
+ *	0 NOERROR is success, if tsig is nonNULL it has either verified
+ *	or contains a TSIG error.
  */
-int tsig_verify_query(struct tsig_data* tsig, struct sldns_buffer* pkt);
+int tsig_verify_query(struct tsig_data* tsig, struct sldns_buffer* pkt,
+	struct tsig_key* key, struct tsig_record* rr, uint64_t now);
 
 /**
  * Look up key from TSIG in packet.
  * @param key_table: the tsig key table.
  * @param pkt: the packet to look at TSIG.
- * @param tsig: the tsig key is returned here. Or it can be NULL, no TSIG.
+ * @param rr: the TSIG record parsed.
+ * @param tsig_ret: the tsig key is returned here. Or it can be NULL, no TSIG.
  * @param region: if nonNULL used to allocate.
+ * @param key: if the key is in the key_table the key is returned.
+ *	On success the key table is locked for the key.
  * @return fail for alloc failure servfail or wireformat malformed formerr,
  *	success has 0 NOERROR, for no TSIG in packet with tsig returned NULL,
  *	and for key not found with tsig returned with a tsig error in it,
@@ -301,9 +310,19 @@ int tsig_verify_query(struct tsig_data* tsig, struct sldns_buffer* pkt);
  * tsig, is NULL for no TSIG, or nonNULL, with a TSIG error or content that
  * can be verified with tsig_verify_query.
  */
-int tsig_parse_query(struct tsig_key_table* key_table,
-	struct sldns_buffer* pkt, struct tsig_data** tsig,
-	struct regional* region);
+int tsig_lookup_key(struct tsig_key_table* key_table,
+	struct sldns_buffer* pkt, struct tsig_record* rr,
+	struct tsig_data** tsig_ret, struct regional* region,
+	struct tsig_key** key);
+
+/**
+ * Parse a TSIG from the packet. Current position is just before it.
+ * @param pkt: the packet.
+ * @param rr: data filled in, with pointers to the packet buffer.
+ *	The key name can be compressed.
+ * @return 0 if OK, otherwise an RCODE.
+ */
+int tsig_parse(struct sldns_buffer* pkt, struct tsig_record* rr);
 
 /**
  * Parse and verify the TSIG in query packet.
@@ -311,13 +330,14 @@ int tsig_parse_query(struct tsig_key_table* key_table,
  * @param pkt: the packet
  * @param tsig: the tsig key is returned. Or it can be NULL.
  * @param region: if nonNULL used to allocate.
+ * @param now: time that is used, the current time.
  * @return rcode with failure for alloc failure or malformed wireformat.
  *	0 NOERROR is success, if tsig is nonNULL it has either verified
  *	or contains a TSIG error.
  */
 int tsig_parse_verify_query(struct tsig_key_table* key_table,
 	struct sldns_buffer* pkt, struct tsig_data** tsig,
-	struct regional* region);
+	struct regional* region, uint64_t now);
 
 /**
  * Sign a reply with TSIG. Appends the TSIG record.

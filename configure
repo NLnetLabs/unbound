@@ -20824,6 +20824,18 @@ then :
   printf "%s\n" "#define HAVE_SSL_CTX_SET_TMP_ECDH 1" >>confdefs.h
 
 fi
+ac_fn_c_check_func "$LINENO" "HMAC_CTX_new" "ac_cv_func_HMAC_CTX_new"
+if test "x$ac_cv_func_HMAC_CTX_new" = xyes
+then :
+  printf "%s\n" "#define HAVE_HMAC_CTX_NEW 1" >>confdefs.h
+
+fi
+ac_fn_c_check_func "$LINENO" "EVP_MAC_CTX_new" "ac_cv_func_EVP_MAC_CTX_new"
+if test "x$ac_cv_func_EVP_MAC_CTX_new" = xyes
+then :
+  printf "%s\n" "#define HAVE_EVP_MAC_CTX_NEW 1" >>confdefs.h
+
+fi
 
 
 # these check_funcs need -lssl

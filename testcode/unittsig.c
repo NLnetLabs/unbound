@@ -80,6 +80,7 @@ static int vtest = 0;
  *	It TSIG signs with key name, at timestamp in secs, and the
  *	result of the call is compared with the expected result, and
  *	the test fails if not equal. The result is in the packet buffer.
+ * tsig-verify-query <key> <time> <rcode> <tsigerror> <tsigothertime>
  *
  */
 
@@ -463,6 +464,96 @@ handle_tsig_sign_query(char* line, struct tsig_key_table* key_table,
 	tsig_delete(tsig);
 }
 
+/** Handle the tsig-verify-query */
+static void
+handle_tsig_verify_query(char* line, struct tsig_key_table* key_table,
+	struct sldns_buffer* pkt)
+{
+	char* arg = get_arg_on_line(line, "tsig-verify-query");
+	char* keyname, *s, *timestr, *expected_rcode_str,
+		*expected_tsigerr_str, *expected_other_str;
+	int expected_rcode, expected_tsigerr, expected_other, ret;
+	uint64_t timepoint;
+	struct tsig_data* tsig;
+
+	keyname = arg;
+	s = arg;
+
+	s = strchr(s, ' ');
+	if(!s || !*s)
+		fatal_exit("expected arguments for %s", arg);
+	*s++ = 0;
+	while(*s && *s == ' ')
+		s++;
+	timestr = s;
+
+	s = strchr(s, ' ');
+	if(!s || !*s)
+		fatal_exit("expected arguments for %s", arg);
+	*s++ = 0;
+	while(*s && *s == ' ')
+		s++;
+	expected_rcode_str = s;
+
+	s = strchr(s, ' ');
+	if(!s || !*s)
+		fatal_exit("expected arguments for %s", arg);
+	*s++ = 0;
+	while(*s && *s == ' ')
+		s++;
+	expected_tsigerr_str = s;
+
+	s = strchr(s, ' ');
+	if(!s || !*s)
+		fatal_exit("expected arguments for %s", arg);
+	*s++ = 0;
+	while(*s && *s == ' ')
+		s++;
+	expected_other_str = s;
+
+	timepoint = (uint64_t)atoll(timestr);
+	if(timepoint == 0 && strcmp(timestr, "0") != 0)
+		fatal_exit("expected time argument for %s", timestr);
+	expected_rcode = atoi(expected_rcode_str);
+	if(expected_rcode == 0 && strcmp(expected_rcode_str, "0") != 0)
+		fatal_exit("expected int argument for %s", expected_rcode_str);
+	expected_tsigerr = atoi(expected_tsigerr_str);
+	if(expected_tsigerr == 0 && strcmp(expected_tsigerr_str, "0") != 0)
+		fatal_exit("expected int argument for %s", expected_tsigerr_str);
+	expected_other = atoi(expected_other_str);
+	if(expected_other == 0 && strcmp(expected_other_str, "0") != 0)
+		fatal_exit("expected int argument for %s", expected_other_str);
+
+	if(vtest)
+		printf("tsig-sign-query with %s %d %d\n", keyname,
+			(int)timepoint, expected_rcode);
+
+	/* Put position before TSIG */
+	ret = tsig_parse_verify_query(key_table, pkt, &tsig, NULL, timepoint);
+
+	if(vtest) {
+		if(ret == expected_rcode)
+			printf("function ok, %s\n", (ret?"success":"fail"));
+		else
+			printf("function returned %d, expected result %d\n",
+				ret, expected_rcode);
+	}
+	unit_assert(ret == expected_rcode);
+	if(tsig) {
+		unit_assert(tsig->error == expected_tsigerr);
+		if(tsig->other_len == 6) {
+			unit_assert(tsig->other_time == (uint64_t)expected_other);
+		} else {
+			unit_assert(0 == expected_other);
+		}
+	} else {
+		unit_assert(0 == expected_tsigerr);
+		unit_assert(0 == expected_other);
+	}
+
+	tsig_delete(tsig);
+}
+
 /** Handle one line from the TSIG test file */
 static void
 handle_line(char* line, struct tsig_key_table* key_table,
@@ -484,6 +575,8 @@ handle_line(char* line, struct tsig_key_table* key_table,
 		handle_check_packet(s, pkt, in, fname);
 	} else if(strncmp(s, "tsig-sign-query", 15) == 0) {
 		handle_tsig_sign_query(s, key_table, pkt);
+	} else if(strncmp(s, "tsig-verify-query", 17) == 0) {
+		handle_tsig_verify_query(s, key_table, pkt);
 	} else if(strncmp(s, "#", 1) == 0) {
 		/* skip comment */
 	} else if(strcmp(s, "") == 0) {
