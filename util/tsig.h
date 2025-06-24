@@ -363,4 +363,12 @@ int tsig_verify_reply(struct tsig_data* tsig, struct sldns_buffer* pkt);
  */
 size_t tsig_reserved_space(struct tsig_data* tsig);
 
+/**
+ * See if the packet has a TSIG record, or not.
+ * @param pkt: the packet.
+ * @return false if malformed or no tsig. If found, the position is
+ *	just before the TSIG record. So it can be parsed.
+ */
+int tsig_find_rr(struct sldns_buffer* pkt);
+
 #endif /* UTIL_TSIG_H */

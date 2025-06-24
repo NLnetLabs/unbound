@@ -525,10 +525,16 @@ handle_tsig_verify_query(char* line, struct tsig_key_table* key_table,
 		fatal_exit("expected int argument for %s", expected_other_str);
 
 	if(vtest)
-		printf("tsig-sign-query with %s %d %d\n", keyname,
+		printf("tsig-verify-query with %s %d %d\n", keyname,
 			(int)timepoint, expected_rcode);
 
 	/* Put position before TSIG */
+	if(!tsig_find_rr(pkt)) {
+		if(vtest)
+			printf("tsig-verify-query found no TSIG RR\n");
+		unit_assert(0);
+		return;
+	}
 	ret = tsig_parse_verify_query(key_table, pkt, &tsig, NULL, timepoint);
 
 	if(vtest) {

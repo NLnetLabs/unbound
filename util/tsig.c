@@ -1382,3 +1382,57 @@ tsig_parse_verify_query(struct tsig_key_table* key_table,
 	lock_rw_unlock(&key_table->lock);
 	return ret;
 }
+
+int
+tsig_find_rr(struct sldns_buffer* pkt)
+{
+	size_t end_pos, n_rrs;
+	if(sldns_buffer_limit(pkt) < LDNS_HEADER_SIZE) {
+		verbose(VERB_ALGO, "No TSIG, packet too short");
+		return 0;
+	}
+	if(LDNS_ARCOUNT(sldns_buffer_begin(pkt)) < 1) {
+		verbose(VERB_ALGO, "No TSIG found, ARCOUNT == 0");
+		return 0;
+	}
+	n_rrs = LDNS_ANCOUNT(sldns_buffer_begin(pkt))
+	      + LDNS_NSCOUNT(sldns_buffer_begin(pkt))
+	      + LDNS_ARCOUNT(sldns_buffer_begin(pkt))
+	      - 1;
+
+	sldns_buffer_rewind(pkt);
+	sldns_buffer_skip(pkt, LDNS_HEADER_SIZE);
+
+	/* Skip qnames. */
+	if(!skip_pkt_query_rrs(pkt, LDNS_QDCOUNT(sldns_buffer_begin(pkt)))) {
+		verbose(VERB_ALGO, "No TSIG, query section RRs malformed");
+		return 0;
+	}
+	/* Skip all rrs. */
+	if(!skip_pkt_rrs(pkt, n_rrs)) {
+		verbose(VERB_ALGO, "No TSIG, packet RRs are malformed");
+		return 0;
+	}
+	end_pos = sldns_buffer_position(pkt);
+
+	/* The tsig owner name, the key name */
+	if(sldns_buffer_remaining(pkt) < 1) {
+		verbose(VERB_ALGO, "No TSIG, packet too short");
+		return 0;
+	}
+	if(!pkt_dname_len(pkt)) {
+		verbose(VERB_ALGO, "No TSIG, dname malformed");
+		return 0;
+	}
+	if(sldns_buffer_remaining(pkt) < 2+2+4+2) {
+		verbose(VERB_ALGO, "No TSIG, packet too short");
+		return 0;
+	}
+	if(sldns_buffer_read_u16(pkt) != LDNS_RR_TYPE_TSIG) {
+		verbose(VERB_ALGO, "No TSIG, last RR not type TSIG");
+		return 0;
+	}
+
+	sldns_buffer_set_position(pkt, end_pos);
+	return 1;
+}
