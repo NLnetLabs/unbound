@@ -81,6 +81,13 @@ static int vtest = 0;
  *	result of the call is compared with the expected result, and
  *	the test fails if not equal. The result is in the packet buffer.
  * tsig-verify-query <key> <time> <rcode> <tsigerror> <tsigothertime>
+ *	It tsig verifies the packet, looks up key in the key table.
+ *	The verification is at timestamp, in secs. The result is checked,
+ *	the key with keyname of result, the rcode function result, and
+ *	if tsig data is returned, the tsigerror and tsigothertime are
+ *	checked if present. If not equal the test fails.
+ *	If no tsig data is returned, keyname '.', and 0 and 0 are the
+ *	tsigerr and tsigothertime values that are checked.
  *
  */
 
@@ -464,6 +471,43 @@ handle_tsig_sign_query(char* line, struct tsig_key_table* key_table,
 	tsig_delete(tsig);
 }
 
+/** Convert RCODE string to number. */
+static int
+str2wire_rcode(const char* str)
+{
+	sldns_lookup_table *lt = sldns_lookup_by_name(sldns_rcodes, str);
+	if(lt) {
+		return (int)lt->id;
+	} else if(strncmp(str, "RCODE", 5) == 0) {
+		return atoi(str+5);
+	}
+	/* Try as-is, a number. */
+	return atoi(str);
+}
+
+/** Convert TSIG error code string to number. */
+static int
+str2wire_tsigerror(const char* str)
+{
+	sldns_lookup_table *lt = sldns_lookup_by_name(sldns_tsig_errors, str);
+	if(lt) {
+		return (int)lt->id;
+	}
+	/* Try as-is, a number. */
+	return atoi(str);
+}
+
+/** Print TSIG error code to string */
+static void
+wire2str_tsigerror_buf(int tsigerr, char* buf, size_t len)
+{
+	sldns_lookup_table *lt;
+	lt = sldns_lookup_by_id(sldns_tsig_errors, tsigerr);
+	if(lt && lt->name)
+		snprintf(buf, len, "%s", lt->name);
+	else	snprintf(buf, len, "%d", tsigerr);
+}
+
 /** Handle the tsig-verify-query */
 static void
 handle_tsig_verify_query(char* line, struct tsig_key_table* key_table,
@@ -472,9 +516,10 @@ handle_tsig_verify_query(char* line, struct tsig_key_table* key_table,
 	char* arg = get_arg_on_line(line, "tsig-verify-query");
 	char* keyname, *s, *timestr, *expected_rcode_str,
 		*expected_tsigerr_str, *expected_other_str;
-	int expected_rcode, expected_tsigerr, expected_other, ret;
-	uint64_t timepoint;
+	int expected_rcode, expected_tsigerr, ret;
+	uint64_t timepoint, expected_other;
 	struct tsig_data* tsig;
+	char keyname_dname[256];
 
 	keyname = arg;
 	s = arg;
@@ -514,19 +559,31 @@ handle_tsig_verify_query(char* line, struct tsig_key_table* key_table,
 	timepoint = (uint64_t)atoll(timestr);
 	if(timepoint == 0 && strcmp(timestr, "0") != 0)
 		fatal_exit("expected time argument for %s", timestr);
-	expected_rcode = atoi(expected_rcode_str);
-	if(expected_rcode == 0 && strcmp(expected_rcode_str, "0") != 0)
-		fatal_exit("expected int argument for %s", expected_rcode_str);
-	expected_tsigerr = atoi(expected_tsigerr_str);
-	if(expected_tsigerr == 0 && strcmp(expected_tsigerr_str, "0") != 0)
-		fatal_exit("expected int argument for %s", expected_tsigerr_str);
-	expected_other = atoi(expected_other_str);
+	expected_rcode = str2wire_rcode(expected_rcode_str);
+	if(expected_rcode == 0 && strcmp(expected_rcode_str, "0") != 0 &&
+		strcmp(expected_rcode_str, "NOERROR") != 0 &&
+		strcmp(expected_rcode_str, "RCODE0") != 0)
+		fatal_exit("expected rcode argument for %s", expected_rcode_str);
+	expected_tsigerr = str2wire_tsigerror(expected_tsigerr_str);
+	if(expected_tsigerr == 0 && strcmp(expected_tsigerr_str, "0") != 0 &&
+		strcmp(expected_rcode_str, "NOERROR") != 0)
+		fatal_exit("expected tsigerrorcode argument for %s",
+			expected_tsigerr_str);
+	expected_other = (uint64_t)atoll(expected_other_str);
 	if(expected_other == 0 && strcmp(expected_other_str, "0") != 0)
 		fatal_exit("expected int argument for %s", expected_other_str);
+	if(strlen(keyname) > 0 && keyname[strlen(keyname)-1] == '.')
+		snprintf(keyname_dname, sizeof(keyname_dname), "%s", keyname);
+	else	snprintf(keyname_dname, sizeof(keyname_dname), "%s.", keyname);
 
-	if(vtest)
-		printf("tsig-verify-query with %s %d %d\n", keyname,
-			(int)timepoint, expected_rcode);
+	if(vtest) {
+		char bufrc[16], bufte[16];
+		sldns_wire2str_rcode_buf(expected_rcode, bufrc, sizeof(bufrc));
+		wire2str_tsigerror_buf(expected_tsigerr, bufte, sizeof(bufte));
+		printf("tsig-verify-query with %s %d %s %s %llu\n", keyname,
+			(int)timepoint, bufrc, bufte,
+			(unsigned long long)expected_other);
+	}
 
 	/* Put position before TSIG */
 	if(!tsig_find_rr(pkt)) {
@@ -538,23 +595,65 @@ handle_tsig_verify_query(char* line, struct tsig_key_table* key_table,
 	ret = tsig_parse_verify_query(key_table, pkt, &tsig, NULL, timepoint);
 
 	if(vtest) {
+		char bufrc[16], bufte[16], retrc[16], rette[16];
+		sldns_wire2str_rcode_buf(expected_rcode, bufrc, sizeof(bufrc));
+		wire2str_tsigerror_buf(expected_tsigerr, bufte, sizeof(bufte));
+		sldns_wire2str_rcode_buf(ret, retrc, sizeof(retrc));
+		if(tsig)
+			wire2str_tsigerror_buf(tsig->error, rette, sizeof(rette));
+		else	snprintf(rette, sizeof(rette), "none");
 		if(ret == expected_rcode)
-			printf("function ok, %s\n", (ret?"success":"fail"));
+			printf("function ok, rcode %s\n", retrc);
 		else
-			printf("function returned %d, expected result %d\n",
-				ret, expected_rcode);
+			printf("function returned %s, expected result %s\n",
+				retrc, bufrc);
+		if(tsig) {
+			char keynm[256];
+			if(tsig->error == expected_tsigerr)
+				printf("tsig error ok, it is %s\n", bufte);
+			else	printf("tsig error %s, expected %s\n", rette,
+					bufte);
+			if(tsig->other_len == 6) {
+				if(tsig->other_time == expected_other)
+					printf("othererrortime ok, it is %llu\n",
+						(unsigned long long)expected_other);
+				else	printf("othererrortime %llu, expected %llu\n",
+						(unsigned long long)tsig->other_time,
+						(unsigned long long)expected_other);
+			} else {
+				if(0 == expected_other)
+					printf("othererrortime ok, none\n");
+				else	printf("othererrortime none, expected %llu\n",
+						(unsigned long long)expected_other);
+			}
+			sldns_wire2str_dname_buf(tsig->key_name,
+				tsig->key_name_len, keynm, sizeof(keynm));
+			if(strcmp(keynm, keyname_dname) != 0)
+				printf("tsig key is %s, expected %s\n",
+					keynm, keyname_dname);
+		} else {
+			if(expected_tsigerr != 0 || expected_other != 0 ||
+				strcmp(keyname_dname, ".") != 0) {
+				printf("no tsig data returned, but expected it\n");
+			}
+		}
 	}
 	unit_assert(ret == expected_rcode);
 	if(tsig) {
+		char keynm[256];
 		unit_assert(tsig->error == expected_tsigerr);
 		if(tsig->other_len == 6) {
 			unit_assert(tsig->other_time == (uint64_t)expected_other);
 		} else {
 			unit_assert(0 == expected_other);
 		}
+		sldns_wire2str_dname_buf(tsig->key_name, tsig->key_name_len,
+			keynm, sizeof(keynm));
+		unit_assert(strcmp(keynm, keyname_dname) == 0);
 	} else {
 		unit_assert(0 == expected_tsigerr);
 		unit_assert(0 == expected_other);
+		unit_assert(strcmp(keyname_dname, ".") == 0);
 	}
 
 	tsig_delete(tsig);
