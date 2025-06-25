@@ -566,7 +566,7 @@ handle_tsig_verify_query(char* line, struct tsig_key_table* key_table,
 		fatal_exit("expected rcode argument for %s", expected_rcode_str);
 	expected_tsigerr = str2wire_tsigerror(expected_tsigerr_str);
 	if(expected_tsigerr == 0 && strcmp(expected_tsigerr_str, "0") != 0 &&
-		strcmp(expected_rcode_str, "NOERROR") != 0)
+		strcmp(expected_tsigerr_str, "NOERROR") != 0)
 		fatal_exit("expected tsigerrorcode argument for %s",
 			expected_tsigerr_str);
 	expected_other = (uint64_t)atoll(expected_other_str);
