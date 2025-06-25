@@ -52,7 +52,7 @@
 #define SRCDIRSTR xstr(SRCDIR)
 
 /** verbosity for this file, 0 no, 1 print some, 2 print packet dumps */
-static int vtest = 0;
+static int vtest = 2;
 
 /**
  * Content of the TSIG test files.
@@ -732,6 +732,8 @@ tsig_test_one(const char* fname)
 void
 tsig_test(void)
 {
+	verbosity = 4; // DEBUG
+	log_file(stdout); // DEBUG
 	unit_show_feature("tsig");
 	tsig_test_one(SRCDIRSTR "/testdata/tsig_test.1");
 	tsig_test_one(SRCDIRSTR "/testdata/tsig_test.2");
