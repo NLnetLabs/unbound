@@ -1256,7 +1256,7 @@ struct serviced_query* outnet_serviced_query(struct outside_network* outnet,
 	struct query_info* qinfo, uint16_t flags, int dnssec,
 	int ATTR_UNUSED(want_dnssec), int ATTR_UNUSED(nocaps),
 	int ATTR_UNUSED(check_ratelimit),
-	int ATTR_UNUSED(tcp_upstream), int ATTR_UNUSED(ssl_upstream),
+	int tcp_upstream, int ATTR_UNUSED(ssl_upstream),
 	char* ATTR_UNUSED(tls_auth_name), struct sockaddr_storage* addr,
 	socklen_t addrlen, uint8_t* zone, size_t zonelen,
 	struct module_qstate* qstate, comm_point_callback_type* callback,
@@ -1353,7 +1353,7 @@ struct serviced_query* outnet_serviced_query(struct outside_network* outnet,
 	pend->callback = callback;
 	pend->cb_arg = callback_arg;
 	pend->timeout = UDP_AUTH_QUERY_TIMEOUT/1000;
-	pend->transport = transport_udp; /* pretend UDP */
+	pend->transport = tcp_upstream?transport_tcp:transport_udp;
 	pend->pkt = NULL;
 	pend->runtime = runtime;
 	pend->serviced = 1;
