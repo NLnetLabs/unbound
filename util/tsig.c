@@ -1053,6 +1053,9 @@ tsig_verify_query(struct tsig_data* tsig, struct sldns_buffer* pkt,
 		return LDNS_RCODE_SERVFAIL;
 	}
 	sldns_buffer_write_u16_at(pkt, 0, rr->original_query_id);
+	LDNS_ARCOUNT_SET( sldns_buffer_begin(pkt)
+	                , LDNS_ARCOUNT(sldns_buffer_begin(pkt)) - 1);
+	sldns_buffer_set_position(pkt, rr->tsig_pos);
 
 	/* Write the key name uncompressed */
 	sldns_buffer_write(&var, key->name, key->name_len);
@@ -1138,6 +1141,7 @@ tsig_parse(struct sldns_buffer* pkt, struct tsig_record* rr)
 		verbose(VERB_ALGO, "tsig_verify_query: packet too short");
 		return LDNS_RCODE_FORMERR;
 	}
+	rr->tsig_pos = sldns_buffer_position(pkt);
 	rr->key_name = sldns_buffer_current(pkt);
 	rr->key_name_len = pkt_dname_len(pkt);
 	if(rr->key_name_len == 0) {

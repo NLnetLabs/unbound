@@ -57,6 +57,9 @@ struct tsig_record {
 	uint8_t* key_name;
 	/** length of the key_name */
 	size_t key_name_len;
+	/** the position of the TSIG RR in the packet, it is before the owner
+	 * name. */
+	size_t tsig_pos;
 	/** the algorithm name, as a domain name. */
 	uint8_t* algorithm_name;
 	/** length of the algorithm_name */
