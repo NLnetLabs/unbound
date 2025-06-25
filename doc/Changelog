@@ -3,6 +3,8 @@
 	- For #1247, turn off fetch-policy for delegation when looking into
 	  parent side name servers that may not update the addresses and hit
 	  NXNS limits.
+	- For #1247, replay test (added tcp_transport to
+	  outnet_serviced_query).
 
 20 June 2025: Yorgos
 	- Fix #1293: EDE 6 is attached to insecure cached answers when client
