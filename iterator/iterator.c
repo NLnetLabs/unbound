@@ -2180,6 +2180,10 @@ processLastResort(struct module_qstate* qstate, struct iter_qstate* iq,
 					a->lame, a->tls_auth_name, -1, NULL);
 			}
 			lock_rw_unlock(&qstate->env->hints->lock);
+			/* copy over some configuration since we update the
+			 * delegation point in place */
+			iq->dp->tcp_upstream = dp->tcp_upstream;
+			iq->dp->ssl_upstream = dp->ssl_upstream;
 		}
 		iq->dp->has_parent_side_NS = 1;
 	} else if(!iq->dp->has_parent_side_NS) {

@@ -1,3 +1,6 @@
+25 June 2025: Yorgos
+	- Fix #1247: forward-first: ssl handshake failed on root nameservers.
+
 20 June 2025: Yorgos
 	- Fix #1293: EDE 6 is attached to insecure cached answers when client
 	  sends the CD bit.
