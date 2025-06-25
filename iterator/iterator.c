@@ -2206,6 +2206,11 @@ processLastResort(struct module_qstate* qstate, struct iter_qstate* iq,
 		qstate->region, iq->dp, 0))
 		log_err("out of memory in cache_fill_missing");
 	if(iq->dp->usable_list) {
+		if (iq->dp->ssl_upstream) {
+			verbose(VERB_OPS, "tls forwarders failed and forward-first is set. "
+					"trying recursive query.");
+			iq->dp->ssl_upstream = 0;
+		}
 		verbose(VERB_ALGO, "try parent-side-name, w. glue from cache");
 		return next_state(iq, QUERYTARGETS_STATE);
 	}
