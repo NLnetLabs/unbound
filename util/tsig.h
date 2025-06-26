@@ -93,8 +93,11 @@ struct tsig_data {
 	uint8_t* key_name;
 	/** length of the key name */
 	size_t key_name_len;
-	/** length of the algorithm name */
-	size_t algorithm_name_len;
+	/** The algo name, if the key could not be found. If NULL, it can
+	 * be found in the tsig_key algo. */
+	uint8_t* algo_name;
+	/** length of the algo name */
+	size_t algo_name_len;
 	/** mac size */
 	size_t mac_size;
 	/** digest buffer */
@@ -126,6 +129,7 @@ struct tsig_algorithm {
 	/**
 	 * Full wireformat name of the algorith, such as
 	 * "hmac-md5.sig-alg.reg.int."
+	 * In canonical format, that is in lowercase.
 	 */
 	uint8_t* wireformat_name;
 	/** length of the wireformat_name */
@@ -346,9 +350,12 @@ int tsig_parse_verify_query(struct tsig_key_table* key_table,
  * Sign a reply with TSIG. Appends the TSIG record.
  * @param tsig: the tsig data.
  * @param pkt: the packet to sign.
+ * @param key_table: the tsig key table is used to fetch the key details.
+ * @param now: time to sign the query, the current time.
  * @return false on failure.
  */
-int tsig_sign_reply(struct tsig_data* tsig, struct sldns_buffer* pkt);
+int tsig_sign_reply(struct tsig_data* tsig, struct sldns_buffer* pkt,
+	struct tsig_key_table* key_table, uint64_t now);
 
 /**
  * Verify a reply with TSIG.

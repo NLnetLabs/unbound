@@ -156,6 +156,8 @@ tsig_key_create(const char* name, const char* algorithm, const char* secret)
 		tsig_key_delete(key);
 		return NULL;
 	}
+	/* Canonicalize the key name. */
+	query_dname_tolower(key->name);
 
 	key->data_len = sldns_b64_pton_calculate_size(strlen(secret));
 	if(key->data_len == 0)
@@ -632,7 +634,7 @@ tsig_create(struct tsig_key_table* key_table, uint8_t* name, size_t namelen)
 		log_err("out of memory");
 		return NULL;
 	}
-	tsig->algorithm_name_len = key->algo->wireformat_name_len;
+	tsig->algo_name_len = key->algo->wireformat_name_len;
 	tsig->mac_size = key->algo->max_digest_size;
 	tsig->mac = calloc(1, tsig->mac_size);
 	if(!tsig->mac) {
@@ -671,6 +673,7 @@ tsig_delete(struct tsig_data* tsig)
 {
 	if(!tsig) return;
 	free(tsig->key_name);
+	free(tsig->algo_name);
 	free(tsig->mac);
 	free(tsig);
 }
@@ -686,7 +689,7 @@ tsig_reserved_space(struct tsig_data* tsig)
 		+ sizeof(uint16_t)	/* Class */
 		+ sizeof(uint32_t)	/* TTL */
 		+ sizeof(uint16_t)	/* RDATA length */
-		+ tsig->algorithm_name_len /* Algorithm */
+		+ tsig->algo_name_len	/* Algorithm */
 		+ 6 /* 48bit */		/* Signed time */
 		+ sizeof(uint16_t)	/* Fudge */
 		+ sizeof(uint16_t)	/* Mac size */
@@ -786,7 +789,7 @@ tsig_algo_calc_parts(struct tsig_key* key, struct sldns_buffer* pkt,
 	}
 
 	if(!EVP_MAC_update(ctx, sldns_buffer_begin(var),
-		sldns_buffer_limit(var))) {
+		sldns_buffer_position(var))) {
 		log_crypto_err("Could not EVP_MAC_update");
 		EVP_MAC_CTX_free(ctx);
 		EVP_MAC_free(mac);
@@ -837,7 +840,7 @@ tsig_algo_calc_parts(struct tsig_key* key, struct sldns_buffer* pkt,
 		return 0;
 	}
 	if(!HMAC_Update(ctx, sldns_buffer_begin(var),
-		sldns_buffer_limit(var))) {
+		sldns_buffer_position(var))) {
 		log_crypto_err("Could not HMAC_Update");
 		HMAC_CTX_free(ctx);
 		return 0;
@@ -896,7 +899,7 @@ tsig_algo_calc_parts(struct tsig_key* key, struct sldns_buffer* pkt,
 	r =
 #endif
 	HMAC_Update(&ctx, sldns_buffer_begin(var),
-		sldns_buffer_limit(var));
+		sldns_buffer_position(var));
 #ifndef HMAC_INIT_EX_RETURNS_VOID
 	if(!r) {
 		log_crypto_err("Could not HMAC_Update");
@@ -919,6 +922,108 @@ tsig_algo_calc_parts(struct tsig_key* key, struct sldns_buffer* pkt,
 	HMAC_CTX_cleanup(&ctx);
 #endif
 	return 1;
+}
+
+/** Returns true if buffer has space for vars. */
+static int
+tsig_vars_available(struct tsig_data* tsig, struct sldns_buffer* pkt)
+{
+	if(!sldns_buffer_available(pkt, tsig->key_name_len + 2 + 4
+		+ tsig->algo_name_len + 6 + 2 + 2
+		+ 2 + tsig->other_len))
+		return 0;
+	return 1;
+}
+
+/** Returns true if buffer has space for vars. */
+static int
+tsig_vars_available_parsed(struct tsig_record* rr, struct sldns_buffer* pkt)
+{
+	if(!sldns_buffer_available(pkt, rr->key_name_len + 2 + 4
+		+ rr->algorithm_name_len + 6 + 2 + 2
+		+ 2 + rr->other_size))
+		return 0;
+	return 1;
+}
+
+/** Write tsig variables to buffer, from tsig data. */
+static void
+tsig_write_vars(struct tsig_data* tsig, struct sldns_buffer* pkt,
+	struct tsig_key* key, size_t *aftername_pos)
+{
+	/* Write uncompressed TSIG owner, it is the key name. */
+	sldns_buffer_write(pkt, tsig->key_name, tsig->key_name_len);
+	*aftername_pos = sldns_buffer_position(pkt);
+	sldns_buffer_write_u16(pkt, tsig->klass);
+	sldns_buffer_write_u32(pkt, tsig->ttl);
+	sldns_buffer_write(pkt, key->algo->wireformat_name,
+		key->algo->wireformat_name_len);
+	sldns_buffer_write_u48(pkt, tsig->time_signed);
+	sldns_buffer_write_u16(pkt, tsig->fudge);
+	sldns_buffer_write_u16(pkt, tsig->error);
+	if(tsig->other_len == 6) {
+		sldns_buffer_write_u16(pkt, tsig->other_len);
+		sldns_buffer_write_u48(pkt, tsig->other_time);
+	} else {
+		sldns_buffer_write_u16(pkt, 0);
+	}
+}
+
+/** Write tsig variables to buffer, that have just been parsed. */
+static void
+tsig_write_vars_parsed(struct tsig_record* rr, struct sldns_buffer* var,
+	struct tsig_key* key)
+{
+	/* Write the key name uncompressed */
+	sldns_buffer_write(var, key->name, key->name_len);
+	sldns_buffer_write_u16(var, LDNS_RR_CLASS_ANY);
+	sldns_buffer_write_u32(var, 0); /* TTL */
+	sldns_buffer_write(var, key->algo->wireformat_name,
+		key->algo->wireformat_name_len);
+	sldns_buffer_write_u48(var, rr->signed_time);
+	sldns_buffer_write_u16(var, rr->fudge_time);
+	sldns_buffer_write_u16(var, rr->error_code);
+	sldns_buffer_write_u16(var, rr->other_size);
+	sldns_buffer_write(var, rr->other_data, rr->other_size);
+}
+
+/** Append TSIG RR to the packet. */
+static void
+tsig_append_rr(struct tsig_data* tsig, struct sldns_buffer* pkt,
+	size_t aftername_pos, uint8_t* algo_name, size_t algo_name_len,
+	uint8_t* mac, size_t mac_size)
+{
+	/* The record appended consists of:
+	 * owner name, u16 type, u16 class, u32 TTL, u16 rdlength,
+	 * algo name, u48 signed_time, u16 fudge, u16 mac_len, mac data,
+	 * u16 original_query_id, u16 error, u16 other_len, other data.
+	 */
+	sldns_buffer_set_position(pkt, aftername_pos);
+	sldns_buffer_write_u16(pkt, LDNS_RR_TYPE_TSIG);
+	sldns_buffer_write_u16(pkt, tsig->klass);
+	sldns_buffer_write_u32(pkt, tsig->ttl);
+
+	/* rdlength */
+	sldns_buffer_write_u16(pkt, algo_name_len
+		+ 6 + 2 + 2 /* time,fudge,maclen */ + mac_size
+		+ 2 + 2 + 2 /* id,error,otherlen */ + tsig->other_len);
+	sldns_buffer_write(pkt, algo_name, algo_name_len);
+	sldns_buffer_write_u48(pkt, tsig->time_signed);
+	sldns_buffer_write_u16(pkt, tsig->fudge);
+	sldns_buffer_write_u16(pkt, mac_size);
+	if(mac_size != 0)
+		sldns_buffer_write(pkt, mac, mac_size);
+	sldns_buffer_write_u16(pkt, tsig->original_query_id);
+	sldns_buffer_write_u16(pkt, tsig->error);
+	if(tsig->other_len == 6) {
+		sldns_buffer_write_u16(pkt, tsig->other_len);
+		sldns_buffer_write_u48(pkt, tsig->other_time);
+	} else {
+		sldns_buffer_write_u16(pkt, 0);
+	}
+
+	LDNS_ARCOUNT_SET(sldns_buffer_begin(pkt),
+		LDNS_ARCOUNT(sldns_buffer_begin(pkt))+1);
 }
 
 int
@@ -955,33 +1060,15 @@ tsig_sign_query(struct tsig_data* tsig, struct sldns_buffer* pkt,
 	 * u16 fudge, u16 error, u16 other_len, <data> other_data. */
 	/* That fits in the current buffer, since the reserved space for
 	 * the TSIG record is larger. */
-	if(!sldns_buffer_available(pkt, tsig->key_name_len + 2 + 4
-		+ key->algo->wireformat_name_len + 6 + 2 + 2
-		+ 2 + tsig->other_len)) {
+	if(!tsig_vars_available(tsig, pkt)) {
 		/* Buffer is too small */
 		lock_rw_unlock(&key_table->lock);
 		verbose(VERB_ALGO, "tsig_sign_query: not enough buffer space");
 		return 0;
 	}
+	tsig_write_vars(tsig, pkt, key, &aftername_pos);
 
-	/* Write uncompressed TSIG owner, it is the key name. */
-	sldns_buffer_write(pkt, tsig->key_name, tsig->key_name_len);
-	aftername_pos = sldns_buffer_position(pkt);
-	sldns_buffer_write_u16(pkt, tsig->klass);
-	sldns_buffer_write_u32(pkt, tsig->ttl);
-	sldns_buffer_write(pkt, key->algo->wireformat_name,
-		key->algo->wireformat_name_len);
-	sldns_buffer_write_u48(pkt, tsig->time_signed);
-	sldns_buffer_write_u16(pkt, tsig->fudge);
-	sldns_buffer_write_u16(pkt, tsig->error);
-	if(tsig->other_len == 6) {
-		sldns_buffer_write_u16(pkt, tsig->other_len);
-		sldns_buffer_write_u48(pkt, tsig->other_time);
-	} else {
-		sldns_buffer_write_u16(pkt, 0);
-	}
-
-	/* Sign it */
+	/* Calculate the TSIG. */
 	if(!tsig_algo_calc(key, pkt, tsig)) {
 		/* Failure to calculate digest. */
 		lock_rw_unlock(&key_table->lock);
@@ -989,39 +1076,9 @@ tsig_sign_query(struct tsig_data* tsig, struct sldns_buffer* pkt,
 		return 0;
 	}
 
-	/* Append TSIG record */
-	/* The record appended consists of:
-	 * owner name, u16 type, u16 class, u32 TTL, u16 rdlength,
-	 * algo name, u48 signed_time, u16 fudge, u16 mac_len, mac data,
-	 * u16 original_query_id, u16 error, u16 other_len, other data.
-	 */
-	sldns_buffer_set_position(pkt, aftername_pos);
-	sldns_buffer_write_u16(pkt, LDNS_RR_TYPE_TSIG);
-	sldns_buffer_write_u16(pkt, tsig->klass);
-	sldns_buffer_write_u32(pkt, tsig->ttl);
-
-	/* rdlength */
-	sldns_buffer_write_u16(pkt, key->algo->wireformat_name_len
-		+ 6 + 2 + 2 /* time,fudge,maclen */ + tsig->mac_size
-		+ 2 + 2 + 2 /* id,error,otherlen */ + tsig->other_len);
-	sldns_buffer_write(pkt, key->algo->wireformat_name,
-		key->algo->wireformat_name_len);
-	sldns_buffer_write_u48(pkt, tsig->time_signed);
-	sldns_buffer_write_u16(pkt, tsig->fudge);
-	sldns_buffer_write_u16(pkt, tsig->mac_size);
-	sldns_buffer_write(pkt, tsig->mac, tsig->mac_size);
-	sldns_buffer_write_u16(pkt, tsig->original_query_id);
-	sldns_buffer_write_u16(pkt, tsig->error);
-	if(tsig->other_len == 6) {
-		sldns_buffer_write_u16(pkt, tsig->other_len);
-		sldns_buffer_write_u48(pkt, tsig->other_time);
-	} else {
-		sldns_buffer_write_u16(pkt, 0);
-	}
-
-	LDNS_ARCOUNT_SET(sldns_buffer_begin(pkt),
-		LDNS_ARCOUNT(sldns_buffer_begin(pkt))+1);
-
+	/* Append TSIG record. */
+	tsig_append_rr(tsig, pkt, aftername_pos, key->algo->wireformat_name,
+		key->algo->wireformat_name_len, tsig->mac, tsig->mac_size);
 	lock_rw_unlock(&key_table->lock);
 	return 1;
 }
@@ -1044,11 +1101,7 @@ tsig_verify_query(struct tsig_data* tsig, struct sldns_buffer* pkt,
 
 	/* Create the variables to digest in the buffer. */
 	/* packet with original query ID and ARCOUNT without TSIG. */
-	if(sldns_buffer_capacity(&var) <
-		tsig->key_name_len /* TSIG owner */ + 2 /* class */ +
-		4 /* TTL */ + key->algo->wireformat_name_len /* algo */ +
-		6 /* time signed */ + 2 /* fudge */ + 2 /* error */ +
-		2 /* other len */ + rr->other_size) {
+	if(!tsig_vars_available_parsed(rr, &var)) {
 		verbose(VERB_ALGO, "tsig_verify_query: variable buffer too small");
 		return LDNS_RCODE_SERVFAIL;
 	}
@@ -1057,18 +1110,7 @@ tsig_verify_query(struct tsig_data* tsig, struct sldns_buffer* pkt,
 	                , LDNS_ARCOUNT(sldns_buffer_begin(pkt)) - 1);
 	sldns_buffer_set_position(pkt, rr->tsig_pos);
 
-	/* Write the key name uncompressed */
-	sldns_buffer_write(&var, key->name, key->name_len);
-	sldns_buffer_write_u16(&var, LDNS_RR_CLASS_ANY);
-	sldns_buffer_write_u32(&var, 0); /* TTL */
-	sldns_buffer_write(&var, key->algo->wireformat_name,
-		key->algo->wireformat_name_len);
-	sldns_buffer_write_u48(&var, rr->signed_time);
-	sldns_buffer_write_u16(&var, rr->fudge_time);
-	sldns_buffer_write_u16(&var, rr->error_code);
-	sldns_buffer_write_u16(&var, rr->other_size);
-	sldns_buffer_write(&var, rr->other_data, rr->other_size);
-	sldns_buffer_flip(&var);
+	tsig_write_vars_parsed(rr, &var, key);
 
 	if(!tsig_algo_calc_parts(key, pkt, &var, tsig)) {
 		/* Failure to calculate digest. */
@@ -1286,6 +1328,8 @@ tsig_lookup_key(struct tsig_key_table* key_table,
 		return LDNS_RCODE_SERVFAIL;
 	}
 	dname_pkt_copy(pkt, tsig->key_name, rr->key_name);
+	/* Canonicalize the key name. */
+	query_dname_tolower(tsig->key_name);
 
 	/* Search for the key. */
 	lock_rw_rdlock(&key_table->lock);
@@ -1300,6 +1344,24 @@ tsig_lookup_key(struct tsig_key_table* key_table,
 			verbose(VERB_ALGO, "tsig_verify_query: key %s not in table",
 				keynm);
 		}
+
+		/* Allocate the algo name for the reply. */
+		if(region)
+			tsig->algo_name = regional_alloc_init(region,
+				rr->algorithm_name, rr->algorithm_name_len);
+		else
+			tsig->algo_name = memdup(rr->algorithm_name,
+				rr->algorithm_name_len);
+		if(!tsig->algo_name) {
+			verbose(VERB_ALGO, "tsig_lookup_key: alloc failure");
+			if(!region) {
+				free(tsig->key_name);
+				free(tsig);
+			}
+			return LDNS_RCODE_SERVFAIL;
+		}
+		tsig->algo_name_len = rr->algorithm_name_len;
+
 		tsig->error = LDNS_TSIG_ERROR_BADKEY;
 		*tsig_ret = tsig;
 		return LDNS_RCODE_NOTAUTH;
@@ -1316,10 +1378,30 @@ tsig_lookup_key(struct tsig_key_table* key_table,
 			verbose(VERB_ALGO, "tsig_verify_query: TSIG algorithm different for key %s, it has algo %s but the packet has %s",
 				keynm, (*key)->algo->short_name, algonm);
 		}
+
+		/* Allocate the algo name for the reply. */
+		if(region)
+			tsig->algo_name = regional_alloc_init(region,
+				rr->algorithm_name, rr->algorithm_name_len);
+		else
+			tsig->algo_name = memdup(rr->algorithm_name,
+				rr->algorithm_name_len);
+		if(!tsig->algo_name) {
+			verbose(VERB_ALGO, "tsig_lookup_key: alloc failure");
+			if(!region) {
+				free(tsig->key_name);
+				free(tsig);
+			}
+			return LDNS_RCODE_SERVFAIL;
+		}
+		tsig->algo_name_len = rr->algorithm_name_len;
+
 		tsig->error = LDNS_TSIG_ERROR_BADKEY;
 		*tsig_ret = tsig;
 		return LDNS_RCODE_NOTAUTH;
 	}
+	tsig->algo_name = NULL;
+	tsig->algo_name_len = (*key)->algo->wireformat_name_len;
 
 	/* Check mac size. */
 	if(rr->mac_size != (*key)->algo->max_digest_size ||
@@ -1438,5 +1520,109 @@ tsig_find_rr(struct sldns_buffer* pkt)
 	}
 
 	sldns_buffer_set_position(pkt, end_pos);
+	return 1;
+}
+
+int
+tsig_sign_reply(struct tsig_data* tsig, struct sldns_buffer* pkt,
+	struct tsig_key_table* key_table, uint64_t now)
+{
+	size_t aftername_pos;
+	struct tsig_key* key;
+	uint8_t var_buf[2048];
+	struct sldns_buffer var;
+	uint16_t current_query_id;
+
+	if(!tsig) {
+		/* For some rcodes, like FORMERR, no tsig data is returned,
+		 * and also no TSIG is needed on the reply. */
+		verbose(VERB_ALGO, "tsig_sign_reply: no TSIG on error reply");
+		return 1;
+	}
+
+	if(sldns_buffer_remaining(pkt) < tsig_reserved_space(tsig)) {
+		/* Not enough space in buffer for packet and TSIG. */
+		verbose(VERB_ALGO, "tsig_sign_reply: not enough buffer space");
+		return 0;
+	}
+
+	if(LDNS_RCODE_WIRE(sldns_buffer_begin(pkt)) == LDNS_RCODE_SERVFAIL ||
+	   LDNS_RCODE_WIRE(sldns_buffer_begin(pkt)) == LDNS_RCODE_FORMERR ||
+	   LDNS_RCODE_WIRE(sldns_buffer_begin(pkt)) == LDNS_RCODE_NOTIMPL ||
+	   (LDNS_RCODE_WIRE(sldns_buffer_begin(pkt)) == LDNS_RCODE_NOTAUTH &&
+	    tsig->error != LDNS_TSIG_ERROR_BADTIME)) {
+		uint8_t* algo_name;
+		size_t algo_name_len;
+		/* No TSIG calculation on error reply. */
+		if(tsig->error == 0)
+			return 1; /* No TSIG needed for the error. Also,
+			copying in possible formerr contents is not desired. */
+		if(tsig->algo_name) {
+			/* For errors, the tsig->algo_name is allocated. */
+			algo_name = tsig->algo_name;
+			algo_name_len = tsig->algo_name_len;
+		} else {
+			/* Robust code in case there is algo name. */
+			algo_name = (uint8_t*)"\000";
+			algo_name_len = 1;
+		}
+
+		/* The TSIG can be written straight away */
+		sldns_buffer_write(pkt, tsig->key_name, tsig->key_name_len);
+		aftername_pos = sldns_buffer_position(pkt);
+		tsig_append_rr(tsig, pkt, aftername_pos, algo_name,
+			algo_name_len, NULL, 0);
+		return 1;
+	}
+
+	lock_rw_rdlock(&key_table->lock);
+	key = tsig_key_table_search(key_table, tsig->key_name,
+		tsig->key_name_len);
+	if(!key) {
+		/* The tsig key has disappeared from the key table. */
+		lock_rw_unlock(&key_table->lock);
+		verbose(VERB_ALGO, "tsig_sign_reply: key not in table");
+		return 0;
+	}
+
+	tsig->time_signed = now;
+	/* The variables for the TSIG calculation fit in the current buffer,
+	 * since the reserved space for the TSIG record is larger. */
+	if(!tsig_vars_available(tsig, pkt)) {
+		/* Buffer is too small */
+		lock_rw_unlock(&key_table->lock);
+		verbose(VERB_ALGO, "tsig_sign_reply: not enough buffer space");
+		return 0;
+	}
+
+	current_query_id = sldns_buffer_read_u16_at(pkt, 0);
+	sldns_buffer_write_u16_at(pkt, 0, tsig->original_query_id);
+	tsig_write_vars(tsig, pkt, key, &aftername_pos);
+
+	/* The prior digest. It is prepended to the other variables. */
+	sldns_buffer_init_frm_data(&var, var_buf, sizeof(var_buf));
+	if(!sldns_buffer_available(&var, 2 /* mac_size */ + tsig->mac_size)) {
+		/* Buffer too small. */
+		lock_rw_unlock(&key_table->lock);
+		verbose(VERB_ALGO, "tsig_sign_reply: not enough buffer space");
+		return 0;
+	}
+	sldns_buffer_write_u16(&var, tsig->mac_size);
+	sldns_buffer_write(&var, tsig->mac, tsig->mac_size);
+
+	/* Calculate the TSIG. */
+	if(!tsig_algo_calc_parts(key, &var, pkt, tsig)) {
+		/* Failure to calculate digest. */
+		lock_rw_unlock(&key_table->lock);
+		sldns_buffer_write_u16_at(pkt, 0, current_query_id);
+		verbose(VERB_ALGO, "tsig_sign_reply: failed to calculate digest");
+		return 0;
+	}
+
+	/* Append TSIG record. */
+	sldns_buffer_write_u16_at(pkt, 0, current_query_id);
+	tsig_append_rr(tsig, pkt, aftername_pos, key->algo->wireformat_name,
+		key->algo->wireformat_name_len, tsig->mac, tsig->mac_size);
+	lock_rw_unlock(&key_table->lock);
 	return 1;
 }
