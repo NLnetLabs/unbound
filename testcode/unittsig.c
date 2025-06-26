@@ -114,6 +114,31 @@ get_arg_on_line(char* line, char* keyword)
 	return s;
 }
 
+/** Get next argument from line */
+static char*
+get_next_arg_on_line(char** s)
+{
+	char* arg;
+	if(!*s)
+		return *s;
+	while(**s && **s == ' ')
+		(*s)++;
+	arg = *s;
+	if(!**s)
+		return arg; /* No arguments */
+	*s = strchr(*s, ' ');
+	if(!*s) {
+		*s = arg+strlen(arg);
+		return arg; /* No further arguments */
+	}
+	if(!**s)
+		return arg;
+	*(*s)++ = 0;
+	while(**s && **s == ' ')
+		(*s)++;
+	return arg;
+}
+
 /** See if algorithm is supported for tsig test */
 static int
 tsig_algo_test(char* algo)
@@ -419,22 +444,10 @@ handle_tsig_sign_query(char* line, struct tsig_key_table* key_table,
 	struct tsig_data* tsig;
 	size_t pos;
 
-	keyname = arg;
 	s = arg;
-	s = strchr(s, ' ');
-	if(!s || !*s)
-		fatal_exit("expected arguments for %s", arg);
-	*s++ = 0;
-	while(*s && *s == ' ')
-		s++;
-	timestr = s;
-	s = strchr(s, ' ');
-	if(!s || !*s)
-		fatal_exit("expected arguments for %s", arg);
-	*s++ = 0;
-	while(*s && *s == ' ')
-		s++;
-	expectedstr = s;
+	keyname = get_next_arg_on_line(&s);
+	timestr = get_next_arg_on_line(&s);
+	expectedstr = get_next_arg_on_line(&s);
 
 	timepoint = (uint64_t)atoll(timestr);
 	if(timepoint == 0 && strcmp(timestr, "0") != 0)
@@ -521,40 +534,12 @@ handle_tsig_verify_query(char* line, struct tsig_key_table* key_table,
 	struct tsig_data* tsig;
 	char keyname_dname[256];
 
-	keyname = arg;
 	s = arg;
-
-	s = strchr(s, ' ');
-	if(!s || !*s)
-		fatal_exit("expected arguments for %s", arg);
-	*s++ = 0;
-	while(*s && *s == ' ')
-		s++;
-	timestr = s;
-
-	s = strchr(s, ' ');
-	if(!s || !*s)
-		fatal_exit("expected arguments for %s", arg);
-	*s++ = 0;
-	while(*s && *s == ' ')
-		s++;
-	expected_rcode_str = s;
-
-	s = strchr(s, ' ');
-	if(!s || !*s)
-		fatal_exit("expected arguments for %s", arg);
-	*s++ = 0;
-	while(*s && *s == ' ')
-		s++;
-	expected_tsigerr_str = s;
-
-	s = strchr(s, ' ');
-	if(!s || !*s)
-		fatal_exit("expected arguments for %s", arg);
-	*s++ = 0;
-	while(*s && *s == ' ')
-		s++;
-	expected_other_str = s;
+	keyname = get_next_arg_on_line(&s);
+	timestr = get_next_arg_on_line(&s);
+	expected_rcode_str = get_next_arg_on_line(&s);
+	expected_tsigerr_str = get_next_arg_on_line(&s);
+	expected_other_str = get_next_arg_on_line(&s);
 
 	timepoint = (uint64_t)atoll(timestr);
 	if(timepoint == 0 && strcmp(timestr, "0") != 0)
