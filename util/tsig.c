@@ -358,6 +358,19 @@ tsig_algo_find_name(const char* algo_name)
 	return NULL;
 }
 
+struct tsig_algorithm*
+tsig_algo_find_wire(uint8_t* algo)
+{
+	size_t i;
+	for(i=0; i<sizeof(tsig_algorithm_table)/sizeof(*tsig_algorithm_table);
+	    i++) {
+		if(query_dname_compare(tsig_algorithm_table[i].wireformat_name,
+			algo) == 0)
+			return &tsig_algorithm_table[i];
+	}
+	return NULL;
+}
+
 /**
  * Skip packet query rr.
  * @param pkt: the packet, position before the rr, ends after the rr.
@@ -1180,21 +1193,21 @@ tsig_parse(struct sldns_buffer* pkt, struct tsig_record* rr)
 	}
 	if(sldns_buffer_remaining(pkt) < 1) {
 		/* The packet is malformed */
-		verbose(VERB_ALGO, "tsig_verify_query: packet too short");
+		verbose(VERB_ALGO, "tsig_parse: packet too short");
 		return LDNS_RCODE_FORMERR;
 	}
 	rr->tsig_pos = sldns_buffer_position(pkt);
 	rr->key_name = sldns_buffer_current(pkt);
 	rr->key_name_len = pkt_dname_len(pkt);
 	if(rr->key_name_len == 0) {
-		verbose(VERB_ALGO, "tsig_verify_query: tsig name malformed");
+		verbose(VERB_ALGO, "tsig_parse: tsig name malformed");
 		return LDNS_RCODE_FORMERR;
 	}
 
 	if(sldns_buffer_remaining(pkt) < 2 /* type */ + 2 /* class */ +
 		4 /* ttl */ + 2 /* rdlength */) {
 		/* The packet is malformed */
-		verbose(VERB_ALGO, "tsig_verify_query: packet too short");
+		verbose(VERB_ALGO, "tsig_parse: packet too short");
 		return LDNS_RCODE_FORMERR;
 	}
 	type = sldns_buffer_read_u16(pkt);
@@ -1203,29 +1216,29 @@ tsig_parse(struct sldns_buffer* pkt, struct tsig_record* rr)
 	rdlength = sldns_buffer_read_u16(pkt);
 	if(type != LDNS_RR_TYPE_TSIG) {
 		/* The packet is malformed */
-		verbose(VERB_ALGO, "tsig_verify_query: TSIG RR has wrong RR type, not TSIG");
+		verbose(VERB_ALGO, "tsig_parse: TSIG RR has wrong RR type, not TSIG");
 		return LDNS_RCODE_FORMERR;
 	}
 	if(klass != LDNS_RR_CLASS_ANY) {
 		/* The packet is malformed */
-		verbose(VERB_ALGO, "tsig_verify_query: TSIG RR has wrong RR class, not ANY");
+		verbose(VERB_ALGO, "tsig_parse: TSIG RR has wrong RR class, not ANY");
 		return LDNS_RCODE_FORMERR;
 	}
 	if(ttl != 0) {
 		/* The packet is malformed */
-		verbose(VERB_ALGO, "tsig_verify_query: TSIG RR has wrong TTL, not 0");
+		verbose(VERB_ALGO, "tsig_parse: TSIG RR has wrong TTL, not 0");
 		return LDNS_RCODE_FORMERR;
 	}
 	if(sldns_buffer_remaining(pkt) < rdlength) {
 		/* The packet is malformed */
-		verbose(VERB_ALGO, "tsig_verify_query: packet too short for rdlength");
+		verbose(VERB_ALGO, "tsig_parse: packet too short for rdlength");
 		return LDNS_RCODE_FORMERR;
 	}
 	if(rdlength < 1 /* algo name first byte */
 		+ 6 + 2 + 2 /* time,fudge,maclen */
 		+ 2 + 2 + 2 /* id,error,otherlen */) {
 		/* The packet is malformed */
-		verbose(VERB_ALGO, "tsig_verify_query: TSIG record too short");
+		verbose(VERB_ALGO, "tsig_parse: TSIG record too short");
 		return LDNS_RCODE_FORMERR;
 	}
 
@@ -1235,14 +1248,14 @@ tsig_parse(struct sldns_buffer* pkt, struct tsig_record* rr)
 	if(rr->algorithm_name_len == 0 ||
 		rdlength < sldns_buffer_position(pkt)-algopos) {
 		/* The packet is malformed */
-		verbose(VERB_ALGO, "tsig_verify_query: TSIG algorithm name malformed");
+		verbose(VERB_ALGO, "tsig_parse: TSIG algorithm name malformed");
 		return LDNS_RCODE_FORMERR;
 	}
 
 	if(sldns_buffer_remaining(pkt) < 6 + 2 + 2 /* time,fudge,maclen */ ||
 		rdlength < sldns_buffer_position(pkt)-algopos) {
 		/* The packet is malformed */
-		verbose(VERB_ALGO, "tsig_verify_query: TSIG record too short");
+		verbose(VERB_ALGO, "tsig_parse: TSIG record too short");
 		return LDNS_RCODE_FORMERR;
 	}
 	rr->signed_time = sldns_buffer_read_u48(pkt);
@@ -1252,12 +1265,12 @@ tsig_parse(struct sldns_buffer* pkt, struct tsig_record* rr)
 		+ 2 + 2 + 2 /* id,error,otherlen */ ||
 		rdlength < sldns_buffer_position(pkt)-algopos) {
 		/* The packet is malformed */
-		verbose(VERB_ALGO, "tsig_verify_query: TSIG record too short");
+		verbose(VERB_ALGO, "tsig_parse: TSIG record too short");
 		return LDNS_RCODE_FORMERR;
 	}
 	if(rr->mac_size > 16384) {
 		/* the hash should not be too big, really 512/8=64 bytes */
-		verbose(VERB_ALGO, "tsig_verify_query: TSIG mac_size too large");
+		verbose(VERB_ALGO, "tsig_parse: TSIG mac_size too large");
 		return LDNS_RCODE_FORMERR;
 	}
 	rr->mac_data = sldns_buffer_current(pkt);
@@ -1271,12 +1284,12 @@ tsig_parse(struct sldns_buffer* pkt, struct tsig_record* rr)
 	if(sldns_buffer_remaining(pkt) < rr->other_size ||
 		rdlength < sldns_buffer_position(pkt)-algopos) {
 		/* The packet is malformed */
-		verbose(VERB_ALGO, "tsig_verify_query: TSIG record too short");
+		verbose(VERB_ALGO, "tsig_parse: TSIG record too short");
 		return LDNS_RCODE_FORMERR;
 	}
 	if(rr->other_size > 16) {
 		/* The packet is malformed */
-		verbose(VERB_ALGO, "tsig_verify_query: other_size too large");
+		verbose(VERB_ALGO, "tsig_parse: other_size too large");
 		return LDNS_RCODE_FORMERR;
 	}
 	if(rr->other_size == 6)
@@ -1286,13 +1299,13 @@ tsig_parse(struct sldns_buffer* pkt, struct tsig_record* rr)
 
 	if(rdlength != sldns_buffer_position(pkt)-algopos) {
 		/* The packet is malformed */
-		verbose(VERB_ALGO, "tsig_verify_query: TSIG record has trailing data");
+		verbose(VERB_ALGO, "tsig_parse: TSIG record has trailing data");
 		return LDNS_RCODE_FORMERR;
 	}
 	if(sldns_buffer_remaining(pkt) > 0) {
 		/* The packet is malformed */
 		/* Trailing bytes after the RR, or more RRs after the TSIG. */
-		verbose(VERB_ALGO, "tsig_verify_query: TSIG record has trailing data after it");
+		verbose(VERB_ALGO, "tsig_parse: TSIG record has trailing data after it");
 		return LDNS_RCODE_FORMERR;
 	}
 
@@ -1625,4 +1638,92 @@ tsig_sign_reply(struct tsig_data* tsig, struct sldns_buffer* pkt,
 		key->algo->wireformat_name_len, tsig->mac, tsig->mac_size);
 	lock_rw_unlock(&key_table->lock);
 	return 1;
+}
+
+/**
+ * Verify pkt with the name (domain name), algorithm and key in Base64.
+ * out 0 on success, an error code otherwise.
+ * For a shared packet with contents.
+ */
+int
+tsig_verify_shared(sldns_buffer* pkt, const uint8_t* name, const uint8_t* alg,
+		const uint8_t* secret, size_t secret_len, uint64_t now)
+{
+	int ret;
+	struct tsig_record rr;
+	struct tsig_key key;
+	struct tsig_data tsig;
+	uint8_t bufname[256];
+	size_t bufname_len;
+	uint8_t macbuf[1024];
+
+	if(!tsig_find_rr(pkt)) {
+		verbose(VERB_ALGO, "tsig_verify_shared: No TSIG found");
+		return -1;
+	}
+
+	/* Parse the TSIG RR from the query. */
+	ret = tsig_parse(pkt, &rr);
+	if(ret != 0) {
+		if(ret == LDNS_RCODE_SERVFAIL ||
+			ret == LDNS_RCODE_FORMERR)
+			return -1;
+		return ret;
+	}
+
+	if(rr.key_name_len > sizeof(bufname)) {
+		verbose(VERB_ALGO, "tsig_verify_shared: key name too long");
+		return -1;
+	}
+	dname_pkt_copy(pkt, bufname, rr.key_name);
+	query_dname_tolower(bufname);
+	bufname_len = rr.key_name_len;
+
+	if(query_dname_compare(bufname, name) != 0) {
+		verbose(VERB_ALGO, "tsig_verify_shared: wrong key");
+		return LDNS_TSIG_ERROR_BADKEY;
+	}
+	if(query_dname_compare(rr.algorithm_name, alg) != 0) {
+		verbose(VERB_ALGO, "tsig_verify_shared: wrong algorithm");
+		return LDNS_TSIG_ERROR_BADKEY;
+	}
+
+	memset(&tsig, 0, sizeof(tsig));
+	tsig.fudge = TSIG_FUDGE_TIME; /* seconds */
+	tsig.key_name = bufname;
+	tsig.key_name_len = bufname_len;
+	tsig.algo_name = NULL;
+	tsig.algo_name_len = rr.algorithm_name_len;
+
+	memset(&key, 0, sizeof(key));
+	key.name = bufname;
+	key.name_len = bufname_len;
+	key.data = (uint8_t*)secret;
+	key.data_len = secret_len;
+	key.algo = tsig_algo_find_wire((uint8_t*)alg);
+	if(!key.algo) {
+		verbose(VERB_ALGO, "tsig_verify_shared: unknown algorithm");
+		return LDNS_TSIG_ERROR_BADKEY;
+	}
+	if(key.algo->max_digest_size != rr.mac_size) {
+		verbose(VERB_ALGO, "tsig_verify_shared: wrong mac size");
+		return -1;
+	}
+	if(key.algo->max_digest_size > sizeof(macbuf)) {
+		verbose(VERB_ALGO, "tsig_verify_shared: mac size too large");
+		return -1;
+	}
+	tsig.mac_size = key.algo->max_digest_size;
+	tsig.mac = macbuf;
+
+	/* Verify the TSIG. */
+	ret = tsig_verify_query(&tsig, pkt, &key, &rr, now);
+
+	if(ret != 0) {
+		if(ret == LDNS_RCODE_SERVFAIL ||
+			ret == LDNS_RCODE_FORMERR)
+			return -1;
+		return ret;
+	}
+	return 0;
 }
