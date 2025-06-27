@@ -381,10 +381,26 @@ int tsig_sign_reply(struct tsig_data* tsig, struct sldns_buffer* pkt,
  * Verify a reply with TSIG.
  * @param tsig: the tsig data.
  * @param pkt: the reply to verify.
+ * @param key: the key with algorithm, caller must hold lock.
+ * @param rr: the tsig record parsed from the reply.
+ * @param now: time to sign the query, the current time.
  * @return false on failure, like
  *	alloc failure, wireformat malformed, did not verify.
  */
-int tsig_verify_reply(struct tsig_data* tsig, struct sldns_buffer* pkt);
+int tsig_verify_reply(struct tsig_data* tsig, struct sldns_buffer* pkt,
+	struct tsig_key* key, struct tsig_record* rr, uint64_t now);
+
+/**
+ * Verify a reply with TSIG.
+ * @param tsig: the tsig data.
+ * @param pkt: the reply to verify.
+ * @param key_table: the tsig key table is used to fetch the key details.
+ * @param now: time to sign the query, the current time.
+ * @return false on failure, like
+ *	alloc failure, wireformat malformed, did not verify.
+ */
+int tsig_parse_verify_reply(struct tsig_data* tsig, struct sldns_buffer* pkt,
+	struct tsig_key_table* key_table, uint64_t now);
 
 /**
  * Calculate reserved space for TSIG.

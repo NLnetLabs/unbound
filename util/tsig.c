@@ -553,14 +553,16 @@ tsig_algo_calc(struct tsig_key* key, struct sldns_buffer* pkt,
  * Called must hold locks, on key. The routine concatenates the argument
  * datas with digest updates.
  * @param key: the key, and algorithm.
+ * @param prior: before the next buffer. or NULL.
  * @param pkt: packet with contents.
  * @param var: variables to digest.
  * @param tsig: where to store the result.
  * @return false on failure.
  */
 static int
-tsig_algo_calc_parts(struct tsig_key* key, struct sldns_buffer* pkt,
-	struct sldns_buffer* var, struct tsig_data* tsig)
+tsig_algo_calc_parts(struct tsig_key* key, struct sldns_buffer* prior,
+	struct sldns_buffer* pkt, struct sldns_buffer* var,
+	struct tsig_data* tsig)
 {
 #ifdef HAVE_EVP_MAC_CTX_NEW
 	/* For EVP_MAC_CTX_new and OpenSSL since 3.0 functions. */
@@ -582,6 +584,15 @@ tsig_algo_calc_parts(struct tsig_key* key, struct sldns_buffer* pkt,
 		EVP_MAC_free(mac);
 		return 0;
 	}
+
+	if(prior && !EVP_MAC_update(ctx, sldns_buffer_begin(prior),
+		sldns_buffer_position(prior))) {
+		log_crypto_err("Could not EVP_MAC_update");
+		EVP_MAC_CTX_free(ctx);
+		EVP_MAC_free(mac);
+		return 0;
+	}
+
 	if(!EVP_MAC_update(ctx, sldns_buffer_begin(pkt),
 		sldns_buffer_position(pkt))) {
 		log_crypto_err("Could not EVP_MAC_update");
@@ -635,6 +646,12 @@ tsig_algo_calc_parts(struct tsig_key* key, struct sldns_buffer* pkt,
 		HMAC_CTX_free(ctx);
 		return 0;
 	}
+	if(prior && !HMAC_Update(ctx, sldns_buffer_begin(prior),
+		sldns_buffer_position(prior))) {
+		log_crypto_err("Could not HMAC_Update");
+		HMAC_CTX_free(ctx);
+		return 0;
+	}
 	if(!HMAC_Update(ctx, sldns_buffer_begin(pkt),
 		sldns_buffer_position(pkt))) {
 		log_crypto_err("Could not HMAC_Update");
@@ -685,6 +702,20 @@ tsig_algo_calc_parts(struct tsig_key* key, struct sldns_buffer* pkt,
 		return 0;
 	}
 #endif
+	if(prior) {
+#ifndef HMAC_INIT_EX_RETURNS_VOID
+		r =
+#endif
+		HMAC_Update(&ctx, sldns_buffer_begin(prior),
+			sldns_buffer_position(prior));
+#ifndef HMAC_INIT_EX_RETURNS_VOID
+		if(!r) {
+			log_crypto_err("Could not HMAC_Update");
+			HMAC_CTX_cleanup(&ctx);
+			return 0;
+		}
+#endif
+	}
 #ifndef HMAC_INIT_EX_RETURNS_VOID
 	r =
 #endif
@@ -914,7 +945,7 @@ tsig_verify_query(struct tsig_data* tsig, struct sldns_buffer* pkt,
 
 	tsig_write_vars_parsed(rr, &var, key);
 
-	if(!tsig_algo_calc_parts(key, pkt, &var, tsig)) {
+	if(!tsig_algo_calc_parts(key, NULL, pkt, &var, tsig)) {
 		/* Failure to calculate digest. */
 		sldns_buffer_write_u16_at(pkt, 0, current_query_id);
 		verbose(VERB_ALGO, "tsig_verify_query: failed to calculate digest");
@@ -1414,7 +1445,7 @@ tsig_sign_reply(struct tsig_data* tsig, struct sldns_buffer* pkt,
 	sldns_buffer_write(&var, tsig->mac, tsig->mac_size);
 
 	/* Calculate the TSIG. */
-	if(!tsig_algo_calc_parts(key, &var, pkt, tsig)) {
+	if(!tsig_algo_calc_parts(key, NULL, &var, pkt, tsig)) {
 		/* Failure to calculate digest. */
 		lock_rw_unlock(&key_table->lock);
 		sldns_buffer_write_u16_at(pkt, 0, current_query_id);
@@ -1428,6 +1459,130 @@ tsig_sign_reply(struct tsig_data* tsig, struct sldns_buffer* pkt,
 		key->algo->wireformat_name_len, tsig->mac, tsig->mac_size);
 	lock_rw_unlock(&key_table->lock);
 	return 1;
+}
+
+int
+tsig_verify_reply(struct tsig_data* tsig, struct sldns_buffer* pkt,
+	struct tsig_key* key, struct tsig_record* rr, uint64_t now)
+{
+	uint8_t var_buf[2048], prior_buf[1024];
+	struct sldns_buffer var, prior;
+	uint16_t current_query_id;
+
+	sldns_buffer_init_frm_data(&var, var_buf, sizeof(var_buf));
+	sldns_buffer_init_frm_data(&prior, prior_buf, sizeof(prior_buf));
+
+	/* Create the variables to digest in the buffer. */
+	/* packet with original query ID and ARCOUNT without TSIG. */
+	/* It is prepended with the prior mac. */
+	if(!tsig_vars_available_parsed(rr, &var)) {
+		verbose(VERB_ALGO, "tsig_verify_reply: variable buffer too small");
+		return 0;
+	}
+	if(sldns_buffer_remaining(&prior) <
+		2 /* mac_size */ + tsig->mac_size) {
+		verbose(VERB_ALGO, "tsig_verify_reply: prior buffer too small");
+		return 0;
+	}
+
+	sldns_buffer_write_u16(&prior, tsig->mac_size);
+	sldns_buffer_write(&prior, tsig->mac, tsig->mac_size);
+
+	current_query_id = sldns_buffer_read_u16_at(pkt, 0);
+	sldns_buffer_write_u16_at(pkt, 0, rr->original_query_id);
+	LDNS_ARCOUNT_SET( sldns_buffer_begin(pkt)
+			, LDNS_ARCOUNT(sldns_buffer_begin(pkt)) - 1);
+	sldns_buffer_set_position(pkt, rr->tsig_pos);
+
+	tsig_write_vars_parsed(rr, &var, key);
+
+	if(!tsig_algo_calc_parts(key, &prior, pkt, &var, tsig)) {
+		/* Failure to calculate digest. */
+		sldns_buffer_write_u16_at(pkt, 0, current_query_id);
+		verbose(VERB_ALGO, "tsig_verify_reply: failed to calculate digest");
+		return 0;
+	}
+	if(CRYPTO_memcmp(rr->mac_data, tsig->mac, tsig->mac_size) != 0) {
+		/* TSIG has wrong digest. */
+		sldns_buffer_write_u16_at(pkt, 0, current_query_id);
+		if(verbosity >= VERB_ALGO) {
+			char keynm[256];
+			dname_str(tsig->key_name, keynm);
+			verbose(VERB_ALGO, "tsig_verify_reply: TSIG %s has wrong digest",
+				keynm);
+		}
+		return 0;
+	}
+	/* The TSIG digest has verified */
+	sldns_buffer_write_u16_at(pkt, 0, current_query_id);
+
+	/* Check the TSIG timestamp. */
+	/* Time is checked after the MAC is verified */
+	if( (now > rr->signed_time && now - rr->signed_time > rr->fudge_time) ||
+	    (now < rr->signed_time && rr->signed_time - now > rr->fudge_time)) {
+		/* TSIG has wrong timestamp. */
+		if(verbosity >= VERB_ALGO) {
+			char keynm[256];
+			dname_str(tsig->key_name, keynm);
+			verbose(VERB_ALGO, "tsig_verify_reply: TSIG %s has wrong timestamp, now=%llu packet time=%llu fudge time=%d",
+				keynm, (unsigned long long)now,
+				(unsigned long long)rr->signed_time,
+				(int)rr->fudge_time);
+			if(rr->other_size == 6)
+				verbose(VERB_ALGO, "tsig_verify_reply: other time is reported at %llu",
+					(unsigned long long)rr->other_time);
+		}
+		return 0;
+	}
+
+	return 1;
+}
+
+int
+tsig_parse_verify_reply(struct tsig_data* tsig, struct sldns_buffer* pkt,
+	struct tsig_key_table* key_table, uint64_t now)
+{
+	struct tsig_key* key;
+	struct tsig_record rr;
+	int ret;
+
+	/* Parse the TSIG RR from the query. */
+	ret = tsig_parse(pkt, &rr);
+	if(ret != 0)
+		return 0;
+
+	/* Check it is the same key, same algo, same digest_size */
+	if(dname_pkt_compare(pkt, tsig->key_name, rr.key_name) != 0) {
+		verbose(VERB_ALGO, "tsig_verify_reply: key name wrong");
+		return 0;
+	}
+
+	lock_rw_rdlock(&key_table->lock);
+	key = tsig_key_table_search(key_table, tsig->key_name,
+		tsig->key_name_len);
+	if(!key) {
+		/* The tsig key has disappeared from the key table. */
+		lock_rw_unlock(&key_table->lock);
+		verbose(VERB_ALGO, "tsig_verify_reply: key not in table");
+		return 0;
+	}
+
+	if(query_dname_compare(key->algo->wireformat_name,
+		rr.algorithm_name) != 0) {
+		lock_rw_unlock(&key_table->lock);
+		verbose(VERB_ALGO, "tsig_verify_reply: algorithm wrong");
+		return 0;
+	}
+	if(tsig->mac_size != rr.mac_size) {
+		lock_rw_unlock(&key_table->lock);
+		verbose(VERB_ALGO, "tsig_verify_reply: mac size wrong");
+		return 0;
+	}
+
+	/* Verify the TSIG. */
+	ret = tsig_verify_reply(tsig, pkt, key, &rr, now);
+	lock_rw_unlock(&key_table->lock);
+	return ret;
 }
 
 /**
