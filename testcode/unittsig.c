@@ -109,6 +109,16 @@ static int vtest = 0;
  *	there is no previous packet. If the result is not the expected
  *	result the test fails.
  *
+ * tsig-sign-reply <time> <expected rcode> <expected result2>
+ * <hex>
+ * endpacket
+ *	The data from previous packet in the buffer is used with
+ *	tsig-verify-query. Then the hex data is the reply, it it
+ *	used with tsig-sign-reply. The result packet is in the packet
+ *	buffer. The expected rcode is the result of the verify,
+ *	the expected result2 is the result of the sign. If that differs
+ *	the test fails.
+ *
  */
 
 /** Clean up first keyword */
