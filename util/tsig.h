@@ -255,9 +255,20 @@ int tsig_verify(struct sldns_buffer* pkt, const uint8_t* name,
 	uint64_t now);
 
 /**
+ * Sign pkt with the name (domain name), algorithm and key in Base64.
+ * out 0 on success, -1 on failure.
+ * For a shared packet with contents. This signs a reply packet without
+ * the prior hash, since there is no prior packet.
+ */
+int tsig_sign_shared(struct sldns_buffer* pkt, const uint8_t* name,
+	const uint8_t* alg, const uint8_t* secret, size_t secret_len,
+	uint64_t now);
+
+/**
  * Verify pkt with the name (domain name), algorithm and key in Base64.
  * out 0 on success, an error code otherwise.
- * For a shared packet with contents.
+ * For a shared packet with contents. This verifies a reply packet without
+ * the prior hash, since there is no prior packet.
  * out 0 on success, on failure:
  * -1 for malformed, no tsig RR, or too large for buffer.
  * >0 rcode with a TSIG error code otherwise.

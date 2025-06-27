@@ -1727,3 +1727,78 @@ tsig_verify_shared(sldns_buffer* pkt, const uint8_t* name, const uint8_t* alg,
 	}
 	return 0;
 }
+
+/**
+ * Sign pkt with the name (domain name), algorithm and key in Base64.
+ * out 0 on success, -1 on failure.
+ * For a shared packet with contents.
+ */
+int
+tsig_sign_shared(sldns_buffer* pkt, const uint8_t* name, const uint8_t* alg,
+		const uint8_t* secret, size_t secret_len, uint64_t now)
+{
+	struct tsig_key key;
+	struct tsig_data tsig;
+	size_t aftername_pos;
+	uint8_t macbuf[1024];
+	uint8_t bufname[256];
+
+	memset(&key, 0, sizeof(key));
+	(void)dname_count_size_labels((uint8_t*)name, &key.name_len);
+	if(key.name_len == 0 || key.name_len > sizeof(bufname)) {
+		verbose(VERB_ALGO, "tsig_sign_shared: key name too long");
+		return -1;
+	}
+	memcpy(bufname, name, key.name_len);
+	query_dname_tolower(bufname);
+	key.name = bufname;
+	key.data = (uint8_t*)secret;
+	key.data_len = secret_len;
+	key.algo = tsig_algo_find_wire((uint8_t*)alg);
+	if(!key.algo) {
+		verbose(VERB_ALGO, "tsig_sign_shared: unknown algorithm");
+		return -1;
+	}
+	if(key.algo->max_digest_size > sizeof(macbuf)) {
+		verbose(VERB_ALGO, "tsig_sign_shared: mac size too large");
+		return -1;
+	}
+
+	memset(&tsig, 0, sizeof(tsig));
+	tsig.time_signed = now;
+	tsig.fudge = TSIG_FUDGE_TIME; /* seconds */
+	tsig.key_name = key.name;
+	tsig.key_name_len = key.name_len;
+	tsig.algo_name = NULL;
+	tsig.algo_name_len = key.algo->wireformat_name_len;
+	tsig.mac_size = key.algo->max_digest_size;
+	tsig.mac = macbuf;
+
+	if(sldns_buffer_remaining(pkt) < tsig_reserved_space(&tsig)) {
+		/* Not enough space in buffer for packet and TSIG. */
+		verbose(VERB_ALGO, "tsig_sign_shared: not enough buffer space");
+		return -1;
+	}
+	tsig.original_query_id = sldns_buffer_read_u16_at(pkt, 0);
+
+	/* That fits in the current buffer, since the reserved space for
+	 * the TSIG record is larger. */
+	if(!tsig_vars_available(&tsig, pkt)) {
+		/* Buffer is too small */
+		verbose(VERB_ALGO, "tsig_sign_shared: not enough buffer space");
+		return -1;
+	}
+	tsig_write_vars(&tsig, pkt, &key, &aftername_pos);
+
+	/* Calculate the TSIG. */
+	if(!tsig_algo_calc(&key, pkt, &tsig)) {
+		/* Failure to calculate digest. */
+		verbose(VERB_ALGO, "tsig_sign_shared: failed to calculate digest");
+		return -1;
+	}
+
+	/* Append TSIG record. */
+	tsig_append_rr(&tsig, pkt, aftername_pos, key.algo->wireformat_name,
+		key.algo->wireformat_name_len, tsig.mac, tsig.mac_size);
+	return 0;
+}
