@@ -409,217 +409,6 @@ skip_pkt_query_rrs(struct sldns_buffer* pkt, int num)
 	return 1;
 }
 
-/**
- * Verify pkt with the name (domain name), algorithm and key in Base64.
- * out 0 on success, an error code otherwise.
- */
-int
-tsig_verify(sldns_buffer* pkt, const uint8_t* name, const uint8_t* alg,
-		const uint8_t* secret, size_t secret_len, uint64_t now)
-{
-	size_t   n_rrs;
-	size_t   end_of_message;
-	uint8_t  mac[2048];
-	uint16_t mac_sz;
-	uint8_t  hmac_result[2048];
-	unsigned int hmac_result_len;
-	size_t   pos;
-	uint16_t other_len;
-	size_t   algname_size;
-	uint64_t time_signed;
-	uint16_t fudge;
-	const EVP_MD* digester;
-	uint8_t* tsig_name, *tsig_algo;
-	uint16_t rdlength;
-	uint16_t current_query_id;
-
-	if(sldns_buffer_limit(pkt) < LDNS_HEADER_SIZE) {
-		verbose(VERB_ALGO, "No TSIG, packet too short");
-		return -1;
-	}
-	if(LDNS_ARCOUNT(sldns_buffer_begin(pkt)) < 1) {
-		verbose(VERB_ALGO, "No TSIG found, ARCOUNT == 0");
-		return -1;
-	}
-	LDNS_ARCOUNT_SET( sldns_buffer_begin(pkt)
-	                , LDNS_ARCOUNT(sldns_buffer_begin(pkt)) - 1);
-	n_rrs = LDNS_ANCOUNT(sldns_buffer_begin(pkt))
-	      + LDNS_NSCOUNT(sldns_buffer_begin(pkt))
-	      + LDNS_ARCOUNT(sldns_buffer_begin(pkt));
-
-	sldns_buffer_rewind(pkt);
-	sldns_buffer_skip(pkt, LDNS_HEADER_SIZE);
-
-	/* Skip qnames. */
-	if(!skip_pkt_query_rrs(pkt, LDNS_QDCOUNT(sldns_buffer_begin(pkt)))) {
-		verbose(VERB_ALGO, "No TSIG, query section RRs malformed");
-		return -1;
-	}
-	/* Skip all rrs. */
-	if(!skip_pkt_rrs(pkt, n_rrs)) {
-		verbose(VERB_ALGO, "No TSIG, packet RRs are malformed");
-		return -1;
-	}
-	end_of_message = sldns_buffer_position(pkt);
-
-	/* Skip TSIG name. */
-	if(sldns_buffer_remaining(pkt) < 1) {
-		verbose(VERB_ALGO, "No TSIG, no tsig name");
-		sldns_buffer_set_position(pkt, end_of_message);
-		return -1;
-	}
-	tsig_name = sldns_buffer_current(pkt);
-	if(!pkt_dname_len(pkt)) {
-		verbose(VERB_ALGO, "No TSIG, tsig name malformed");
-		sldns_buffer_set_position(pkt, end_of_message);
-		return -1;
-	}
-	if(dname_pkt_compare(pkt, tsig_name, (uint8_t*)name) != 0) {
-		sldns_buffer_set_position(pkt, end_of_message);
-		return LDNS_TSIG_ERROR_BADKEY;
-	}
-	pos = sldns_buffer_position(pkt);             /* Append pos */
-
-	/* Skip type, class, TTL and rdlength */
-	if(sldns_buffer_remaining(pkt) < 2 /* type */ + 2 /* class */
-		+ 4 /* TTL */ + 2 /* rdlength */) {
-		verbose(VERB_ALGO, "No TSIG, TSIG RR malformed, packet too short");
-		sldns_buffer_set_position(pkt, end_of_message);
-		return -1;
-	}
-	if(sldns_buffer_read_u16(pkt) != LDNS_RR_TYPE_TSIG) {
-		verbose(VERB_ALGO, "No TSIG found, wrong RR type");
-		sldns_buffer_set_position(pkt, end_of_message);
-		return -1;
-	}
-	sldns_buffer_skip(pkt, sizeof(uint16_t)       /* skip class */
-	                     + sizeof(uint32_t));     /* skip TTL */
-	rdlength = sldns_buffer_read_u16(pkt);        /* read rdlength */
-	if(sldns_buffer_remaining(pkt) < rdlength) {
-		verbose(VERB_ALGO, "TSIG rdlength wrong, packet too short");
-		sldns_buffer_set_position(pkt, end_of_message);
-		return -1;
-	}
-
-	/* Read the TSIG rdata. */
-	if(rdlength < 18 /* Rdata length with '.' names, zero lengths. */) {
-		verbose(VERB_ALGO, "TSIG rdata too short");
-		sldns_buffer_set_position(pkt, end_of_message);
-		return -1;
-	}
-	tsig_algo = sldns_buffer_current(pkt);
-	/* The algorithm name MUST be uncompressed wireformat (RFC8945),
-	 * check that it is. Fails on malformed and skips the name. */
-	if(!(algname_size = query_dname_len(pkt))) {
-		verbose(VERB_ALGO, "TSIG algorithm name malformed");
-		sldns_buffer_set_position(pkt, end_of_message);
-		return -1;
-	}
-	if(query_dname_compare(alg, tsig_algo) != 0) {
-		sldns_buffer_set_position(pkt, end_of_message);
-		return LDNS_TSIG_ERROR_BADKEY;
-	}
-	if(rdlength < algname_size + 6 /* time */ + 2 /* fudge */
-		+ 2 /* mac size */) {
-		verbose(VERB_ALGO, "TSIG rdata too short for timestamp");
-		sldns_buffer_set_position(pkt, end_of_message);
-		return -1;
-	}
-	time_signed = sldns_buffer_read_u48(pkt);     /* time signed */
-	fudge = sldns_buffer_read_u16(pkt);           /* fudge */
-	mac_sz = sldns_buffer_read_u16(pkt);          /* mac size */
-
-	if(rdlength < algname_size + 6 /* time */ + 2 /* fudge */
-		+ 2 /* mac size */ + mac_sz + 2 /* origid */
-		+ 2 /* error_code */ + 2 /* otherlen */) {
-		verbose(VERB_ALGO, "TSIG rdata too short for mac");
-		sldns_buffer_set_position(pkt, end_of_message);
-		return -1;
-	}
-	if(mac_sz > 16384) {
-		/* the hash should not be too big, really 512/8=64 bytes */
-		verbose(VERB_ALGO, "TSIG mac too large");
-		sldns_buffer_set_position(pkt, end_of_message);
-		return -1;
-	}
-	if(mac_sz > sizeof(mac)) {
-		verbose(VERB_ALGO, "TSIG mac too large for buffer");
-		sldns_buffer_set_position(pkt, end_of_message);
-		return -1;
-	}
-	memcpy(mac,sldns_buffer_current(pkt),mac_sz); /* copy mac */
-	sldns_buffer_skip(pkt, mac_sz);               /* skip mac */
-
-	/* Set ID to original ID */
-	current_query_id = sldns_buffer_read_u16_at(pkt, 0);
-	sldns_buffer_write_u16_at(pkt, 0, sldns_buffer_read_u16(pkt));
-	sldns_buffer_skip(pkt, sizeof(uint16_t));     /* skip error */
-	other_len = sldns_buffer_read_u16(pkt);       /* other len */
-	if(rdlength < algname_size + 6 /* time */ + 2 /* fudge */
-		+ 2 /* mac size */ + mac_sz + 2 /* origid */
-		+ 2 /* error_code */ + 2 /* otherlen */ + other_len) {
-		verbose(VERB_ALGO, "TSIG rdata too short for Other Data");
-		sldns_buffer_write_u16_at(pkt, 0, current_query_id);
-		sldns_buffer_set_position(pkt, end_of_message);
-		return -1;
-	}
-	if(rdlength > algname_size + 6 /* time */ + 2 /* fudge */
-		+ 2 /* mac size */ + mac_sz + 2 /* origid */
-		+ 2 /* error_code */ + 2 /* otherlen */ + other_len) {
-		/* Trailing data in TSIG RR */
-		verbose(VERB_ALGO, "TSIG rdata wrong, it has trailing data");
-		sldns_buffer_write_u16_at(pkt, 0, current_query_id);
-		sldns_buffer_set_position(pkt, end_of_message);
-		return -1;
-	}
-	if(other_len > 16) {
-		verbose(VERB_ALGO, "TSIG Other Len too large");
-		sldns_buffer_write_u16_at(pkt, 0, current_query_id);
-		sldns_buffer_set_position(pkt, end_of_message);
-		return -1;
-	}
-
-	/* The buffer for the packet is used for the digest buffer
-	 * for this message. It fits in the buffer. */
-	/* move CLASS (uint16_t) and TTL (uint32_t) -> TYPE position */
-	memmove( sldns_buffer_at(pkt, pos)
-	       , sldns_buffer_at(pkt, pos + sizeof(uint16_t) /* type */)
-	       , sizeof(uint16_t) + sizeof(uint32_t));
-	pos +=   sizeof(uint16_t) + sizeof(uint32_t);
-
-	/* Append Algorithm Name, Time signed (uint48_t), Fudge (uint16_t) */
-	memmove( sldns_buffer_at(pkt, pos)
-	       , sldns_buffer_at(pkt, pos + sizeof(uint16_t) /* type */
-	                                  + sizeof(uint16_t) /* rdlength */)
-	       , algname_size + 6 /* sizeof(uint48_t) */ + sizeof(uint16_t));
-	pos +=   algname_size + 6 /* sizeof(uint48_t) */ + sizeof(uint16_t);
-
-	/* Append Error (uint16_t), Other Len (uint16_t), Other Data */
-	memmove( sldns_buffer_at(pkt, pos)
-	       , sldns_buffer_at(pkt, sldns_buffer_position(pkt)
-	                            - 2 * sizeof(uint16_t))
-	       , 2 * sizeof(uint16_t) + other_len);
-	pos +=   2 * sizeof(uint16_t) + other_len;
-
-	digester = EVP_sha256();
-	hmac_result_len = sizeof(hmac_result);
-	HMAC( digester, secret, secret_len, sldns_buffer_begin(pkt), pos
-	    , hmac_result, &hmac_result_len);
-	if(CRYPTO_memcmp(mac, hmac_result, hmac_result_len) == 0) {
-		/* Restore the query id of the packet. */
-		sldns_buffer_write_u16_at(pkt, 0, current_query_id);
-		sldns_buffer_set_position(pkt, end_of_message);
-		/* The TSIG has verified. */
-		return now > time_signed ?
-		     ( time_signed - now > fudge ? LDNS_TSIG_ERROR_BADTIME : 0 )
-		     : now - time_signed > fudge ? LDNS_TSIG_ERROR_BADTIME : 0 ;
-	}
-	/* Restore the query id of the packet. */
-	sldns_buffer_write_u16_at(pkt, 0, current_query_id);
-	sldns_buffer_set_position(pkt, end_of_message);
-	return LDNS_TSIG_ERROR_BADSIG;
-}
-
 struct tsig_data*
 tsig_create(struct tsig_key_table* key_table, uint8_t* name, size_t namelen)
 {
@@ -1329,6 +1118,7 @@ tsig_lookup_key(struct tsig_key_table* key_table,
 		return LDNS_RCODE_SERVFAIL;
 	}
 	tsig->fudge = TSIG_FUDGE_TIME; /* seconds */
+	tsig->klass = LDNS_RR_CLASS_ANY;
 	if(region)
 		tsig->key_name = regional_alloc(region, rr->key_name_len);
 	else
@@ -1690,6 +1480,7 @@ tsig_verify_shared(sldns_buffer* pkt, const uint8_t* name, const uint8_t* alg,
 
 	memset(&tsig, 0, sizeof(tsig));
 	tsig.fudge = TSIG_FUDGE_TIME; /* seconds */
+	tsig.klass = LDNS_RR_CLASS_ANY;
 	tsig.key_name = bufname;
 	tsig.key_name_len = bufname_len;
 	tsig.algo_name = NULL;
@@ -1767,6 +1558,7 @@ tsig_sign_shared(sldns_buffer* pkt, const uint8_t* name, const uint8_t* alg,
 	memset(&tsig, 0, sizeof(tsig));
 	tsig.time_signed = now;
 	tsig.fudge = TSIG_FUDGE_TIME; /* seconds */
+	tsig.klass = LDNS_RR_CLASS_ANY;
 	tsig.key_name = key.name;
 	tsig.key_name_len = key.name_len;
 	tsig.algo_name = NULL;

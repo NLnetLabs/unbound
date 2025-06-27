@@ -44,6 +44,7 @@
 #include "testcode/unitmain.h"
 #include "sldns/parseutil.h"
 #include "sldns/sbuffer.h"
+#include "sldns/str2wire.h"
 #include "sldns/wire2str.h"
 #include <ctype.h>
 
@@ -88,6 +89,17 @@ static int vtest = 0;
  *	checked if present. If not equal the test fails.
  *	If no tsig data is returned, keyname '.', and 0 and 0 are the
  *	tsigerr and tsigothertime values that are checked.
+ *
+ * tsig-sign-shared <key> <time> <expected result>
+ *	Looks up key in key_table and signs a reply with it.
+ *	For a shared packet without prior hash of previous packet, since
+ *	there is no previous packet. If the result is not the expected
+ *	result the test fails.
+ * tsig-verify-shared <key> <time> <expected result>
+ *	Looks up key in key_table and verifies a reply with it.
+ *	For a shared packet without prior hash of previous packet, since
+ *	there is no previous packet. If the result is not the expected
+ *	result the test fails.
  *
  */
 
@@ -644,6 +656,116 @@ handle_tsig_verify_query(char* line, struct tsig_key_table* key_table,
 	tsig_delete(tsig);
 }
 
+/** Handle the tsig-sign-shared */
+static void
+handle_tsig_sign_shared(char* line, struct tsig_key_table* key_table,
+	struct sldns_buffer* pkt)
+{
+	char* arg = get_arg_on_line(line, "tsig-sign-shared");
+	char* keyname, *s, *timestr, *expectedstr;
+	int expected_result, ret;
+	uint64_t timepoint;
+	struct tsig_key* key;
+	size_t pos;
+	uint8_t keynm[256];
+	size_t keynm_len;
+
+	s = arg;
+	keyname = get_next_arg_on_line(&s);
+	timestr = get_next_arg_on_line(&s);
+	expectedstr = get_next_arg_on_line(&s);
+
+	timepoint = (uint64_t)atoll(timestr);
+	if(timepoint == 0 && strcmp(timestr, "0") != 0)
+		fatal_exit("expected time argument for %s", timestr);
+	expected_result = atoi(expectedstr);
+	if(expected_result == 0 && strcmp(expectedstr, "0") != 0)
+		fatal_exit("expected int argument for %s", expectedstr);
+
+	if(vtest)
+		printf("tsig-sign-shared with %s %d %d\n", keyname,
+			(int)timepoint, expected_result);
+
+	keynm_len = sizeof(keynm);
+	if(sldns_str2wire_dname_buf(keyname, keynm, &keynm_len) != 0)
+		fatal_exit("could not parse '%s'", keyname);
+	key = tsig_key_table_search(key_table, keynm, keynm_len);
+	if(!key)
+		fatal_exit("key not found %s", keyname);
+
+	/* Put position at the end of the packet to sign it. */
+	pos = sldns_buffer_limit(pkt);
+	sldns_buffer_clear(pkt);
+	sldns_buffer_set_position(pkt, pos);
+
+	ret = tsig_sign_shared(pkt, key->name, key->algo->wireformat_name,
+		key->data, key->data_len, timepoint);
+	sldns_buffer_flip(pkt);
+
+	if(vtest) {
+		if(ret == expected_result)
+			printf("function ok, ret %d\n", ret);
+		else
+			printf("function returned %d, expected result %d\n",
+				ret, expected_result);
+	}
+	unit_assert(ret == expected_result);
+}
+
+/** Handle the tsig-verify-shared */
+static void
+handle_tsig_verify_shared(char* line, struct tsig_key_table* key_table,
+	struct sldns_buffer* pkt)
+{
+	char* arg = get_arg_on_line(line, "tsig-verify-shared");
+	char* keyname, *s, *timestr, *expectedstr;
+	int expected_result, ret;
+	uint64_t timepoint;
+	struct tsig_key* key;
+	uint8_t keynm[256];
+	size_t keynm_len, pos;
+
+	s = arg;
+	keyname = get_next_arg_on_line(&s);
+	timestr = get_next_arg_on_line(&s);
+	expectedstr = get_next_arg_on_line(&s);
+
+	timepoint = (uint64_t)atoll(timestr);
+	if(timepoint == 0 && strcmp(timestr, "0") != 0)
+		fatal_exit("expected time argument for %s", timestr);
+	expected_result = atoi(expectedstr);
+	if(expected_result == 0 && strcmp(expectedstr, "0") != 0)
+		fatal_exit("expected int argument for %s", expectedstr);
+
+	if(vtest)
+		printf("tsig-verify-shared with %s %d %d\n", keyname,
+			(int)timepoint, expected_result);
+
+	keynm_len = sizeof(keynm);
+	if(sldns_str2wire_dname_buf(keyname, keynm, &keynm_len) != 0)
+		fatal_exit("could not parse '%s'", keyname);
+	key = tsig_key_table_search(key_table, keynm, keynm_len);
+	if(!key)
+		fatal_exit("key not found %s", keyname);
+
+	pos = sldns_buffer_limit(pkt);
+	sldns_buffer_clear(pkt);
+	sldns_buffer_set_limit(pkt, pos);
+
+	ret = tsig_verify_shared(pkt, key->name, key->algo->wireformat_name,
+		key->data, key->data_len, timepoint);
+
+	if(vtest) {
+		if(ret == expected_result)
+			printf("function ok, ret %d\n", ret);
+		else
+			printf("function returned %d, expected result %d\n",
+				ret, expected_result);
+	}
+	unit_assert(ret == expected_result);
+}
+
+
 /** Handle one line from the TSIG test file */
 static void
 handle_line(char* line, struct tsig_key_table* key_table,
@@ -667,6 +789,10 @@ handle_line(char* line, struct tsig_key_table* key_table,
 		handle_tsig_sign_query(s, key_table, pkt);
 	} else if(strncmp(s, "tsig-verify-query", 17) == 0) {
 		handle_tsig_verify_query(s, key_table, pkt);
+	} else if(strncmp(s, "tsig-sign-shared", 16) == 0) {
+		handle_tsig_sign_shared(s, key_table, pkt);
+	} else if(strncmp(s, "tsig-verify-shared", 18) == 0) {
+		handle_tsig_verify_shared(s, key_table, pkt);
 	} else if(strncmp(s, "#", 1) == 0) {
 		/* skip comment */
 	} else if(strcmp(s, "") == 0) {
