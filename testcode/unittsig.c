@@ -65,15 +65,22 @@ static int vtest = 0;
  * 	supported at the test run time, the file is skipped, silently.
  *
  * tsig-key:
+ *   name: "key.name"
+ *   algorithm: "hmac-sha256"
+ *   secret: "<base64"
  * 	the following lines define name:, algorithm: and secret:
  * 	and it adds a tsig-key that can be used.
  * del-key <name>
  *	The tsig key is deleted, from the in-memory key table.
  *
  * packet
+ * <hex>
+ * endpacket
  *	A packet in hex dump, on the following lines. Until 'endpacket'.
  *	It can be used to sign or verify.
  * check-packet
+ * <hex>
+ * endpacket
  *	A packet in hex dump, on the following lines. Until 'endpacket'.
  *	It is compared to the packet buffer, and the test fails if not equal.
  *
