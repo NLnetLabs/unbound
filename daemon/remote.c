@@ -1576,7 +1576,7 @@ do_view_zone_add(RES* ssl, struct worker* worker, char* arg)
 		}
 		if(!v->isfirst) {
 			/* Global local-zone is not used for this view,
-			 * therefore add defaults to this view-specic
+			 * therefore add defaults to this view-specific
 			 * local-zone. */
 			struct config_file lz_cfg;
 			memset(&lz_cfg, 0, sizeof(lz_cfg));
@@ -5424,7 +5424,7 @@ fr_atomic_copy_cfg(struct config_file* oldcfg, struct config_file* cfg,
 	COPY_VAR_ptr(tls_cert_bundle);
 	COPY_VAR_int(tls_win_cert);
 	COPY_VAR_ptr(tls_additional_port);
-	/* The first is used to walk throught the list but last is
+	/* The first is used to walk through the list but last is
 	 * only used during config read. */
 	COPY_VAR_ptr(tls_session_ticket_keys.first);
 	COPY_VAR_ptr(tls_session_ticket_keys.last);
@@ -5611,7 +5611,7 @@ fr_atomic_copy_cfg(struct config_file* oldcfg, struct config_file* cfg,
 	   tagname, num_tags
 	*/
 	COPY_VAR_int(remote_control_enable);
-	/* The first is used to walk throught the list but last is
+	/* The first is used to walk through the list but last is
 	 * only used during config read. */
 	COPY_VAR_ptr(control_ifs.first);
 	COPY_VAR_ptr(control_ifs.last);
@@ -7174,7 +7174,7 @@ void
 fast_reload_worker_pickup_changes(struct worker* worker)
 {
 	/* The pickup of changes is called when the fast reload has
-	 * a syncronized moment, and all the threads are paused and the
+	 * a synchronized moment, and all the threads are paused and the
 	 * reload has been applied. Then the worker can pick up the new
 	 * changes and store them in worker-specific structs.
 	 * The pickup is also called when there is no pause, and then

@@ -59,7 +59,7 @@ Generate a distribution tar file for unbound.
     -wxp expat.xx.tar.gz Also build expat from tarball for windows dist.
     -wdir directory     Build openssl and expat in a persistent directory for
                         windows dist. If builds are already in that directory
-                        they are used right away. Useful when debuggin windows
+                        they are used right away. Useful when debugging windows
                         builds.
     -w32                32bit windows compile.
     -w ...              Build windows binary dist. last args passed to configure.

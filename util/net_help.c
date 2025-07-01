@@ -1035,7 +1035,7 @@ void log_crypto_err_code(const char* str, unsigned long err)
 }
 
 #ifdef HAVE_SSL
-/** Print crypt erro with SSL_get_error want code and err_get_error code */
+/** Print crypt error with SSL_get_error want code and err_get_error code */
 static void log_crypto_err_io_code_arg(const char* str, int r,
 	unsigned long err, int err_present)
 {

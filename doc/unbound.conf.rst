@@ -3239,7 +3239,7 @@ These options are part of the **server:** clause.
 @@UAHL@unbound.conf@ede@@: *<yes or no>*
     If enabled, Unbound will respond with Extended DNS Error codes
     (:rfc:`8914`).
-    These EDEs privide additional information with a response mainly for, but
+    These EDEs provide additional information with a response mainly for, but
     not limited to, DNS and DNSSEC errors.
 
     When the :ref:`val-log-level<unbound.conf.val-log-level>` option is also
