@@ -82,7 +82,7 @@ struct delegpt {
 	/** if true, the delegation point has reached last resort processing
 	 *  and the parent side information has been possibly added to the
 	 *  delegation point.
-	 *  For now this singals that further target lookups will ignore
+	 *  For now this signals that further target lookups will ignore
 	 *  the configured target-fetch-policy and only resolve on
 	 *  demand to try and avoid triggering limits at this stage (.i.e, it
 	 *  is very likely that the A/AAAA queries for the newly added name
