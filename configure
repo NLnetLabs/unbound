@@ -10616,22 +10616,22 @@ fi
 test -z "$MANIFEST_TOOL" && MANIFEST_TOOL=mt
 { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking if $MANIFEST_TOOL is a manifest tool" >&5
 printf %s "checking if $MANIFEST_TOOL is a manifest tool... " >&6; }
-if test ${lt_cv_path_manifest_tool+y}
+if test ${lt_cv_path_mainfest_tool+y}
 then :
   printf %s "(cached) " >&6
 else $as_nop
-  lt_cv_path_manifest_tool=no
+  lt_cv_path_mainfest_tool=no
   echo "$as_me:$LINENO: $MANIFEST_TOOL '-?'" >&5
   $MANIFEST_TOOL '-?' 2>conftest.err > conftest.out
   cat conftest.err >&5
   if $GREP 'Manifest Tool' conftest.out > /dev/null; then
-    lt_cv_path_manifest_tool=yes
+    lt_cv_path_mainfest_tool=yes
   fi
   rm -f conftest*
 fi
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $lt_cv_path_manifest_tool" >&5
-printf "%s\n" "$lt_cv_path_manifest_tool" >&6; }
-if test yes != "$lt_cv_path_manifest_tool"; then
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $lt_cv_path_mainfest_tool" >&5
+printf "%s\n" "$lt_cv_path_mainfest_tool" >&6; }
+if test yes != "$lt_cv_path_mainfest_tool"; then
   MANIFEST_TOOL=:
 fi
 
@@ -14661,7 +14661,7 @@ fi
   # Add ABI-specific directories to the system library path.
   sys_lib_dlsearch_path_spec="/lib64 /usr/lib64 /lib /usr/lib"
 
-  # Ideally, we could use ldconfig to report *all* directories which are
+  # Ideally, we could use ldconfig to report *all* directores which are
   # searched for libraries, however this is still not possible.  Aside from not
   # being certain /sbin/ldconfig is available, command
   # 'ldconfig -N -X -v | grep ^/' on 64bit Fedora does not report /usr/lib64,

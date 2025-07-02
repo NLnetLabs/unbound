@@ -1,3 +1,7 @@
+2 July 2025: Wouter
+	- Merge #1299: Fix typos.
+	- Generate ltmain.sh and configure again.
+
 25 June 2025: Yorgos
 	- Fix #1247: forward-first: ssl handshake failed on root nameservers.
 	- For #1247, turn off fetch-policy for delegation when looking into
