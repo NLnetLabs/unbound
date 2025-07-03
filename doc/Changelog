@@ -1,6 +1,7 @@
 3 July 2025: Wouter
 	- Fix #1300: Is 'sock-queue-timeout' a linux only feature.
 	- For #1300: implement sock-queue-timeout for FreeBSD as well.
+	- Fix layout of comm_point_udp_ancil_callback.
 
 2 July 2025: Wouter
 	- Merge #1299: Fix typos.

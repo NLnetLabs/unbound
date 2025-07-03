@@ -1087,8 +1087,7 @@ comm_point_udp_ancil_callback(int fd, short event, void* arg)
 			} else if( cmsg->cmsg_level == SOL_SOCKET &&
 				cmsg->cmsg_type == SCM_TIMESTAMP) {
 				/* FreeBSD and also Linux. */
-				memmove(&rep.c->recv_tv, CMSG_DATA(cmsg), sizeof
-(struct timeval));
+				memmove(&rep.c->recv_tv, CMSG_DATA(cmsg), sizeof(struct timeval));
 #endif /* HAVE_LINUX_NET_TSTAMP_H */
 			}
 		}
