@@ -1183,6 +1183,15 @@ set_recvtimestamp(int s)
 		return 0;
 	}
 	return 1;
+#elif defined(SO_TIMESTAMP) && defined(SCM_TIMESTAMP)
+	int on = 1;
+	/* FreeBSD and also Linux. */
+	if (setsockopt(s, SOL_SOCKET, SO_TIMESTAMP, (void*)&on, (socklen_t)sizeof(on)) < 0) {
+		log_err("setsockopt(..., SO_TIMESTAMP, ...) failed: %s",
+			strerror(errno));
+		return 0;
+	}
+	return 1;
 #else
 	log_err("packets timestamping is not supported on this platform");
 	(void)s;

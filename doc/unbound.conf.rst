@@ -910,7 +910,7 @@ These options are part of the **server:** clause.
     This could happen if the host has not been able to service the queries for
     a while, i.e. Unbound is not running, and then is enabled again.
     It uses timestamp socket options.
-    The socket option is available on the Linux platform.
+    The socket option is available on the Linux and FreeBSD platforms.
 
     Default: 0 (disabled)
 
