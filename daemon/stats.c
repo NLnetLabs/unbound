@@ -202,24 +202,6 @@ get_rrset_bogus(struct worker* worker, int reset)
 	return r;
 }
 
-/** get number of validation operations from validator */
-static size_t
-get_val_ops(struct worker* worker, int reset)
-{
-	int m = modstack_find(&worker->env.mesh->mods, "validator");
-	struct val_env* ve;
-	size_t r;
-	if(m == -1)
-		return 0;
-	ve = (struct val_env*)worker->env.modinfo[m];
-	lock_basic_lock(&ve->valops_lock);
-	r = ve->num_val_ops;
-	if(reset && !worker->env.cfg->stat_cumulative)
-		ve->num_val_ops = 0;
-	lock_basic_unlock(&ve->valops_lock);
-	return r;
-}
-
 /** get number of ratelimited queries from iterator */
 static size_t
 get_queries_ratelimit(struct worker* worker, int reset)
@@ -291,6 +273,7 @@ server_stats_compile(struct worker* worker, struct ub_stats_info* s, int reset)
 	/* add in the values from the mesh */
 	s->svr.ans_secure += (long long)worker->env.mesh->ans_secure;
 	s->svr.ans_bogus += (long long)worker->env.mesh->ans_bogus;
+	s->svr.val_ops += (long long)worker->env.mesh->val_ops;
 	s->svr.ans_rcode_nodata += (long long)worker->env.mesh->ans_nodata;
 	s->svr.ans_expired += (long long)worker->env.mesh->ans_expired;
 	for(i=0; i<UB_STATS_RCODE_NUM; i++)
@@ -312,9 +295,6 @@ server_stats_compile(struct worker* worker, struct ub_stats_info* s, int reset)
 
 	/* get and reset validator rrset bogus number */
 	s->svr.rrset_bogus = (long long)get_rrset_bogus(worker, reset);
-
-	/* get and reset validator number of validation operations */
-	s->svr.val_ops = (long long)get_val_ops(worker, reset);
 
 	/* get and reset iterator query ratelimit number */
 	s->svr.queries_ratelimited = (long long)get_queries_ratelimit(worker, reset);

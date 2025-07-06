@@ -126,11 +126,6 @@ struct val_env {
 	lock_basic_type bogus_lock;
 	/** number of times rrsets marked bogus */
 	size_t num_rrset_bogus;
-
-	/** lock on validation operations counter */
-	lock_basic_type valops_lock;
-	/** number of times a validation operation was performed */
-	size_t num_val_ops;
 };
 
 /**

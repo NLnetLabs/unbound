@@ -57,6 +57,7 @@
 #include "sldns/sbuffer.h"
 #include "sldns/parseutil.h"
 #include "sldns/wire2str.h"
+#include "services/mesh.h"
 
 #include <ctype.h>
 #if !defined(HAVE_SSL) && !defined(HAVE_NSS) && !defined(HAVE_NETTLE)
@@ -1678,9 +1679,8 @@ dnskey_verify_rrset_sig(struct regional* region, sldns_buffer* buf,
 	sec = verify_canonrrset(buf, (int)sig[2+2],
 		sigblock, sigblock_len, key, keylen, reason);
 
-	lock_basic_lock(&ve->valops_lock);
-	ve->num_val_ops++;
-	lock_basic_unlock(&ve->valops_lock);
+	/* count validation operation */
+	qstate->env->mesh->val_ops++;
 	
 	if(sec == sec_status_secure) {
 		/* check if TTL is too high - reduce if so */

@@ -237,9 +237,6 @@ val_init(struct module_env* env, int id)
 	lock_basic_init(&val_env->bogus_lock);
 	lock_protect(&val_env->bogus_lock, &val_env->num_rrset_bogus,
 		sizeof(val_env->num_rrset_bogus));
-	lock_basic_init(&val_env->valops_lock);
-	lock_protect(&val_env->valops_lock, &val_env->num_val_ops,
-		sizeof(val_env->num_val_ops));
 #ifdef USE_ECDSA_EVP_WORKAROUND
 	ecdsa_evp_workaround_init();
 #endif
@@ -270,7 +267,6 @@ val_deinit(struct module_env* env, int id)
 		return;
 	val_env = (struct val_env*)env->modinfo[id];
 	lock_basic_destroy(&val_env->bogus_lock);
-	lock_basic_destroy(&val_env->valops_lock);
 	anchors_delete(env->anchors);
 	env->anchors = NULL;
 	key_cache_delete(val_env->kcache);
