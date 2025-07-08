@@ -1680,7 +1680,8 @@ dnskey_verify_rrset_sig(struct regional* region, sldns_buffer* buf,
 		sigblock, sigblock_len, key, keylen, reason);
 
 	/* count validation operation */
-	qstate->env->mesh->val_ops++;
+	if(qstate->env->mesh)
+		qstate->env->mesh->val_ops++;
 	
 	if(sec == sec_status_secure) {
 		/* check if TTL is too high - reduce if so */
