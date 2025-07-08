@@ -1,3 +1,6 @@
+8 July 2025: Wouter
+	- Fix to improve dnstap discovery on Fedora.
+
 3 July 2025: Wouter
 	- Fix #1300: Is 'sock-queue-timeout' a linux only feature.
 	- For #1300: implement sock-queue-timeout for FreeBSD as well.
