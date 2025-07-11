@@ -1,5 +1,6 @@
 11 July 2025: Wouter
 	- Fix detection of SSL_CTX_set_tmp_ecdh function.
+	- For #1301: configure cant find SSL_is_quic in OpenSSL 3.5.1.
 
 8 July 2025: Wouter
 	- Fix to improve dnstap discovery on Fedora.

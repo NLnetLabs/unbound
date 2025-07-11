@@ -22560,6 +22560,10 @@ then :
 fi
 
 
+    # these check_funcs need -lssl
+    BAKLIBS="$LIBS"
+    LIBS="-lssl $LIBS"
+
   for ac_func in SSL_is_quic
 do :
   ac_fn_c_check_func "$LINENO" "SSL_is_quic" "ac_cv_func_SSL_is_quic"
@@ -22572,6 +22576,8 @@ else $as_nop
 fi
 
 done
+    LIBS="$BAKLIBS"
+
     ac_fn_c_check_type "$LINENO" "struct ngtcp2_version_cid" "ac_cv_type_struct_ngtcp2_version_cid" "$ac_includes_default
     #include <ngtcp2/ngtcp2.h>
 
