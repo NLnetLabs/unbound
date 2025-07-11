@@ -578,6 +578,11 @@ tsig_algo_calc_parts(struct tsig_key* key, struct sldns_buffer* prior,
 		(char*)key->algo->digest, 0);
 	params[1] = OSSL_PARAM_construct_end();
 	ctx = EVP_MAC_CTX_new(mac);
+	if(!ctx) {
+		log_crypto_err("Could not EVP_MAC_CTX_new");
+		EVP_MAC_free(mac);
+		return 0;
+	}
 	if(!EVP_MAC_init(ctx, key->data, key->data_len, params)) {
 		log_crypto_err("Could not EVP_MAC_init");
 		EVP_MAC_CTX_free(ctx);
@@ -755,6 +760,233 @@ tsig_algo_calc_parts(struct tsig_key* key, struct sldns_buffer* prior,
 	HMAC_CTX_cleanup(&ctx);
 #endif
 	return 1;
+}
+
+/**
+ * Calculate TSIG MAC in several calls. This has to be with several calls,
+ * since it needs to update for every packet in an AXFR or IXFR, and then
+ * later get a TSIG.
+ * Caller must hold locks, on key, in the init step.
+ */
+struct tsig_calc_state_crypto {
+#ifdef HAVE_EVP_MAC_CTX_NEW
+	EVP_MAC* mac;
+	EVP_MAC_CTX* ctx;
+#elif defined(HAVE_HMAC_CTX_NEW)
+	HMAC_CTX* ctx;
+#else
+	HMAC_CTX ctx;
+#endif
+};
+
+/**
+ * Init the calc state for the key.
+ * Caller must hold locks, on key.
+ * @param key: the tsig key, with algorithm and key data.
+ * @return malloced state or NULL on failure.
+ */
+static struct tsig_calc_state_crypto*
+tsig_calc_state_init(struct tsig_key* key)
+{
+#ifdef HAVE_EVP_MAC_CTX_NEW
+	OSSL_PARAM params[2];
+#elif defined(HAVE_HMAC_CTX_NEW)
+	const EVP_MD* evp_md;
+#else
+	const EVP_MD* evp_md;
+#ifndef HMAC_INIT_EX_RETURNS_VOID
+	int r;
+#endif
+#endif
+	struct tsig_calc_state_crypto* calc_state_crypto = calloc(1,
+		sizeof(*calc_state_crypto));
+	if(!calc_state_crypto) {
+		log_err("out of memory");
+		return NULL;
+	}
+#ifdef HAVE_EVP_MAC_CTX_NEW
+	calc_state_crypto->mac = EVP_MAC_fetch(NULL, "hmac", NULL);
+	if(!calc_state_crypto->mac) {
+		log_crypto_err("Could not EVP_MAC_FETCH(..hmac..)");
+		free(calc_state_crypto);
+		return NULL;
+	}
+	params[0] = OSSL_PARAM_construct_utf8_string(OSSL_MAC_PARAM_DIGEST,
+		(char*)key->algo->digest, 0);
+	params[1] = OSSL_PARAM_construct_end();
+	calc_state_crypto->ctx = EVP_MAC_CTX_new(calc_state_crypto->mac);
+	if(!calc_state_crypto->ctx) {
+		log_crypto_err("Could not EVP_MAC_CTX_new");
+		EVP_MAC_free(calc_state_crypto->mac);
+		free(calc_state_crypto);
+		return NULL;
+	}
+	if(!EVP_MAC_init(calc_state_crypto->ctx, key->data, key->data_len,
+		params)) {
+		log_crypto_err("Could not EVP_MAC_init");
+		EVP_MAC_CTX_free(calc_state_crypto->ctx);
+		EVP_MAC_free(calc_state_crypto->mac);
+		free(calc_state_crypto);
+		return NULL;
+	}
+#elif defined(HAVE_HMAC_CTX_NEW)
+	evp_md = EVP_get_digestbyname(key->algo->digest);
+	if(!evp_md) {
+		char buf[256];
+		snprintf(buf, sizeof(buf), "EVP_get_digestbyname %s failed",
+			key->algo->digest);
+		log_crypto_err(buf);
+		free(calc_state_crypto);
+		return NULL;
+	}
+	calc_state_crypto->ctx = HMAC_CTX_new();
+	if(!calc_state_crypto->ctx) {
+		log_crypto_err("Could not HMAC_CTX_new");
+		free(calc_state_crypto);
+		return NULL;
+	}
+	if(!HMAC_Init_ex(calc_state_crypto->ctx, key->data, key->data_len,
+		evp_md, NULL)) {
+		log_crypto_err("Could not HMAC_Init_ex");
+		HMAC_CTX_free(calc_state_crypto->ctx);
+		free(calc_state_crypto);
+		return NULL;
+	}
+#else
+	memset(&calc_state_crypto->ctx, 0, sizeof(calc_state_crypto->ctx));
+	HMAC_CTX_init(&calc_state_crypto->ctx);
+
+	evp_md = EVP_get_digestbyname(key->algo->digest);
+	if(!evp_md) {
+		char buf[256];
+		snprintf(buf, sizeof(buf), "EVP_get_digestbyname %s failed",
+			key->algo->digest);
+		log_crypto_err(buf);
+		free(calc_state_crypto);
+		return NULL;
+	}
+#ifndef HMAC_INIT_EX_RETURNS_VOID
+	r =
+#endif
+	HMAC_Init_ex(&calc_state_crypto->ctx, key->data, key->data_len,
+		evp_md, NULL);
+#ifndef HMAC_INIT_EX_RETURNS_VOID
+	if(!r) {
+		log_crypto_err("Could not HMAC_Init_ex");
+		HMAC_CTX_cleanup(&calc_state_crypto->ctx);
+		free(calc_state_crypto);
+		return NULL;
+	}
+#endif
+#endif
+	return calc_state_crypto;
+}
+
+/**
+ * Update the calc state with more information.
+ * @param calc_state_crypto: the tsig calc state crypto.
+ * @param buf: the buffer to add from begin to position.
+ * @return 0 on failure.
+ */
+static int
+tsig_calc_state_update(struct tsig_calc_state_crypto* calc_state_crypto,
+	struct sldns_buffer* buf)
+{
+#ifdef HAVE_EVP_MAC_CTX_NEW
+	if(!EVP_MAC_update(calc_state_crypto->ctx, sldns_buffer_begin(buf),
+		sldns_buffer_position(buf))) {
+		log_crypto_err("Could not EVP_MAC_update");
+		return 0;
+	}
+#elif defined(HAVE_HMAC_CTX_NEW)
+	if(!HMAC_Update(calc_state_crypto->ctx, sldns_buffer_begin(buf),
+		sldns_buffer_position(buf))) {
+		log_crypto_err("Could not HMAC_Update");
+		return 0;
+	}
+#else
+#ifndef HMAC_INIT_EX_RETURNS_VOID
+	int r;
+	r =
+#endif
+	HMAC_Update(&calc_state_crypto->ctx, sldns_buffer_begin(buf),
+		sldns_buffer_position(buf));
+#ifndef HMAC_INIT_EX_RETURNS_VOID
+	if(!r) {
+		log_crypto_err("Could not HMAC_Update");
+		return 0;
+	}
+#endif
+#endif
+	return 1;
+}
+
+/**
+ * Final calculation for the calc state.
+ * @param calc_state_crypto: the tsig calc state crypto.
+ * @param tsig: the result is stored.
+ * @return 0 on failure.
+ */
+static int
+tsig_calc_state_final(struct tsig_calc_state_crypto* calc_state_crypto,
+	struct tsig_data* tsig)
+{
+#ifdef HAVE_EVP_MAC_CTX_NEW
+	size_t outl = 0;
+	if(!EVP_MAC_final(calc_state_crypto->ctx, tsig->mac, &outl,
+		tsig->mac_size)) {
+		log_crypto_err("Could not EVP_MAC_final");
+		return 0;
+	}
+	if(outl != tsig->mac_size) {
+		log_err("Wrong output size of EVP_MAC_final");
+		return 0;
+	}
+#elif defined(HAVE_HMAC_CTX_NEW)
+	unsigned int len;
+	len = (unsigned int)tsig->mac_size;
+	if(!HMAC_Final(calc_state_crypto->ctx, tsig->mac, &len)) {
+		log_crypto_err("Could not HMAC_Final");
+		return 0;
+	}
+#else
+	unsigned int len;
+#ifndef HMAC_INIT_EX_RETURNS_VOID
+	int r;
+#endif
+	len = (unsigned int)tsig->mac_size;
+#ifndef HMAC_INIT_EX_RETURNS_VOID
+	r =
+#endif
+	HMAC_Final(&calc_state_crypto->ctx, tsig->mac, &len);
+#ifndef HMAC_INIT_EX_RETURNS_VOID
+	if(!r) {
+		log_crypto_err("Could not HMAC_Final");
+		return 0;
+	}
+#endif
+#endif
+	return 1;
+}
+
+/**
+ * Delete the calc state.
+ * @param calc_state_crypto: it is deleted.
+ */
+static void
+tsig_calc_state_delete(struct tsig_calc_state_crypto* calc_state_crypto)
+{
+	if(!calc_state_crypto)
+		return;
+#ifdef HAVE_EVP_MAC_CTX_NEW
+	EVP_MAC_CTX_free(calc_state_crypto->ctx);
+	EVP_MAC_free(calc_state_crypto->mac);
+#elif defined(HAVE_HMAC_CTX_NEW)
+	HMAC_CTX_free(calc_state_crypto->ctx);
+#else
+	HMAC_CTX_cleanup(&calc_state_crypto->ctx);
+#endif
+	free(calc_state_crypto);
 }
 
 /** Returns true if buffer has space for vars. */
