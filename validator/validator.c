@@ -76,7 +76,7 @@ static void process_ds_response(struct module_qstate* qstate,
 	struct module_qstate* sub_qstate);
 
 
-/* Updates the suplied EDE (RFC8914) code selectively so we don't lose
+/* Updates the supplied EDE (RFC8914) code selectively so we don't lose
  * a more specific code */
 static void
 update_reason_bogus(struct reply_info* rep, sldns_ede_code reason_bogus)
@@ -2917,7 +2917,7 @@ ds_response_to_ke(struct module_qstate* qstate, struct val_qstate* vq,
 		struct ub_packed_rrset_key* ds;
 		enum sec_status sec;
 		ds = reply_find_answer_rrset(qinfo, msg->rep);
-		/* If there was no DS rrset, then we have mis-classified 
+		/* If there was no DS rrset, then we have misclassified
 		 * this message. */
 		if(!ds) {
 			log_warn("internal error: POSITIVE DS response was "
@@ -3469,7 +3469,7 @@ val_inform_super(struct module_qstate* qstate, int id,
 		if(suspend) {
 			/* deep copy the return_msg to vq->sub_ds_msg; it will
 			 * be resumed later in the super state with the caveat
-			 * that the initial calculations will be re-caclulated
+			 * that the initial calculations will be re-calculated
 			 * and re-suspended there before continuing. */
 			vq->sub_ds_msg = dns_msg_deepcopy_region(
 				qstate->return_msg, super->region);

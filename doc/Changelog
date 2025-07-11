@@ -1,3 +1,15 @@
+8 July 2025: Wouter
+	- Fix to improve dnstap discovery on Fedora.
+
+3 July 2025: Wouter
+	- Fix #1300: Is 'sock-queue-timeout' a linux only feature.
+	- For #1300: implement sock-queue-timeout for FreeBSD as well.
+	- Fix layout of comm_point_udp_ancil_callback.
+
+2 July 2025: Wouter
+	- Merge #1299: Fix typos.
+	- Generate ltmain.sh and configure again.
+
 25 June 2025: Yorgos
 	- Fix #1247: forward-first: ssl handshake failed on root nameservers.
 	- For #1247, turn off fetch-policy for delegation when looking into
@@ -768,7 +780,7 @@
 	  now checks both single and multi process/thread operation.
 
 16 May 2024: Yorgos
-	- Merge #1070: Fix rtt assignement for low values of
+	- Merge #1070: Fix rtt assignment for low values of
 	  infra-cache-max-rtt.
 
 16 May 2024: Wouter
@@ -1176,7 +1188,7 @@
 13 October 2023: George
 	- Better fix for infinite loop when reading multiple lines of input on
 	  a broken remote control socket, by treating a zero byte line the
-	  same as transmission end. Addesses #947 and #948.
+	  same as transmission end. Addresses #947 and #948.
 
 12 October 2023: Wouter
 	- Merge #944: Disable EDNS DO.
@@ -1199,7 +1211,7 @@
 
 10 October 2023: George
 	- Fix infinite loop when reading multiple lines of input on a broken
-	  remote control socket. Addesses #947 and #948.
+	  remote control socket. Addresses #947 and #948.
 
 9 October 2023: Wouter
 	- Fix edns subnet so that queries with a source prefix of zero cause
@@ -1632,7 +1644,7 @@
 	- Ignore expired error responses.
 
 11 November 2022: Wouter
-	- Fix #779: [doc] Missing documention in ub_resolve_event() for
+	- Fix #779: [doc] Missing documentation in ub_resolve_event() for
 	  callback parameter was_ratelimited.
 
 9 November 2022: George
@@ -2596,7 +2608,7 @@
 	  not hang. removed trailing slashes from configure paths. Moved iOS
 	  tests to allow-failure.
 	- travis, analyzer disabled on test without debug, that does not
-	  run anway.  Turn off failing tests except one.  Update iOS test
+	  run anyway.  Turn off failing tests except one.  Update iOS test
 	  to xcode image 12.2.
 
 22 March 2021: George
@@ -2685,7 +2697,7 @@
 	- Fix build on Python 3.10.
 
 10 February 2021: Wouter
-	- Merge PR #420 from dyunwei: DOH not responsing with
+	- Merge PR #420 from dyunwei: DOH not responding with
 	  "http2_query_read_done failure" logged.
 
 9 February 2021: Wouter
@@ -3085,7 +3097,7 @@
 
 6 August 2020: Wouter
 	- Merge PR #284 and Fix #246: Remove DLV entirely from Unbound.
-	  The DLV has been decommisioned and in unbound 1.5.4, in 2015, there
+	  The DLV has been decommissioned and in unbound 1.5.4, in 2015, there
 	  was advise to stop using it.  The current code base does not contain
 	  DLV code any more.  The use of dlv options displays a warning.
 
@@ -3634,7 +3646,7 @@
 3 December 2019: Wouter
 	- Merge pull request #124 from rmetrich: Changed log lock
 	  from 'quick' to 'basic' because this is an I/O lock.
-	- Fix text around serial arithmatic used for RRSIG times to refer
+	- Fix text around serial arithmetic used for RRSIG times to refer
 	  to correct RFC number.
 	- Fix Assert Causing DoS in synth_cname(),
 	  reported by X41 D-Sec.
@@ -3897,7 +3909,7 @@
 	- For #52 #53, second context does not close logfile override.
 	- Fix #52 #53, fix for example fail program.
 	- Fix to return after failed auth zone http chunk write.
-	- Fix to remove unused test for task_probe existance.
+	- Fix to remove unused test for task_probe existence.
 	- Fix to timeval_add for remaining second in microseconds.
 	- Check repinfo in worker_handle_request, if null, drop it.
 
@@ -5154,7 +5166,7 @@
 
 1 February 2018: Wouter
 	- fix unaligned structure making a false positive in checklock
-	  unitialised memory.
+	  uninitialised memory.
 
 29 January 2018: Ralph
 	- Use NSEC with longest ce to prove wildcard absence.
@@ -5757,8 +5769,8 @@
 	- Remove (now unused) event2 include from dnscrypt code.
 
 24 March 2017: George
-	- Fix to prevent non-referal query from being cached as referal when the
-	  no_cache_store flag was set.
+	- Fix to prevent non-referral query from being cached as referral when
+	  the no_cache_store flag was set.
 
 23 March 2017: Wouter
 	- Fix #1239: configure fails to find python distutils if python
@@ -5821,7 +5833,7 @@
 
 7 March 2017: Wouter
 	- Fix #1230: swig version 2.0.0 is required for pythonmod, with
-	  1.3.40 it crashes when running repeatly unbound-control reload.
+	  1.3.40 it crashes when running repeatedly unbound-control reload.
 	- Response actions based on IP address from Jinmei Tatuya (Infoblox).
 
 6 March 2017: Wouter
@@ -5837,7 +5849,7 @@
 	  known vulns.
 
 27 February 2017: Wouter
-	- Fix #1227: Fix that Unbound control allows weak ciphersuits.
+	- Fix #1227: Fix that Unbound control allows weak ciphersuites.
 	- Fix #1226: provide official 32bit binary for windows.
 
 24 February 2017: Wouter
@@ -6826,7 +6838,7 @@
 	- Fix #674: Do not free pointers given by getenv.
 
 29 May 2015: Wouter
-	- Fix that unparseable error responses are ratelimited.
+	- Fix that unparsable error responses are ratelimited.
 	- SOA negative TTL is capped at minimumttl in its rdata section.
 	- cache-max-negative-ttl config option, default 3600.
 
@@ -6844,7 +6856,7 @@
 
 10 May 2015: Wouter
 	- Change syntax of particular validator error to be easier for
-	  machine parse, swap rrset and ip adres info so it looks like:
+	  machine parse, swap rrset and ip address info so it looks like:
 	  validation failure <www.example.nl. TXT IN>: signature crypto
 	  failed from 2001:DB8:7:bba4::53 for <*.example.nl. NSEC IN>
 
@@ -8424,7 +8436,7 @@
 	- fix that --enable-static-exe does not complain about it unknown.
 
 30 June 2011: Wouter
-	- tag relase 1.4.11, trunk is 1.4.12 development.
+	- tag release 1.4.11, trunk is 1.4.12 development.
 	- iana portlist updated.
 	- fix bug#395: id bits of other query may leak out under conditions
 	- fix replyaddr count wrong after jostled queries, which leads to
@@ -9754,7 +9766,7 @@
 
 8 June 2009: Wouter
 	- Removed RFC5011 REVOKE flag support. Partial 5011 support may cause
-	  inadvertant behaviour.
+	  inadvertent behaviour.
 	- 1.3.0 tarball for release created.
 	- 1.3.1 development in svn trunk.
 	- iana portlist updated.
@@ -10103,7 +10115,7 @@
 	- initgroups(3) is called to drop secondary group permissions, if
 	  applicable.
 	- configure option --with-ldns-builtin forces the use of the 
-	  inluded ldns package with the unbound source.  The -I include
+	  included ldns package with the unbound source.  The -I include
 	  is put before the others, so it avoids bad include files from
 	  an older ldns install.
 	- daemon(3) posix call is used when available.
@@ -10408,7 +10420,7 @@
 	  please ranlib, stop file without symbols warning.
 	- harden referral path now also validates the root after priming.
 	  It looks up the root NS authoritatively as well as the root servers
-	  and attemps to validate the entries.
+	  and attempts to validate the entries.
 
 16 October 2008: Wouter
 	- Fixup negative TTL values appearing (reported by Attila Nagy).
@@ -11187,7 +11199,7 @@
 	- please doxygen, put doxygen comment in one place.
 	- asynclook -b blocking mode and test.
 	- refactor asynclook, nicer code.
-	- fixup race problems from opensll in rand init from library, with
+	- fixup race problems from openssl in rand init from library, with
 	  a mutex around the rand init.
 	- fix pass async_id=NULL to _async resolve().
 	- rewrote _wait() routine, so that it is threadsafe.
@@ -12160,7 +12172,7 @@
 11 June 2007: Wouter
 	- replies on TCP queries have the address field set in replyinfo,
 	  for serviced queries, because the initiator does not know that
-	  a TCP fallback has occured.
+	  a TCP fallback has occurred.
 	- omit DNSSEC types from nonDO replies, except if qtype is ANY or
 	  if qtype directly queries for the type (and then only show that
 	  'unknown type' in the answer section).

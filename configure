@@ -685,6 +685,7 @@ opt_dnstap_socket_path
 ENABLE_DNSTAP
 PROTOBUFC_LIBS
 PROTOBUFC_CFLAGS
+PROTOC_GEN_C
 PROTOC_C
 PROTOC
 UBSYMS
@@ -24425,6 +24426,77 @@ fi
 	if test -z "$PROTOC_C"; then
 	  as_fn_error $? "The protoc or protoc-c program was not found. It is needed for dnstap, use --disable-dnstap, or install protobuf-c to provide protoc or protoc-c" "$LINENO" 5
 	fi
+
+	# Check for protoc-gen-c plugin
+	# Extract the first word of "protoc-gen-c", so it can be a program name with args.
+set dummy protoc-gen-c; ac_word=$2
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
+printf %s "checking for $ac_word... " >&6; }
+if test ${ac_cv_path_PROTOC_GEN_C+y}
+then :
+  printf %s "(cached) " >&6
+else $as_nop
+  case $PROTOC_GEN_C in
+  [\\/]* | ?:[\\/]*)
+  ac_cv_path_PROTOC_GEN_C="$PROTOC_GEN_C" # Let the user override the test with a path.
+  ;;
+  *)
+  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH
+do
+  IFS=$as_save_IFS
+  case $as_dir in #(((
+    '') as_dir=./ ;;
+    */) ;;
+    *) as_dir=$as_dir/ ;;
+  esac
+    for ac_exec_ext in '' $ac_executable_extensions; do
+  if as_fn_executable_p "$as_dir$ac_word$ac_exec_ext"; then
+    ac_cv_path_PROTOC_GEN_C="$as_dir$ac_word$ac_exec_ext"
+    printf "%s\n" "$as_me:${as_lineno-$LINENO}: found $as_dir$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+  done
+IFS=$as_save_IFS
+
+  ;;
+esac
+fi
+PROTOC_GEN_C=$ac_cv_path_PROTOC_GEN_C
+if test -n "$PROTOC_GEN_C"; then
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $PROTOC_GEN_C" >&5
+printf "%s\n" "$PROTOC_GEN_C" >&6; }
+else
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
+printf "%s\n" "no" >&6; }
+fi
+
+
+	if test -z "$PROTOC_GEN_C"; then
+	  as_fn_error $? "The protoc-gen-c plugin was not found. It is needed for dnstap, use --disable-dnstap, or install protobuf-c-compiler to provide protoc-gen-c" "$LINENO" 5
+	fi
+
+	# Test that protoc-gen-c actually works
+	{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking if protoc-gen-c plugin works" >&5
+printf %s "checking if protoc-gen-c plugin works... " >&6; }
+	cat > conftest.proto << EOF
+syntax = "proto2";
+message TestMessage {
+  optional string test_field = 1;
+}
+EOF
+	if $PROTOC_C --c_out=. conftest.proto >/dev/null 2>&1; then
+	  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+printf "%s\n" "yes" >&6; }
+	  rm -f conftest.proto conftest.pb-c.c conftest.pb-c.h
+	else
+	  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
+printf "%s\n" "no" >&6; }
+	  rm -f conftest.proto conftest.pb-c.c conftest.pb-c.h
+	  as_fn_error $? "The protoc-gen-c plugin is not working properly. Please ensure protobuf-c-compiler is properly installed" "$LINENO" 5
+	fi
+
 
 # Check whether --with-protobuf-c was given.
 if test ${with_protobuf_c+y}

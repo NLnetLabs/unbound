@@ -272,7 +272,7 @@ sldns_key_buf2dsa_raw(unsigned char* key, size_t len)
 		return NULL;
 	}
 	if (!DSA_set0_key(dsa, Y, NULL)) {
-		/* QPG attached, cleaned up by DSA_fre() */
+		/* QPG attached, cleaned up by DSA_free() */
 		DSA_free(dsa);
 		BN_free(Y);
 		return NULL;

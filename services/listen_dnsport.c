@@ -906,7 +906,7 @@ create_tcp_accept_sock(struct addrinfo *addr, int v6only, int* noproto,
 	   against IP spoofing attacks as suggested in RFC7413 */
 #ifdef __APPLE__
 	/* OS X implementation only supports qlen of 1 via this call. Actual
-	   value is configured by the net.inet.tcp.fastopen_backlog kernel parm. */
+	   value is configured by the net.inet.tcp.fastopen_backlog kernel param. */
 	qlen = 1;
 #else
 	/* 5 is recommended on linux */
@@ -1179,6 +1179,15 @@ set_recvtimestamp(int s)
 	int opt = SOF_TIMESTAMPING_RX_SOFTWARE | SOF_TIMESTAMPING_SOFTWARE;
 	if (setsockopt(s, SOL_SOCKET, SO_TIMESTAMPNS, (void*)&opt, (socklen_t)sizeof(opt)) < 0) {
 		log_err("setsockopt(..., SO_TIMESTAMPNS, ...) failed: %s",
+			strerror(errno));
+		return 0;
+	}
+	return 1;
+#elif defined(SO_TIMESTAMP) && defined(SCM_TIMESTAMP)
+	int on = 1;
+	/* FreeBSD and also Linux. */
+	if (setsockopt(s, SOL_SOCKET, SO_TIMESTAMP, (void*)&on, (socklen_t)sizeof(on)) < 0) {
+		log_err("setsockopt(..., SO_TIMESTAMP, ...) failed: %s",
 			strerror(errno));
 		return 0;
 	}
@@ -1602,7 +1611,7 @@ listen_create(struct comm_base* base, struct listen_port* ports,
 				front->udp_buff, ports->pp2_enabled, cb,
 				cb_arg, ports->socket);
 #else
-			log_warn("This system does not support UDP ancilliary data.");
+			log_warn("This system does not support UDP ancillary data.");
 #endif
 		}
 		if(!cp) {
@@ -3103,7 +3112,7 @@ static int http2_req_header_cb(nghttp2_session* session,
 		return 0;
 	}
 	/* Content type is a SHOULD (rfc7231#section-3.1.1.5) when using POST,
-	 * and not needed when using GET. Don't enfore.
+	 * and not needed when using GET. Don't enforce.
 	 * If set only allow lowercase "application/dns-message".
 	 *
 	 * Clients SHOULD (rfc8484#section-4.1) set an accept header, but MUST
@@ -3165,7 +3174,7 @@ static int http2_req_data_chunk_recv_cb(nghttp2_session* ATTR_UNUSED(session),
 			qlen = h2_stream->content_length;
 		} else if(len <= h2_session->c->http2_stream_max_qbuffer_size) {
 			/* setting this to msg-buffer-size can result in a lot
-			 * of memory consuption. Most queries should fit in a
+			 * of memory consumption. Most queries should fit in a
 			 * single DATA frame, and most POST queries will
 			 * contain content-length which does not impose this
 			 * limit. */
@@ -3191,7 +3200,7 @@ static int http2_req_data_chunk_recv_cb(nghttp2_session* ATTR_UNUSED(session),
 
 	if(!h2_stream->qbuffer ||
 		sldns_buffer_remaining(h2_stream->qbuffer) < len) {
-		verbose(VERB_ALGO, "http2 data_chunck_recv failed. Not enough "
+		verbose(VERB_ALGO, "http2 data_chunk_recv failed. Not enough "
 			"buffer space for POST query. Can happen on multi "
 			"frame requests without content-length header");
 		h2_stream->query_too_large = 1;
