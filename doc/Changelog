@@ -1,3 +1,6 @@
+11 July 2025: Wouter
+	- Fix detection of SSL_CTX_set_tmp_ecdh function.
+
 8 July 2025: Wouter
 	- Fix to improve dnstap discovery on Fedora.
 

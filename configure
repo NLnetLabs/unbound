@@ -20819,12 +20819,6 @@ then :
   printf "%s\n" "#define HAVE_BIO_SET_CALLBACK_EX 1" >>confdefs.h
 
 fi
-ac_fn_c_check_func "$LINENO" "SSL_CTX_set_tmp_ecdh" "ac_cv_func_SSL_CTX_set_tmp_ecdh"
-if test "x$ac_cv_func_SSL_CTX_set_tmp_ecdh" = xyes
-then :
-  printf "%s\n" "#define HAVE_SSL_CTX_SET_TMP_ECDH 1" >>confdefs.h
-
-fi
 
 
 # these check_funcs need -lssl
@@ -20983,6 +20977,34 @@ else $as_nop
   ac_have_decl=0
 fi
 printf "%s\n" "#define HAVE_DECL_SSL_CTX_SET_ECDH_AUTO $ac_have_decl" >>confdefs.h
+ac_fn_check_decl "$LINENO" "SSL_CTX_set_tmp_ecdh" "ac_cv_have_decl_SSL_CTX_set_tmp_ecdh" "
+$ac_includes_default
+#ifdef HAVE_OPENSSL_ERR_H
+#include <openssl/err.h>
+#endif
+
+#ifdef HAVE_OPENSSL_RAND_H
+#include <openssl/rand.h>
+#endif
+
+#ifdef HAVE_OPENSSL_CONF_H
+#include <openssl/conf.h>
+#endif
+
+#ifdef HAVE_OPENSSL_ENGINE_H
+#include <openssl/engine.h>
+#endif
+#include <openssl/ssl.h>
+#include <openssl/evp.h>
+
+" "$ac_c_undeclared_builtin_options" "CFLAGS"
+if test "x$ac_cv_have_decl_SSL_CTX_set_tmp_ecdh" = xyes
+then :
+  ac_have_decl=1
+else $as_nop
+  ac_have_decl=0
+fi
+printf "%s\n" "#define HAVE_DECL_SSL_CTX_SET_TMP_ECDH $ac_have_decl" >>confdefs.h
 
 
 if test "$ac_cv_func_HMAC_Init_ex" = "yes"; then
