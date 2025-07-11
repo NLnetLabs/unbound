@@ -770,11 +770,14 @@ tsig_algo_calc_parts(struct tsig_key* key, struct sldns_buffer* prior,
  */
 struct tsig_calc_state_crypto {
 #ifdef HAVE_EVP_MAC_CTX_NEW
+	/** For EVP_MAC_CTX_new and OpenSSL since 3.0 functions. */
 	EVP_MAC* mac;
 	EVP_MAC_CTX* ctx;
 #elif defined(HAVE_HMAC_CTX_NEW)
+	/** For HMAC_CTX_new and OpenSSL since 1.1 functions. */
 	HMAC_CTX* ctx;
 #else
+	/** For HMAC_CTX_init and OpenSSL before 1.1 functions. */
 	HMAC_CTX ctx;
 #endif
 };
