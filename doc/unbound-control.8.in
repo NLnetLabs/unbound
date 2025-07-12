@@ -1367,6 +1367,15 @@ Increased for every RRset inspection that fails.
 .UNINDENT
 .INDENT 0.0
 .TP
+.B num.valops 
+The number of validation operations performed by the validator.
+Increased for every RRSIG verification operation regardless of the
+validation result.
+The RRSIG and key combination needs to first pass some sanity checks before
+Unbound even performs the verification, e.g., length/protocol checks.
+.UNINDENT
+.INDENT 0.0
+.TP
 .B unwanted.queries 
 Number of queries that were refused or dropped because they failed the
 access control settings.
