@@ -1219,6 +1219,14 @@ Extended Statistics
     Increased for every RRset inspection that fails.
 
 
+@@UAHL@unbound-control.stats@num.valops@@
+    The number of validation operations performed by the validator.
+    Increased for every RRSIG verification operation regardless of the
+    validation result.
+    The RRSIG and key combination needs to first pass some sanity checks before
+    Unbound even performs the verification, e.g., length/protocol checks.
+
+
 @@UAHL@unbound-control.stats@unwanted.queries@@
     Number of queries that were refused or dropped because they failed the
     access control settings.

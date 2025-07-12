@@ -3,6 +3,7 @@
 	  track the number of signature validation operations.
 	  Adds 'num.valops' to extended statistics.
 	- For #1289: test num.valops in existing stat_values.tdir.
+	- For #1289: add num.valops in the unbound-control man page.
 
 11 July 2025: Wouter
 	- Fix detection of SSL_CTX_set_tmp_ecdh function.
