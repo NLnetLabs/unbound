@@ -1,3 +1,8 @@
+12 July 2025: Yorgos
+	- Merge #1289 from Roland van Rijswijk-Deij: Add extra statistic to
+	  track the number of signature validation operations.
+	  Adds 'num.valops' to extended statistics.
+
 11 July 2025: Wouter
 	- Fix detection of SSL_CTX_set_tmp_ecdh function.
 	- For #1301: configure cant find SSL_is_quic in OpenSSL 3.5.1.
