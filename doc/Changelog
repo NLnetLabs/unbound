@@ -3,6 +3,7 @@
 	  from AOSP Lab Nankai University.
 	- Tag for 1.23.1 with the release of 1.23.0 and the CVE fix, the
 	  repository continues with the previous fixes, with 1.23.2.
+	- Add unit tests for non-ecs aggregation.
 
 12 July 2025: Yorgos
 	- Merge #1289 from Roland van Rijswijk-Deij: Add extra statistic to
