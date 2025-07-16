@@ -1,3 +1,9 @@
+16 July 2025: Wouter
+	- Fix for RebirthDay Attack CVE-2025-5994, reported by Xiang Li
+	  from AOSP Lab Nankai University.
+	- Tag for 1.23.1 with the release of 1.23.0 and the CVE fix, the
+	  repository continues with the previous fixes, with 1.23.2.
+
 12 July 2025: Yorgos
 	- Merge #1289 from Roland van Rijswijk-Deij: Add extra statistic to
 	  track the number of signature validation operations.
