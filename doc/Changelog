@@ -1,6 +1,7 @@
 17 July 2025: Wouter
 	- Fix to not set rlimits in the unit tests.
 	- Fix #1303: [FR] Disable TLSv1.2.
+	- iana portlist updated.
 
 16 July 2025: Wouter
 	- Fix for RebirthDay Attack CVE-2025-5994, reported by Xiang Li
