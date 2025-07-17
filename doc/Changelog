@@ -1,3 +1,6 @@
+17 July 2025: Wouter
+	- Fix to not set rlimits in the unit tests.
+
 16 July 2025: Wouter
 	- Fix for RebirthDay Attack CVE-2025-5994, reported by Xiang Li
 	  from AOSP Lab Nankai University.
