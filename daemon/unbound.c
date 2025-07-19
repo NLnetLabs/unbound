@@ -174,7 +174,7 @@ static void
 checkrlimits(struct config_file* cfg)
 {
 #ifndef S_SPLINT_S
-#ifdef HAVE_GETRLIMIT
+#if defined(HAVE_GETRLIMIT) && !defined(unbound_testbound)
 	/* list has number of ports to listen to, ifs number addresses */
 	int list = ((cfg->do_udp?1:0) + (cfg->do_tcp?1 + 
 			(int)cfg->incoming_num_tcp:0));
