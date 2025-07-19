@@ -1622,7 +1622,7 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 			comm_point_drop_reply(repinfo);
 			return 0;
 		}
-		if((r = tsig_verify(c->buffer, tsig_name, alg, tsig_secret,
+		if((r = tsig_verify_shared(c->buffer, tsig_name, alg, tsig_secret,
 					tsig_secret_len, *worker->env.now))) {
 			verbose(VERB_ALGO, "worker tsig very of response: %s",
 				sldns_lookup_by_id(sldns_tsig_errors, r)?
