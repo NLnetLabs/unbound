@@ -89,6 +89,7 @@
 #include "util/random.h"
 #include "util/tube.h"
 #include "util/net_help.h"
+#include "util/tsig.h"
 #include "sldns/keyraw.h"
 #include "respip/respip.h"
 #include "iterator/iter_fwd.h"
@@ -316,6 +317,17 @@ daemon_init(void)
 		acl_list_delete(daemon->acl);
 		tcl_list_delete(daemon->tcl);
 		edns_known_options_delete(daemon->env);
+		free(daemon->env);
+		free(daemon);
+		return NULL;
+	}
+	if(!(daemon->env->tsig_key_table = tsig_key_table_create())) {
+		auth_zones_delete(daemon->env->auth_zones);
+		acl_list_delete(daemon->acl_interface);
+		acl_list_delete(daemon->acl);
+		tcl_list_delete(daemon->tcl);
+		edns_known_options_delete(daemon->env);
+		edns_strings_delete(daemon->env->edns_strings);
 		free(daemon->env);
 		free(daemon);
 		return NULL;
@@ -771,6 +783,10 @@ daemon_fork(struct daemon* daemon)
 	daemon->use_response_ip = !respip_set_is_empty(
 		daemon->env->respip_set) || have_view_respip_cfg;
 
+	/* setup tsig keys */
+	if(!tsig_key_table_apply_cfg(daemon->env->tsig_key_table, daemon->cfg))
+		fatal_exit("Could not set up TSIG keys");
+
 	/* setup modules */
 	daemon_setup_modules(daemon);
 
@@ -944,6 +960,7 @@ daemon_delete(struct daemon* daemon)
 		edns_known_options_delete(daemon->env);
 		edns_strings_delete(daemon->env->edns_strings);
 		auth_zones_delete(daemon->env->auth_zones);
+		tsig_key_table_delete(daemon->env->tsig_key_table);
 	}
 	ub_randfree(daemon->rand);
 	alloc_clear(&daemon->superalloc);

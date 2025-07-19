@@ -97,7 +97,7 @@ dname_valid(uint8_t* dname, size_t maxlen)
 
 /** compare uncompressed, noncanonical, registers are hints for speed */
 int 
-query_dname_compare(const register uint8_t* d1, const register uint8_t* d2)
+query_dname_compare(register const uint8_t* d1, register const uint8_t* d2)
 {
 	register uint8_t lab1, lab2;
 	log_assert(d1 && d2);

@@ -253,6 +253,9 @@
 /* Define to 1 if you have the `EVP_EncryptInit_ex' function. */
 #undef HAVE_EVP_ENCRYPTINIT_EX
 
+/* Define to 1 if you have the `EVP_MAC_CTX_new' function. */
+#undef HAVE_EVP_MAC_CTX_NEW
+
 /* Define to 1 if you have the `EVP_MAC_CTX_set_params' function. */
 #undef HAVE_EVP_MAC_CTX_SET_PARAMS
 
@@ -333,6 +336,9 @@
 
 /* Define to 1 if you have the <hiredis/hiredis.h> header file. */
 #undef HAVE_HIREDIS_HIREDIS_H
+
+/* Define to 1 if you have the `HMAC_CTX_new' function. */
+#undef HAVE_HMAC_CTX_NEW
 
 /* Define to 1 if you have the `HMAC_Init_ex' function. */
 #undef HAVE_HMAC_INIT_EX
@@ -654,6 +660,9 @@
 /* Define to 1 if you have the `SSL_CTX_set_tlsext_ticket_key_evp_cb'
    function. */
 #undef HAVE_SSL_CTX_SET_TLSEXT_TICKET_KEY_EVP_CB
+
+/* Define to 1 if you have the `SSL_CTX_set_tmp_ecdh' function. */
+#undef HAVE_SSL_CTX_SET_TMP_ECDH
 
 /* Define to 1 if you have the `SSL_get0_alpn_selected' function. */
 #undef HAVE_SSL_GET0_ALPN_SELECTED
