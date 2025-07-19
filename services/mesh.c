@@ -78,6 +78,20 @@
 #include <netdb.h>
 #endif
 
+/** Compare two views by name */
+static int
+view_name_compare(const char* v_a, const char* v_b)
+{
+	if(v_a == NULL && v_b == NULL)
+		return 0;
+	/* The NULL name is smaller than if the name is set. */
+	if(v_a == NULL)
+		return -1;
+	if(v_b == NULL)
+		return 1;
+	return strcmp(v_a, v_b);
+}
+
 /**
  * Compare two response-ip client info entries for the purpose of mesh state
  * compare.  It returns 0 if ci_a and ci_b are considered equal; otherwise
@@ -133,12 +147,14 @@ client_info_compare(const struct respip_client_info* ci_a,
 	}
 	if(ci_a->tag_datas != ci_b->tag_datas)
 		return ci_a->tag_datas < ci_b->tag_datas ? -1 : 1;
-	if(ci_a->view != ci_b->view)
-		return ci_a->view < ci_b->view ? -1 : 1;
-	/* For the unbound daemon these should be non-NULL and identical,
-	 * but we check that just in case. */
-	if(ci_a->respip_set != ci_b->respip_set)
-		return ci_a->respip_set < ci_b->respip_set ? -1 : 1;
+	if(ci_a->view || ci_a->view_name || ci_b->view || ci_b->view_name) {
+		/* Compare the views by name. */
+		cmp = view_name_compare(
+			(ci_a->view?ci_a->view->name:ci_a->view_name),
+			(ci_b->view?ci_b->view->name:ci_b->view_name));
+		if(cmp != 0)
+			return cmp;
+	}
 	return 0;
 }
 
@@ -217,6 +233,7 @@ mesh_create(struct module_stack* stack, struct module_env* env)
 	mesh->ans_cachedb = 0;
 	mesh->num_queries_discard_timeout = 0;
 	mesh->num_queries_wait_limit = 0;
+	mesh->num_dns_error_reports = 0;
 	mesh->max_reply_states = env->cfg->num_queries_per_thread;
 	mesh->max_forever_states = (mesh->max_reply_states+1)/2;
 #ifndef S_SPLINT_S
@@ -871,6 +888,78 @@ void mesh_report_reply(struct mesh_area* mesh, struct outbound_entry* e,
 	mesh_run(mesh, e->qstate->mesh_info, event, e);
 }
 
+/** copy strlist to region */
+static struct config_strlist*
+cfg_region_strlist_copy(struct regional* region, struct config_strlist* list)
+{
+	struct config_strlist* result = NULL, *last = NULL, *s = list;
+	while(s) {
+		struct config_strlist* n = regional_alloc_zero(region,
+			sizeof(*n));
+		if(!n)
+			return NULL;
+		n->str = regional_strdup(region, s->str);
+		if(!n->str)
+			return NULL;
+		if(last)
+			last->next = n;
+		else	result = n;
+		last = n;
+		s = s->next;
+	}
+	return result;
+}
+
+/** Copy the client info to the query region. */
+static struct respip_client_info*
+mesh_copy_client_info(struct regional* region, struct respip_client_info* cinfo)
+{
+	size_t i;
+	struct respip_client_info* client_info;
+	client_info = regional_alloc_init(region, cinfo, sizeof(*cinfo));
+	if(!client_info)
+		return NULL;
+	/* Copy the client_info so that if the configuration changes,
+	 * then the data stays valid. */
+	if(cinfo->taglist) {
+		client_info->taglist = regional_alloc_init(region, cinfo->taglist,
+			cinfo->taglen);
+		if(!client_info->taglist)
+			return NULL;
+	}
+	if(cinfo->tag_actions) {
+		client_info->tag_actions = regional_alloc_init(region, cinfo->tag_actions,
+			cinfo->tag_actions_size);
+		if(!client_info->tag_actions)
+			return NULL;
+	}
+	if(cinfo->tag_datas) {
+		client_info->tag_datas = regional_alloc_zero(region,
+			sizeof(struct config_strlist*)*cinfo->tag_datas_size);
+		if(!client_info->tag_datas)
+			return NULL;
+		for(i=0; i<cinfo->tag_datas_size; i++) {
+			if(cinfo->tag_datas[i]) {
+				client_info->tag_datas[i] = cfg_region_strlist_copy(
+					region, cinfo->tag_datas[i]);
+				if(!client_info->tag_datas[i])
+					return NULL;
+			}
+		}
+	}
+	if(cinfo->view) {
+		/* Do not copy the view pointer but store a name instead.
+		 * The name is looked up later when done, this means that
+		 * the view tree can be changed, by reloads. */
+		client_info->view = NULL;
+		client_info->view_name = regional_strdup(region,
+			cinfo->view->name);
+		if(!client_info->view_name)
+			return NULL;
+	}
+	return client_info;
+}
+
 struct mesh_state*
 mesh_state_create(struct module_env* env, struct query_info* qinfo,
 	struct respip_client_info* cinfo, uint16_t qflags, int prime,
@@ -911,8 +1000,7 @@ mesh_state_create(struct module_env* env, struct query_info* qinfo,
 		return NULL;
 	}
 	if(cinfo) {
-		mstate->s.client_info = regional_alloc_init(region, cinfo,
-			sizeof(*cinfo));
+		mstate->s.client_info = mesh_copy_client_info(region, cinfo);
 		if(!mstate->s.client_info) {
 			alloc_reg_release(env->alloc, region);
 			return NULL;
@@ -1492,8 +1580,119 @@ mesh_send_reply(struct mesh_state* m, int rcode, struct reply_info* rep,
 			&r->query_reply.client_addr,
 			r->query_reply.client_addrlen, duration, 0, r_buffer,
 			(m->s.env->cfg->log_destaddr?(void*)r->query_reply.c->socket->addr:NULL),
-			r->query_reply.c->type);
+			r->query_reply.c->type, r->query_reply.c->ssl);
 	}
+}
+
+/**
+ * Generate the DNS Error Report (RFC9567).
+ * If there is an EDE attached for this reply and there was a Report-Channel
+ * EDNS0 option from the upstream, fire up a report query.
+ * @param qstate: module qstate.
+ * @param rep: prepared reply to be sent.
+ */
+static void dns_error_reporting(struct module_qstate* qstate,
+	struct reply_info* rep)
+{
+	struct query_info qinfo;
+	struct mesh_state* sub;
+	struct module_qstate* newq;
+	uint8_t buf[LDNS_MAX_DOMAINLEN];
+	size_t count = 0;
+	int written;
+	size_t expected_length;
+	struct edns_option* opt;
+	sldns_ede_code reason_bogus = LDNS_EDE_NONE;
+	sldns_rr_type qtype = qstate->qinfo.qtype;
+	uint8_t* qname = qstate->qinfo.qname;
+	size_t qname_len = qstate->qinfo.qname_len-1; /* skip the trailing \0 */
+	uint8_t* agent_domain;
+	size_t agent_domain_len;
+
+	/* We need a valid reporting agent;
+	 * this is based on qstate->edns_opts_back_in that will probably have
+	 * the latest reporting agent we found while iterating */
+	opt = edns_opt_list_find(qstate->edns_opts_back_in,
+		LDNS_EDNS_REPORT_CHANNEL);
+	if(!opt) return;
+	agent_domain_len = opt->opt_len;
+	agent_domain = opt->opt_data;
+	if(dname_valid(agent_domain, agent_domain_len) < 3) {
+		/* The agent domain needs to be a valid dname that is not the
+		 * root; from RFC9567. */
+		return;
+	}
+
+	/* Get the EDE generated from the mesh state, these are mostly
+	 * validator errors. If other errors are produced in the future (e.g.,
+	 * RPZ) we would not want them to result in error reports. */
+	reason_bogus = errinf_to_reason_bogus(qstate);
+	if(rep && ((reason_bogus == LDNS_EDE_DNSSEC_BOGUS &&
+		rep->reason_bogus != LDNS_EDE_NONE) ||
+		reason_bogus == LDNS_EDE_NONE)) {
+		reason_bogus = rep->reason_bogus;
+	}
+	if(reason_bogus == LDNS_EDE_NONE ||
+		/* other, does not make sense without the text that comes
+		 * with it */
+		reason_bogus == LDNS_EDE_OTHER) return;
+
+	/* Synthesize the error report query in the format:
+	 * "_er.$qtype.$qname.$ede._er.$reporting-agent-domain" */
+	/* First check if the static length parts fit in the buffer.
+	 * That is everything except for qtype and ede that need to be
+	 * converted to decimal and checked further on. */
+	expected_length = 4/*_er*/+qname_len+4/*_er*/+agent_domain_len;
+	if(expected_length > LDNS_MAX_DOMAINLEN) goto skip;
+
+	memmove(buf+count, "\3_er", 4);
+	count += 4;
+
+	written = snprintf((char*)buf+count, LDNS_MAX_DOMAINLEN-count,
+		"X%d", qtype);
+	expected_length += written;
+	/* Skip on error, truncation or long expected length */
+	if(written < 0 || (size_t)written >= LDNS_MAX_DOMAINLEN-count ||
+		expected_length > LDNS_MAX_DOMAINLEN ) goto skip;
+	/* Put in the label length */
+	*(buf+count) = (char)(written - 1);
+	count += written;
+
+	memmove(buf+count, qname, qname_len);
+	count += qname_len;
+
+	written = snprintf((char*)buf+count, LDNS_MAX_DOMAINLEN-count,
+		"X%d", reason_bogus);
+	expected_length += written;
+	/* Skip on error, truncation or long expected length */
+	if(written < 0 || (size_t)written >= LDNS_MAX_DOMAINLEN-count ||
+		expected_length > LDNS_MAX_DOMAINLEN ) goto skip;
+	*(buf+count) = (char)(written - 1);
+	count += written;
+
+	memmove(buf+count, "\3_er", 4);
+	count += 4;
+
+	/* Copy the agent domain */
+	memmove(buf+count, agent_domain, agent_domain_len);
+	count += agent_domain_len;
+
+	qinfo.qname = buf;
+	qinfo.qname_len = count;
+	qinfo.qtype = LDNS_RR_TYPE_TXT;
+	qinfo.qclass = qstate->qinfo.qclass;
+	qinfo.local_alias = NULL;
+
+	log_query_info(VERB_ALGO, "DNS Error Reporting: generating report "
+		"query for", &qinfo);
+	if(mesh_add_sub(qstate, &qinfo, BIT_RD, 0, 0, &newq, &sub)) {
+		qstate->env->mesh->num_dns_error_reports++;
+	}
+	return;
+skip:
+	verbose(VERB_ALGO, "DNS Error Reporting: report query qname too long; "
+		"skip");
+	return;
 }
 
 void mesh_query_done(struct mesh_state* mstate)
@@ -1544,6 +1743,9 @@ void mesh_query_done(struct mesh_state* mstate)
 		}
 			
 	}
+	if(mstate->reply_list && mstate->s.env->cfg->dns_error_reporting)
+		dns_error_reporting(&mstate->s, rep);
+
 	for(r = mstate->reply_list; r; r = r->next) {
 		struct timeval old;
 		timeval_subtract(&old, mstate->s.env->now_tv, &r->start_time);
@@ -1705,6 +1907,25 @@ struct mesh_state* mesh_area_find(struct mesh_area* mesh,
 
 	result = (struct mesh_state*)rbtree_search(&mesh->all, &key);
 	return result;
+}
+
+/** remove mesh state callback */
+int mesh_state_del_cb(struct mesh_state* s, mesh_cb_func_type cb, void* cb_arg)
+{
+	struct mesh_cb* r, *prev = NULL;
+	r = s->cb_list;
+	while(r) {
+		if(r->cb == cb && r->cb_arg == cb_arg) {
+			/* Delete this entry. */
+			/* It was allocated in the s.region, so no free. */
+			if(prev) prev->next = r->next;
+			else s->cb_list = r->next;
+			return 1;
+		}
+		prev = r;
+		r = r->next;
+	}
+	return 0;
 }
 
 int mesh_state_add_cb(struct mesh_state* s, struct edns_data* edns,
@@ -2064,6 +2285,7 @@ mesh_stats_clear(struct mesh_area* mesh)
 	timehist_clear(mesh->histogram);
 	mesh->ans_secure = 0;
 	mesh->ans_bogus = 0;
+	mesh->val_ops = 0;
 	mesh->ans_expired = 0;
 	mesh->ans_cachedb = 0;
 	memset(&mesh->ans_rcode[0], 0, sizeof(size_t)*UB_STATS_RCODE_NUM);
@@ -2071,6 +2293,7 @@ mesh_stats_clear(struct mesh_area* mesh)
 	mesh->ans_nodata = 0;
 	mesh->num_queries_discard_timeout = 0;
 	mesh->num_queries_wait_limit = 0;
+	mesh->num_dns_error_reports = 0;
 }
 
 size_t
@@ -2172,7 +2395,8 @@ apply_respip_action(struct module_qstate* qstate,
 		return 1;
 
 	if(!respip_rewrite_reply(qinfo, cinfo, rep, encode_repp, actinfo,
-		alias_rrset, 0, qstate->region, az, NULL))
+		alias_rrset, 0, qstate->region, az, NULL, qstate->env->views,
+		qstate->env->respip_set))
 		return 0;
 
 	/* xxx_deny actions mean dropping the reply, unless the original reply
@@ -2247,7 +2471,8 @@ mesh_serve_expired_callback(void* arg)
 		} else if(partial_rep &&
 			!respip_merge_cname(partial_rep, &qstate->qinfo, msg->rep,
 			qstate->client_info, must_validate, &encode_rep, qstate->region,
-			qstate->env->auth_zones)) {
+			qstate->env->auth_zones, qstate->env->views,
+			qstate->env->respip_set)) {
 			return;
 		}
 		if(!encode_rep || alias_rrset) {
@@ -2400,4 +2625,26 @@ int mesh_jostle_exceeded(struct mesh_area* mesh)
 	if(mesh->all.count < mesh->max_reply_states)
 		return 0;
 	return 1;
+}
+
+void mesh_remove_callback(struct mesh_area* mesh, struct query_info* qinfo,
+	uint16_t qflags, mesh_cb_func_type cb, void* cb_arg)
+{
+	struct mesh_state* s = NULL;
+	s = mesh_area_find(mesh, NULL, qinfo, qflags&(BIT_RD|BIT_CD), 0, 0);
+	if(!s) return;
+	if(!mesh_state_del_cb(s, cb, cb_arg)) return;
+
+	/* It was in the list and removed. */
+	log_assert(mesh->num_reply_addrs > 0);
+	mesh->num_reply_addrs--;
+	if(!s->reply_list && !s->cb_list) {
+		/* was a reply state, not anymore */
+		log_assert(mesh->num_reply_states > 0);
+		mesh->num_reply_states--;
+	}
+	if(!s->reply_list && !s->cb_list &&
+		s->super_set.count == 0) {
+		mesh->num_detached_states++;
+	}
 }

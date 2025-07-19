@@ -92,11 +92,13 @@ int RRSET_ROUNDROBIN = 1;
 /** log tag queries with name instead of 'info' for filtering */
 int LOG_TAG_QUERYREPLY = 0;
 
+#ifdef HAVE_SSL
 static struct tls_session_ticket_key {
 	unsigned char *key_name;
 	unsigned char *aes_key;
 	unsigned char *hmac_key;
 } *ticket_keys;
+#endif /* HAVE_SSL */
 
 #ifdef HAVE_SSL
 /**
@@ -315,6 +317,11 @@ int netblockstrtoaddr(const char* str, int port, struct sockaddr_storage* addr,
 			log_err("cannot parse netblock: '%s'", str);
 			return 0;
 		}
+		if(*net < 0) {
+			log_err("netblock value %d is negative in: '%s'",
+				*net, str);
+			return 0;
+		}
 		strlcpy(buf, str, sizeof(buf));
 		s = strchr(buf, '/');
 		if(s) *s = 0;
@@ -427,6 +434,8 @@ int netblockdnametoaddr(uint8_t* dname, size_t dnamelen,
 	buff[nlablen] = '\0';
 	*net = atoi(buff);
 	if(*net == 0 && strcmp(buff, "0") != 0)
+		return 0;
+	if(*net < 0)
 		return 0;
 	dname += nlablen;
 	dname++;
@@ -795,7 +804,7 @@ addr_mask(struct sockaddr_storage* addr, socklen_t len, int net)
 		s = (uint8_t*)&((struct sockaddr_in*)addr)->sin_addr;
 		max = 32;
 	}
-	if(net >= max)
+	if(net >= max || net < 0)
 		return;
 	for(i=net/8+1; i<max/8; i++) {
 		s[i] = 0;
@@ -1026,7 +1035,7 @@ void log_crypto_err_code(const char* str, unsigned long err)
 }
 
 #ifdef HAVE_SSL
-/** Print crypt erro with SSL_get_error want code and err_get_error code */
+/** Print crypt error with SSL_get_error want code and err_get_error code */
 static void log_crypto_err_io_code_arg(const char* str, int r,
 	unsigned long err, int err_present)
 {
@@ -1198,6 +1207,7 @@ static int doh_alpn_select_cb(SSL* ATTR_UNUSED(ssl), const unsigned char** out,
 }
 #endif
 
+#ifdef HAVE_SSL
 /* setup the callback for ticket keys */
 static int
 setup_ticket_keys_cb(void* sslctx)
@@ -1213,7 +1223,7 @@ setup_ticket_keys_cb(void* sslctx)
 #  endif
 	return 1;
 }
-
+#endif /* HAVE_SSL */
 
 int
 listen_sslctx_setup(void* ctxt)
@@ -1246,6 +1256,14 @@ listen_sslctx_setup(void* ctxt)
 	if((SSL_CTX_set_options(ctx, SSL_OP_NO_TLSv1_1) & SSL_OP_NO_TLSv1_1)
 		!= SSL_OP_NO_TLSv1_1){
 		log_crypto_err("could not set SSL_OP_NO_TLSv1_1");
+		return 0;
+	}
+#endif
+#if defined(SSL_OP_NO_TLSv1_2) && defined(SSL_OP_NO_TLSv1_3)
+	/* if we have tls 1.3 disable 1.2 */
+	if((SSL_CTX_set_options(ctx, SSL_OP_NO_TLSv1_2) & SSL_OP_NO_TLSv1_2)
+		!= SSL_OP_NO_TLSv1_2){
+		log_crypto_err("could not set SSL_OP_NO_TLSv1_2");
 		return 0;
 	}
 #endif
@@ -1302,7 +1320,7 @@ listen_sslctx_setup_2(void* ctxt)
 	if(!SSL_CTX_set_ecdh_auto(ctx,1)) {
 		log_crypto_err("Error in SSL_CTX_ecdh_auto, not enabling ECDHE");
 	}
-#elif defined(USE_ECDSA) && defined(HAVE_SSL_CTX_SET_TMP_ECDH)
+#elif defined(USE_ECDSA) && HAVE_DECL_SSL_CTX_SET_TMP_ECDH
 	if(1) {
 		EC_KEY *ecdh = EC_KEY_new_by_curve_name (NID_X9_62_prime256v1);
 		if (!ecdh) {
@@ -1393,6 +1411,8 @@ void* listen_sslctx_create(const char* key, const char* pem,
 			return NULL;
 		}
 	}
+#else
+	(void)tls_ciphersuites; /* variable unused. */
 #endif /* HAVE_SSL_CTX_SET_CIPHERSUITES */
 	if(set_ticket_keys_cb) {
 		if(!setup_ticket_keys_cb(ctx)) {
@@ -1415,7 +1435,7 @@ void* listen_sslctx_create(const char* key, const char* pem,
 #else
 	(void)key; (void)pem; (void)verifypem;
 	(void)tls_ciphers; (void)tls_ciphersuites;
-	(void)tls_session_ticket_keys;
+	(void)set_ticket_keys_cb; (void)is_dot; (void)is_doh;
 	return NULL;
 #endif /* HAVE_SSL */
 }
@@ -1938,6 +1958,7 @@ int tls_session_ticket_key_cb(SSL *ATTR_UNUSED(sslctx), unsigned char* key_name,
 }
 #endif /* HAVE_SSL */
 
+#ifdef HAVE_SSL
 void
 listen_sslctx_delete_ticket_keys(void)
 {
@@ -1955,6 +1976,7 @@ listen_sslctx_delete_ticket_keys(void)
 	free(ticket_keys);
 	ticket_keys = NULL;
 }
+#endif /* HAVE_SSL */
 
 #  ifndef USE_WINSOCK
 char*

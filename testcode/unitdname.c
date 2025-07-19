@@ -476,6 +476,23 @@ dname_test_removelabel(void)
 	unit_assert( l == 1 );
 }
 
+/** test dname_remove_label_limit_len */
+static void
+dname_test_removelabellimitlen(void)
+{
+	uint8_t* orig = (uint8_t*)"\007example\003com\000";
+	uint8_t* n = orig;
+	size_t l = 13;
+	size_t lenlimit = 5; /* com.*/
+	unit_show_func("util/data/dname.c", "dname_remove_label_limit_len");
+	unit_assert(dname_remove_label_limit_len(&n, &l, lenlimit) == 1);
+	unit_assert( n == orig+8 );
+	unit_assert( l == 5 );
+	unit_assert(dname_remove_label_limit_len(&n, &l, lenlimit) == 0);
+	unit_assert( n == orig+8 );
+	unit_assert( l == 5 );
+}
+
 /** test dname_signame_label_count */
 static void
 dname_test_sigcount(void)
@@ -998,7 +1015,7 @@ dname_test_str(sldns_buffer* buff)
 		unit_assert( pkt_dname_len(buff) == 3);
 		dname_str(sldns_buffer_begin(buff), result);
 		if(strcmp( "?.", result) != 0 ) {
-			log_err("ASCII value '0x%lX' allowed in string output", i);
+			log_err("ASCII value '0x%lX' allowed in string output", (unsigned long)i);
 			unit_assert(0);
 		}
 	}
@@ -1024,6 +1041,7 @@ void dname_test(void)
 	dname_test_subdomain();
 	dname_test_isroot();
 	dname_test_removelabel();
+	dname_test_removelabellimitlen();
 	dname_test_sigcount();
 	dname_test_iswild();
 	dname_test_canoncmp();

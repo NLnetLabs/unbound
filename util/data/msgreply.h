@@ -554,11 +554,13 @@ void log_dns_msg(const char* str, struct query_info* qinfo,
  * @param rmsg: sldns buffer packet.
  * @param daddr: if not NULL, the destination address and port are logged.
  * @param tp: type of the comm point for logging destination connection type.
+ * @param ssl: the SSL pointer of the connection, to see if the connection
+ *	type is tcp or dot.
  */
 void log_reply_info(enum verbosity_value v, struct query_info *qinf,
 	struct sockaddr_storage *addr, socklen_t addrlen, struct timeval dur,
 	int cached, struct sldns_buffer *rmsg, struct sockaddr_storage* daddr,
-	enum comm_point_type tp);
+	enum comm_point_type tp, void* ssl);
 
 /**
  * Print string with neat domain name, type, class from query info.
@@ -798,5 +800,15 @@ int edns_opt_compare(struct edns_option* p, struct edns_option* q);
  * Compare edns option lists, also the order and contents of edns-options.
  */
 int edns_opt_list_compare(struct edns_option* p, struct edns_option* q);
+
+/**
+ * Swallow copy the local_alias into the given qname and qname_len.
+ * @param local_alias: the local_alias.
+ * @param qname: the qname to copy to.
+ * @param qname_len: the qname_len to copy to.
+ * @return false on current local_alias assumptions, true otherwise.
+ */
+int local_alias_shallow_copy_qname(struct local_rrset* local_alias, uint8_t** qname,
+	size_t* qname_len);
 
 #endif /* UTIL_DATA_MSGREPLY_H */

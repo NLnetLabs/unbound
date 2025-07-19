@@ -343,6 +343,9 @@ enum sldns_enum_rdf_type
         /** 8 * 8 bit hex numbers separated by dashes. For EUI64. */
         LDNS_RDF_TYPE_EUI64,
 
+	/** Character string without quotes. */
+	LDNS_RDF_TYPE_UNQUOTED,
+
         /** A non-zero sequence of US-ASCII letters and numbers in lower case.
          *  For CAA.
          */
@@ -440,6 +443,7 @@ enum sldns_enum_edns_option
 	LDNS_EDNS_PADDING = 12, /* RFC7830 */
 	LDNS_EDNS_EDE = 15, /* RFC8914 */
 	LDNS_EDNS_CLIENT_TAG = 16, /* draft-bellis-dnsop-edns-tags-01 */
+	LDNS_EDNS_REPORT_CHANNEL = 18, /* RFC9567 */
 	LDNS_EDNS_UNBOUND_CACHEDB_TESTFRAME_TEST = 65534
 };
 typedef enum sldns_enum_edns_option sldns_edns_option;

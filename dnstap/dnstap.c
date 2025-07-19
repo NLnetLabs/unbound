@@ -192,8 +192,11 @@ static void
 dt_apply_identity(struct dt_env *env, struct config_file *cfg)
 {
 	char buf[MAXHOSTNAMELEN+1];
-	if (!cfg->dnstap_send_identity)
+	if (!cfg->dnstap_send_identity) {
+		free(env->identity);
+		env->identity = NULL;
 		return;
+	}
 	free(env->identity);
 	if (cfg->dnstap_identity == NULL || cfg->dnstap_identity[0] == 0) {
 		if (gethostname(buf, MAXHOSTNAMELEN) == 0) {
@@ -215,8 +218,11 @@ dt_apply_identity(struct dt_env *env, struct config_file *cfg)
 static void
 dt_apply_version(struct dt_env *env, struct config_file *cfg)
 {
-	if (!cfg->dnstap_send_version)
+	if (!cfg->dnstap_send_version) {
+		free(env->version);
+		env->version = NULL;
 		return;
+	}
 	free(env->version);
 	if (cfg->dnstap_version == NULL || cfg->dnstap_version[0] == 0)
 		env->version = strdup(PACKAGE_STRING);
@@ -230,13 +236,8 @@ dt_apply_version(struct dt_env *env, struct config_file *cfg)
 }
 
 void
-dt_apply_cfg(struct dt_env *env, struct config_file *cfg)
+dt_apply_logcfg(struct dt_env *env, struct config_file *cfg)
 {
-	if (!cfg->dnstap)
-		return;
-
-	dt_apply_identity(env, cfg);
-	dt_apply_version(env, cfg);
 	if ((env->log_resolver_query_messages = (unsigned int)
 	     cfg->dnstap_log_resolver_query_messages))
 	{
@@ -273,6 +274,17 @@ dt_apply_cfg(struct dt_env *env, struct config_file *cfg)
 		verbose(VERB_OPS, "dnstap SAMPLE_RATE enabled and set to \"%d\"", (int)env->sample_rate);
 	}
 	lock_basic_unlock(&env->sample_lock);
+}
+
+void
+dt_apply_cfg(struct dt_env *env, struct config_file *cfg)
+{
+	if (!cfg->dnstap)
+		return;
+
+	dt_apply_identity(env, cfg);
+	dt_apply_version(env, cfg);
+	dt_apply_logcfg(env, cfg);
 }
 
 int
@@ -530,7 +542,7 @@ dt_msg_send_outside_query(struct dt_env *env,
 	qflags = sldns_buffer_read_u16_at(qmsg, 2);
 
 	/* type */
-	if (qflags & BIT_RD) {
+	if ((qflags & BIT_RD)) {
 		if (!env->log_forwarder_query_messages)
 			return;
 		dt_msg_init(env, &dm, DNSTAP__MESSAGE__TYPE__FORWARDER_QUERY);
@@ -587,7 +599,7 @@ dt_msg_send_outside_response(struct dt_env *env,
 	qflags = ntohs(qflags);
 
 	/* type */
-	if (qflags & BIT_RD) {
+	if ((qflags & BIT_RD)) {
 		if (!env->log_forwarder_response_messages)
 			return;
 		dt_msg_init(env, &dm, DNSTAP__MESSAGE__TYPE__FORWARDER_RESPONSE);

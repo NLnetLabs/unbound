@@ -630,8 +630,9 @@ int libworker_fg(struct ub_ctx* ctx, struct ctx_query* q)
 		free(qinfo.qname);
 		return UB_NOERROR;
 	}
-	if(ctx->env->auth_zones && auth_zones_answer(ctx->env->auth_zones,
-		w->env, &qinfo, &edns, NULL, w->back->udp_buff, w->env->scratch)) {
+	if(ctx->env->auth_zones && auth_zones_downstream_answer(
+		ctx->env->auth_zones, w->env, &qinfo, &edns, NULL,
+		w->back->udp_buff, w->env->scratch)) {
 		regional_free_all(w->env->scratch);
 		libworker_fillup_fg(q, LDNS_RCODE_NOERROR, 
 			w->back->udp_buff, sec_status_insecure, NULL, 0);
@@ -709,8 +710,9 @@ int libworker_attach_mesh(struct ub_ctx* ctx, struct ctx_query* q,
 			w->back->udp_buff, sec_status_insecure, NULL, 0);
 		return UB_NOERROR;
 	}
-	if(ctx->env->auth_zones && auth_zones_answer(ctx->env->auth_zones,
-		w->env, &qinfo, &edns, NULL, w->back->udp_buff, w->env->scratch)) {
+	if(ctx->env->auth_zones && auth_zones_downstream_answer(
+		ctx->env->auth_zones, w->env, &qinfo, &edns, NULL,
+		w->back->udp_buff, w->env->scratch)) {
 		regional_free_all(w->env->scratch);
 		free(qinfo.qname);
 		libworker_event_done_cb(q, LDNS_RCODE_NOERROR,
@@ -847,8 +849,9 @@ handle_newq(struct libworker* w, uint8_t* buf, uint32_t len)
 		free(qinfo.qname);
 		return;
 	}
-	if(w->ctx->env->auth_zones && auth_zones_answer(w->ctx->env->auth_zones,
-		w->env, &qinfo, &edns, NULL, w->back->udp_buff, w->env->scratch)) {
+	if(w->ctx->env->auth_zones && auth_zones_downstream_answer(
+		w->ctx->env->auth_zones, w->env, &qinfo, &edns, NULL,
+		w->back->udp_buff, w->env->scratch)) {
 		regional_free_all(w->env->scratch);
 		q->msg_security = sec_status_insecure;
 		add_bg_result(w, q, w->back->udp_buff, UB_NOERROR, NULL, 0);
@@ -1058,6 +1061,20 @@ void dtio_mainfdcallback(int ATTR_UNUSED(fd), short ATTR_UNUSED(ev),
 	log_assert(0);
 }
 #endif
+
+void fast_reload_service_cb(int ATTR_UNUSED(fd), short ATTR_UNUSED(ev),
+	void* ATTR_UNUSED(arg))
+{
+	log_assert(0);
+}
+
+int fast_reload_client_callback(struct comm_point* ATTR_UNUSED(c),
+	void* ATTR_UNUSED(arg), int ATTR_UNUSED(error),
+        struct comm_reply* ATTR_UNUSED(repinfo))
+{
+	log_assert(0);
+	return 0;
+}
 
 #ifdef HAVE_NGTCP2
 void doq_client_event_cb(int ATTR_UNUSED(fd), short ATTR_UNUSED(ev),

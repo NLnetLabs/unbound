@@ -515,6 +515,21 @@ void infra_wait_limit_inc(struct infra_cache* infra, struct comm_reply* rep,
 void infra_wait_limit_dec(struct infra_cache* infra, struct comm_reply* rep,
 	struct config_file* cfg);
 
+/** setup wait limits tree (0 on failure) */
+int setup_wait_limits(struct rbtree_type* wait_limits_netblock,
+	struct rbtree_type* wait_limits_cookie_netblock,
+	struct config_file* cfg);
+
+/** Free the wait limits and wait cookie limits tree. */
+void wait_limits_free(struct rbtree_type* wait_limits_tree);
+
+/** setup domain limits tree (0 on failure) */
+int setup_domain_limits(struct rbtree_type* domain_limits,
+	struct config_file* cfg);
+
+/** Free the domain limits tree. */
+void domain_limits_free(struct rbtree_type* domain_limits);
+
 /** exported for unit test */
 int still_useful_timeout();
 

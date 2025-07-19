@@ -1173,17 +1173,53 @@ anchors_lookup(struct val_anchors* anchors,
 	return result;
 }
 
+/** Get memory usage of assembled key rrset */
+static size_t
+assembled_rrset_get_mem(struct ub_packed_rrset_key* pkey)
+{
+	size_t s;
+	if(!pkey)
+		return 0;
+	s = sizeof(*pkey) + pkey->rk.dname_len;
+	if(pkey->entry.data) {
+		struct packed_rrset_data* pd = (struct packed_rrset_data*)
+			pkey->entry.data;
+		s += sizeof(*pd) + pd->count * (sizeof(size_t)+sizeof(time_t)+
+			sizeof(uint8_t*));
+	}
+	return s;
+}
+
 size_t 
 anchors_get_mem(struct val_anchors* anchors)
 {
 	struct trust_anchor *ta;
-	size_t s = sizeof(*anchors);
-	if(!anchors)
-		return 0;
+	struct ta_key *k;
+	size_t s;
+	if(!anchors) return 0;
+	s = sizeof(*anchors);
+	lock_basic_lock(&anchors->lock);
 	RBTREE_FOR(ta, struct trust_anchor*, anchors->tree) {
+		lock_basic_lock(&ta->lock);
 		s += sizeof(*ta) + ta->namelen;
 		/* keys and so on */
+		for(k = ta->keylist; k; k = k->next) {
+			s += sizeof(*k) + k->len;
+		}
+		s += assembled_rrset_get_mem(ta->ds_rrset);
+		s += assembled_rrset_get_mem(ta->dnskey_rrset);
+		if(ta->autr) {
+			struct autr_ta* p;
+			s += sizeof(*ta->autr);
+			if(ta->autr->file)
+				s += strlen(ta->autr->file);
+			for(p = ta->autr->keys; p; p=p->next) {
+				s += sizeof(*p) + p->rr_len;
+			}
+		}
+		lock_basic_unlock(&ta->lock);
 	}
+	lock_basic_unlock(&anchors->lock);
 	return s;
 }
 
@@ -1345,4 +1381,23 @@ anchors_find_any_noninsecure(struct val_anchors* anchors)
 	}
 	lock_basic_unlock(&anchors->lock);
 	return NULL;
+}
+
+void
+anchors_swap_tree(struct val_anchors* anchors, struct val_anchors* data)
+{
+	rbtree_type* oldtree;
+	rbtree_type oldprobe;
+
+	if(!anchors || !data)
+		return; /* If anchors is NULL, there is no validation. */
+
+	oldtree = anchors->tree;
+	oldprobe = anchors->autr->probe;
+
+	anchors->tree = data->tree;
+	anchors->autr->probe = data->autr->probe;
+
+	data->tree = oldtree;
+	data->autr->probe = oldprobe;
 }

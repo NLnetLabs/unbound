@@ -816,3 +816,14 @@ log_acl_action(const char* action, struct sockaddr_storage* addr,
 			(int)port);
 	}
 }
+
+void acl_list_swap_tree(struct acl_list* acl, struct acl_list* data)
+{
+	/* swap tree and region */
+	rbtree_type oldtree = acl->tree;
+	struct regional* oldregion = acl->region;
+	acl->tree = data->tree;
+	acl->region = data->region;
+	data->tree = oldtree;
+	data->region = oldregion;
+}

@@ -161,7 +161,7 @@ rate_deldatafunc(void* d, void* ATTR_UNUSED(arg))
 
 /** find or create element in domainlimit tree */
 static struct domain_limit_data* domain_limit_findcreate(
-	struct infra_cache* infra, char* name)
+	struct rbtree_type* domain_limits, char* name)
 {
 	uint8_t* nm;
 	int labs;
@@ -177,8 +177,8 @@ static struct domain_limit_data* domain_limit_findcreate(
 	labs = dname_count_labels(nm);
 
 	/* can we find it? */
-	d = (struct domain_limit_data*)name_tree_find(&infra->domain_limits,
-		nm, nmlen, labs, LDNS_RR_CLASS_IN);
+	d = (struct domain_limit_data*)name_tree_find(domain_limits, nm,
+		nmlen, labs, LDNS_RR_CLASS_IN);
 	if(d) {
 		free(nm);
 		return d;
@@ -197,8 +197,8 @@ static struct domain_limit_data* domain_limit_findcreate(
 	d->node.dclass = LDNS_RR_CLASS_IN;
 	d->lim = -1;
 	d->below = -1;
-	if(!name_tree_insert(&infra->domain_limits, &d->node, nm, nmlen,
-		labs, LDNS_RR_CLASS_IN)) {
+	if(!name_tree_insert(domain_limits, &d->node, nm, nmlen, labs,
+		LDNS_RR_CLASS_IN)) {
 		log_err("duplicate element in domainlimit tree");
 		free(nm);
 		free(d);
@@ -208,19 +208,19 @@ static struct domain_limit_data* domain_limit_findcreate(
 }
 
 /** insert rate limit configuration into lookup tree */
-static int infra_ratelimit_cfg_insert(struct infra_cache* infra,
+static int infra_ratelimit_cfg_insert(struct rbtree_type* domain_limits,
 	struct config_file* cfg)
 {
 	struct config_str2list* p;
 	struct domain_limit_data* d;
 	for(p = cfg->ratelimit_for_domain; p; p = p->next) {
-		d = domain_limit_findcreate(infra, p->str);
+		d = domain_limit_findcreate(domain_limits, p->str);
 		if(!d)
 			return 0;
 		d->lim = atoi(p->str2);
 	}
 	for(p = cfg->ratelimit_below_domain; p; p = p->next) {
-		d = domain_limit_findcreate(infra, p->str);
+		d = domain_limit_findcreate(domain_limits, p->str);
 		if(!d)
 			return 0;
 		d->below = atoi(p->str2);
@@ -228,24 +228,21 @@ static int infra_ratelimit_cfg_insert(struct infra_cache* infra,
 	return 1;
 }
 
-/** setup domain limits tree (0 on failure) */
-static int
-setup_domain_limits(struct infra_cache* infra, struct config_file* cfg)
+int
+setup_domain_limits(struct rbtree_type* domain_limits, struct config_file* cfg)
 {
-	name_tree_init(&infra->domain_limits);
-	if(!infra_ratelimit_cfg_insert(infra, cfg)) {
+	name_tree_init(domain_limits);
+	if(!infra_ratelimit_cfg_insert(domain_limits, cfg)) {
 		return 0;
 	}
-	name_tree_init_parents(&infra->domain_limits);
+	name_tree_init_parents(domain_limits);
 	return 1;
 }
 
 /** find or create element in wait limit netblock tree */
 static struct wait_limit_netblock_info*
-wait_limit_netblock_findcreate(struct infra_cache* infra, char* str,
-	int cookie)
+wait_limit_netblock_findcreate(struct rbtree_type* tree, char* str)
 {
-	rbtree_type* tree;
 	struct sockaddr_storage addr;
 	int net;
 	socklen_t addrlen;
@@ -257,10 +254,6 @@ wait_limit_netblock_findcreate(struct infra_cache* infra, char* str,
 	}
 
 	/* can we find it? */
-	if(cookie)
-		tree = &infra->wait_limits_cookie_netblock;
-	else
-		tree = &infra->wait_limits_netblock;
 	d = (struct wait_limit_netblock_info*)addr_tree_find(tree, &addr,
 		addrlen, net);
 	if(d)
@@ -282,19 +275,21 @@ wait_limit_netblock_findcreate(struct infra_cache* infra, char* str,
 
 /** insert wait limit information into lookup tree */
 static int
-infra_wait_limit_netblock_insert(struct infra_cache* infra,
-	struct config_file* cfg)
+infra_wait_limit_netblock_insert(rbtree_type* wait_limits_netblock,
+        rbtree_type* wait_limits_cookie_netblock, struct config_file* cfg)
 {
 	struct config_str2list* p;
 	struct wait_limit_netblock_info* d;
 	for(p = cfg->wait_limit_netblock; p; p = p->next) {
-		d = wait_limit_netblock_findcreate(infra, p->str, 0);
+		d = wait_limit_netblock_findcreate(wait_limits_netblock,
+			p->str);
 		if(!d)
 			return 0;
 		d->limit = atoi(p->str2);
 	}
 	for(p = cfg->wait_limit_cookie_netblock; p; p = p->next) {
-		d = wait_limit_netblock_findcreate(infra, p->str, 1);
+		d = wait_limit_netblock_findcreate(wait_limits_cookie_netblock,
+			p->str);
 		if(!d)
 			return 0;
 		d->limit = atoi(p->str2);
@@ -302,16 +297,48 @@ infra_wait_limit_netblock_insert(struct infra_cache* infra,
 	return 1;
 }
 
-/** setup wait limits tree (0 on failure) */
+/** Add a default wait limit netblock */
 static int
-setup_wait_limits(struct infra_cache* infra, struct config_file* cfg)
+wait_limit_netblock_default(struct rbtree_type* tree, char* str, int limit)
 {
-	addr_tree_init(&infra->wait_limits_netblock);
-	addr_tree_init(&infra->wait_limits_cookie_netblock);
-	if(!infra_wait_limit_netblock_insert(infra, cfg))
+	struct wait_limit_netblock_info* d;
+	d = wait_limit_netblock_findcreate(tree, str);
+	if(!d)
 		return 0;
-	addr_tree_init_parents(&infra->wait_limits_netblock);
-	addr_tree_init_parents(&infra->wait_limits_cookie_netblock);
+	d->limit = limit;
+	return 1;
+}
+
+int
+setup_wait_limits(rbtree_type* wait_limits_netblock,
+	rbtree_type* wait_limits_cookie_netblock, struct config_file* cfg)
+{
+	addr_tree_init(wait_limits_netblock);
+	addr_tree_init(wait_limits_cookie_netblock);
+
+	/* Insert defaults */
+	/* The loopback address is separated from the rest of the network. */
+	/* wait-limit-netblock: 127.0.0.0/8 -1 */
+	if(!wait_limit_netblock_default(wait_limits_netblock, "127.0.0.0/8",
+		-1))
+		return 0;
+	/* wait-limit-netblock: ::1/128 -1 */
+	if(!wait_limit_netblock_default(wait_limits_netblock, "::1/128", -1))
+		return 0;
+	/* wait-limit-cookie-netblock: 127.0.0.0/8 -1 */
+	if(!wait_limit_netblock_default(wait_limits_cookie_netblock,
+		"127.0.0.0/8", -1))
+		return 0;
+	/* wait-limit-cookie-netblock: ::1/128 -1 */
+	if(!wait_limit_netblock_default(wait_limits_cookie_netblock,
+		"::1/128", -1))
+		return 0;
+
+	if(!infra_wait_limit_netblock_insert(wait_limits_netblock,
+		wait_limits_cookie_netblock, cfg))
+		return 0;
+	addr_tree_init_parents(wait_limits_netblock);
+	addr_tree_init_parents(wait_limits_cookie_netblock);
 	return 1;
 }
 
@@ -344,11 +371,12 @@ infra_create(struct config_file* cfg)
 		return NULL;
 	}
 	/* insert config data into ratelimits */
-	if(!setup_domain_limits(infra, cfg)) {
+	if(!setup_domain_limits(&infra->domain_limits, cfg)) {
 		infra_delete(infra);
 		return NULL;
 	}
-	if(!setup_wait_limits(infra, cfg)) {
+	if(!setup_wait_limits(&infra->wait_limits_netblock,
+		&infra->wait_limits_cookie_netblock, cfg)) {
 		infra_delete(infra);
 		return NULL;
 	}
@@ -373,10 +401,27 @@ static void domain_limit_free(rbnode_type* n, void* ATTR_UNUSED(arg))
 	}
 }
 
+void
+domain_limits_free(struct rbtree_type* domain_limits)
+{
+	if(!domain_limits)
+		return;
+	traverse_postorder(domain_limits, domain_limit_free, NULL);
+}
+
 /** delete wait_limit_netblock_info entries */
 static void wait_limit_netblock_del(rbnode_type* n, void* ATTR_UNUSED(arg))
 {
 	free(n);
+}
+
+void
+wait_limits_free(struct rbtree_type* wait_limits_tree)
+{
+	if(!wait_limits_tree)
+		return;
+	traverse_postorder(wait_limits_tree, wait_limit_netblock_del,
+		NULL);
 }
 
 void 
@@ -386,12 +431,10 @@ infra_delete(struct infra_cache* infra)
 		return;
 	slabhash_delete(infra->hosts);
 	slabhash_delete(infra->domain_rates);
-	traverse_postorder(&infra->domain_limits, domain_limit_free, NULL);
+	domain_limits_free(&infra->domain_limits);
 	slabhash_delete(infra->client_ip_rates);
-	traverse_postorder(&infra->wait_limits_netblock,
-		wait_limit_netblock_del, NULL);
-	traverse_postorder(&infra->wait_limits_cookie_netblock,
-		wait_limit_netblock_del, NULL);
+	wait_limits_free(&infra->wait_limits_netblock);
+	wait_limits_free(&infra->wait_limits_cookie_netblock);
 	free(infra);
 }
 
@@ -422,7 +465,7 @@ infra_adjust(struct infra_cache* infra, struct config_file* cfg)
 		/* reapply domain limits */
 		traverse_postorder(&infra->domain_limits, domain_limit_free,
 			NULL);
-		if(!setup_domain_limits(infra, cfg)) {
+		if(!setup_domain_limits(&infra->domain_limits, cfg)) {
 			infra_delete(infra);
 			return NULL;
 		}

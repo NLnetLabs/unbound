@@ -155,7 +155,7 @@ config_create(void)
 #  else
 	/* libevent can use many sockets */
 	cfg->outgoing_num_ports = 4096;
-	cfg->num_queries_per_thread = 1024;
+	cfg->num_queries_per_thread = 2048;
 #  endif
 	cfg->outgoing_num_tcp = 10;
 	cfg->incoming_num_tcp = 10;
@@ -169,10 +169,10 @@ config_create(void)
 	cfg->edns_buffer_size = 1232; /* from DNS flagday recommendation */
 	cfg->msg_buffer_size = 65552; /* 64 k + a small margin */
 	cfg->msg_cache_size = 4 * 1024 * 1024;
-	cfg->msg_cache_slabs = 4;
+	cfg->msg_cache_slabs = 0;
 	cfg->jostle_time = 200;
 	cfg->rrset_cache_size = 4 * 1024 * 1024;
-	cfg->rrset_cache_slabs = 4;
+	cfg->rrset_cache_slabs = 0;
 	cfg->host_ttl = 900;
 	cfg->bogus_ttl = 60;
 	cfg->min_ttl = 0;
@@ -182,7 +182,7 @@ config_create(void)
 	cfg->prefetch = 0;
 	cfg->prefetch_key = 0;
 	cfg->deny_any = 0;
-	cfg->infra_cache_slabs = 4;
+	cfg->infra_cache_slabs = 0;
 	cfg->infra_cache_numhosts = 10000;
 	cfg->infra_cache_min_rtt = 50;
 	cfg->infra_cache_max_rtt = 120000;
@@ -210,7 +210,7 @@ config_create(void)
 	cfg->if_automatic = 0;
 	cfg->if_automatic_ports = NULL;
 	cfg->so_rcvbuf = 0;
-	cfg->so_sndbuf = 0;
+	cfg->so_sndbuf = 4*1024*1024;
 	cfg->so_reuseport = REUSEPORT_DEFAULT;
 	cfg->ip_transparent = 0;
 	cfg->ip_freebind = 0;
@@ -286,7 +286,6 @@ config_create(void)
 	cfg->serve_expired_ttl_reset = 0;
 	cfg->serve_expired_reply_ttl = 30;
 	cfg->serve_expired_client_timeout = 1800;
-	cfg->ede_serve_expired = 0;
 	cfg->serve_original_ttl = 0;
 	cfg->zonemd_permissive_mode = 0;
 	cfg->add_holddown = 30*24*3600;
@@ -294,7 +293,7 @@ config_create(void)
 	cfg->keep_missing = 366*24*3600; /* one year plus a little leeway */
 	cfg->permit_small_holddown = 0;
 	cfg->key_cache_size = 4 * 1024 * 1024;
-	cfg->key_cache_slabs = 4;
+	cfg->key_cache_slabs = 0;
 	cfg->neg_cache_size = 1 * 1024 * 1024;
 	cfg->local_zones = NULL;
 	cfg->local_zones_nodefault = NULL;
@@ -344,8 +343,8 @@ config_create(void)
 	cfg->ip_ratelimit_cookie = 0;
 	cfg->ip_ratelimit = 0;
 	cfg->ratelimit = 0;
-	cfg->ip_ratelimit_slabs = 4;
-	cfg->ratelimit_slabs = 4;
+	cfg->ip_ratelimit_slabs = 0;
+	cfg->ratelimit_slabs = 0;
 	cfg->ip_ratelimit_size = 4*1024*1024;
 	cfg->ratelimit_size = 4*1024*1024;
 	cfg->ratelimit_for_domain = NULL;
@@ -370,9 +369,9 @@ config_create(void)
 	cfg->dnscrypt_provider_cert_rotated = NULL;
 	cfg->dnscrypt_secret_key = NULL;
 	cfg->dnscrypt_shared_secret_cache_size = 4*1024*1024;
-	cfg->dnscrypt_shared_secret_cache_slabs = 4;
+	cfg->dnscrypt_shared_secret_cache_slabs = 0;
 	cfg->dnscrypt_nonce_cache_size = 4*1024*1024;
-	cfg->dnscrypt_nonce_cache_slabs = 4;
+	cfg->dnscrypt_nonce_cache_slabs = 0;
 	cfg->pad_responses = 1;
 	cfg->pad_responses_block_size = 468; /* from RFC8467 */
 	cfg->pad_queries = 1;
@@ -397,14 +396,22 @@ config_create(void)
 	cfg->cachedb_check_when_serve_expired = 1;
 #ifdef USE_REDIS
 	if(!(cfg->redis_server_host = strdup("127.0.0.1"))) goto error_exit;
+	if(!(cfg->redis_replica_server_host = strdup(""))) goto error_exit;
 	cfg->redis_server_path = NULL;
+	cfg->redis_replica_server_path = NULL;
 	cfg->redis_server_password = NULL;
+	cfg->redis_replica_server_password = NULL;
 	cfg->redis_timeout = 100;
+	cfg->redis_replica_timeout = 100;
 	cfg->redis_command_timeout = 0;
+	cfg->redis_replica_command_timeout = 0;
 	cfg->redis_connect_timeout = 0;
+	cfg->redis_replica_connect_timeout = 0;
 	cfg->redis_server_port = 6379;
+	cfg->redis_replica_server_port = 6379;
 	cfg->redis_expire_records = 0;
 	cfg->redis_logical_db = 0;
+	cfg->redis_replica_logical_db = 0;
 #endif  /* USE_REDIS */
 #endif  /* USE_CACHEDB */
 #ifdef USE_IPSET
@@ -412,6 +419,8 @@ config_create(void)
 	cfg->ipset_name_v6 = NULL;
 #endif
 	cfg->ede = 0;
+	cfg->ede_serve_expired = 0;
+	cfg->dns_error_reporting = 0;
 	cfg->iter_scrub_ns = 20;
 	cfg->iter_scrub_cname = 11;
 	cfg->max_global_quota = 200;
@@ -447,6 +456,11 @@ struct config_file* config_create_forlib(void)
 	cfg->val_log_squelch = 1;
 	cfg->minimal_responses = 0;
 	cfg->harden_short_bufsize = 1;
+	/* Need to explicitly define the slabs from their 0 default value */
+	cfg->ip_ratelimit_slabs = 1;
+	cfg->ratelimit_slabs = 1;
+	cfg->dnscrypt_shared_secret_cache_slabs = 1;
+	cfg->dnscrypt_nonce_cache_slabs = 1;
 	return cfg;
 }
 
@@ -750,6 +764,7 @@ int config_set_option(struct config_file* cfg, const char* opt,
 	else S_NUMBER_OR_ZERO("serve-expired-client-timeout:", serve_expired_client_timeout)
 	else S_YNO("ede:", ede)
 	else S_YNO("ede-serve-expired:", ede_serve_expired)
+	else S_YNO("dns-error-reporting:", dns_error_reporting)
 	else S_NUMBER_OR_ZERO("iter-scrub-ns:", iter_scrub_ns)
 	else S_NUMBER_OR_ZERO("iter-scrub-cname:", iter_scrub_cname)
 	else S_NUMBER_OR_ZERO("max-global-quota:", max_global_quota)
@@ -1226,6 +1241,7 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_DEC(opt, "serve-expired-client-timeout", serve_expired_client_timeout)
 	else O_YNO(opt, "ede", ede)
 	else O_YNO(opt, "ede-serve-expired", ede_serve_expired)
+	else O_YNO(opt, "dns-error-reporting", dns_error_reporting)
 	else O_DEC(opt, "iter-scrub-ns", iter_scrub_ns)
 	else O_DEC(opt, "iter-scrub-cname", iter_scrub_cname)
 	else O_DEC(opt, "max-global-quota", max_global_quota)
@@ -1391,14 +1407,22 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_YNO(opt, "cachedb-check-when-serve-expired", cachedb_check_when_serve_expired)
 #ifdef USE_REDIS
 	else O_STR(opt, "redis-server-host", redis_server_host)
+	else O_STR(opt, "redis-replica-server-host", redis_replica_server_host)
 	else O_DEC(opt, "redis-server-port", redis_server_port)
+	else O_DEC(opt, "redis-replica-server-port", redis_replica_server_port)
 	else O_STR(opt, "redis-server-path", redis_server_path)
+	else O_STR(opt, "redis-replica-server-path", redis_replica_server_path)
 	else O_STR(opt, "redis-server-password", redis_server_password)
+	else O_STR(opt, "redis-replica-server-password", redis_replica_server_password)
 	else O_DEC(opt, "redis-timeout", redis_timeout)
+	else O_DEC(opt, "redis-replica-timeout", redis_replica_timeout)
 	else O_DEC(opt, "redis-command-timeout", redis_command_timeout)
+	else O_DEC(opt, "redis-replica-command-timeout", redis_replica_command_timeout)
 	else O_DEC(opt, "redis-connect-timeout", redis_connect_timeout)
+	else O_DEC(opt, "redis-replica-connect-timeout", redis_replica_connect_timeout)
 	else O_YNO(opt, "redis-expire-records", redis_expire_records)
 	else O_DEC(opt, "redis-logical-db", redis_logical_db)
+	else O_DEC(opt, "redis-replica-logical-db", redis_replica_logical_db)
 #endif  /* USE_REDIS */
 #endif  /* USE_CACHEDB */
 #ifdef USE_IPSET
@@ -1430,6 +1454,41 @@ create_cfg_parser(struct config_file* cfg, char* filename, const char* chroot)
 	cfg_parser->chroot = chroot;
 	cfg_parser->started_toplevel = 0;
 	init_cfg_parse();
+}
+
+void
+config_auto_slab_values(struct config_file* cfg)
+{
+#define SET_AUTO_SLAB(var, name, val)						\
+do {										\
+	if(cfg->var == 0) {							\
+		cfg->var = val;							\
+		verbose(VERB_QUERY, "setting "name": %lu", (unsigned long)val);	\
+	}									\
+} while(0);
+#ifdef THREADS_DISABLED
+	size_t pow_2_threads = 1;
+#else
+	size_t pow_2_threads = 4;  /* pow2 start */
+	while (pow_2_threads < (size_t)(cfg->num_threads?cfg->num_threads:1) &&
+		/* 1/3 of the distance to the next pow2 value stays with the
+		 * lower value */
+		(size_t)cfg->num_threads > pow_2_threads + (pow_2_threads - 1)/3) {
+		pow_2_threads <<= 1;
+	}
+	log_assert((pow_2_threads & (pow_2_threads - 1)) == 0); /* powerof2? */
+#endif /* THREADS_DISABLED */
+
+	SET_AUTO_SLAB(msg_cache_slabs, "msg-cache-slabs", pow_2_threads);
+	SET_AUTO_SLAB(rrset_cache_slabs, "rrset-cache-slabs", pow_2_threads);
+	SET_AUTO_SLAB(infra_cache_slabs, "infra-cache-slabs", pow_2_threads);
+	SET_AUTO_SLAB(key_cache_slabs, "key-cache-slabs", pow_2_threads);
+	SET_AUTO_SLAB(ip_ratelimit_slabs, "ip-ratelimit-slabs", pow_2_threads);
+	SET_AUTO_SLAB(ratelimit_slabs, "ratelimit-slabs", pow_2_threads);
+	SET_AUTO_SLAB(dnscrypt_shared_secret_cache_slabs,
+		"dnscrypt-shared-secret-cache-slabs", pow_2_threads);
+	SET_AUTO_SLAB(dnscrypt_nonce_cache_slabs,
+		"dnscrypt-nonce-cache-slabs", pow_2_threads);
 }
 
 int
@@ -1496,6 +1555,7 @@ config_read(struct config_file* cfg, const char* filename, const char* chroot)
 			}
 		}
 		globfree(&g);
+		config_auto_slab_values(cfg);
 		return 1;
 	}
 #endif /* HAVE_GLOB */
@@ -1519,6 +1579,7 @@ config_read(struct config_file* cfg, const char* filename, const char* chroot)
 		return 0;
 	}
 
+	config_auto_slab_values(cfg);
 	return 1;
 }
 
@@ -1735,6 +1796,7 @@ config_delete(struct config_file* cfg)
 	config_del_strarray(cfg->tagname, cfg->num_tags);
 	config_del_strbytelist(cfg->local_zone_tags);
 	config_del_strbytelist(cfg->respip_tags);
+	config_deldblstrlist(cfg->respip_actions);
 	config_deldblstrlist(cfg->acl_view);
 	config_del_strbytelist(cfg->acl_tags);
 	config_deltrplstrlist(cfg->acl_tag_actions);
@@ -1778,8 +1840,11 @@ config_delete(struct config_file* cfg)
 	free(cfg->cachedb_secret);
 #ifdef USE_REDIS
 	free(cfg->redis_server_host);
+	free(cfg->redis_replica_server_host);
 	free(cfg->redis_server_path);
+	free(cfg->redis_replica_server_path);
 	free(cfg->redis_server_password);
+	free(cfg->redis_replica_server_password);
 #endif  /* USE_REDIS */
 #endif  /* USE_CACHEDB */
 #ifdef USE_IPSET
@@ -2836,6 +2901,13 @@ if_is_dnscrypt(const char* ifname, int default_port, int dnscrypt_port)
 	(void)dnscrypt_port;
 	return 0;
 #endif
+}
+
+size_t
+getmem_str(char* str)
+{
+	if(!str) return 0;
+	return strlen(str)+1;
 }
 
 int

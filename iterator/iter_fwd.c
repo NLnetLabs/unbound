@@ -139,6 +139,17 @@ forwards_insert_data(struct iter_forwards* fwd, uint16_t c, uint8_t* nm,
 	return 1;
 }
 
+static struct iter_forward_zone*
+fwd_zone_find(struct iter_forwards* fwd, uint16_t c, uint8_t* nm)
+{
+	struct iter_forward_zone key;
+	key.node.key = &key;
+	key.dclass = c;
+	key.name = nm;
+	key.namelabs = dname_count_size_labels(nm, &key.namelen);
+	return (struct iter_forward_zone*)rbtree_search(fwd->tree, &key);
+}
+
 /** insert new info into forward structure given dp */
 static int
 forwards_insert(struct iter_forwards* fwd, uint16_t c, struct delegpt* dp)
@@ -321,6 +332,11 @@ make_stub_holes(struct iter_forwards* fwd, struct config_file* cfg)
 			log_err("cannot parse stub name '%s'", s->name);
 			return 0;
 		}
+		if(fwd_zone_find(fwd, LDNS_RR_CLASS_IN, dname) != NULL) {
+			/* Already a forward zone there. */
+			free(dname);
+			continue;
+		}
 		if(!fwd_add_stub_hole(fwd, LDNS_RR_CLASS_IN, dname)) {
 			free(dname);
 			log_err("out of memory");
@@ -344,6 +360,11 @@ make_auth_holes(struct iter_forwards* fwd, struct config_file* cfg)
 		if(!dname) {
 			log_err("cannot parse auth name '%s'", a->name);
 			return 0;
+		}
+		if(fwd_zone_find(fwd, LDNS_RR_CLASS_IN, dname) != NULL) {
+			/* Already a forward zone there. */
+			free(dname);
+			continue;
 		}
 		if(!fwd_add_stub_hole(fwd, LDNS_RR_CLASS_IN, dname)) {
 			free(dname);
@@ -537,17 +558,6 @@ forwards_get_mem(struct iter_forwards* fwd)
 	return s;
 }
 
-static struct iter_forward_zone*
-fwd_zone_find(struct iter_forwards* fwd, uint16_t c, uint8_t* nm)
-{
-	struct iter_forward_zone key;
-	key.node.key = &key;
-	key.dclass = c;
-	key.name = nm;
-	key.namelabs = dname_count_size_labels(nm, &key.namelen);
-	return (struct iter_forward_zone*)rbtree_search(fwd->tree, &key);
-}
-
 int 
 forwards_add_zone(struct iter_forwards* fwd, uint16_t c, struct delegpt* dp,
 	int nolock)
@@ -623,4 +633,20 @@ forwards_delete_stub_hole(struct iter_forwards* fwd, uint16_t c,
 	fwd_zone_free(z);
 	fwd_init_parents(fwd);
 	if(!nolock) { lock_rw_unlock(&fwd->lock); }
+}
+
+void
+forwards_swap_tree(struct iter_forwards* fwd, struct iter_forwards* data)
+{
+	rbtree_type* oldtree = fwd->tree;
+	if(oldtree) {
+		lock_unprotect(&fwd->lock, oldtree);
+	}
+	if(data->tree) {
+		lock_unprotect(&data->lock, data->tree);
+	}
+	fwd->tree = data->tree;
+	data->tree = oldtree;
+	lock_protect(&fwd->lock, fwd->tree, sizeof(*fwd->tree));
+	lock_protect(&data->lock, data->tree, sizeof(*data->tree));
 }

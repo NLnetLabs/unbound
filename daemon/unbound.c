@@ -174,7 +174,7 @@ static void
 checkrlimits(struct config_file* cfg)
 {
 #ifndef S_SPLINT_S
-#ifdef HAVE_GETRLIMIT
+#if defined(HAVE_GETRLIMIT) && !defined(unbound_testbound)
 	/* list has number of ports to listen to, ifs number addresses */
 	int list = ((cfg->do_udp?1:0) + (cfg->do_tcp?1 + 
 			(int)cfg->incoming_num_tcp:0));
@@ -710,6 +710,9 @@ perform_setup(struct daemon* daemon, struct config_file* cfg, int debug_mode,
 	 * it would succeed on SIGHUP as well */
 	if(!cfg->use_syslog)
 		log_init(cfg->logfile, cfg->use_syslog, cfg->chrootdir);
+	daemon->cfgfile = strdup(*cfgfile);
+	if(!daemon->cfgfile)
+		fatal_exit("out of memory in daemon cfgfile strdup");
 }
 
 /**
@@ -744,6 +747,7 @@ run_daemon(const char* cfgfile, int cmdline_verbose, int debug_mode, int need_pi
 					"the commandline to see more errors, "
 					"or unbound-checkconf", cfgfile);
 			log_warn("Continuing with default config settings");
+			config_auto_slab_values(cfg);
 		}
 		apply_settings(daemon, cfg, cmdline_verbose, debug_mode);
 		if(!done_setup)

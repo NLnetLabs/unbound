@@ -772,6 +772,8 @@ struct ub_server_stats {
 	long long ans_bogus;
 	/** rrsets marked bogus by validator */
 	long long rrset_bogus;
+	/** number of signature validation operations performed by validator */
+	long long val_ops;
 	/** number of queries that have been ratelimited by domain recursion. */
 	long long queries_ratelimited;
 	/** unwanted traffic received on server-facing ports */
@@ -853,6 +855,8 @@ struct ub_server_stats {
 	long long num_queries_discard_timeout;
 	/** number of queries removed due to wait-limit */
 	long long num_queries_wait_limit;
+	/** number of dns error reports generated */
+	long long num_dns_error_reports;
 };
 
 /**

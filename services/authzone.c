@@ -2317,9 +2317,6 @@ auth_free_masters(struct auth_master* list)
 	}
 }
 
-/** delete auth xfer structure
- * @param xfr: delete this xfer and its tasks.
- */
 void
 auth_xfer_delete(struct auth_xfer* xfr)
 {
@@ -2416,14 +2413,12 @@ az_find_wildcard(struct auth_zone* z, struct query_info* qinfo,
 	if(!dname_subdomain_c(nm, z->name))
 		return NULL; /* out of zone */
 	while((node=az_find_wildcard_domain(z, nm, nmlen))==NULL) {
-		/* see if we can go up to find the wildcard */
 		if(nmlen == z->namelen)
 			return NULL; /* top of zone reached */
 		if(ce && nmlen == ce->namelen)
 			return NULL; /* ce reached */
-		if(dname_is_root(nm))
-			return NULL; /* cannot go up */
-		dname_remove_label(&nm, &nmlen);
+		if(!dname_remove_label_limit_len(&nm, &nmlen, z->namelen))
+			return NULL; /* can't go up */
 	}
 	return node;
 }
@@ -2445,9 +2440,8 @@ az_find_candidate_ce(struct auth_zone* z, struct query_info* qinfo,
 	n = az_find_name(z, nm, nmlen);
 	/* delete labels and go up on name */
 	while(!n) {
-		if(dname_is_root(nm))
-			return NULL; /* cannot go up */
-		dname_remove_label(&nm, &nmlen);
+		if(!dname_remove_label_limit_len(&nm, &nmlen, z->namelen))
+			return NULL; /* can't go up */
 		n = az_find_name(z, nm, nmlen);
 	}
 	return n;
@@ -2459,8 +2453,7 @@ az_domain_go_up(struct auth_zone* z, struct auth_data* n)
 {
 	uint8_t* nm = n->name;
 	size_t nmlen = n->namelen;
-	while(!dname_is_root(nm)) {
-		dname_remove_label(&nm, &nmlen);
+	while(dname_remove_label_limit_len(&nm, &nmlen, z->namelen)) {
 		if((n=az_find_name(z, nm, nmlen)) != NULL)
 			return n;
 	}
@@ -2774,26 +2767,23 @@ az_change_dnames(struct dns_msg* msg, uint8_t* oldname, uint8_t* newname,
 	}
 }
 
-/** find NSEC record covering the query */
+/** find NSEC record covering the query, with the given node in the zone */
 static struct auth_rrset*
 az_find_nsec_cover(struct auth_zone* z, struct auth_data** node)
 {
-	uint8_t* nm = (*node)->name;
-	size_t nmlen = (*node)->namelen;
+	uint8_t* nm;
+	size_t nmlen;
 	struct auth_rrset* rrset;
+	log_assert(*node); /* we already have a node when calling this */
+	nm = (*node)->name;
+	nmlen = (*node)->namelen;
 	/* find the NSEC for the smallest-or-equal node */
-	/* if node == NULL, we did not find a smaller name.  But the zone
-	 * name is the smallest name and should have an NSEC. So there is
-	 * no NSEC to return (for a properly signed zone) */
-	/* for empty nonterminals, the auth-data node should not exist,
-	 * and thus we don't need to go rbtree_previous here to find
-	 * a domain with an NSEC record */
-	/* but there could be glue, and if this is node, then it has no NSEC.
+	/* But there could be glue, and then it has no NSEC.
 	 * Go up to find nonglue (previous) NSEC-holding nodes */
 	while((rrset=az_domain_rrset(*node, LDNS_RR_TYPE_NSEC)) == NULL) {
-		if(dname_is_root(nm)) return NULL;
 		if(nmlen == z->namelen) return NULL;
-		dname_remove_label(&nm, &nmlen);
+		if(!dname_remove_label_limit_len(&nm, &nmlen, z->namelen))
+			return NULL; /* can't go up */
 		/* adjust *node for the nsec rrset to find in */
 		*node = az_find_name(z, nm, nmlen);
 	}
@@ -3021,12 +3011,9 @@ az_nsec3_find_ce(struct auth_zone* z, uint8_t** cenm, size_t* cenmlen,
 	struct auth_data* node;
 	while((node = az_nsec3_find_exact(z, *cenm, *cenmlen,
 		algo, iter, salt, saltlen)) == NULL) {
-		if(*cenmlen == z->namelen) {
-			/* next step up would take us out of the zone. fail */
-			return NULL;
-		}
+		if(!dname_remove_label_limit_len(cenm, cenmlen, z->namelen))
+			return NULL; /* can't go up */
 		*no_exact_ce = 1;
-		dname_remove_label(cenm, cenmlen);
 	}
 	return node;
 }
@@ -3343,7 +3330,8 @@ az_generate_wildcard_answer(struct auth_zone* z, struct query_info* qinfo,
 	} else if(ce) {
 		uint8_t* wildup = wildcard->name;
 		size_t wilduplen= wildcard->namelen;
-		dname_remove_label(&wildup, &wilduplen);
+		if(!dname_remove_label_limit_len(&wildup, &wilduplen, z->namelen))
+			return 0; /* can't go up */
 		if(!az_add_nsec3_proof(z, region, msg, wildup,
 			wilduplen, msg->qinfo.qname,
 			msg->qinfo.qname_len, 0, insert_ce, 1, 0))
@@ -3402,7 +3390,7 @@ az_generate_answer_with_node(struct auth_zone* z, struct query_info* qinfo,
 }
 
 /** Generate answer without an existing-node that we can use.
- * So it'll be a referral, DNAME or nxdomain */
+ * So it'll be a referral, DNAME, notype, wildcard or nxdomain */
 static int
 az_generate_answer_nonexistnode(struct auth_zone* z, struct query_info* qinfo,
 	struct regional* region, struct dns_msg* msg, struct auth_data* ce,
@@ -3568,14 +3556,17 @@ auth_error_encode(struct query_info* qinfo, struct module_env* env,
 		sldns_buffer_read_u16_at(buf, 2), edns);
 }
 
-int auth_zones_answer(struct auth_zones* az, struct module_env* env,
+int auth_zones_downstream_answer(struct auth_zones* az, struct module_env* env,
 	struct query_info* qinfo, struct edns_data* edns,
-	struct comm_reply* repinfo, struct sldns_buffer* buf, struct regional* temp)
+	struct comm_reply* repinfo, struct sldns_buffer* buf,
+	struct regional* temp)
 {
 	struct dns_msg* msg = NULL;
 	struct auth_zone* z;
 	int r;
 	int fallback = 0;
+	/* Copy the qinfo in case of cname aliasing from local-zone */
+	struct query_info zqinfo = *qinfo;
 
 	lock_rw_rdlock(&az->lock);
 	if(!az->have_downstream) {
@@ -3583,6 +3574,7 @@ int auth_zones_answer(struct auth_zones* az, struct module_env* env,
 		lock_rw_unlock(&az->lock);
 		return 0;
 	}
+
 	if(qinfo->qtype == LDNS_RR_TYPE_DS) {
 		uint8_t* delname = qinfo->qname;
 		size_t delnamelen = qinfo->qname_len;
@@ -3590,8 +3582,14 @@ int auth_zones_answer(struct auth_zones* az, struct module_env* env,
 		z = auth_zones_find_zone(az, delname, delnamelen,
 			qinfo->qclass);
 	} else {
-		z = auth_zones_find_zone(az, qinfo->qname, qinfo->qname_len,
-			qinfo->qclass);
+		if(zqinfo.local_alias && !local_alias_shallow_copy_qname(
+			zqinfo.local_alias, &zqinfo.qname,
+			&zqinfo.qname_len)) {
+			lock_rw_unlock(&az->lock);
+			return 0;
+		}
+		z = auth_zones_find_zone(az, zqinfo.qname, zqinfo.qname_len,
+			zqinfo.qclass);
 	}
 	if(!z) {
 		/* no zone above it */
@@ -3617,7 +3615,7 @@ int auth_zones_answer(struct auth_zones* az, struct module_env* env,
 	}
 
 	/* answer it from zone z */
-	r = auth_zone_generate_answer(z, qinfo, temp, &msg, &fallback);
+	r = auth_zone_generate_answer(z, &zqinfo, temp, &msg, &fallback);
 	lock_rw_unlock(&z->lock);
 	if(!r && fallback) {
 		/* fallback to regular answering (recursive) */
@@ -7006,6 +7004,18 @@ xfr_set_timeout(struct auth_xfer* xfr, struct module_env* env,
 	comm_timer_set(xfr->task_nextprobe->timer, &tv);
 }
 
+void auth_xfer_pickup_initial_zone(struct auth_xfer* x, struct module_env* env)
+{
+	/* set lease_time, because we now have timestamp in env,
+	 * (not earlier during startup and apply_cfg), and this
+	 * notes the start time when the data was acquired */
+	if(x->have_zone)
+		x->lease_time = *env->now;
+	if(x->task_nextprobe && x->task_nextprobe->worker == NULL) {
+		xfr_set_timeout(x, env, 0, 1);
+	}
+}
+
 /** initial pick up of worker timeouts, ties events to worker event loop */
 void
 auth_xfer_pickup_initial(struct auth_zones* az, struct module_env* env)
@@ -7014,14 +7024,7 @@ auth_xfer_pickup_initial(struct auth_zones* az, struct module_env* env)
 	lock_rw_wrlock(&az->lock);
 	RBTREE_FOR(x, struct auth_xfer*, &az->xtree) {
 		lock_basic_lock(&x->lock);
-		/* set lease_time, because we now have timestamp in env,
-		 * (not earlier during startup and apply_cfg), and this
-		 * notes the start time when the data was acquired */
-		if(x->have_zone)
-			x->lease_time = *env->now;
-		if(x->task_nextprobe && x->task_nextprobe->worker == NULL) {
-			xfr_set_timeout(x, env, 0, 1);
-		}
+		auth_xfer_pickup_initial_zone(x, env);
 		lock_basic_unlock(&x->lock);
 	}
 	lock_rw_unlock(&az->lock);
@@ -8579,4 +8582,162 @@ void auth_zones_pickup_zonemd_verify(struct auth_zones* az,
 			break;
 	}
 	lock_rw_unlock(&az->lock);
+}
+
+/** Get memory usage of auth rrset */
+static size_t
+auth_rrset_get_mem(struct auth_rrset* rrset)
+{
+	size_t m = sizeof(*rrset) + packed_rrset_sizeof(rrset->data);
+	return m;
+}
+
+/** Get memory usage of auth data */
+static size_t
+auth_data_get_mem(struct auth_data* node)
+{
+	size_t m = sizeof(*node) + node->namelen;
+	struct auth_rrset* rrset;
+	for(rrset = node->rrsets; rrset; rrset = rrset->next) {
+		m += auth_rrset_get_mem(rrset);
+	}
+	return m;
+}
+
+/** Get memory usage of auth zone */
+static size_t
+auth_zone_get_mem(struct auth_zone* z)
+{
+	size_t m = sizeof(*z) + z->namelen;
+	struct auth_data* node;
+	if(z->zonefile)
+		m += strlen(z->zonefile)+1;
+	RBTREE_FOR(node, struct auth_data*, &z->data) {
+		m += auth_data_get_mem(node);
+	}
+	if(z->rpz)
+		m += rpz_get_mem(z->rpz);
+	return m;
+}
+
+/** Get memory usage of list of auth addr */
+static size_t
+auth_addrs_get_mem(struct auth_addr* list)
+{
+	size_t m = 0;
+	struct auth_addr* a;
+	for(a = list; a; a = a->next) {
+		m += sizeof(*a);
+	}
+	return m;
+}
+
+/** Get memory usage of list of primaries for auth xfer */
+static size_t
+auth_primaries_get_mem(struct auth_master* list)
+{
+	size_t m = 0;
+	struct auth_master* n;
+	for(n = list; n; n = n->next) {
+		m += sizeof(*n);
+		m += auth_addrs_get_mem(n->list);
+		if(n->host)
+			m += strlen(n->host)+1;
+		if(n->file)
+			m += strlen(n->file)+1;
+	}
+	return m;
+}
+
+/** Get memory usage or list of auth chunks */
+static size_t
+auth_chunks_get_mem(struct auth_chunk* list)
+{
+	size_t m = 0;
+	struct auth_chunk* chunk;
+	for(chunk = list; chunk; chunk = chunk->next) {
+		m += sizeof(*chunk) + chunk->len;
+	}
+	return m;
+}
+
+/** Get memory usage of auth xfer */
+static size_t
+auth_xfer_get_mem(struct auth_xfer* xfr)
+{
+	size_t m = sizeof(*xfr) + xfr->namelen;
+
+	/* auth_nextprobe */
+	m += comm_timer_get_mem(xfr->task_nextprobe->timer);
+
+	/* auth_probe */
+	m += auth_primaries_get_mem(xfr->task_probe->masters);
+	m += comm_point_get_mem(xfr->task_probe->cp);
+	m += comm_timer_get_mem(xfr->task_probe->timer);
+
+	/* auth_transfer */
+	m += auth_chunks_get_mem(xfr->task_transfer->chunks_first);
+	m += auth_primaries_get_mem(xfr->task_transfer->masters);
+	m += comm_point_get_mem(xfr->task_transfer->cp);
+	m += comm_timer_get_mem(xfr->task_transfer->timer);
+
+	/* allow_notify_list */
+	m += auth_primaries_get_mem(xfr->allow_notify_list);
+
+	return m;
+}
+
+/** Get memory usage of auth zones ztree */
+static size_t
+az_ztree_get_mem(struct auth_zones* az)
+{
+	size_t m = 0;
+	struct auth_zone* z;
+	RBTREE_FOR(z, struct auth_zone*, &az->ztree) {
+		lock_rw_rdlock(&z->lock);
+		m += auth_zone_get_mem(z);
+		lock_rw_unlock(&z->lock);
+	}
+	return m;
+}
+
+/** Get memory usage of auth zones xtree */
+static size_t
+az_xtree_get_mem(struct auth_zones* az)
+{
+	size_t m = 0;
+	struct auth_xfer* xfr;
+	RBTREE_FOR(xfr, struct auth_xfer*, &az->xtree) {
+		lock_basic_lock(&xfr->lock);
+		m += auth_xfer_get_mem(xfr);
+		lock_basic_unlock(&xfr->lock);
+	}
+	return m;
+}
+
+size_t auth_zones_get_mem(struct auth_zones* zones)
+{
+	size_t m;
+	if(!zones) return 0;
+	m = sizeof(*zones);
+	lock_rw_rdlock(&zones->rpz_lock);
+	lock_rw_rdlock(&zones->lock);
+	m += az_ztree_get_mem(zones);
+	m += az_xtree_get_mem(zones);
+	lock_rw_unlock(&zones->lock);
+	lock_rw_unlock(&zones->rpz_lock);
+	return m;
+}
+
+void xfr_disown_tasks(struct auth_xfer* xfr, struct worker* worker)
+{
+	if(xfr->task_nextprobe->worker == worker) {
+		xfr_nextprobe_disown(xfr);
+	}
+	if(xfr->task_probe->worker == worker) {
+		xfr_probe_disown(xfr);
+	}
+	if(xfr->task_transfer->worker == worker) {
+		xfr_transfer_disown(xfr);
+	}
 }
