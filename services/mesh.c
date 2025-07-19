@@ -1723,6 +1723,10 @@ void mesh_query_done(struct mesh_state* mstate)
 			if(err) { log_err("%s", err); }
 		}
 	}
+
+	if(mstate->reply_list && mstate->s.env->cfg->dns_error_reporting)
+		dns_error_reporting(&mstate->s, rep);
+
 	if(mstate->reply_list && rep) {
 		uint8_t data[8192];
 		struct sldns_buffer dest;
@@ -1743,8 +1747,6 @@ void mesh_query_done(struct mesh_state* mstate)
 		}
 			
 	}
-	if(mstate->reply_list && mstate->s.env->cfg->dns_error_reporting)
-		dns_error_reporting(&mstate->s, rep);
 
 	for(r = mstate->reply_list; r; r = r->next) {
 		struct timeval old;

@@ -303,7 +303,7 @@ worker_err_ratelimit(struct worker* worker, int err)
  * Structure holding the result of the worker_check_request function.
  * Based on configuration it could be called up to four times; ideally should
  * be called once.
- * When value is a positive number, it countains the error to return.
+ * When value is a positive number, it contains the error to return.
  * Otherwise DROP_REQUEST (-1) is returned, or RESPONSE_MESSAGE (-2) in
  * case the qr bit was set. Value is set to REQUEST_OK (0) if all is good.
  */
