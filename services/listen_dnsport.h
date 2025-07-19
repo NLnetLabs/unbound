@@ -165,8 +165,6 @@ struct listen_port {
 #endif	/* HAVE_COAP */
 };
 
-void free_pdu_response_data(struct pdu_response_data* data);
-
 /**
  * Create shared listening ports
  * Getaddrinfo, create socket, bind and listen to zero or more 
