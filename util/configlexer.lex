@@ -274,6 +274,7 @@ quic-port{COLON}		{ YDVAR(1, VAR_QUIC_PORT) }
 quic-size{COLON}		{ YDVAR(1, VAR_QUIC_SIZE) }
 coap-port{COLON}		{ YDVAR(1, VAR_COAP_PORT) }
 coaps-port{COLON}		{ YDVAR(1, VAR_COAPS_PORT) }
+coap-endpoit{COLON}		{ YDVAR(1, VAR_COAP_ENDPOINT) }
 coaps-psk{COLON}		{ YDVAR(1, VAR_COAPS_PSK) }
 coaps-psk-id{COLON}		{ YDVAR(1, VAR_COAPS_PSK_ID) }
 coap-oscore-conf{COLON}		{ YDVAR(1, VAR_COAP_OSCORE_CONF) }

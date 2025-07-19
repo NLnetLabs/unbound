@@ -1530,10 +1530,14 @@ doc_handle_fetch(coap_resource_t *resource, coap_session_t *session,
 }
 
 static void
-doc_init_resources(coap_context_t* ctx, struct comm_point* cp) {
+doc_init_resources(coap_context_t* ctx, const char* resource_path, struct comm_point* cp) {
 	coap_resource_t* r;
 
-	log_info("Registering coap resource /");
+	log_info("Registering coap resource `%s`\n", resource_path);
+	if (resource_path[0] == '/')
+	{
+		resource_path += 1;
+	}
 	r = coap_resource_init(coap_make_str_const(""),
 			COAP_RESOURCE_FLAGS_NOTIFY_CON);
 
@@ -2000,7 +2004,9 @@ struct listen_dnsport*
 listen_create(struct comm_base* base, struct listen_port* ports,
 	size_t bufsize, int tcp_accept_count, int tcp_idle_timeout,
 	int harden_large_queries, uint32_t http_max_streams,
-	char* http_endpoint, int http_notls, struct tcl_list* tcp_conn_limit,
+	char* http_endpoint, int http_notls,
+	char* coap_endpoint,
+	struct tcl_list* tcp_conn_limit,
 	void* dot_sslctx, void* doh_sslctx, void* quic_sslctx,
 	struct dt_env* dtenv,
 	struct doq_table* doq_table,
@@ -2036,7 +2042,7 @@ listen_create(struct comm_base* base, struct listen_port* ports,
 				front->udp_buff, ports->pp2_enabled, cb,
 				cb_arg, ports->socket);
 			cp->coap_context = ports->coap_context;
-			doc_init_resources(cp->coap_context, cp);
+			doc_init_resources(cp->coap_context, coap_endpoint, cp);
 #endif	/* HAVE_COAP */
 		} else if(ports->ftype == listen_type_doq) {
 #ifndef HAVE_NGTCP2

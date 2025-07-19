@@ -140,6 +140,7 @@ config_create(void)
 	cfg->quic_size = 8*1024*1024;
 	cfg->coap_port = UNBOUND_DNS_OVER_COAP_PORT;
 	cfg->coaps_port = UNBOUND_DNS_OVER_COAPS_PORT;
+	if(!(cfg->coap_endpoint = strdup("/"))) goto error_exit;
 	cfg->coaps_psk = NULL;
 	cfg->coaps_psk_id = NULL;
 	cfg->coap_oscore_conf = NULL;
@@ -1760,6 +1761,7 @@ config_delete(struct config_file* cfg)
 	free(cfg->tls_ciphers);
 	free(cfg->tls_ciphersuites);
 	free(cfg->http_endpoint);
+	free(cfg->coap_endpoint);
 	if(cfg->log_identity) {
 		log_ident_revert_to_default();
 		free(cfg->log_identity);
