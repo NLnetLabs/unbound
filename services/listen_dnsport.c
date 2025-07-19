@@ -1619,6 +1619,8 @@ set_recvpktinfo(int s, int family)
  * @param quic_port: dns over quic port number.
  * @param coap_port: dns over coap port number.
  * @param coaps_port: dns over coaps port number.
+ * @param coaps_psk: coaps pre-shared key.
+ * @param coaps_psk_id: coaps pre-shared key client ID.
  * @param http_notls_downstream: if no tls is used for https downstream.
  * @param sock_queue_timeout: the sock_queue_timeout from config. Seconds to
  * 	wait to discard if UDP packets have waited for long in the socket
