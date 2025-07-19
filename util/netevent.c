@@ -571,8 +571,9 @@ comm_point_send_udp_msg(struct comm_point *c, sldns_buffer* packet,
 	return 1;
 }
 
+#ifdef HAVE_COAP
 coap_pdu_t*
-create_pdu_from_response_data(coap_session_t* session, const struct pdu_response_data* data)
+create_pdu_from_response_data(coap_session_t* session, const struct coap_pdu_response_data* data)
 {
 	if (!session || !data) return NULL;
 
@@ -589,12 +590,11 @@ create_pdu_from_response_data(coap_session_t* session, const struct pdu_response
 	return pdu;
 }
 
-#ifdef HAVE_COAP
 /* send a CoAP reply */
 int
 comm_point_send_coap_msg(struct comm_point *c, sldns_buffer* packet,
 	struct sockaddr* addr, socklen_t addrlen, int is_connected,
-	coap_session_t* session, coap_pdu_t* response, struct pdu_response_data* pdu_wrapper)
+	coap_session_t* session, coap_pdu_t* response, struct coap_pdu_response_data* pdu_wrapper)
 {
 	coap_address_t dst;
 
@@ -6252,7 +6252,7 @@ comm_point_create_doc(struct comm_base *base, int fd, sldns_buffer* buffer,
 	(void)callback;
 	(void)callback_arg;
 	(void)socket;
-	return NULL
+	return NULL;
 #endif	/* HAVE_COAP */
 }
 

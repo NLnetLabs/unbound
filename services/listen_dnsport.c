@@ -1373,7 +1373,7 @@ coap_bin_const_t* doc_copy_coap_bin_const_t(const coap_bin_const_t* original) {
 }
 
 static void
-doc_extract_pdu_info(const coap_pdu_t *pdu, struct pdu_response_data *data) {
+doc_extract_pdu_info(const coap_pdu_t *pdu, struct coap_pdu_response_data *data) {
 	if (!pdu || !data) return;
 
 	data->type = coap_pdu_get_type(pdu);
@@ -1404,7 +1404,7 @@ doc_handle_fetch(coap_resource_t *resource, coap_session_t *session,
 	size_t size;
 	const uint8_t* data;
 	struct comm_reply rep;
-	struct pdu_response_data* pdu_wrapper = (struct pdu_response_data*)malloc(sizeof(struct pdu_response_data));
+	struct coap_pdu_response_data* pdu_wrapper = (struct coap_pdu_response_data*)malloc(sizeof(struct coap_pdu_response_data));
 	rep.c = (struct comm_point*)cp;
 	rep.session = session;
 	rep.response = response;
@@ -1834,9 +1834,11 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 		if(!(listen_port = port_insert(list, s, udp_port_type, is_pp2, ub_sock))) {
 			sock_close(s);
 			free(ub_sock->addr);
+#ifdef HAVE_COAP
 			if (ub_sock->coap_ep) {
 				coap_free_endpoint(ub_sock->coap_ep);
 			}
+#endif
 			free(ub_sock);
 			return 0;
 		}

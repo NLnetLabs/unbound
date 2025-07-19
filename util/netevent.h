@@ -140,7 +140,7 @@ struct comm_base {
 /**
  * CoAP response PDU data
  */
-struct pdu_response_data {
+struct coap_pdu_response_data {
 	/** CoAP message type */
 	coap_pdu_type_t type;
 	/** CoAP response code */
@@ -218,7 +218,7 @@ struct comm_reply {
 	coap_pdu_t* response;
 
 	/** PDU information for the CoAP response */
-	struct pdu_response_data* pdu_wrapper;
+	struct coap_pdu_response_data* pdu_wrapper;
 #endif	/* HAVE_COAP */
 };
 
@@ -813,7 +813,7 @@ int comm_point_send_udp_msg(struct comm_point* c, struct sldns_buffer* packet,
  */
 int comm_point_send_coap_msg(struct comm_point* c, struct sldns_buffer* packet,
 	struct sockaddr* addr, socklen_t addrlen,int is_connected,
-	coap_session_t* session, coap_pdu_t* response, struct pdu_response_data* pdu_wrapper);
+	coap_session_t* session, coap_pdu_t* response, struct coap_pdu_response_data* pdu_wrapper);
 #endif	/* HAVE_COAP */
 
 /**
