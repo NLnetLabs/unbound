@@ -142,6 +142,8 @@ config_create(void)
 	cfg->coaps_port = UNBOUND_DNS_OVER_COAPS_PORT;
 	cfg->coaps_psk = NULL;
 	cfg->coaps_psk_id = NULL;
+	cfg->coap_oscore_conf = NULL;
+	cfg->coap_oscore_seq_file = NULL;
 	cfg->use_syslog = 1;
 	cfg->log_identity = NULL; /* changed later with argv[0] */
 	cfg->log_time_ascii = 0;

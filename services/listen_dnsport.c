@@ -110,6 +110,10 @@
 
 #ifdef HAVE_COAP
 #include <coap3/coap.h>
+#include <stdio.h>
+#include <sys/stat.h>
+#else
+typedef void coap_context_t;
 #endif	/* HAVE_COAP */
 
 /** number of queued TCP connections for listen() */
@@ -1283,11 +1287,10 @@ static uint8_t oscore_config[] =
 	"master_secret,hex,\"0102030405060708090a0b0c0d0e0f10\"\n"
 	"sender_id,ascii,\"server\"\n"
 	"recipient_id,ascii,\"client\"\n";
-static const char* oscore_seq_save_file = "server.seq";
-static FILE *oscore_seq_num_fp = NULL;
 
 static int
-doc_oscore_save_seq_num(uint64_t sender_seq_num, void *param COAP_UNUSED) {
+doc_oscore_save_seq_num(uint64_t sender_seq_num, void *param) {
+	FILE* oscore_seq_num_fp = param;
 	if (oscore_seq_num_fp) {
 		rewind(oscore_seq_num_fp);
 		fprintf(oscore_seq_num_fp, "%lu\n", sender_seq_num);
@@ -1296,14 +1299,12 @@ doc_oscore_save_seq_num(uint64_t sender_seq_num, void *param COAP_UNUSED) {
 	return 1;
 }
 
-static coap_context_t*
-doc_setup_server_context(const uint8_t* key, unsigned key_len, const char* hint) {
-	coap_address_t listen_addr;
-	coap_context_t* coap_context = coap_new_context(NULL);
-
-	coap_context_set_block_mode(coap_context,
-			COAP_BLOCK_USE_LIBCOAP | COAP_BLOCK_SINGLE_BODY);
-
+static int
+doc_setup_dtls(
+	coap_context_t* coap_context,
+	const uint8_t* key,
+	unsigned key_len,
+	const char* hint) {
 	if (key && hint) {
 		/* setup dtls */
 		coap_dtls_spsk_t dtls_psk;
@@ -1317,33 +1318,98 @@ doc_setup_server_context(const uint8_t* key, unsigned key_len, const char* hint)
 
 		coap_context_set_psk2(coap_context, &dtls_psk);
 	}
+	return 0;
+}
 
-	/* setup oscore */
-	uint64_t start_seq_num = 0;
-	if (oscore_seq_save_file) {
-		oscore_seq_num_fp = fopen(oscore_seq_save_file, "r+");
-		if (oscore_seq_num_fp == NULL) {
-			oscore_seq_num_fp = fopen(oscore_seq_save_file, "w+");
+static int
+doc_setup_oscore(
+	coap_context_t* coap_context,
+	const char* oscore_conf,
+	const char* oscore_seq_file) {
+	if (oscore_conf) {
+		coap_str_const_t oscore_conf_str;
+		struct stat statbuf;
+		/* setup oscore */
+		FILE* oscore_conf_file;
+		FILE* oscore_seq_num_fp = NULL;
+		uint8_t* oscore_conf_buf;
+		size_t oscore_conf_len = 0;
+		uint64_t start_seq_num = 0;
+
+		oscore_conf_file = fopen(oscore_conf, "r");
+		if (!oscore_conf_file) {
+			fatal_exit("Unable to open OSCORE configuration file.\n");
+		}
+		if (fstat(fileno(oscore_conf_file), &statbuf) == -1) {
+			fclose(oscore_conf_file);
+			fatal_exit("Unable to stat OSCORE configuration file.\n");
+		}
+		oscore_conf_len = statbuf.st_size + 1;
+		oscore_conf_buf = coap_malloc(oscore_conf_len);
+		if (!oscore_conf_buf) {
+			fclose(oscore_conf_file);
+			fatal_exit("Unable to allocate OSCORE configuration buffer.\n");
+		}
+		if (fread(oscore_conf_buf, 1, statbuf.st_size, oscore_conf_file) != (size_t)statbuf.st_size) {
+			fclose(oscore_conf_file);
+			coap_free(oscore_conf_buf);
+			fatal_exit("Unable to read OSCORE configuraion file");
+		}
+		oscore_conf_buf[statbuf.st_size] = '\000';
+		fclose(oscore_conf_file);
+		oscore_conf_str.s = oscore_conf_buf;
+		oscore_conf_str.length = oscore_conf_len;
+		if (oscore_seq_file) {
+			oscore_seq_num_fp = fopen(oscore_seq_file, "r+");
 			if (oscore_seq_num_fp == NULL) {
-				log_err("Unable to create or open OSCORE sequence number file.\n");
-				return NULL;
+				oscore_seq_num_fp = fopen(oscore_seq_file, "w+");
+				if (oscore_seq_num_fp == NULL) {
+					fatal_exit("Unable to create or open OSCORE sequence number file.\n");
+				}
+			}
+			errno = 0;
+			if (fscanf(oscore_seq_num_fp, "%lu", &start_seq_num) == EOF) {
+				if (errno != 0) {
+					fatal_exit("Failed to read OSCORE sequence number, %s", strerror(errno));
+				}
 			}
 		}
-		errno = 0;
-		if (fscanf(oscore_seq_num_fp, "%lu", &start_seq_num) == EOF) {
-			if (errno != 0) {
-				log_err("Failed to read OSCORE sequence number, %s", strerror(errno));
-				return NULL;
-			}
+
+		coap_oscore_conf_t* coap_oscore_conf = coap_new_oscore_conf(
+			oscore_conf_str,
+			doc_oscore_save_seq_num,
+			oscore_seq_num_fp,
+			start_seq_num);
+		coap_free(oscore_conf_buf);
+		if (!coap_oscore_conf) {
+			coap_free_context(coap_context);
+			fatal_exit("Unable to create OSCORE configuration.");
 		}
+		coap_context_oscore_server(coap_context, coap_oscore_conf);
 	}
-	coap_str_const_t config = { sizeof(oscore_config) - 1, oscore_config };
-	coap_oscore_conf_t* oscore_conf = coap_new_oscore_conf(config, doc_oscore_save_seq_num, NULL, start_seq_num);
-	if (!oscore_conf) {
-		coap_free_context(coap_context);
+	return 0;
+}
+
+static coap_context_t*
+doc_setup_server_context(
+	const uint8_t* key,
+	unsigned key_len,
+	const char* hint,
+	const char* oscore_conf,
+	const char* oscore_seq_file)
+{
+	coap_address_t listen_addr;
+	coap_context_t* coap_context = coap_new_context(NULL);
+
+	coap_context_set_block_mode(coap_context,
+			COAP_BLOCK_USE_LIBCOAP | COAP_BLOCK_SINGLE_BODY);
+
+	if (doc_setup_dtls(coap_context, key, key_len, hint) < 0) {
 		return NULL;
 	}
-	coap_context_oscore_server(coap_context, oscore_conf);
+	if (doc_setup_oscore(coap_context, oscore_conf, oscore_seq_file) < 0) {
+		return NULL;
+	}
 
 	return coap_context;
 }
@@ -1619,9 +1685,7 @@ set_recvpktinfo(int s, int family)
  * @param quic_port: dns over quic port number.
  * @param coap_port: dns over coap port number.
  * @param coaps_port: dns over coaps port number.
- * @param coaps_psk: coaps pre-shared key.
- * @param coaps_psk_id: coaps pre-shared key client ID.
- * @param http_notls_downstream: if no tls is used for https downstream.
+ * @param coap_context: a pre-created CoAP context for dns over coap.
  * @param sock_queue_timeout: the sock_queue_timeout from config. Seconds to
  * 	wait to discard if UDP packets have waited for long in the socket
  * 	buffer.
@@ -1636,7 +1700,7 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 	int* reuseport, int transparent, int tcp_mss, int freebind,
 	int http2_nodelay, int use_systemd, int dnscrypt_port, int dscp,
 	int quic_port, int coap_port, int coaps_port,
-	const char* coaps_psk, const char* coaps_psk_id,
+	coap_context_t *coap_context, int do_oscore,
 	int http_notls_downstream, int sock_queue_timeout)
 {
 	int s, noip6=0;
@@ -1656,19 +1720,6 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 	struct unbound_socket* ub_sock;
 	const char* add = NULL;
 
-#ifdef HAVE_COAP
-	printf("coaps_psk: %s, coaps_psk_len: %lu, coaps_psk_id: %s\n", coaps_psk, strlen(coaps_psk), coaps_psk_id);
-	coap_context_t* coap_context = doc_setup_server_context(
-		(const uint8_t *)coaps_psk, strlen(coaps_psk), coaps_psk_id);
-
-	if (!coap_context) {
-		fatal_exit("Unable to get server context");
-	}
-#else
-	(void)coaps_psk;
-	(void)coaps_psk_id;
-#endif  /* HAVE_COAP */
-
 	if(!do_udp && !do_tcp)
 		return 0;
 
@@ -1685,11 +1736,12 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 		}
 	}
 
-#ifdef HAVE_COAP
-	if (is_doc) {
-		/* Check for OSCORE credentials and fail if they are not set */
+	if (is_doc && !coap_context) {
+		fatal_exit("CoAP context not initialilized with DoC!");
 	}
-#endif  /* HAVE_COAP */
+	if (is_doc && !(is_docs || do_oscore)) {
+		fatal_exit("No CoAP security configured.");
+	}
 
 	/* Check if both UDP and TCP ports should be open.
 	 * In the case of encrypted channels, probably an unencrypted channel
@@ -2319,10 +2371,51 @@ int resolve_interface_names(char** ifs, int num_ifs,
 #endif /* HAVE_GETIFADDRS */
 }
 
+#ifdef HAVE_COAP
+static coap_context_t* coap_context_from_cfg(struct config_file *cfg)
+{
+	coap_context_t* coap_context = NULL;
+
+	char* oscore_conf = NULL;
+	char* oscore_seq_file = NULL;
+
+	if (cfg->coap_oscore_conf) {
+		oscore_conf = fname_after_chroot(cfg->coap_oscore_conf, cfg, 1);
+
+		if (!oscore_conf) {
+			log_err("out of memory in remote control fname");
+			return NULL;
+		}
+		if (cfg->coap_oscore_seq_file) {
+			oscore_seq_file = fname_after_chroot(cfg->coap_oscore_seq_file, cfg, 1);
+
+			if (!oscore_seq_file) {
+				free(oscore_conf);
+				log_err("out of memory in remote control fname");
+				return NULL;
+			}
+		}
+	}
+
+	coap_context = doc_setup_server_context(
+		(const uint8_t *)cfg->coaps_psk, strlen(cfg->coaps_psk), cfg->coaps_psk_id,
+		oscore_conf, oscore_seq_file);
+
+	free(oscore_conf);
+	free(oscore_seq_file);
+	if (!coap_context) {
+		fatal_exit("Unable to create CoAP server context for DoC.");
+	}
+
+	return coap_context;
+}
+#endif
+
 struct listen_port*
 listening_ports_open(struct config_file* cfg, char** ifs, int num_ifs,
 	int* reuseport)
 {
+	coap_context_t* coap_context = NULL;
 	struct listen_port* list = NULL;
 	struct addrinfo hints;
 	int i, do_ip4, do_ip6;
@@ -2331,6 +2424,7 @@ listening_ports_open(struct config_file* cfg, char** ifs, int num_ifs,
 	do_ip6 = cfg->do_ip6;
 	do_tcp = cfg->do_tcp;
 	do_auto = cfg->if_automatic && cfg->do_udp;
+	int do_oscore = 0;
 	if(cfg->incoming_num_tcp == 0)
 		do_tcp = 0;
 
@@ -2343,6 +2437,12 @@ listening_ports_open(struct config_file* cfg, char** ifs, int num_ifs,
 	hints.ai_family = AF_UNSPEC;
 #ifndef INET6
 	do_ip6 = 0;
+#endif
+#ifdef HAVE_COAP
+	coap_context = coap_context_from_cfg(cfg);
+	if (coap_context) {
+		do_oscore = (cfg->coap_oscore_conf != NULL);
+	}
 #endif
 	if(!do_ip4 && !do_ip6) {
 		return NULL;
@@ -2386,7 +2486,7 @@ listening_ports_open(struct config_file* cfg, char** ifs, int num_ifs,
 						cfg->http_nodelay, cfg->use_systemd,
 						cfg->dnscrypt_port, cfg->ip_dscp,
 						cfg->quic_port, cfg->coap_port, cfg->coaps_port,
-						cfg->coaps_psk, cfg->coaps_psk_id,
+						coap_context, do_oscore,
 						cfg->http_notls_downstream,
 						cfg->sock_queue_timeout)) {
 						listening_ports_free(list);
@@ -2407,7 +2507,7 @@ listening_ports_open(struct config_file* cfg, char** ifs, int num_ifs,
 						cfg->http_nodelay, cfg->use_systemd,
 						cfg->dnscrypt_port, cfg->ip_dscp,
 						cfg->quic_port, cfg->coap_port, cfg->coaps_port,
-						cfg->coaps_psk, cfg->coaps_psk_id,
+						coap_context, do_oscore,
 						cfg->http_notls_downstream,
 						cfg->sock_queue_timeout)) {
 						listening_ports_free(list);
@@ -2430,7 +2530,7 @@ listening_ports_open(struct config_file* cfg, char** ifs, int num_ifs,
 				cfg->http_nodelay, cfg->use_systemd,
 				cfg->dnscrypt_port, cfg->ip_dscp,
 				cfg->quic_port, cfg->coap_port, cfg->coaps_port,
-				cfg->coaps_psk, cfg->coaps_psk_id,
+				coap_context, do_oscore,
 				cfg->http_notls_downstream,
 				cfg->sock_queue_timeout)) {
 				listening_ports_free(list);
@@ -2450,7 +2550,7 @@ listening_ports_open(struct config_file* cfg, char** ifs, int num_ifs,
 				cfg->http_nodelay, cfg->use_systemd,
 				cfg->dnscrypt_port, cfg->ip_dscp,
 				cfg->quic_port, cfg->coap_port, cfg->coaps_port,
-				cfg->coaps_psk, cfg->coaps_psk_id,
+				coap_context, do_oscore,
 				cfg->http_notls_downstream,
 				cfg->sock_queue_timeout)) {
 				listening_ports_free(list);
@@ -2472,7 +2572,7 @@ listening_ports_open(struct config_file* cfg, char** ifs, int num_ifs,
 				cfg->http_nodelay, cfg->use_systemd,
 				cfg->dnscrypt_port, cfg->ip_dscp,
 				cfg->quic_port, cfg->coap_port, cfg->coaps_port,
-				cfg->coaps_psk, cfg->coaps_psk_id,
+				coap_context, do_oscore,
 				cfg->http_notls_downstream,
 				cfg->sock_queue_timeout)) {
 				listening_ports_free(list);
@@ -2492,7 +2592,7 @@ listening_ports_open(struct config_file* cfg, char** ifs, int num_ifs,
 				cfg->http_nodelay, cfg->use_systemd,
 				cfg->dnscrypt_port, cfg->ip_dscp,
 				cfg->quic_port, cfg->coap_port, cfg->coaps_port,
-				cfg->coaps_psk, cfg->coaps_psk_id,
+				coap_context, do_oscore,
 				cfg->http_notls_downstream,
 				cfg->sock_queue_timeout)) {
 				listening_ports_free(list);
@@ -2514,6 +2614,11 @@ void listening_ports_free(struct listen_port* list)
 		}
 		/* rc_ports don't have ub_socket */
 		if(list->socket) {
+#ifdef HAVE_COAP
+			if (list->socket->coap_ep) {
+				coap_free_endpoint(list->socket->coap_ep);
+			}
+#endif
 			free(list->socket->addr);
 			free(list->socket);
 		}

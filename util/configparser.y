@@ -212,6 +212,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_INTERFACE_TAG_ACTION VAR_INTERFACE_TAG_DATA
 %token VAR_QUIC_PORT VAR_QUIC_SIZE
 %token VAR_COAP_PORT VAR_COAPS_PORT VAR_COAPS_PSK VAR_COAPS_PSK_ID
+%token VAR_COAP_OSCORE_CONF VAR_COAP_OSCORE_SEQ_FILE
 %token VAR_PROXY_PROTOCOL_PORT VAR_STATISTICS_INHIBIT_ZERO
 %token VAR_HARDEN_UNKNOWN_ADDITIONAL VAR_DISABLE_EDNS_DO VAR_CACHEDB_NO_STORE
 %token VAR_LOG_DESTADDR VAR_CACHEDB_CHECK_WHEN_SERVE_EXPIRED
@@ -355,6 +356,7 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_tcp_reuse_timeout | server_tcp_auth_query_timeout |
 	server_quic_port | server_quic_size |
 	server_coap_port | server_coaps_port | server_coaps_psk | server_coaps_psk_id |
+	server_coap_oscore_conf | server_coap_oscore_seq_file |
 	server_interface_automatic_ports | server_ede |
 	server_dns_error_reporting |
 	server_proxy_protocol_port | server_statistics_inhibit_zero |
@@ -1296,6 +1298,18 @@ server_coaps_psk_id: VAR_COAPS_PSK_ID STRING_ARG
 		OUTYY(("P(server_coaps_psk_id:%s)\n", $2));
 		free(cfg_parser->cfg->coaps_psk_id);
 		cfg_parser->cfg->coaps_psk_id = $2;
+	};
+server_coap_oscore_conf: VAR_COAP_OSCORE_CONF STRING_ARG
+	{
+		OUTYY(("P(server_coap_oscore_conf:%s)\n", $2));
+		free(cfg_parser->cfg->coap_oscore_conf);
+		cfg_parser->cfg->coap_oscore_conf = $2;
+	};
+server_coap_oscore_seq_file: VAR_COAP_OSCORE_SEQ_FILE STRING_ARG
+	{
+		OUTYY(("P(server_coap_oscore_seq_file:%s)\n", $2));
+		free(cfg_parser->cfg->coap_oscore_seq_file);
+		cfg_parser->cfg->coap_oscore_seq_file = $2;
 	};
 server_use_systemd: VAR_USE_SYSTEMD STRING_ARG
 	{
