@@ -75,8 +75,9 @@ extern struct config_parser_state* cfg_parser;
 %token <str> STRING_ARG
 %token VAR_FORCE_TOPLEVEL
 %token VAR_SERVER VAR_VERBOSITY VAR_NUM_THREADS VAR_PORT
-%token VAR_OUTGOING_RANGE VAR_INTERFACE VAR_DISTRIBUTE VAR_PREFER_IP4
-%token VAR_DO_IP4 VAR_DO_IP6 VAR_DO_NAT64 VAR_PREFER_IP6 VAR_DO_UDP VAR_DO_TCP
+%token VAR_OUTGOING_RANGE VAR_INTERFACE VAR_DISTRIBUTE VAR_ALLOW_RESPONSE
+%token VAR_PREFER_IP4 VAR_DO_IP4 VAR_DO_IP6 VAR_DO_NAT64 VAR_PREFER_IP6
+%token VAR_DO_UDP VAR_DO_TCP
 %token VAR_TCP_MSS VAR_OUTGOING_TCP_MSS VAR_TCP_IDLE_TIMEOUT
 %token VAR_EDNS_TCP_KEEPALIVE VAR_EDNS_TCP_KEEPALIVE_TIMEOUT
 %token VAR_SOCK_QUEUE_TIMEOUT
@@ -251,7 +252,8 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_tcp_mss | server_outgoing_tcp_mss | server_tcp_idle_timeout |
 	server_tcp_keepalive | server_tcp_keepalive_timeout |
 	server_sock_queue_timeout |
-	server_interface | server_distribute | server_chroot | server_username |
+	server_interface | server_distribute | server_allow_response |
+	server_chroot | server_username |
 	server_directory | server_logfile | server_pidfile |
 	server_msg_cache_size | server_msg_cache_slabs |
 	server_num_queries_per_thread | server_rrset_cache_size |
@@ -825,6 +827,13 @@ server_distribute: VAR_DISTRIBUTE STRING_ARG
 			yyerror("out of memory");
 		else
 			cfg_parser->cfg->dist[cfg_parser->cfg->num_dist++] = $2;
+	}
+	;
+server_allow_response: VAR_ALLOW_RESPONSE STRING_ARG STRING_ARG
+	{
+		OUTYY(("P(allow_response: %s %s)\n", $2, $3));
+		if(!cfg_str2list_insert(&cfg_parser->cfg->allow_response_list, $2, $3))
+			fatal_exit("out of memory adding acl");
 	}
 	;
 server_outgoing_interface: VAR_OUTGOING_INTERFACE STRING_ARG

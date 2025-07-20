@@ -250,6 +250,9 @@ struct config_file {
 	/** distribute description strings (IP addresses) */
 	char **dist;
 
+	/** list of allowed responses, linked list */
+	struct config_str2list* allow_response_list;
+
 	/** number of outgoing interfaces to open.
 	 * If 0 default all interfaces. */
 	int num_out_ifs;

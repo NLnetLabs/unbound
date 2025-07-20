@@ -4790,6 +4790,7 @@ config_file_getmem(struct config_file* cfg)
 	m += getmem_config_str3list(cfg->acl_tag_datas);
 	m += getmem_config_str2list(cfg->acl_view);
 	m += getmem_config_str2list(cfg->interface_actions);
+	m += getmem_config_str2list(cfg->allow_response_list);
 	m += getmem_config_strbytelist(cfg->interface_tags);
 	m += getmem_config_str3list(cfg->interface_tag_actions);
 	m += getmem_config_str3list(cfg->interface_tag_datas);
@@ -5597,6 +5598,7 @@ fr_atomic_copy_cfg(struct config_file* oldcfg, struct config_file* cfg,
 	*/
 	COPY_VAR_ptr(acl_view);
 	COPY_VAR_ptr(interface_actions);
+	COPY_VAR_ptr(allow_response_list);
 	/* These reference tags
 	COPY_VAR_ptr(interface_tags);
 	COPY_VAR_ptr(interface_tag_actions);
