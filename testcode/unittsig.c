@@ -118,6 +118,15 @@ static int vtest = 0;
  *	buffer. The expected rcode is the result of the verify,
  *	the expected result2 is the result of the sign. If that differs
  *	the test fails.
+ * tsig-verify-reply <key> <time> <expected result> <expected result2>
+ * <hex>
+ * endpacket
+ *	The data from previous packet in the buffer is used with
+ *	tsig-sign-query. Then the hex data is the reply, it is used
+ *	with tsig-verify-reply. It TSIG signs with key name, at timestamp
+ *	in secs. The result of the sign call is compared with the
+ *	expected result, the result of the verify call is compared with
+ *	the expected result2, and the test fails if not equal.
  *
  */
 
@@ -880,6 +889,97 @@ handle_tsig_sign_reply(char* line, FILE* in, const char* fname,
 	sldns_buffer_copy(pkt, &reply_pkt);
 }
 
+/** Handle the tsig-verify-reply */
+static void
+handle_tsig_verify_reply(char* line, FILE* in, const char* fname,
+	struct tsig_key_table* key_table, struct sldns_buffer* pkt)
+{
+	char* arg = get_arg_on_line(line, "tsig-verify-reply");
+	char* s, *keyname, *timestr, *expectedstr, *expectedstr2;
+	int expected_result, expected_result2, ret;
+	uint64_t timepoint;
+	struct tsig_data* tsig;
+	size_t pos;
+	uint8_t buf[65536];
+	sldns_buffer reply_pkt;
+
+	s = arg;
+	keyname = get_next_arg_on_line(&s);
+	timestr = get_next_arg_on_line(&s);
+	expectedstr = get_next_arg_on_line(&s);
+	expectedstr2 = get_next_arg_on_line(&s);
+
+	timepoint = (uint64_t)atoll(timestr);
+	if(timepoint == 0 && strcmp(timestr, "0") != 0)
+		fatal_exit("expected time argument for %s", timestr);
+	expected_result = atoi(expectedstr);
+	if(expected_result == 0 && strcmp(expectedstr, "0") != 0)
+		fatal_exit("expected int argument for %s", expectedstr);
+	expected_result2 = atoi(expectedstr2);
+	if(expected_result2 == 0 && strcmp(expectedstr2, "0") != 0)
+		fatal_exit("expected int argument for %s", expectedstr2);
+
+	sldns_buffer_init_frm_data(&reply_pkt, buf, sizeof(buf));
+	if(!read_packet_hex("", &reply_pkt, in, fname))
+		fatal_exit("Could not read reply packet");
+	if(vtest >= 2) {
+		char* str = sldns_wire2str_pkt(sldns_buffer_begin(&reply_pkt),
+			sldns_buffer_limit(&reply_pkt));
+		if(str)
+			printf("reply packet: %s\n", str);
+		else
+			printf("could not wire2str_pkt\n");
+		free(str);
+	}
+
+	if(vtest) {
+		printf("tsig-verify-reply with %s %d %d %d\n", keyname,
+			(int)timepoint, expected_result, expected_result2);
+	}
+
+	tsig = tsig_create_fromstr(key_table, keyname);
+	if(!tsig)
+		fatal_exit("alloc fail or key not found %s", keyname);
+
+	/* Put position at the end of the packet to sign it. */
+	pos = sldns_buffer_limit(pkt);
+	sldns_buffer_clear(pkt);
+	sldns_buffer_set_position(pkt, pos);
+
+	ret = tsig_sign_query(tsig, pkt, key_table, timepoint);
+	sldns_buffer_flip(pkt);
+
+	if(vtest) {
+		if(ret == expected_result)
+			printf("function ok, %s\n", (ret?"success":"fail"));
+		else
+			printf("function returned %d, expected result %d\n",
+				ret, expected_result);
+	}
+	unit_assert(ret == expected_result);
+
+	/* Verify the reply */
+	/* Put position before TSIG */
+	if(!tsig_find_rr(&reply_pkt)) {
+		if(vtest)
+			printf("tsig-verify-reply found no TSIG RR\n");
+		unit_assert(0);
+		return;
+	}
+	ret = tsig_parse_verify_reply(tsig, &reply_pkt, key_table, timepoint);
+
+	if(vtest) {
+		if(ret == expected_result2)
+			printf("function ok, %s\n", (ret?"success":"fail"));
+		else
+			printf("function returned %d, expected result2 %d\n",
+				ret, expected_result2);
+	}
+	unit_assert(ret == expected_result2);
+
+	tsig_delete(tsig);
+}
+
 /** Handle one line from the TSIG test file */
 static void
 handle_line(char* line, struct tsig_key_table* key_table,
@@ -908,7 +1008,9 @@ handle_line(char* line, struct tsig_key_table* key_table,
 	} else if(strncmp(s, "tsig-verify-shared", 18) == 0) {
 		handle_tsig_verify_shared(s, key_table, pkt);
 	} else if(strncmp(s, "tsig-sign-reply", 15) == 0) {
-		handle_tsig_sign_reply(s, in,fname, key_table, pkt);
+		handle_tsig_sign_reply(s, in, fname, key_table, pkt);
+	} else if(strncmp(s, "tsig-verify-reply", 17) == 0) {
+		handle_tsig_verify_reply(s, in, fname, key_table, pkt);
 	} else if(strncmp(s, "#", 1) == 0) {
 		/* skip comment */
 	} else if(strcmp(s, "") == 0) {
