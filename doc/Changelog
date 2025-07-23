@@ -1,3 +1,26 @@
+17 July 2025: Wouter
+	- Fix to not set rlimits in the unit tests.
+	- Fix #1303: [FR] Disable TLSv1.2.
+	- iana portlist updated.
+
+16 July 2025: Wouter
+	- Fix for RebirthDay Attack CVE-2025-5994, reported by Xiang Li
+	  from AOSP Lab Nankai University.
+	- Tag for 1.23.1 with the release of 1.23.0 and the CVE fix, the
+	  repository continues with the previous fixes, with 1.23.2.
+	- Add unit tests for non-ecs aggregation.
+
+12 July 2025: Yorgos
+	- Merge #1289 from Roland van Rijswijk-Deij: Add extra statistic to
+	  track the number of signature validation operations.
+	  Adds 'num.valops' to extended statistics.
+	- For #1289: test num.valops in existing stat_values.tdir.
+	- For #1289: add num.valops in the unbound-control man page.
+
+11 July 2025: Wouter
+	- Fix detection of SSL_CTX_set_tmp_ecdh function.
+	- For #1301: configure cant find SSL_is_quic in OpenSSL 3.5.1.
+
 8 July 2025: Wouter
 	- Fix to improve dnstap discovery on Fedora.
 

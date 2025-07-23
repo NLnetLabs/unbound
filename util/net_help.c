@@ -1259,6 +1259,14 @@ listen_sslctx_setup(void* ctxt)
 		return 0;
 	}
 #endif
+#if defined(SSL_OP_NO_TLSv1_2) && defined(SSL_OP_NO_TLSv1_3)
+	/* if we have tls 1.3 disable 1.2 */
+	if((SSL_CTX_set_options(ctx, SSL_OP_NO_TLSv1_2) & SSL_OP_NO_TLSv1_2)
+		!= SSL_OP_NO_TLSv1_2){
+		log_crypto_err("could not set SSL_OP_NO_TLSv1_2");
+		return 0;
+	}
+#endif
 #if defined(SSL_OP_NO_RENEGOTIATION)
 	/* disable client renegotiation */
 	if((SSL_CTX_set_options(ctx, SSL_OP_NO_RENEGOTIATION) &
@@ -1312,7 +1320,7 @@ listen_sslctx_setup_2(void* ctxt)
 	if(!SSL_CTX_set_ecdh_auto(ctx,1)) {
 		log_crypto_err("Error in SSL_CTX_ecdh_auto, not enabling ECDHE");
 	}
-#elif defined(USE_ECDSA) && defined(HAVE_SSL_CTX_SET_TMP_ECDH)
+#elif defined(USE_ECDSA) && HAVE_DECL_SSL_CTX_SET_TMP_ECDH
 	if(1) {
 		EC_KEY *ecdh = EC_KEY_new_by_curve_name (NID_X9_62_prime256v1);
 		if (!ecdh) {
