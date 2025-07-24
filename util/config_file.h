@@ -45,6 +45,7 @@
 struct config_stub;
 struct config_auth;
 struct config_view;
+struct config_tsig_key;
 struct config_strlist;
 struct config_str2list;
 struct config_str3list;
@@ -244,6 +245,14 @@ struct config_file {
 	/** interface description strings (IP addresses) */
 	char **ifs;
 
+	/** number of addresses to distribute new responses. */
+	int num_dist;
+	/** distribute description strings (IP addresses) */
+	char **dist;
+
+	/** list of allowed responses, linked list */
+	struct config_str2list* allow_response_list;
+
 	/** number of outgoing interfaces to open.
 	 * If 0 default all interfaces. */
 	int num_out_ifs;
@@ -260,6 +269,8 @@ struct config_file {
 	struct config_auth* auths;
 	/** the views definitions, linked list */
 	struct config_view* views;
+	/** the tsig-key definitions, linked list */
+	struct config_tsig_key* tsig_keys;
 	/** list of donotquery addresses, linked list */
 	struct config_strlist* donotqueryaddrs;
 #ifdef CLIENT_SUBNET
@@ -905,6 +916,20 @@ struct config_view {
 };
 
 /**
+ * Tsig-key config options
+ */
+struct config_tsig_key {
+	/** next in list */
+	struct config_tsig_key* next;
+	/** name of the tsig key */
+	char* name;
+	/** algorithm */
+	char* algorithm;
+	/** secret date, in base64 */
+	char* secret;
+};
+
+/**
  * List of strings for config options
  */
 struct config_strlist {
@@ -1215,6 +1240,18 @@ void config_delview(struct config_view* p);
  * @param list: list.
  */
 void config_delviews(struct config_view* list);
+
+/**
+ * Delete a tsig_key item
+ * @param p: tsig_key item
+ */
+void config_deltsig_key(struct config_tsig_key* p);
+
+/**
+ * Delete items in config tsig_key list.
+ * @param list: list.
+ */
+void config_deltsig_keys(struct config_tsig_key* list);
 
 /** check if config for remote control turns on IP-address interface
  * with certificates or a named pipe without certificates. */

@@ -1418,3 +1418,14 @@ remote-control:
 #     rpz-signal-nxdomain-ra: no
 #     for-downstream: no
 #     tags: "example"
+
+# TSIG keys
+# tsig-key:
+#	# The key name is sent to the other party, it must be the same
+#	name: "keyname"
+#	# algorithm hmac-md5, or sha1, sha256, sha224, sha384, sha512
+#	algorithm: sha256
+#	# secret material, must be the same as the other party uses.
+#	# base64 encoded random number.
+#	# e.g. from dd if=/dev/random of=/dev/stdout count=1 bs=32 | base64
+#       secret: "K2tf3TRjvQkVCmJF3/Z9vA=="

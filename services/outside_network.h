@@ -190,6 +190,10 @@ struct outside_network {
 	struct waiting_tcp* tcp_wait_first;
 	/** last of waiting query list */
 	struct waiting_tcp* tcp_wait_last;
+	/** number of IP addresses to send to be cached responses to */
+	int num_dist;
+	/** udp sockets to the addresses to send to be cached responses to */
+	int* dist;
 };
 
 /**
@@ -570,7 +574,7 @@ struct outside_network* outside_network_create(struct comm_base* base,
 	void (*unwanted_action)(void*), void* unwanted_param, int do_udp,
 	void* sslctx, int delayclose, int tls_use_sni, struct dt_env *dtenv,
 	int udp_connect, int max_reuse_tcp_queries, int tcp_reuse_timeout,
-	int tcp_auth_query_timeout);
+	int tcp_auth_query_timeout, char** dist, int num_dist);
 
 /**
  * Delete outside_network structure.
