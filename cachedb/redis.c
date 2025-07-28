@@ -141,6 +141,7 @@ redis_connect(const char* host, int port, const char* path,
 	struct timeval* now_tv,
 	const char* infostr)
 {
+	struct timeval now_val;
 	redisContext* ctx;
 
 	/* See if the redis server is down, and reconnect has to wait. */
@@ -148,10 +149,17 @@ redis_connect(const char* host, int port, const char* path,
 		/* Acquire lock to look at timeval, the integer has atomic
 		 * integrity. */
 		struct timeval wait_tv;
+		if(now_tv) {
+			now_val = *now_tv;
+		} else {
+			if(gettimeofday(&now_val, NULL) < 0)
+				log_err("redis: gettimeofday: %s",
+					strerror(errno));
+		}
 		lock_basic_lock(wait_lock);
 		wait_tv = *reconnect_wait;
 		lock_basic_unlock(wait_lock);
-		if(timeval_smaller(now_tv, &wait_tv)) {
+		if(timeval_smaller(&now_val, &wait_tv)) {
 			verbose(VERB_ALGO, "redis %sdown, reconnect wait",
 				infostr);
 			return NULL;
@@ -214,7 +222,14 @@ fail:
 	if(*reconnect_attempts > REDIS_RECONNECT_ATTEMPT_LIMIT) {
 		/* Wait for the reconnect interval before trying again. */
 		struct timeval tv;
-		tv = *now_tv;
+		if(now_tv) {
+			now_val = *now_tv;
+		} else {
+			if(gettimeofday(&now_val, NULL) < 0)
+				log_err("redis: gettimeofday: %s",
+					strerror(errno));
+		}
+		tv = now_val;
 		timeval_add(&tv, reconnect_interval);
 		lock_basic_lock(wait_lock);
 		*reconnect_wait = tv;
