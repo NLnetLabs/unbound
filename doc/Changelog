@@ -1,3 +1,6 @@
+28 July 2025: Wouter
+	- Fix redis cachedb module gettimeofday init failure.
+
 24 July 2025: Wouter
 	- Redis checks for server down and throttles reconnects.
 
