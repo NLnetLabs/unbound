@@ -1,0 +1,31 @@
+# #-- mesh_jostle_priority.test --#
+# source the master var file when it's there
+[ -f ../.tpkg.var.master ] && source ../.tpkg.var.master
+# use .tpkg.var.test for in test variable passing
+[ -f .tpkg.var.test ] && source .tpkg.var.test
+PRE="../.."
+. ../common.sh
+
+get_make
+(cd $PRE; $MAKE streamtcp)
+
+teststep "Fire up and forget the two slow queries"
+$PRE/streamtcp -f 127.0.0.1@$SERVER_PORT -u -n a.slow. A IN b.slow. A IN
+if test "$?" -ne 0
+then
+	echo "error with streamtcp"
+	exit 1
+fi
+
+teststep "Let time pass so that queries can be jostled based on time"
+sleep 1
+
+teststep "Check that the fast query is dropped because the slow ones have explicitly configured upstreams"
+dig @127.0.0.1 -p $SERVER_PORT +retry=0 +timeout=1 c.fast. > outfile
+if grep "10.20.30.40" outfile
+then
+	cat outfile
+	echo "Did not get a drop"
+	exit 1
+fi
+exit 0

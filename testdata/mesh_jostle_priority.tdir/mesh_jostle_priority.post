@@ -1,0 +1,12 @@
+# #-- mesh_jostle_priority.post --#
+# source the master var file when it's there
+[ -f ../.tpkg.var.master ] && source ../.tpkg.var.master
+# source the test var file when it's there
+[ -f .tpkg.var.test ] && source .tpkg.var.test
+#
+# do your teardown here
+. ../common.sh
+kill_from_pidfile "unbound.pid"
+kill_pid $SLOW_STUB_PID
+kill_pid $FAST_STUB_PID
+cat unbound.log
