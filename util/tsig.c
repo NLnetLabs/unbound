@@ -252,6 +252,18 @@ tsig_key_table_search(struct tsig_key_table* key_table, uint8_t* name,
 	return (struct tsig_key*)node->key;
 }
 
+struct tsig_key*
+tsig_key_table_search_fromstr(struct tsig_key_table* key_table, char* name)
+{
+	uint8_t buf[LDNS_MAX_DOMAINLEN+1];
+	size_t len = sizeof(buf);
+	if(sldns_str2wire_dname_buf(name, buf, &len) != 0) {
+		log_err("could not parse '%s'", name);
+		return NULL;
+	}
+	return tsig_key_table_search(key_table, buf, len);
+}
+
 void tsig_key_delete(struct tsig_key* key)
 {
 	if(!key)

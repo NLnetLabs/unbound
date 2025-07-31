@@ -55,6 +55,7 @@
 #include "util/log.h"
 #include "util/module.h"
 #include "util/random.h"
+#include "util/tsig.h"
 #include "services/cache/dns.h"
 #include "services/outside_network.h"
 #include "services/listen_dnsport.h"
@@ -2091,7 +2092,8 @@ auth_zones_setup_zones(struct auth_zones* az)
 
 /** set config items and create zones */
 static int
-auth_zones_cfg(struct auth_zones* az, struct config_auth* c)
+auth_zones_cfg(struct auth_zones* az, struct config_auth* c,
+	struct tsig_key_table* tsig_key_table)
 {
 	struct auth_zone* z;
 	struct auth_xfer* x = NULL;
@@ -2171,12 +2173,14 @@ auth_zones_cfg(struct auth_zones* az, struct config_auth* c)
 	if(x) {
 		z->zone_is_slave = 1;
 		/* set options on xfer zone */
-		if(!xfer_set_masters(&x->task_probe->masters, c, 0)) {
+		if(!xfer_set_masters(&x->task_probe->masters, c, 0,
+			tsig_key_table)) {
 			lock_basic_unlock(&x->lock);
 			lock_rw_unlock(&z->lock);
 			return 0;
 		}
-		if(!xfer_set_masters(&x->task_transfer->masters, c, 1)) {
+		if(!xfer_set_masters(&x->task_transfer->masters, c, 1,
+			tsig_key_table)) {
 			lock_basic_unlock(&x->lock);
 			lock_rw_unlock(&z->lock);
 			return 0;
@@ -2244,7 +2248,7 @@ az_delete_deleted_zones(struct auth_zones* az)
 
 int auth_zones_apply_cfg(struct auth_zones* az, struct config_file* cfg,
 	int setup, int* is_rpz, struct module_env* env,
-	struct module_stack* mods)
+	struct module_stack* mods, struct tsig_key_table* tsig_key_table)
 {
 	struct config_auth* p;
 	az_setall_deleted(az);
@@ -2254,7 +2258,7 @@ int auth_zones_apply_cfg(struct auth_zones* az, struct config_file* cfg,
 			continue;
 		}
 		*is_rpz = (*is_rpz || p->isrpz);
-		if(!auth_zones_cfg(az, p)) {
+		if(!auth_zones_cfg(az, p, tsig_key_table)) {
 			log_err("cannot config auth zone %s", p->name);
 			return 0;
 		}
@@ -7284,9 +7288,30 @@ parse_url(char* url, char** host, char** file, int* port, int* ssl)
 	return 1;
 }
 
+/** Check the tsig key exists */
+static int
+check_tsig_key_exists(struct tsig_key_table* tsig_key_table,
+	const char* optname, char* str, char* str2)
+{
+	struct tsig_key* key;
+	if(!tsig_key_table)
+		return 1;
+
+	lock_rw_rdlock(&tsig_key_table->lock);
+	key = tsig_key_table_search_fromstr(tsig_key_table, str2);
+	lock_rw_unlock(&tsig_key_table->lock);
+
+	if(!key) {
+		log_err("could not find tsig-key for %s: %s %s",
+			optname, str, str2);
+		return 0;
+	}
+	return 1;
+}
+
 int
 xfer_set_masters(struct auth_master** list, struct config_auth* c,
-	int with_http)
+	int with_http, struct tsig_key_table* tsig_key_table)
 {
 	struct auth_master* m;
 	struct config_strlist* p;
@@ -7322,6 +7347,9 @@ xfer_set_masters(struct auth_master** list, struct config_auth* c,
 			log_err("malloc failure");
 			return 0;
 		}
+		if(!check_tsig_key_exists(tsig_key_table, "primary-tsig",
+			p2->str, p2->str2))
+			return 0;
 		m->tsig_key_name = strdup(p2->str2);
 		if(!m->tsig_key_name) {
 			log_err("malloc failure");
@@ -7347,6 +7375,9 @@ xfer_set_masters(struct auth_master** list, struct config_auth* c,
 			log_err("malloc failure");
 			return 0;
 		}
+		if(!check_tsig_key_exists(tsig_key_table, "allow-notify-tsig",
+			p2->str, p2->str2))
+			return 0;
 		m->tsig_key_name = strdup(p2->str2);
 		if(!m->tsig_key_name) {
 			log_err("malloc failure");

@@ -55,6 +55,7 @@ struct query_info;
 struct dns_msg;
 struct edns_data;
 struct module_env;
+struct tsig_key_table;
 struct worker;
 struct comm_point;
 struct comm_timer;
@@ -488,11 +489,13 @@ struct auth_zones* auth_zones_create(void);
  * @param is_rpz: set to 1 if at least one RPZ zone is configured.
  * @param env: environment for offline verification.
  * @param mods: modules in environment.
+ * @param tsig_key_table: tsig key table to check if tsig keys exist.
+ *	If NULL, no check is performed.
  * @return false on failure.
  */
 int auth_zones_apply_cfg(struct auth_zones* az, struct config_file* cfg,
 	int setup, int* is_rpz, struct module_env* env,
-	struct module_stack* mods);
+	struct module_stack* mods, struct tsig_key_table* tsig_key_table);
 
 /** initial pick up of worker timeouts, ties events to worker event loop
  * @param az: auth zones structure
@@ -669,10 +672,12 @@ struct auth_xfer* auth_xfer_create(struct auth_zones* az, struct auth_zone* z);
  * @param list: pointer to start of list.  The malloced list is returned here.
  * @param c: the config items to copy over.
  * @param with_http: if true, http urls are also included, before the masters.
+ * @param tsig_key_table: if nonNULL, used to check that tsig keys exist in
+ *	the key table.
  * @return false on failure.
  */
 int xfer_set_masters(struct auth_master** list, struct config_auth* c,
-	int with_http);
+	int with_http, struct tsig_key_table* tsig_key_table);
 
 /** xfer nextprobe timeout callback, this is part of task_nextprobe */
 void auth_xfer_timer(void* arg);

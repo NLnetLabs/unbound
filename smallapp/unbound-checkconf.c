@@ -49,6 +49,7 @@
 #include "util/module.h"
 #include "util/net_help.h"
 #include "util/regional.h"
+#include "util/tsig.h"
 #include "iterator/iterator.h"
 #include "iterator/iter_fwd.h"
 #include "iterator/iter_hints.h"
@@ -1003,13 +1004,23 @@ static void
 check_auth(struct config_file* cfg)
 {
 	int is_rpz = 0;
+	struct tsig_key_table* tsig_key_table;
 	struct auth_zones* az = auth_zones_create();
-	if(!az || !auth_zones_apply_cfg(az, cfg, 0, &is_rpz, NULL, NULL)) {
+
+	/* construct tsig key table for tsig key name checks, and it
+	 * also checks the TSIG key name and algorithm and base64 syntax. */
+	tsig_key_table = tsig_key_table_create();
+	if(!tsig_key_table || !tsig_key_table_apply_cfg(tsig_key_table, cfg))
+		fatal_exit("Could not set up TSIG keys");
+
+	if(!az || !auth_zones_apply_cfg(az, cfg, 0, &is_rpz, NULL, NULL,
+		tsig_key_table)) {
 		fatal_exit("Could not setup authority zones");
 	}
 	if(is_rpz && !strstr(cfg->module_conf, "respip"))
 		fatal_exit("RPZ requires the respip module");
 	auth_zones_delete(az);
+	tsig_key_table_delete(tsig_key_table);
 }
 
 /** check config file */

@@ -218,6 +218,16 @@ struct tsig_key* tsig_key_table_search(struct tsig_key_table* key_table,
 	uint8_t* name, size_t namelen);
 
 /**
+ * Find key in key table. Caller must hold lock on the table.
+ * @param key_table: the tsig key table.
+ * @param name: the name in string format, it is parsed to wireformat.
+ * @return the found key or NULL if not found or NULL on parse error of the
+ * key name as a domain name. The item is locked by the key_table lock.
+ */
+struct tsig_key* tsig_key_table_search_fromstr(
+	struct tsig_key_table* key_table, char* name);
+
+/**
  * Delete TSIG key.
  * @param key: to delete
  */
