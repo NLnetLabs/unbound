@@ -2110,7 +2110,7 @@ auth_zones_cfg(struct auth_zones* az, struct config_auth* c)
 		}
 		return 0;
 	}
-	if(c->masters || c->urls) {
+	if(c->masters || c->masters_tsig || c->urls) {
 		if(!(x=auth_zones_find_or_add_xfer(az, z))) {
 			lock_rw_unlock(&az->lock);
 			lock_rw_unlock(&z->lock);
@@ -2312,6 +2312,7 @@ auth_free_masters(struct auth_master* list)
 		auth_free_master_addrs(list->list);
 		free(list->host);
 		free(list->file);
+		free(list->tsig_key_name);
 		free(list);
 		list = n;
 	}
@@ -3978,9 +3979,20 @@ auth_master_copy(struct auth_master* o)
 			return NULL;
 		}
 	}
+	if(m->tsig_key_name) {
+		m->tsig_key_name = strdup(m->tsig_key_name);
+		if(!m->tsig_key_name) {
+			free(m->file);
+			free(m->host);
+			free(m);
+			log_err("malloc failure");
+			return NULL;
+		}
+	}
 	if(m->list) {
 		m->list = auth_addr_list_copy(m->list);
 		if(!m->list) {
+			free(m->tsig_key_name);
 			free(m->file);
 			free(m->host);
 			free(m);
@@ -7278,6 +7290,7 @@ xfer_set_masters(struct auth_master** list, struct config_auth* c,
 {
 	struct auth_master* m;
 	struct config_strlist* p;
+	struct config_str2list* p2;
 	/* list points to the first, or next pointer for the new element */
 	while(*list) {
 		list = &( (*list)->next );
@@ -7300,12 +7313,42 @@ xfer_set_masters(struct auth_master** list, struct config_auth* c,
 			return 0;
 		}
 	}
+	for(p2 = c->masters_tsig; p2; p2 = p2->next) {
+		m = auth_master_new(&list);
+		if(!m) return 0;
+		m->ixfr = 1; /* this flag is not configurable */
+		m->host = strdup(p2->str);
+		if(!m->host) {
+			log_err("malloc failure");
+			return 0;
+		}
+		m->tsig_key_name = strdup(p2->str2);
+		if(!m->tsig_key_name) {
+			log_err("malloc failure");
+			return 0;
+		}
+	}
 	for(p = c->allow_notify; p; p = p->next) {
 		m = auth_master_new(&list);
 		if(!m) return 0;
 		m->allow_notify = 1;
 		m->host = strdup(p->str);
 		if(!m->host) {
+			log_err("malloc failure");
+			return 0;
+		}
+	}
+	for(p2 = c->allow_notify_tsig; p2; p2 = p2->next) {
+		m = auth_master_new(&list);
+		if(!m) return 0;
+		m->allow_notify = 1;
+		m->host = strdup(p2->str);
+		if(!m->host) {
+			log_err("malloc failure");
+			return 0;
+		}
+		m->tsig_key_name = strdup(p2->str2);
+		if(!m->tsig_key_name) {
 			log_err("malloc failure");
 			return 0;
 		}
@@ -8645,6 +8688,8 @@ auth_primaries_get_mem(struct auth_master* list)
 			m += strlen(n->host)+1;
 		if(n->file)
 			m += strlen(n->file)+1;
+		if(n->tsig_key_name)
+			m += strlen(n->tsig_key_name)+1;
 	}
 	return m;
 }

@@ -848,6 +848,10 @@ struct config_auth {
 	struct config_strlist* urls;
 	/** list of allow-notify */
 	struct config_strlist* allow_notify;
+	/** list of masters with tsig key */
+	struct config_str2list* masters_tsig;
+	/** list of allow-notify with tsig key */
+	struct config_str2list* allow_notify_tsig;
 	/** zonefile (or NULL) */
 	char* zonefile;
 	/** provide downstream answers */

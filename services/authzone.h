@@ -457,6 +457,8 @@ struct auth_master {
 	int ssl;
 	/** the port number (for urls) */
 	int port;
+	/** the tsig key name (if any, or NULL) */
+	char* tsig_key_name;
 	/** if the host is a hostname, the list of resolved addrs, if any*/
 	struct auth_addr* list;
 };

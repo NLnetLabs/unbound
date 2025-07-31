@@ -1226,7 +1226,8 @@ remote-control:
 # authoritatively.  zonefile: reads from file (and writes to it if you also
 # download it), primary: fetches with AXFR and IXFR, or url to zonefile.
 # With allow-notify: you can give additional (apart from primaries and urls)
-# sources of notifies.
+# sources of notifies. primary-tsig: and allow-notify-tsig: use addr keyname,
+# with the name of the TSIG key to use, declared as a tsig-key:.
 # auth-zone:
 #	name: "."
 #	primary: 170.247.170.2        # b.root-servers.net
@@ -1405,6 +1406,7 @@ remote-control:
 # and drop.  Policies can be loaded from a file, or using zone
 # transfer, or using HTTP. The respip module needs to be added
 # to the module-config, e.g.: module-config: "respip validator iterator".
+# Can also use primary-tsig: and allow-notify-tsig:
 # rpz:
 #     name: "rpz.example.com"
 #     zonefile: "rpz.example.com"

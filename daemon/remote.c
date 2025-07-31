@@ -4696,6 +4696,8 @@ getmem_config_auth(struct config_auth* p)
 			+ getmem_config_strlist(s->masters)
 			+ getmem_config_strlist(s->urls)
 			+ getmem_config_strlist(s->allow_notify)
+			+ getmem_config_str2list(s->masters_tsig)
+			+ getmem_config_str2list(s->allow_notify_tsig)
 			+ getmem_str(s->zonefile)
 			+ s->rpz_taglistlen
 			+ getmem_str(s->rpz_action_override)
@@ -4947,6 +4949,12 @@ xfr_auth_master_equal(struct auth_master* m1, struct auth_master* m2)
 		return 0;
 	if(m1->port != m2->port)
 		return 0;
+
+	if((m1->tsig_key_name && !m2->tsig_key_name) || (!m1->tsig_key_name && m2->tsig_key_name))
+		return 0;
+	if(m1->tsig_key_name && m2->tsig_key_name && strcmp(m1->tsig_key_name, m2->tsig_key_name) != 0)
+		return 0;
+
 	return 1;
 }
 

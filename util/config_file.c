@@ -1641,6 +1641,8 @@ config_delauth(struct config_auth* p)
 	config_delstrlist(p->masters);
 	config_delstrlist(p->urls);
 	config_delstrlist(p->allow_notify);
+	config_deldblstrlist(p->masters_tsig);
+	config_deldblstrlist(p->allow_notify_tsig);
 	free(p->zonefile);
 	free(p->rpz_taglist);
 	free(p->rpz_action_override);
