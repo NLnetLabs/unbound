@@ -1,3 +1,9 @@
+28 July 2025: Wouter
+	- Fix redis cachedb module gettimeofday init failure.
+
+24 July 2025: Wouter
+	- Redis checks for server down and throttles reconnects.
+
 17 July 2025: Wouter
 	- Fix to not set rlimits in the unit tests.
 	- Fix #1303: [FR] Disable TLSv1.2.
