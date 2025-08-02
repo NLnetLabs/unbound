@@ -52,6 +52,7 @@
 #include "util/data/msgreply.h"
 #include "util/storage/slabhash.h"
 #include "util/edns.h"
+#include "util/tsig.h"
 #include "sldns/sbuffer.h"
 #include "iterator/iter_fwd.h"
 #include "iterator/iter_hints.h"
@@ -81,6 +82,8 @@ context_finalize(struct ub_ctx* ctx)
 		return UB_INITFAIL;
 	listen_setup_locks();
 	log_edns_known_options(VERB_ALGO, ctx->env);
+	if(!tsig_key_table_apply_cfg(ctx->env->tsig_key_table, cfg))
+		return UB_INITFAIL;
 	ctx->local_zones = local_zones_create();
 	if(!ctx->local_zones)
 		return UB_NOMEM;
