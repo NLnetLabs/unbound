@@ -3218,10 +3218,9 @@ comm_point_tcp_accept_callback(int fd, short event, void* arg)
 	}
 	/* accept incoming connection. */
 	c_hdl = c->tcp_free;
-	if(!c_hdl->is_in_tcp_free) {
-		/* Should not happen */
-		fatal_exit("inconsistent tcp_free state in accept_callback");
-	}
+	/* Should not happen: inconsistent tcp_free state in
+	 * accept_callback. */
+	log_assert(c_hdl->is_in_tcp_free);
 	/* clear leftover flags from previous use, and then set the
 	 * correct event base for the event structure for libevent */
 	ub_event_free(c_hdl->ev->ev);
@@ -3297,10 +3296,9 @@ comm_point_tcp_accept_callback(int fd, short event, void* arg)
 	}
 
 	/* Paranoia: Check that the state has not changed from above: */
-	if(c_hdl != c->tcp_free || !c_hdl->is_in_tcp_free) {
-		/* Should not happen */
-		fatal_exit("tcp_free state changed within accept_callback!");
-	}
+	/* Should not happen: tcp_free state changed within accept_callback. */
+	log_assert(c_hdl == c->tcp_free);
+	log_assert(c_hdl->is_in_tcp_free);
 	/* grab the tcp handler buffers */
 	c->cur_tcp_count++;
 	c->tcp_free = c_hdl->tcp_free;
@@ -3327,10 +3325,9 @@ reclaim_tcp_handler(struct comm_point* c)
 	}
 	comm_point_close(c);
 	if(c->tcp_parent && !c->is_in_tcp_free) {
-		if(c->tcp_free || c->tcp_parent->cur_tcp_count <= 0) {
-			/* Should not happen */
-			fatal_exit("bad tcp_free state in reclaim_tcp");
-		}
+		/* Should not happen: bad tcp_free state in reclaim_tcp. */
+		log_assert(c->tcp_free == NULL);
+		log_assert(c->tcp_parent->cur_tcp_count > 0);
 		c->tcp_parent->cur_tcp_count--;
 		c->tcp_free = c->tcp_parent->tcp_free;
 		c->tcp_parent->tcp_free = c;
@@ -4721,10 +4718,9 @@ reclaim_http_handler(struct comm_point* c)
 	}
 	comm_point_close(c);
 	if(c->tcp_parent && !c->is_in_tcp_free) {
-		if(c->tcp_free || c->tcp_parent->cur_tcp_count <= 0) {
-			/* Should not happen */
-			fatal_exit("bad tcp_free state in reclaim_http");
-		}
+		/* Should not happen: bad tcp_free state in reclaim_http. */
+		log_assert(c->tcp_free == NULL);
+		log_assert(c->tcp_parent->cur_tcp_count > 0);
 		c->tcp_parent->cur_tcp_count--;
 		c->tcp_free = c->tcp_parent->tcp_free;
 		c->tcp_parent->tcp_free = c;

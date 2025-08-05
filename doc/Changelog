@@ -1,6 +1,8 @@
 5 August 2025: Wouter
 	- Fix #1309: incorrectly reclaimed tcp handler can cause data
 	  corruption and segfault.
+	- Fix to use assertions for consistency checks in #1309 reclaimed
+	  tcp handlers.
 
 1 August 2025: Wouter
 	- Fix testbound test program to accurately output packets from hex.
