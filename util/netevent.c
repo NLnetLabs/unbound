@@ -3218,6 +3218,10 @@ comm_point_tcp_accept_callback(int fd, short event, void* arg)
 	}
 	/* accept incoming connection. */
 	c_hdl = c->tcp_free;
+	if(!c_hdl->is_in_tcp_free) {
+		/* Should not happen */
+		fatal_exit("inconsistent tcp_free state in accept_callback");
+	}
 	/* clear leftover flags from previous use, and then set the
 	 * correct event base for the event structure for libevent */
 	ub_event_free(c_hdl->ev->ev);
@@ -3292,10 +3296,16 @@ comm_point_tcp_accept_callback(int fd, short event, void* arg)
 #endif
 	}
 
+	/* Paranoia: Check that the state has not changed from above: */
+	if(c_hdl != c->tcp_free || !c_hdl->is_in_tcp_free) {
+		/* Should not happen */
+		fatal_exit("tcp_free state changed within accept_callback!");
+	}
 	/* grab the tcp handler buffers */
 	c->cur_tcp_count++;
 	c->tcp_free = c_hdl->tcp_free;
 	c_hdl->tcp_free = NULL;
+	c_hdl->is_in_tcp_free = 0;
 	if(!c->tcp_free) {
 		/* stop accepting incoming queries for now. */
 		comm_point_stop_listening(c);
@@ -3316,12 +3326,15 @@ reclaim_tcp_handler(struct comm_point* c)
 #endif
 	}
 	comm_point_close(c);
-	if(c->tcp_parent) {
-		if(c != c->tcp_parent->tcp_free) {
-			c->tcp_parent->cur_tcp_count--;
-			c->tcp_free = c->tcp_parent->tcp_free;
-			c->tcp_parent->tcp_free = c;
+	if(c->tcp_parent && !c->is_in_tcp_free) {
+		if(c->tcp_free || c->tcp_parent->cur_tcp_count <= 0) {
+			/* Should not happen */
+			fatal_exit("bad tcp_free state in reclaim_tcp");
 		}
+		c->tcp_parent->cur_tcp_count--;
+		c->tcp_free = c->tcp_parent->tcp_free;
+		c->tcp_parent->tcp_free = c;
+		c->is_in_tcp_free = 1;
 		if(!c->tcp_free) {
 			/* re-enable listening on accept socket */
 			comm_point_start_listening(c->tcp_parent, -1, -1);
@@ -4707,12 +4720,15 @@ reclaim_http_handler(struct comm_point* c)
 #endif
 	}
 	comm_point_close(c);
-	if(c->tcp_parent) {
-		if(c != c->tcp_parent->tcp_free) {
-			c->tcp_parent->cur_tcp_count--;
-			c->tcp_free = c->tcp_parent->tcp_free;
-			c->tcp_parent->tcp_free = c;
+	if(c->tcp_parent && !c->is_in_tcp_free) {
+		if(c->tcp_free || c->tcp_parent->cur_tcp_count <= 0) {
+			/* Should not happen */
+			fatal_exit("bad tcp_free state in reclaim_http");
 		}
+		c->tcp_parent->cur_tcp_count--;
+		c->tcp_free = c->tcp_parent->tcp_free;
+		c->tcp_parent->tcp_free = c;
+		c->is_in_tcp_free = 1;
 		if(!c->tcp_free) {
 			/* re-enable listening on accept socket */
 			comm_point_start_listening(c->tcp_parent, -1, -1);
@@ -5748,6 +5764,7 @@ comm_point_create_udp(struct comm_base *base, int fd, sldns_buffer* buffer,
 	c->cur_tcp_count = 0;
 	c->tcp_handlers = NULL;
 	c->tcp_free = NULL;
+	c->is_in_tcp_free = 0;
 	c->type = comm_udp;
 	c->tcp_do_close = 0;
 	c->do_not_close = 0;
@@ -5812,6 +5829,7 @@ comm_point_create_udp_ancil(struct comm_base *base, int fd,
 	c->cur_tcp_count = 0;
 	c->tcp_handlers = NULL;
 	c->tcp_free = NULL;
+	c->is_in_tcp_free = 0;
 	c->type = comm_udp;
 	c->tcp_do_close = 0;
 	c->do_not_close = 0;
@@ -5879,6 +5897,7 @@ comm_point_create_doq(struct comm_base *base, int fd, sldns_buffer* buffer,
 	c->cur_tcp_count = 0;
 	c->tcp_handlers = NULL;
 	c->tcp_free = NULL;
+	c->is_in_tcp_free = 0;
 	c->type = comm_doq;
 	c->tcp_do_close = 0;
 	c->do_not_close = 0;
@@ -5979,6 +5998,7 @@ comm_point_create_tcp_handler(struct comm_base *base,
 	c->cur_tcp_count = 0;
 	c->tcp_handlers = NULL;
 	c->tcp_free = NULL;
+	c->is_in_tcp_free = 0;
 	c->type = comm_tcp;
 	c->tcp_do_close = 0;
 	c->do_not_close = 0;
@@ -6016,6 +6036,7 @@ comm_point_create_tcp_handler(struct comm_base *base,
 	/* add to parent free list */
 	c->tcp_free = parent->tcp_free;
 	parent->tcp_free = c;
+	c->is_in_tcp_free = 1;
 	/* ub_event stuff */
 	evbits = UB_EV_PERSIST | UB_EV_READ | UB_EV_TIMEOUT;
 	c->ev->ev = ub_event_new(base->eb->base, c->fd, evbits,
@@ -6078,6 +6099,7 @@ comm_point_create_http_handler(struct comm_base *base,
 	c->cur_tcp_count = 0;
 	c->tcp_handlers = NULL;
 	c->tcp_free = NULL;
+	c->is_in_tcp_free = 0;
 	c->type = comm_http;
 	c->tcp_do_close = 1;
 	c->do_not_close = 0;
@@ -6136,6 +6158,7 @@ comm_point_create_http_handler(struct comm_base *base,
 	/* add to parent free list */
 	c->tcp_free = parent->tcp_free;
 	parent->tcp_free = c;
+	c->is_in_tcp_free = 1;
 	/* ub_event stuff */
 	evbits = UB_EV_PERSIST | UB_EV_READ | UB_EV_TIMEOUT;
 	c->ev->ev = ub_event_new(base->eb->base, c->fd, evbits,
@@ -6197,6 +6220,7 @@ comm_point_create_tcp(struct comm_base *base, int fd, int num,
 		return NULL;
 	}
 	c->tcp_free = NULL;
+	c->is_in_tcp_free = 0;
 	c->type = comm_tcp_accept;
 	c->tcp_do_close = 0;
 	c->do_not_close = 0;
@@ -6291,6 +6315,7 @@ comm_point_create_tcp_out(struct comm_base *base, size_t bufsize,
 	c->cur_tcp_count = 0;
 	c->tcp_handlers = NULL;
 	c->tcp_free = NULL;
+	c->is_in_tcp_free = 0;
 	c->type = comm_tcp;
 	c->tcp_do_close = 0;
 	c->do_not_close = 0;
@@ -6355,6 +6380,7 @@ comm_point_create_http_out(struct comm_base *base, size_t bufsize,
 	c->cur_tcp_count = 0;
 	c->tcp_handlers = NULL;
 	c->tcp_free = NULL;
+	c->is_in_tcp_free = 0;
 	c->type = comm_http;
 	c->tcp_do_close = 0;
 	c->do_not_close = 0;
@@ -6425,6 +6451,7 @@ comm_point_create_local(struct comm_base *base, int fd, size_t bufsize,
 	c->cur_tcp_count = 0;
 	c->tcp_handlers = NULL;
 	c->tcp_free = NULL;
+	c->is_in_tcp_free = 0;
 	c->type = comm_local;
 	c->tcp_do_close = 0;
 	c->do_not_close = 1;
@@ -6488,6 +6515,7 @@ comm_point_create_raw(struct comm_base* base, int fd, int writing,
 	c->cur_tcp_count = 0;
 	c->tcp_handlers = NULL;
 	c->tcp_free = NULL;
+	c->is_in_tcp_free = 0;
 	c->type = comm_raw;
 	c->tcp_do_close = 0;
 	c->do_not_close = 1;
