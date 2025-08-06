@@ -1,3 +1,9 @@
+6 August 2025: Wouter
+	- Fix edns subnet, so that the subquery without subnet is stored in
+	  global cache if the querier used 0.0.0.0/0 and the name and address
+	  do not receive subnet treatment. If the name and address are
+	  configured for subnet, it is stored in the subnet cache.
+
 5 August 2025: Wouter
 	- Fix #1309: incorrectly reclaimed tcp handler can cause data
 	  corruption and segfault.
