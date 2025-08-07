@@ -1,6 +1,8 @@
 7 August 2025: Wouter
 	- Fix dname_str for printout of long names. Thanks to Jan Komissar
 	  for the fix.
+	- Fix that edns-subnet failure to create a subquery errors as
+	  servfail, and not formerror.
 
 6 August 2025: Wouter
 	- Fix edns subnet, so that the subquery without subnet is stored in

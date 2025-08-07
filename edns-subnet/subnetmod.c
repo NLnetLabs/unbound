@@ -608,7 +608,7 @@ generate_lookup_without_subnet(struct module_qstate *qstate, int id,
 	verbose(VERB_ALGO, "subnetcache: make subquery to look up without subnet");
 	if(!generate_sub_request(qstate, id, sq)) {
 		verbose(VERB_ALGO, "Could not generate sub query");
-		qstate->return_rcode = LDNS_RCODE_FORMERR;
+		qstate->return_rcode = LDNS_RCODE_SERVFAIL;
 		qstate->return_msg = NULL;
 		return module_finished;
 	}
