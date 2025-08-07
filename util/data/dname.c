@@ -650,11 +650,11 @@ void dname_str(uint8_t* dname, char* str)
 	while(lablen) {
 		len += lablen+1;
 		if(len >= LDNS_MAX_DOMAINLEN) {
-		    if ((s-str) >= (LDNS_MAX_DOMAINLEN-1))
-			s = str + LDNS_MAX_DOMAINLEN - 2;
-		    *s++ = '&';
-		    *s = 0;
-		    return;
+			if ((s-str) >= (LDNS_MAX_DOMAINLEN-1))
+				s = str + LDNS_MAX_DOMAINLEN - 2;
+			*s++ = '&';
+			*s = 0;
+			return;
 		}
 		if(lablen > LDNS_MAX_LABELLEN) {
 			*s++ = '#';
@@ -666,7 +666,7 @@ void dname_str(uint8_t* dname, char* str)
 				|| *dname == '-' || *dname == '_'
 				|| *dname == '*')
 				*s++ = *(char*)dname++;
-			else    {
+			else	{
 				*s++ = '?';
 				dname++;
 			}

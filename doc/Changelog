@@ -3,6 +3,7 @@
 	  for the fix.
 	- Fix that edns-subnet failure to create a subquery errors as
 	  servfail, and not formerror.
+	- Fix to whitespace in dname_str.
 
 6 August 2025: Wouter
 	- Fix edns subnet, so that the subquery without subnet is stored in
