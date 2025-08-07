@@ -1198,7 +1198,7 @@ unitanchor.lo unitanchor.o: $(srcdir)/testcode/unitanchor.c config.h $(srcdir)/u
  $(srcdir)/validator/val_anchor.h $(srcdir)/util/rbtree.h $(srcdir)/sldns/sbuffer.h $(srcdir)/sldns/rrdef.h
 unitdname.lo unitdname.o: $(srcdir)/testcode/unitdname.c config.h $(srcdir)/util/log.h $(srcdir)/testcode/unitmain.h \
  $(srcdir)/util/data/dname.h $(srcdir)/util/storage/lruhash.h $(srcdir)/util/locks.h $(srcdir)/sldns/sbuffer.h \
- $(srcdir)/sldns/str2wire.h $(srcdir)/sldns/rrdef.h
+ $(srcdir)/sldns/str2wire.h $(srcdir)/sldns/rrdef.h $(srcdir)/sldns/wire2str.h
 unitlruhash.lo unitlruhash.o: $(srcdir)/testcode/unitlruhash.c config.h $(srcdir)/testcode/unitmain.h \
  $(srcdir)/util/log.h $(srcdir)/util/storage/lruhash.h $(srcdir)/util/locks.h $(srcdir)/util/storage/slabhash.h
 unitmain.lo unitmain.o: $(srcdir)/testcode/unitmain.c config.h $(srcdir)/sldns/rrdef.h $(srcdir)/sldns/keyraw.h \
