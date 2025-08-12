@@ -1,3 +1,7 @@
+12 August 2025: Wouter
+	- Fix that unbound-control dump_cache releases the cache locks
+	  every so often, so that the server stays responsive.
+
 7 August 2025: Wouter
 	- Fix dname_str for printout of long names. Thanks to Jan Komissar
 	  for the fix.
