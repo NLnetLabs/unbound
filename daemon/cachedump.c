@@ -99,22 +99,115 @@ dump_rrset(RES* ssl, struct ub_packed_rrset_key* k,
 	return 1;
 }
 
-/** dump lruhash rrset cache */
+/** dump lruhash cache and call callback for every item. */
 static int
-dump_rrset_lruhash(RES* ssl, struct lruhash* h, time_t now)
+dump_lruhash(struct lruhash* table, int (*func)(void*, void*), void* arg)
 {
-	struct lruhash_entry* e;
-	/* lruhash already locked by caller */
-	/* walk in order of lru; best first */
-	for(e=h->lru_start; e; e = e->lru_next) {
-		lock_rw_rdlock(&e->lock);
-		if(!dump_rrset(ssl, (struct ub_packed_rrset_key*)e->key,
-			(struct packed_rrset_data*)e->data, now)) {
-			lock_rw_unlock(&e->lock);
-			return 0;
+	int just_started = 1;
+	int not_done = 1;
+	hashvalue_type hash;
+	size_t num = 0; /* number of entries processed. */
+	size_t max = 1000; /* number of entries after which it unlocks. */
+
+	while(not_done) {
+		size_t i; /* hash bin. */
+		/* Process a number of items. */
+		num = 0;
+		lock_quick_lock(&table->lock);
+		if(just_started) {
+			i = 0;
+		} else {
+			i = hash&table->size_mask;
 		}
-		lock_rw_unlock(&e->lock);
+		while(num < max) {
+			/* Process bin. */
+			int found = 0;
+			size_t num_bin = 0;
+			struct lruhash_bin* bin = &table->array[i];
+			struct lruhash_entry* e;
+			lock_quick_lock(&bin->lock);
+			for(e = bin->overflow_list; e; e = e->overflow_next) {
+				/* Entry e is locked by the func. */
+				if(!(*func)(e, arg)) {
+					lock_quick_unlock(&bin->lock);
+					lock_quick_unlock(&table->lock);
+					return 0;
+				}
+				num_bin++;
+			}
+			lock_quick_unlock(&bin->lock);
+			/* This addition of bin number of entries may take
+			 * it over the max. */
+			num += num_bin;
+
+			/* Move to next bin. */
+			/* Find one with an entry, with a  hash value, so we
+			 * can continue from the hash value. The hash value
+			 * can be indexed also if the array changes size. */
+			i++;
+			while(i < table->size) {
+				bin = &table->array[i];
+				lock_quick_lock(&bin->lock);
+				if(bin->overflow_list) {
+					hash = bin->overflow_list->hash;
+					lock_quick_unlock(&bin->lock);
+					found = 1;
+					just_started = 0;
+					break;
+				}
+				lock_quick_unlock(&bin->lock);
+				i++;
+			}
+			if(!found) {
+				not_done = 0;
+				lock_quick_unlock(&table->lock);
+				break;
+			}
+		}
+		lock_quick_unlock(&table->lock);
 	}
+	return 1;
+}
+
+/** dump slabhash cache and call callback for every item. */
+static int
+dump_slabhash(struct slabhash* sh, int (*func)(void*, void*), void* arg)
+{
+	/* Process a number of items at a time, then unlock the cache,
+	 * so that ordinary processing can continue. Keep an iteration marker
+	 * to continue the loop. That means the cache can change, items
+	 * could be inserted and deleted. And, for example, the hash table
+	 * can grow. */
+	size_t slab;
+	for(slab=0; slab<sh->size; slab++) {
+		if(!dump_lruhash(sh->array[slab], func, arg))
+			return 0;
+	}
+	return 1;
+}
+
+/** Struct for dump information. */
+struct dump_info {
+	/** The worker. */
+	struct worker* worker;
+	/** The printout connection. */
+	RES* ssl;
+};
+
+/** Dump the rrset cache entry */
+static int
+dump_rrset_entry(void* entryp, void* arg)
+{
+	struct dump_info* dump_info = (struct dump_info*)arg;
+	struct lruhash_entry* e = (struct lruhash_entry*)entryp;
+	lock_rw_rdlock(&e->lock);
+	if(!dump_rrset(dump_info->ssl, (struct ub_packed_rrset_key*)e->key,
+		(struct packed_rrset_data*)e->data,
+		*dump_info->worker->env.now)) {
+		lock_rw_unlock(&e->lock);
+		return 0;
+	}
+	lock_rw_unlock(&e->lock);
 	return 1;
 }
 
@@ -123,17 +216,12 @@ static int
 dump_rrset_cache(RES* ssl, struct worker* worker)
 {
 	struct rrset_cache* r = worker->env.rrset_cache;
-	size_t slab;
+	struct dump_info dump_info;
+	dump_info.worker = worker;
+	dump_info.ssl = ssl;
 	if(!ssl_printf(ssl, "START_RRSET_CACHE\n")) return 0;
-	for(slab=0; slab<r->table.size; slab++) {
-		lock_quick_lock(&r->table.array[slab]->lock);
-		if(!dump_rrset_lruhash(ssl, r->table.array[slab],
-			*worker->env.now)) {
-			lock_quick_unlock(&r->table.array[slab]->lock);
-			return 0;
-		}
-		lock_quick_unlock(&r->table.array[slab]->lock);
-	}
+	if(!dump_slabhash(&r->table, &dump_rrset_entry, &dump_info))
+		return 0;
 	return ssl_printf(ssl, "END_RRSET_CACHE\n");
 }
 
@@ -247,30 +335,27 @@ copy_msg(struct regional* region, struct lruhash_entry* e,
 	return (*k)->qname != NULL;
 }
 
-/** dump lruhash msg cache */
+/** Dump the msg entry. */
 static int
-dump_msg_lruhash(RES* ssl, struct worker* worker, struct lruhash* h)
+dump_msg_entry(void* entryp, void* arg)
 {
-	struct lruhash_entry* e;
+	struct dump_info* dump_info = (struct dump_info*)arg;
+	struct lruhash_entry* e = (struct lruhash_entry*)entryp;
 	struct query_info* k;
 	struct reply_info* d;
 
-	/* lruhash already locked by caller */
-	/* walk in order of lru; best first */
-	for(e=h->lru_start; e; e = e->lru_next) {
-		regional_free_all(worker->scratchpad);
-		lock_rw_rdlock(&e->lock);
-		/* make copy of rrset in worker buffer */
-		if(!copy_msg(worker->scratchpad, e, &k, &d)) {
-			lock_rw_unlock(&e->lock);
-			return 0;
-		}
+	regional_free_all(dump_info->worker->scratchpad);
+	/* Make copy of rrset in worker buffer. */
+	lock_rw_rdlock(&e->lock);
+	if(!copy_msg(dump_info->worker->scratchpad, e, &k, &d)) {
 		lock_rw_unlock(&e->lock);
-		/* release lock so we can lookup the rrset references 
-		 * in the rrset cache */
-		if(!dump_msg(ssl, k, d, *worker->env.now)) {
-			return 0;
-		}
+		return 0;
+	}
+	lock_rw_unlock(&e->lock);
+	/* Release lock so we can lookup the rrset references
+	 * in the rrset cache. */
+	if(!dump_msg(dump_info->ssl, k, d, *dump_info->worker->env.now)) {
+		return 0;
 	}
 	return 1;
 }
@@ -279,17 +364,12 @@ dump_msg_lruhash(RES* ssl, struct worker* worker, struct lruhash* h)
 static int
 dump_msg_cache(RES* ssl, struct worker* worker)
 {
-	struct slabhash* sh = worker->env.msg_cache;
-	size_t slab;
+	struct dump_info dump_info;
+	dump_info.worker = worker;
+	dump_info.ssl = ssl;
 	if(!ssl_printf(ssl, "START_MSG_CACHE\n")) return 0;
-	for(slab=0; slab<sh->size; slab++) {
-		lock_quick_lock(&sh->array[slab]->lock);
-		if(!dump_msg_lruhash(ssl, worker, sh->array[slab])) {
-			lock_quick_unlock(&sh->array[slab]->lock);
-			return 0;
-		}
-		lock_quick_unlock(&sh->array[slab]->lock);
-	}
+	if(!dump_slabhash(worker->env.msg_cache, &dump_msg_entry, &dump_info))
+		return 0;
 	return ssl_printf(ssl, "END_MSG_CACHE\n");
 }
 
