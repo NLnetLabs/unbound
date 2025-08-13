@@ -1760,9 +1760,6 @@ cache_lookup_rrset(struct lruhash_entry* e, void* arg)
 	struct cache_lookup_info* inf = (struct cache_lookup_info*)arg;
 	struct ub_packed_rrset_key* k = (struct ub_packed_rrset_key*)e->key;
 	struct packed_rrset_data* d = (struct packed_rrset_data*)e->data;
-	char bla[255], bla2[255];
-	dname_str(k->rk.dname, bla);
-	dname_str(inf->nm, bla2);
 	if(*inf->worker->env.now < d->ttl &&
 		k->id != 0 && /* not deleted */
 		dname_subdomain_c(k->rk.dname, inf->nm)) {
