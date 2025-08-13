@@ -1825,6 +1825,7 @@ cache_lookup_msg(struct lruhash_entry* e, void* arg)
 			for(j=0; j<rd->count + rd->rrsig_count; j++) {
 				if(!packed_rr_to_string(rk, j,
 					*inf->worker->env.now, s, sizeof(s))) {
+					rrset_array_unlock(d->ref, d->rrset_count);
 					ssl_printf(inf->ssl, "BADRR\n");
 					return;
 				}

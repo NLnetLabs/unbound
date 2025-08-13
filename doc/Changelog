@@ -2,6 +2,7 @@
 	- unbound-control cache_lookup <domains> prints the cached rrsets
 	  and messages for those.
 	- Fix to remove debug from cache_lookup.
+	- Fix to unlock cache_lookup message for malformed records.
 
 12 August 2025: Wouter
 	- Fix that unbound-control dump_cache releases the cache locks
