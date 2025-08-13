@@ -1742,6 +1742,157 @@ do_view_datas_remove(struct daemon_remote* rc, RES* ssl, struct worker* worker,
 	(void)ssl_printf(ssl, "removed %d datas\n", num);
 }
 
+/** information for the domain search */
+struct cache_lookup_info {
+	/** The connection to print on. */
+	RES* ssl;
+	/** The worker. */
+	struct worker* worker;
+	/** The domain, in wireformat. */
+	uint8_t* nm;
+	/** The length of nm. */
+	size_t nmlen;
+};
+
+static void
+cache_lookup_rrset(struct lruhash_entry* e, void* arg)
+{
+	struct cache_lookup_info* inf = (struct cache_lookup_info*)arg;
+	struct ub_packed_rrset_key* k = (struct ub_packed_rrset_key*)e->key;
+	struct packed_rrset_data* d = (struct packed_rrset_data*)e->data;
+	char bla[255], bla2[255];
+	dname_str(k->rk.dname, bla);
+	dname_str(inf->nm, bla2);
+	if(*inf->worker->env.now < d->ttl &&
+		k->id != 0 && /* not deleted */
+		dname_subdomain_c(k->rk.dname, inf->nm)) {
+		size_t i;
+		for(i=0; i<d->count + d->rrsig_count; i++) {
+			char s[65535];
+			if(!packed_rr_to_string(k, i, *inf->worker->env.now,
+				s, sizeof(s))) {
+				ssl_printf(inf->ssl, "BADRR\n");
+				return;
+			}
+			ssl_printf(inf->ssl, "%s", s);
+		}
+		ssl_printf(inf->ssl, "\n");
+	}
+}
+
+static void
+cache_lookup_msg(struct lruhash_entry* e, void* arg)
+{
+	struct cache_lookup_info* inf = (struct cache_lookup_info*)arg;
+	struct msgreply_entry* k = (struct msgreply_entry*)e->key;
+	struct reply_info* d = (struct reply_info*)e->data;
+	if(*inf->worker->env.now < d->ttl &&
+		dname_subdomain_c(k->key.qname, inf->nm)) {
+		size_t i;
+		char s[65535], tp[32], cl[32], rc[32], fg[32];
+		sldns_wire2str_dname_buf(k->key.qname, k->key.qname_len,
+			s, sizeof(s));
+		sldns_wire2str_type_buf(k->key.qtype, tp, sizeof(tp));
+		sldns_wire2str_class_buf(k->key.qclass, cl, sizeof(cl));
+		sldns_wire2str_rcode_buf(FLAGS_GET_RCODE(d->flags),
+			rc, sizeof(rc));
+		snprintf(fg, sizeof(fg), "%s%s%s%s%s%s%s%s",
+			((d->flags&BIT_QR)?" QR":""),
+			((d->flags&BIT_AA)?" AA":""),
+			((d->flags&BIT_TC)?" TC":""),
+			((d->flags&BIT_RD)?" RD":""),
+			((d->flags&BIT_RA)?" RA":""),
+			((d->flags&BIT_Z)?" Z":""),
+			((d->flags&BIT_AD)?" AD":""),
+			((d->flags&BIT_CD)?" CD":""));
+		if(!rrset_array_lock(d->ref, d->rrset_count,
+			*inf->worker->env.now)) {
+			/* rrsets have timed out or do not exist */
+			return;
+		}
+		ssl_printf(inf->ssl,
+			"msg %s %s %s%s %s %d %d " ARG_LL "d %d %u %u %u %d %s\n",
+			s, cl, tp, fg, rc,
+			(int)d->flags, (int)d->qdcount,
+			(long long)(d->ttl-*inf->worker->env.now),
+			(int)d->security,
+			(unsigned)d->an_numrrsets,
+			(unsigned)d->ns_numrrsets,
+			(unsigned)d->ar_numrrsets,
+			(int)d->reason_bogus,
+			d->reason_bogus_str?d->reason_bogus_str:"");
+		for(i=0; i<d->rrset_count; i++) {
+			struct ub_packed_rrset_key* rk = d->rrsets[i];
+			struct packed_rrset_data* rd = (struct packed_rrset_data*)rk->entry.data;
+			size_t j;
+			for(j=0; j<rd->count + rd->rrsig_count; j++) {
+				if(!packed_rr_to_string(rk, j,
+					*inf->worker->env.now, s, sizeof(s))) {
+					ssl_printf(inf->ssl, "BADRR\n");
+					return;
+				}
+				ssl_printf(inf->ssl, "%s", s);
+			}
+		}
+		rrset_array_unlock(d->ref, d->rrset_count);
+		ssl_printf(inf->ssl, "\n");
+	}
+}
+
+/** perform cache search for domain */
+static void
+do_cache_lookup_domain(RES* ssl, struct worker* worker, uint8_t* nm,
+	size_t nmlen)
+{
+	struct cache_lookup_info inf;
+	inf.ssl = ssl;
+	inf.worker = worker;
+	inf.nm = nm;
+	inf.nmlen = nmlen;
+	slabhash_traverse(&worker->env.rrset_cache->table, 0,
+		&cache_lookup_rrset, &inf);
+	slabhash_traverse(worker->env.msg_cache, 0, &cache_lookup_msg, &inf);
+}
+
+/** cache lookup of domain */
+static void
+do_cache_lookup(RES* ssl, struct worker* worker, char* arg)
+{
+	uint8_t nm[LDNS_MAX_DOMAINLEN+1];
+	size_t nmlen;
+	int status;
+	char* s = arg, *next = NULL;
+
+	/* Find the commandline arguments of domains. */
+	while(s && *s != 0) {
+		s = skipwhite(s);
+		if(*s == 0)
+			break;
+		if(strchr(s, ' ') || strchr(s, '\t')) {
+			char* sp = strchr(s, ' ');
+			if(strchr(s, '\t') != 0 && strchr(s, '\t') < sp)
+				sp = strchr(s, '\t');
+			*sp = 0;
+			next = sp+1;
+		} else {
+			next = NULL;
+		}
+
+		nmlen = sizeof(nm);
+		status = sldns_str2wire_dname_buf(s, nm, &nmlen);
+		if(status != 0) {
+			ssl_printf(ssl, "error cannot parse name %s at %d: %s\n", s,
+				LDNS_WIREPARSE_OFFSET(status),
+				sldns_get_errorstr_parse(status));
+			return;
+		}
+
+		do_cache_lookup_domain(ssl, worker, nm, nmlen);
+
+		s = next;
+	}
+}
+
 /** cache lookup of nameservers */
 static void
 do_lookup(RES* ssl, struct worker* worker, char* arg)
@@ -3614,6 +3765,9 @@ execute_cmd(struct daemon_remote* rc, struct rc_state* s, RES* ssl, char* cmd,
 		/* must always distribute this cmd */
 		if(rc) distribute_cmd(rc, ssl, cmd);
 		do_flush_requestlist(ssl, worker);
+		return;
+	} else if(cmdcmp(p, "cache_lookup", 12)) {
+		do_cache_lookup(ssl, worker, skipwhite(p+12));
 		return;
 	} else if(cmdcmp(p, "lookup", 6)) {
 		do_lookup(ssl, worker, skipwhite(p+6));
