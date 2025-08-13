@@ -1,3 +1,7 @@
+13 August 2025: Wouter
+	- unbound-control cache_lookup <domains> prints the cached rrsets
+	  and messages for those.
+
 12 August 2025: Wouter
 	- Fix that unbound-control dump_cache releases the cache locks
 	  every so often, so that the server stays responsive.
