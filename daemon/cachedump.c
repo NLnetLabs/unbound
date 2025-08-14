@@ -107,7 +107,7 @@ dump_lruhash(struct lruhash* table, int (*func)(void*, void*), void* arg)
 	int not_done = 1;
 	hashvalue_type hash;
 	size_t num = 0; /* number of entries processed. */
-	size_t max = 1000; /* number of entries after which it unlocks. */
+	size_t max = 2; /* number of entries after which it unlocks. */
 
 	while(not_done) {
 		size_t i; /* hash bin. */
