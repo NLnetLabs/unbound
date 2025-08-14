@@ -1,5 +1,7 @@
 14 August 2025: Wouter
 	- Fix to increase responsiveness of dump_cache.
+	- Fix to decouple file descriptor activity and cache lookups in
+	  dump_cache.
 
 13 August 2025: Wouter
 	- unbound-control cache_lookup <domains> prints the cached rrsets
