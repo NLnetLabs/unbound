@@ -1849,6 +1849,7 @@ addrtree_traverse_visit_edge(struct addredge* edge, addrkey_t* addr,
 	n = (size_t)((addrlen / KEYWIDTH) + ((addrlen % KEYWIDTH != 0)?1:0));
 	if(n > addr_size)
 		n = addr_size;
+	memset(addr, 0, addr_size);
 	memcpy(addr, edge->str, n);
 	addrtree_traverse_visit_node(edge->node, addr, addr_size, is_ipv6,
 		now, q, func, arg);
