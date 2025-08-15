@@ -1,3 +1,7 @@
+15 August 2025: Wouter
+	- unbound-control cache_lookup +t allows tld and root names. And
+	  subnet cache contents are printed.
+
 14 August 2025: Wouter
 	- Fix to increase responsiveness of dump_cache.
 	- Fix to decouple file descriptor activity and cache lookups in

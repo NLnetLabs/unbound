@@ -143,7 +143,8 @@ usage(void)
 	printf("  load_cache			load cache from stdin\n");
 	printf("				(not supported in remote unbounds in\n");
 	printf("				multi-process operation)\n");
-	printf("  cache_lookup <names>		print rrsets and msgs at or under the names\n");
+	printf("  cache_lookup [+t] <names>	print rrsets and msgs at or under the names\n");
+	printf("		+t		allow tld and root names.\n");
 	printf("  lookup <name>			print nameservers for name\n");
 	printf("  flush [+c] <name>			flushes common types for name from cache\n");
 	printf("  				types:  A, AAAA, MX, PTR, NS,\n");
