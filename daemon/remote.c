@@ -1785,10 +1785,6 @@ cache_lookup_subnet_addrnode(struct query_info* q, struct reply_info* d,
 	sldns_wire2str_dname_buf(q->qname, q->qname_len, s, sizeof(s));
 	sldns_wire2str_type_buf(q->qtype, tp, sizeof(tp));
 	sldns_wire2str_class_buf(q->qclass, cl, sizeof(cl));
-	if(!ssl_printf(inf->ssl, "subnet %s/%d%s %s %s %s " ARG_LL "d\n", astr,
-		(int)scope, (only_match_scope_zero?" scope_zero":""),
-		s, cl, tp, (long long)(ttl-*inf->worker->env.now)))
-		return;
 	sldns_wire2str_rcode_buf(FLAGS_GET_RCODE(d->flags),
 		rc, sizeof(rc));
 	snprintf(fg, sizeof(fg), "%s%s%s%s%s%s%s%s",
@@ -1803,6 +1799,12 @@ cache_lookup_subnet_addrnode(struct query_info* q, struct reply_info* d,
 	if(!rrset_array_lock(d->ref, d->rrset_count,
 		*inf->worker->env.now)) {
 		/* rrsets have timed out or do not exist */
+		return;
+	}
+	if(!ssl_printf(inf->ssl, "subnet %s/%d%s %s %s %s " ARG_LL "d\n", astr,
+		(int)scope, (only_match_scope_zero?" scope_zero":""),
+		s, cl, tp, (long long)(ttl-*inf->worker->env.now))) {
+		rrset_array_unlock(d->ref, d->rrset_count);
 		return;
 	}
 	ssl_printf(inf->ssl,
@@ -1842,7 +1844,7 @@ addrtree_traverse_visit_edge(struct addredge* edge, addrkey_t* addr,
 {
 	size_t n;
 	addrlen_t addrlen;
-	if(!edge)
+	if(!edge || !edge->node)
 		return;
 	addrlen = edge->len;
 	/* ceil() */
