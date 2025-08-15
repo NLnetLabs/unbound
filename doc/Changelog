@@ -1,6 +1,7 @@
 15 August 2025: Wouter
 	- unbound-control cache_lookup +t allows tld and root names. And
 	  subnet cache contents are printed.
+	- Fix cache_lookup subnet printout to wipe zero part of the prefix.
 
 14 August 2025: Wouter
 	- Fix to increase responsiveness of dump_cache.
