@@ -2,6 +2,8 @@
 	- unbound-control cache_lookup +t allows tld and root names. And
 	  subnet cache contents are printed.
 	- Fix cache_lookup subnet printout to wipe zero part of the prefix.
+	- Fix cache_lookup subnet print to not print messages without rrsets
+	  and perform in-depth check on node in the addrtree.
 
 14 August 2025: Wouter
 	- Fix to increase responsiveness of dump_cache.
