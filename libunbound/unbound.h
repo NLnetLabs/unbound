@@ -97,6 +97,10 @@
 #ifndef UB_UNBOUND_H
 #define UB_UNBOUND_H
 
+#include <openssl/ssl.h>
+#include <openssl/err.h>
+#include <openssl/rand.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -883,6 +887,19 @@ struct ub_stats_info {
 	/** mesh stats: median of waiting times for replies (in sec) */
 	double mesh_time_median;
 };
+
+struct ubc_ctx {
+    struct config_file *cfg;
+    SSL_CTX* ssl_ctx;
+    int quiet;
+};
+
+struct ubc_ctx* ubc_ctx_create(const char* cfgfile, const char* svr);
+int ubc_ctx_data_add(struct ubc_ctx* ctx, char* data);
+void ubc_ctx_delete(struct ubc_ctx* ctx);
+int ubc_ctx_do_cmd(struct ubc_ctx* ctx, int argc, char** argv);
+int ubc_ctx_get_quiet(struct ubc_ctx* ctx);
+void ubc_ctx_set_quiet(struct ubc_ctx* ctx, int quiet);
 
 #ifdef __cplusplus
 }
