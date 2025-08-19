@@ -101,6 +101,10 @@
 #ifdef USE_CACHEDB
 #include "cachedb/cachedb.h"
 #endif
+#ifdef CLIENT_SUBNET
+#include "edns-subnet/subnetmod.h"
+#include "edns-subnet/addrtree.h"
+#endif
 
 #ifdef HAVE_SYS_TYPES_H
 #  include <sys/types.h>
@@ -1740,6 +1744,334 @@ do_view_datas_remove(struct daemon_remote* rc, RES* ssl, struct worker* worker,
 	}
 	lock_rw_unlock(&v->lock);
 	(void)ssl_printf(ssl, "removed %d datas\n", num);
+}
+
+/** information for the domain search */
+struct cache_lookup_info {
+	/** The connection to print on. */
+	RES* ssl;
+	/** The worker. */
+	struct worker* worker;
+	/** The domain, in wireformat. */
+	uint8_t* nm;
+	/** The length of nm. */
+	size_t nmlen;
+};
+
+#ifdef CLIENT_SUBNET
+static void addrtree_traverse_visit_node(struct addrnode* n, addrkey_t* addr,
+	size_t addr_size, int is_ipv6, time_t now, struct query_info* q,
+	void (*func)(struct query_info*, struct reply_info*, addrkey_t*,
+		size_t, int, addrlen_t, int, time_t, void*), void* arg);
+
+/** Lookup in subnet addrtree */
+static void
+cache_lookup_subnet_addrnode(struct query_info* q, struct reply_info* d,
+	addrkey_t* addr, size_t addr_size, int is_ipv6, addrlen_t scope,
+	int only_match_scope_zero, time_t ttl, void* arg)
+{
+	size_t i;
+	char s[65535], tp[32], cl[32], rc[32], fg[32], astr[64];
+	struct cache_lookup_info* inf = (struct cache_lookup_info*)arg;
+	if(is_ipv6) {
+		if(addr_size < 16 || inet_ntop(AF_INET6, addr, astr,
+			sizeof(astr)) == NULL)
+			snprintf(astr, sizeof(astr), "(inet6ntoperror)");
+	} else {
+		if(addr_size < 4 || inet_ntop(AF_INET, addr, astr,
+			sizeof(astr)) == NULL)
+			snprintf(astr, sizeof(astr), "(inetntoperror)");
+	}
+	sldns_wire2str_dname_buf(q->qname, q->qname_len, s, sizeof(s));
+	sldns_wire2str_type_buf(q->qtype, tp, sizeof(tp));
+	sldns_wire2str_class_buf(q->qclass, cl, sizeof(cl));
+	sldns_wire2str_rcode_buf(FLAGS_GET_RCODE(d->flags),
+		rc, sizeof(rc));
+	snprintf(fg, sizeof(fg), "%s%s%s%s%s%s%s%s",
+		((d->flags&BIT_QR)?" QR":""),
+		((d->flags&BIT_AA)?" AA":""),
+		((d->flags&BIT_TC)?" TC":""),
+		((d->flags&BIT_RD)?" RD":""),
+		((d->flags&BIT_RA)?" RA":""),
+		((d->flags&BIT_Z)?" Z":""),
+		((d->flags&BIT_AD)?" AD":""),
+		((d->flags&BIT_CD)?" CD":""));
+	if(!rrset_array_lock(d->ref, d->rrset_count,
+		*inf->worker->env.now)) {
+		/* rrsets have timed out or do not exist */
+		return;
+	}
+	if(!ssl_printf(inf->ssl, "subnet %s/%d%s %s %s %s " ARG_LL "d\n", astr,
+		(int)scope, (only_match_scope_zero?" scope_zero":""),
+		s, cl, tp, (long long)(ttl-*inf->worker->env.now))) {
+		rrset_array_unlock(d->ref, d->rrset_count);
+		return;
+	}
+	ssl_printf(inf->ssl,
+		"subnet msg %s %s %s%s %s %d %d " ARG_LL "d %d %u %u %u %d %s\n",
+		s, cl, tp, fg, rc,
+		(int)d->flags, (int)d->qdcount,
+		(long long)(d->ttl-*inf->worker->env.now),
+		(int)d->security,
+		(unsigned)d->an_numrrsets,
+		(unsigned)d->ns_numrrsets,
+		(unsigned)d->ar_numrrsets,
+		(int)d->reason_bogus,
+		d->reason_bogus_str?d->reason_bogus_str:"");
+	for(i=0; i<d->rrset_count; i++) {
+		struct ub_packed_rrset_key* rk = d->rrsets[i];
+		struct packed_rrset_data* rd = (struct packed_rrset_data*)rk->entry.data;
+		size_t j;
+		for(j=0; j<rd->count + rd->rrsig_count; j++) {
+			if(!packed_rr_to_string(rk, j,
+				*inf->worker->env.now, s, sizeof(s))) {
+				ssl_printf(inf->ssl, "BADRR\n");
+			} else {
+				ssl_printf(inf->ssl, "%s", s);
+			}
+		}
+	}
+	rrset_array_unlock(d->ref, d->rrset_count);
+	ssl_printf(inf->ssl, "\n");
+}
+
+/** Visit an edge in subnet addrtree traverse */
+static void
+addrtree_traverse_visit_edge(struct addredge* edge, addrkey_t* addr,
+	size_t addr_size, int is_ipv6, time_t now, struct query_info* q,
+	void (*func)(struct query_info*, struct reply_info*, addrkey_t*,
+		size_t, int, addrlen_t, int, time_t, void*), void* arg)
+{
+	size_t n;
+	addrlen_t addrlen;
+	if(!edge || !edge->node)
+		return;
+	addrlen = edge->len;
+	/* ceil() */
+	n = (size_t)((addrlen / KEYWIDTH) + ((addrlen % KEYWIDTH != 0)?1:0));
+	if(n > addr_size)
+		n = addr_size;
+	memset(addr, 0, addr_size);
+	memcpy(addr, edge->str, n);
+	addrtree_traverse_visit_node(edge->node, addr, addr_size, is_ipv6,
+		now, q, func, arg);
+}
+
+/** Visit a node in subnet addrtree traverse */
+static void
+addrtree_traverse_visit_node(struct addrnode* n, addrkey_t* addr,
+	size_t addr_size, int is_ipv6, time_t now, struct query_info* q,
+	void (*func)(struct query_info*, struct reply_info*, addrkey_t*,
+		size_t, int, addrlen_t, int, time_t, void*), void* arg)
+{
+	/* If this node has data, and not expired. */
+	if(n->elem && n->ttl >= now) {
+		func(q, (struct reply_info*)n->elem, addr, addr_size, is_ipv6,
+			n->scope, n->only_match_scope_zero, n->ttl, arg);
+	}
+	/* Traverse edges. */
+	addrtree_traverse_visit_edge(n->edge[0], addr, addr_size, is_ipv6,
+		now, q, func, arg);
+	addrtree_traverse_visit_edge(n->edge[1], addr, addr_size, is_ipv6,
+		now, q, func, arg);
+}
+
+/** Traverse subnet addrtree */
+static void
+addrtree_traverse(struct addrtree* tree, int is_ipv6, time_t now,
+	struct query_info* q,
+	void (*func)(struct query_info*, struct reply_info*, addrkey_t*,
+		size_t, int, addrlen_t, int, time_t, void*), void* arg)
+{
+	uint8_t addr[16]; /* Large enough for IPv4 and IPv6. */
+	memset(addr, 0, sizeof(addr));
+	addrtree_traverse_visit_node(tree->root, (addrkey_t*)addr,
+		sizeof(addr), is_ipv6, now, q, func, arg);
+}
+
+/** Lookup cache_lookup for subnet content. */
+static void
+cache_lookup_subnet_msg(struct lruhash_entry* e, void* arg)
+{
+	struct cache_lookup_info* inf = (struct cache_lookup_info*)arg;
+	struct msgreply_entry *k = (struct msgreply_entry*)e->key;
+	struct subnet_msg_cache_data* d =
+		(struct subnet_msg_cache_data*)e->data;
+	if(!dname_subdomain_c(k->key.qname, inf->nm))
+		return;
+
+	if(d->tree4) {
+		addrtree_traverse(d->tree4, 0, *inf->worker->env.now, &k->key,
+			&cache_lookup_subnet_addrnode, inf);
+	}
+	if(d->tree6) {
+		addrtree_traverse(d->tree6, 1, *inf->worker->env.now, &k->key,
+			&cache_lookup_subnet_addrnode, inf);
+	}
+}
+#endif /* CLIENT_SUBNET */
+
+static void
+cache_lookup_rrset(struct lruhash_entry* e, void* arg)
+{
+	struct cache_lookup_info* inf = (struct cache_lookup_info*)arg;
+	struct ub_packed_rrset_key* k = (struct ub_packed_rrset_key*)e->key;
+	struct packed_rrset_data* d = (struct packed_rrset_data*)e->data;
+	if(*inf->worker->env.now < d->ttl &&
+		k->id != 0 && /* not deleted */
+		dname_subdomain_c(k->rk.dname, inf->nm)) {
+		size_t i;
+		for(i=0; i<d->count + d->rrsig_count; i++) {
+			char s[65535];
+			if(!packed_rr_to_string(k, i, *inf->worker->env.now,
+				s, sizeof(s))) {
+				ssl_printf(inf->ssl, "BADRR\n");
+				return;
+			}
+			ssl_printf(inf->ssl, "%s", s);
+		}
+		ssl_printf(inf->ssl, "\n");
+	}
+}
+
+static void
+cache_lookup_msg(struct lruhash_entry* e, void* arg)
+{
+	struct cache_lookup_info* inf = (struct cache_lookup_info*)arg;
+	struct msgreply_entry* k = (struct msgreply_entry*)e->key;
+	struct reply_info* d = (struct reply_info*)e->data;
+	if(*inf->worker->env.now < d->ttl &&
+		dname_subdomain_c(k->key.qname, inf->nm)) {
+		size_t i;
+		char s[65535], tp[32], cl[32], rc[32], fg[32];
+		sldns_wire2str_dname_buf(k->key.qname, k->key.qname_len,
+			s, sizeof(s));
+		sldns_wire2str_type_buf(k->key.qtype, tp, sizeof(tp));
+		sldns_wire2str_class_buf(k->key.qclass, cl, sizeof(cl));
+		sldns_wire2str_rcode_buf(FLAGS_GET_RCODE(d->flags),
+			rc, sizeof(rc));
+		snprintf(fg, sizeof(fg), "%s%s%s%s%s%s%s%s",
+			((d->flags&BIT_QR)?" QR":""),
+			((d->flags&BIT_AA)?" AA":""),
+			((d->flags&BIT_TC)?" TC":""),
+			((d->flags&BIT_RD)?" RD":""),
+			((d->flags&BIT_RA)?" RA":""),
+			((d->flags&BIT_Z)?" Z":""),
+			((d->flags&BIT_AD)?" AD":""),
+			((d->flags&BIT_CD)?" CD":""));
+		if(!rrset_array_lock(d->ref, d->rrset_count,
+			*inf->worker->env.now)) {
+			/* rrsets have timed out or do not exist */
+			return;
+		}
+		ssl_printf(inf->ssl,
+			"msg %s %s %s%s %s %d %d " ARG_LL "d %d %u %u %u %d %s\n",
+			s, cl, tp, fg, rc,
+			(int)d->flags, (int)d->qdcount,
+			(long long)(d->ttl-*inf->worker->env.now),
+			(int)d->security,
+			(unsigned)d->an_numrrsets,
+			(unsigned)d->ns_numrrsets,
+			(unsigned)d->ar_numrrsets,
+			(int)d->reason_bogus,
+			d->reason_bogus_str?d->reason_bogus_str:"");
+		for(i=0; i<d->rrset_count; i++) {
+			struct ub_packed_rrset_key* rk = d->rrsets[i];
+			struct packed_rrset_data* rd = (struct packed_rrset_data*)rk->entry.data;
+			size_t j;
+			for(j=0; j<rd->count + rd->rrsig_count; j++) {
+				if(!packed_rr_to_string(rk, j,
+					*inf->worker->env.now, s, sizeof(s))) {
+					rrset_array_unlock(d->ref, d->rrset_count);
+					ssl_printf(inf->ssl, "BADRR\n");
+					return;
+				}
+				ssl_printf(inf->ssl, "%s", s);
+			}
+		}
+		rrset_array_unlock(d->ref, d->rrset_count);
+		ssl_printf(inf->ssl, "\n");
+	}
+}
+
+/** perform cache search for domain */
+static void
+do_cache_lookup_domain(RES* ssl, struct worker* worker, uint8_t* nm,
+	size_t nmlen)
+{
+#ifdef CLIENT_SUBNET
+	int m;
+	struct subnet_env* sn_env = NULL;
+#endif /* CLIENT_SUBNET */
+	struct cache_lookup_info inf;
+	inf.ssl = ssl;
+	inf.worker = worker;
+	inf.nm = nm;
+	inf.nmlen = nmlen;
+
+#ifdef CLIENT_SUBNET
+	m = modstack_find(worker->env.modstack, "subnetcache");
+	if(m != -1) sn_env = (struct subnet_env*)worker->env.modinfo[m];
+	if(sn_env) {
+		lock_rw_rdlock(&sn_env->biglock);
+		slabhash_traverse(sn_env->subnet_msg_cache, 0,
+			&cache_lookup_subnet_msg, &inf);
+		lock_rw_unlock(&sn_env->biglock);
+	}
+#endif /* CLIENT_SUBNET */
+
+	slabhash_traverse(&worker->env.rrset_cache->table, 0,
+		&cache_lookup_rrset, &inf);
+	slabhash_traverse(worker->env.msg_cache, 0, &cache_lookup_msg, &inf);
+}
+
+/** cache lookup of domain */
+static void
+do_cache_lookup(RES* ssl, struct worker* worker, char* arg)
+{
+	uint8_t nm[LDNS_MAX_DOMAINLEN+1];
+	size_t nmlen;
+	int status;
+	char* s = arg, *next = NULL;
+	int allow_long = 0;
+
+	if(arg[0] == '+' && arg[1] == 't' && (arg[2]==' ' || arg[2]=='\t')) {
+		allow_long = 1;
+		s = arg+2;
+	}
+
+	/* Find the commandline arguments of domains. */
+	while(s && *s != 0) {
+		s = skipwhite(s);
+		if(*s == 0)
+			break;
+		if(strchr(s, ' ') || strchr(s, '\t')) {
+			char* sp = strchr(s, ' ');
+			if(strchr(s, '\t') != 0 && strchr(s, '\t') < sp)
+				sp = strchr(s, '\t');
+			*sp = 0;
+			next = sp+1;
+		} else {
+			next = NULL;
+		}
+
+		nmlen = sizeof(nm);
+		status = sldns_str2wire_dname_buf(s, nm, &nmlen);
+		if(status != 0) {
+			ssl_printf(ssl, "error cannot parse name %s at %d: %s\n", s,
+				LDNS_WIREPARSE_OFFSET(status),
+				sldns_get_errorstr_parse(status));
+			return;
+		}
+		if(!allow_long && dname_count_labels(nm) < 3) {
+			ssl_printf(ssl, "error name too short: '%s'. Need example.com. or longer, short names take very long, use +t to allow them.\n", s);
+			return;
+		}
+
+		do_cache_lookup_domain(ssl, worker, nm, nmlen);
+
+		s = next;
+	}
 }
 
 /** cache lookup of nameservers */
@@ -3614,6 +3946,9 @@ execute_cmd(struct daemon_remote* rc, struct rc_state* s, RES* ssl, char* cmd,
 		/* must always distribute this cmd */
 		if(rc) distribute_cmd(rc, ssl, cmd);
 		do_flush_requestlist(ssl, worker);
+		return;
+	} else if(cmdcmp(p, "cache_lookup", 12)) {
+		do_cache_lookup(ssl, worker, skipwhite(p+12));
 		return;
 	} else if(cmdcmp(p, "lookup", 6)) {
 		do_lookup(ssl, worker, skipwhite(p+6));

@@ -1,3 +1,47 @@
+15 August 2025: Wouter
+	- unbound-control cache_lookup +t allows tld and root names. And
+	  subnet cache contents are printed.
+	- Fix cache_lookup subnet printout to wipe zero part of the prefix.
+	- Fix cache_lookup subnet print to not print messages without rrsets
+	  and perform in-depth check on node in the addrtree.
+
+14 August 2025: Wouter
+	- Fix to increase responsiveness of dump_cache.
+	- Fix to decouple file descriptor activity and cache lookups in
+	  dump_cache.
+
+13 August 2025: Wouter
+	- unbound-control cache_lookup <domains> prints the cached rrsets
+	  and messages for those.
+	- Fix to remove debug from cache_lookup.
+	- Fix to unlock cache_lookup message for malformed records.
+
+12 August 2025: Wouter
+	- Fix that unbound-control dump_cache releases the cache locks
+	  every so often, so that the server stays responsive.
+
+7 August 2025: Wouter
+	- Fix dname_str for printout of long names. Thanks to Jan Komissar
+	  for the fix.
+	- Fix that edns-subnet failure to create a subquery errors as
+	  servfail, and not formerror.
+	- Fix to whitespace in dname_str.
+
+6 August 2025: Wouter
+	- Fix edns subnet, so that the subquery without subnet is stored in
+	  global cache if the querier used 0.0.0.0/0 and the name and address
+	  do not receive subnet treatment. If the name and address are
+	  configured for subnet, it is stored in the subnet cache.
+
+5 August 2025: Wouter
+	- Fix #1309: incorrectly reclaimed tcp handler can cause data
+	  corruption and segfault.
+	- Fix to use assertions for consistency checks in #1309 reclaimed
+	  tcp handlers.
+
+1 August 2025: Wouter
+	- Fix testbound test program to accurately output packets from hex.
+
 28 July 2025: Wouter
 	- Fix redis cachedb module gettimeofday init failure.
 

@@ -386,6 +386,18 @@ There are several commands that the server understands.
     Not supported in remote Unbounds in multi-process operation.
 
 
+@@UAHL@unbound-control.commands@cache_lookup@@ [``+t``] *names*
+    Print to stdout the RRsets and messages that are in the cache.
+    For every name listed the content at or under the name is printed.
+    Several names separated by spaces can be given, each is printed.
+    When subnetcache is enabled, also matching entries from the subnet
+    cache are printed.
+
+    The ``+t`` option allows tld and root names.
+    With it names like 'com' and '.' can be used, but it takes a lot of
+    effort to look up in the cache.
+
+
 @@UAHL@unbound-control.commands@lookup@@ *name*
     Print to stdout the name servers that would be used to look up the name
     specified.
