@@ -55,6 +55,7 @@ struct query_info;
 struct dns_msg;
 struct edns_data;
 struct module_env;
+struct tsig_data;
 struct tsig_key_table;
 struct worker;
 struct comm_point;
@@ -358,6 +359,8 @@ struct auth_probe {
 	struct comm_timer* timer;
 	/** timeout in msec */
 	int timeout;
+	/** the tsig data for the packet */
+	struct tsig_data* tsig;
 };
 
 /**
@@ -427,6 +430,8 @@ struct auth_transfer {
 	/** timeout for the transfer.
 	 * on the workers event base. */
 	struct comm_timer* timer;
+	/** the tsig data for the transfer */
+	struct tsig_data* tsig;
 };
 
 /** list of addresses */
@@ -620,13 +625,19 @@ int auth_zones_can_fallback(struct auth_zones* az, uint8_t* nm, size_t nmlen,
  * @param has_serial: if true, the notify has a serial attached.
  * @param serial: the serial number, if has_serial is true.
  * @param refused: is set to true on failure to note refused access.
+ * @param pkt: the packet for TSIG verify.
+ * @param tsig: if TSIG, the structure is returned here, allocated in
+ *	the worker scratch region.
+ * @param tsig_rcode: if not NOERROR it is the TSIG error code, TSIG failed.
+ * @param scratchpad: region to allocate tsig in.
  * @return fail on failures (refused is false) and when access is
  * 	denied (refused is true).  True when processed.
  */
 int auth_zones_notify(struct auth_zones* az, struct module_env* env,
 	uint8_t* nm, size_t nmlen, uint16_t dclass,
 	struct sockaddr_storage* addr, socklen_t addrlen, int has_serial,
-	uint32_t serial, int* refused);
+	uint32_t serial, int* refused, struct sldns_buffer* pkt,
+	struct tsig_data** tsig, int* tsig_rcode, struct regional* scratchpad);
 
 /** process notify packet and read serial number from SOA.
  * returns 0 if no soa record in the notify */

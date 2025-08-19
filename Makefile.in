@@ -1364,7 +1364,7 @@ worker.lo worker.o: $(srcdir)/daemon/worker.c config.h $(srcdir)/util/log.h $(sr
  $(srcdir)/services/cache/rrset.h $(srcdir)/services/cache/infra.h $(srcdir)/util/rtt.h \
  $(srcdir)/services/cache/dns.h $(srcdir)/services/authzone.h $(srcdir)/services/mesh.h $(srcdir)/services/rpz.h \
  $(srcdir)/services/localzone.h $(srcdir)/respip/respip.h $(srcdir)/util/data/msgencode.h \
- $(srcdir)/util/data/dname.h $(srcdir)/util/fptr_wlist.h $(srcdir)/util/tube.h $(srcdir)/util/edns.h \
+ $(srcdir)/util/data/dname.h $(srcdir)/util/fptr_wlist.h $(srcdir)/util/tsig.h $(srcdir)/util/tube.h $(srcdir)/util/edns.h \
  $(srcdir)/iterator/iter_fwd.h $(srcdir)/iterator/iter_hints.h $(srcdir)/iterator/iter_utils.h \
  $(srcdir)/iterator/iter_resptype.h $(srcdir)/validator/autotrust.h $(srcdir)/validator/val_anchor.h \
  $(srcdir)/libunbound/context.h $(srcdir)/libunbound/unbound-event.h $(srcdir)/libunbound/libworker.h \

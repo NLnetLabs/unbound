@@ -2336,12 +2336,14 @@ auth_xfer_delete(struct auth_xfer* xfr)
 		auth_free_masters(xfr->task_probe->masters);
 		comm_point_delete(xfr->task_probe->cp);
 		comm_timer_delete(xfr->task_probe->timer);
+		tsig_delete(xfr->task_probe->tsig);
 		free(xfr->task_probe);
 	}
 	if(xfr->task_transfer) {
 		auth_free_masters(xfr->task_transfer->masters);
 		comm_point_delete(xfr->task_transfer->cp);
 		comm_timer_delete(xfr->task_transfer->timer);
+		tsig_delete(xfr->task_transfer->tsig);
 		if(xfr->task_transfer->chunks_first) {
 			auth_chunks_delete(xfr->task_transfer);
 		}
@@ -3723,11 +3725,30 @@ addr_in_list(struct auth_addr* list, struct sockaddr_storage* addr,
  * addresses in the addr list) */
 static int
 addr_matches_master(struct auth_master* master, struct sockaddr_storage* addr,
-	socklen_t addrlen, struct auth_master** fromhost)
+	socklen_t addrlen, struct auth_master** fromhost,
+	struct tsig_data* tsig)
 {
 	struct sockaddr_storage a;
 	socklen_t alen = 0;
 	int net = 0;
+	if(master->tsig_key_name && master->tsig_key_name[0]) {
+		uint8_t keyname[LDNS_MAX_DOMAINLEN+1];
+		size_t keynamelen = sizeof(keyname);
+		if(!tsig) {
+			/* This needs a TSIG key, but no TSIG present. */
+			return 0;
+		}
+		if(sldns_str2wire_dname_buf(master->tsig_key_name, keyname,
+			&keynamelen) != 0) {
+			verbose(VERB_ALGO, "could not parse allow-notify-tsig '%s'",
+				master->tsig_key_name);
+			return 0;
+		}
+		if(query_dname_compare(keyname, tsig->key_name) != 0) {
+			/* The TSIG is a different key name, not matched. */
+			return 0;
+		}
+	}
 	if(addr_in_list(master->list, addr, addrlen)) {
 		*fromhost = master;
 		return 1;	
@@ -3760,11 +3781,12 @@ addr_matches_master(struct auth_master* master, struct sockaddr_storage* addr,
 /** check access list for notifies */
 static int
 az_xfr_allowed_notify(struct auth_xfer* xfr, struct sockaddr_storage* addr,
-	socklen_t addrlen, struct auth_master** fromhost)
+	socklen_t addrlen, struct auth_master** fromhost,
+	struct tsig_data* tsig)
 {
 	struct auth_master* p;
 	for(p=xfr->allow_notify_list; p; p=p->next) {
-		if(addr_matches_master(p, addr, addrlen, fromhost)) {
+		if(addr_matches_master(p, addr, addrlen, fromhost, tsig)) {
 			return 1;
 		}
 	}
@@ -3834,7 +3856,8 @@ xfr_process_notify(struct auth_xfer* xfr, struct module_env* env,
 int auth_zones_notify(struct auth_zones* az, struct module_env* env,
 	uint8_t* nm, size_t nmlen, uint16_t dclass,
 	struct sockaddr_storage* addr, socklen_t addrlen, int has_serial,
-	uint32_t serial, int* refused)
+	uint32_t serial, int* refused, struct sldns_buffer* pkt,
+	struct tsig_data** tsig, int* tsig_rcode, struct regional* scratchpad)
 {
 	struct auth_xfer* xfr;
 	struct auth_master* fromhost = NULL;
@@ -3849,9 +3872,20 @@ int auth_zones_notify(struct auth_zones* az, struct module_env* env,
 	}
 	lock_basic_lock(&xfr->lock);
 	lock_rw_unlock(&az->lock);
-	
+
+	/* check tsig */
+	if(tsig_in_packet(pkt)) {
+		*tsig_rcode = tsig_parse_verify_query(env->tsig_key_table,
+			pkt, tsig, scratchpad, (uint64_t)*env->now);
+		if(*tsig_rcode != 0) {
+			/* The tsig failed to verify. */
+			lock_basic_unlock(&xfr->lock);
+			return 0;
+		}
+	}
+
 	/* check access list for notifies */
-	if(!az_xfr_allowed_notify(xfr, addr, addrlen, &fromhost)) {
+	if(!az_xfr_allowed_notify(xfr, addr, addrlen, &fromhost, *tsig)) {
 		lock_basic_unlock(&xfr->lock);
 		/* notify not allowed, refuse the notify */
 		*refused = 1;
@@ -4256,6 +4290,37 @@ xfr_create_soa_probe_packet(struct auth_xfer* xfr, sldns_buffer* buf,
 	sldns_buffer_write_u16_at(buf, 0, id);
 }
 
+/** sign a query for xfr. */
+static int
+xfr_sign_query(struct tsig_data** tsig, sldns_buffer* pkt,
+	struct module_env* env, char* tsig_key_name)
+{
+	size_t pos;
+	if(*tsig) {
+		tsig_delete(*tsig);
+		*tsig = NULL;
+	}
+	*tsig = tsig_create_fromstr(env->tsig_key_table, tsig_key_name);
+	if(!*tsig) {
+		log_err("tsig key '%s' not found or out of memory",
+			tsig_key_name);
+		return 0;
+	}
+
+	/* Position the buffer after the packet contents. */
+	pos = sldns_buffer_limit(pkt);
+	sldns_buffer_clear(pkt);
+	sldns_buffer_set_position(pkt, pos);
+	if(!tsig_sign_query(*tsig, pkt, env->tsig_key_table,
+		(uint64_t)*env->now)) {
+		sldns_buffer_flip(pkt);
+		log_err("tsig key '%s': could not sign query", tsig_key_name);
+		return 0;
+	}
+	sldns_buffer_flip(pkt);
+	return 1;
+}
+
 /** create IXFR/AXFR packet for xfr */
 static void
 xfr_create_ixfr_packet(struct auth_xfer* xfr, sldns_buffer* buf, uint16_t id,
@@ -4314,7 +4379,7 @@ xfr_create_ixfr_packet(struct auth_xfer* xfr, sldns_buffer* buf, uint16_t id,
 /** check if returned packet is OK */
 static int
 check_packet_ok(sldns_buffer* pkt, uint16_t qtype, struct auth_xfer* xfr,
-	uint32_t* serial)
+	uint32_t* serial, struct module_env* env)
 {
 	/* parse to see if packet worked, valid reply */
 
@@ -4387,6 +4452,20 @@ check_packet_ok(sldns_buffer* pkt, uint16_t qtype, struct auth_xfer* xfr,
 		if(sldns_buffer_remaining(pkt) < 20)
 			return 0;
 		*serial = sldns_buffer_read_u32(pkt);
+	}
+
+	if(xfr->task_probe->tsig) {
+		/* There could be authority or additional RRs in the reply for the
+		 * SOA query, if so skip them by tsig_find_rr. */
+		if(!tsig_find_rr(pkt)) {
+			verbose(VERB_ALGO, "TSIG expected, but not found in reply");
+			return 0;
+		}
+		if(!tsig_parse_verify_reply(xfr->task_probe->tsig, pkt,
+			env->tsig_key_table, (uint64_t)*env->now)) {
+			verbose(VERB_ALGO, "valid TSIG expected in SOA probe reply, but it was not valid");
+			return 0;
+		}
 	}
 	return 1;
 }
@@ -5410,6 +5489,9 @@ xfr_transfer_disown(struct auth_xfer* xfr)
 	/* remove the commpoint */
 	comm_point_delete(xfr->task_transfer->cp);
 	xfr->task_transfer->cp = NULL;
+	/* remove the tsig data */
+	tsig_delete(xfr->task_transfer->tsig);
+	xfr->task_transfer->tsig = NULL;
 	/* we don't own this item anymore */
 	xfr->task_transfer->worker = NULL;
 	xfr->task_transfer->env = NULL;
@@ -5572,6 +5654,17 @@ xfr_transfer_init_fetch(struct auth_xfer* xfr, struct module_env* env)
 	xfr->task_transfer->id = GET_RANDOM_ID(env->rnd);
 	xfr_create_ixfr_packet(xfr, env->scratch_buffer,
 		xfr->task_transfer->id, master);
+	if(master->tsig_key_name) {
+		if(!xfr_sign_query(&xfr->task_transfer->tsig,
+			env->scratch_buffer, env, master->tsig_key_name)) {
+			char zname[LDNS_MAX_DOMAINLEN], as[256];
+			dname_str(xfr->name, zname);
+			addr_port_to_str(&addr, addrlen, as, sizeof(as));
+			verbose(VERB_ALGO, "failed to TSIG sign xfr "
+				"for %s to %s", zname, as);
+			return 0;
+		}
+	}
 
 	/* connect on fd */
 	xfr->task_transfer->cp = outnet_comm_point_for_tcp(env->outnet,
@@ -5777,7 +5870,7 @@ void auth_xfer_transfer_lookup_callback(void* arg, int rcode, sldns_buffer* buf,
  */
 static int
 check_xfer_packet(sldns_buffer* pkt, struct auth_xfer* xfr,
-	int* gonextonfail, int* transferdone)
+	struct module_env* env, int* gonextonfail, int* transferdone)
 {
 	uint8_t* wire = sldns_buffer_begin(pkt);
 	int i;
@@ -5801,6 +5894,25 @@ check_xfer_packet(sldns_buffer* pkt, struct auth_xfer* xfr,
 		verbose(VERB_ALGO, "xfr to %s failed, packet wrong ID",
 			xfr->task_transfer->master->host);
 		return 0;
+	}
+	/* check tsig */
+	if(xfr->task_transfer->tsig) {
+		if(xfr->task_transfer->rr_scan_num == 0) {
+			/* Check TSIG reply on first packet. */
+			if(!tsig_find_rr(pkt)) {
+				verbose(VERB_ALGO, "TSIG expected, but not found in reply for xfr to %s",
+					xfr->task_transfer->master->host);
+				return 0;
+			}
+			if(!tsig_parse_verify_reply(xfr->task_transfer->tsig,
+				pkt, env->tsig_key_table,
+				(uint64_t)*env->now)) {
+				verbose(VERB_ALGO, "valid TSIG expected in xfr reply to %s, but it was not valid",
+					xfr->task_transfer->master->host);
+				return 0;
+			}
+		}
+		sldns_buffer_rewind(pkt);
 	}
 	if(LDNS_RCODE_WIRE(wire) != LDNS_RCODE_NOERROR) {
 		char rcode[32];
@@ -6239,7 +6351,8 @@ auth_xfer_transfer_tcp_callback(struct comm_point* c, void* arg, int err,
 	/* handle returned packet */
 	/* if it fails, cleanup and end this transfer */
 	/* if it needs to fallback from IXFR to AXFR, do that */
-	if(!check_xfer_packet(c->buffer, xfr, &gonextonfail, &transferdone)) {
+	if(!check_xfer_packet(c->buffer, xfr, env, &gonextonfail,
+		&transferdone)) {
 		goto failed;
 	}
 	/* if it is good, link it into the list of data */
@@ -6365,6 +6478,9 @@ xfr_probe_disown(struct auth_xfer* xfr)
 	/* remove the commpoint */
 	comm_point_delete(xfr->task_probe->cp);
 	xfr->task_probe->cp = NULL;
+	/* remove the tsig data */
+	tsig_delete(xfr->task_probe->tsig);
+	xfr->task_probe->tsig = NULL;
 	/* we don't own this item anymore */
 	xfr->task_probe->worker = NULL;
 	xfr->task_probe->env = NULL;
@@ -6422,6 +6538,17 @@ xfr_probe_send_probe(struct auth_xfer* xfr, struct module_env* env,
 		xfr->task_probe->id = GET_RANDOM_ID(env->rnd);
 	xfr_create_soa_probe_packet(xfr, env->scratch_buffer, 
 		xfr->task_probe->id);
+	if(master->tsig_key_name) {
+		if(!xfr_sign_query(&xfr->task_probe->tsig, env->scratch_buffer,
+			env, master->tsig_key_name)) {
+			char zname[LDNS_MAX_DOMAINLEN], as[256];
+			dname_str(xfr->name, zname);
+			addr_port_to_str(&addr, addrlen, as, sizeof(as));
+			verbose(VERB_ALGO, "failed to TSIG sign soa probe "
+				"for %s to %s", zname, as);
+			return 0;
+		}
+	}
 	/* we need to remove the cp if we have a different ip4/ip6 type now */
 	if(xfr->task_probe->cp &&
 		((xfr->task_probe->cp_is_ip6 && !addr_is_ip6(&addr, addrlen)) ||
@@ -6541,7 +6668,7 @@ auth_xfer_probe_udp_callback(struct comm_point* c, void* arg, int err,
 	if(err == NETEVENT_NOERROR) {
 		uint32_t serial = 0;
 		if(check_packet_ok(c->buffer, LDNS_RR_TYPE_SOA, xfr,
-			&serial)) {
+			&serial, env)) {
 			/* successful lookup */
 			if(verbosity >= VERB_ALGO) {
 				char buf[LDNS_MAX_DOMAINLEN];
@@ -6600,6 +6727,9 @@ auth_xfer_probe_udp_callback(struct comm_point* c, void* arg, int err,
 	/* delete commpoint so a new one is created, with a fresh port nr */
 	comm_point_delete(xfr->task_probe->cp);
 	xfr->task_probe->cp = NULL;
+	/* remove the tsig data */
+	tsig_delete(xfr->task_probe->tsig);
+	xfr->task_probe->tsig = NULL;
 
 	/* if the result was not a successful probe, we need
 	 * to send the next one */

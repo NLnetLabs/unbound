@@ -67,6 +67,7 @@
 #include "util/data/dname.h"
 #include "util/fptr_wlist.h"
 #include "util/proxy_protocol.h"
+#include "util/tsig.h"
 #include "util/tube.h"
 #include "util/edns.h"
 #include "util/timeval_func.h"
@@ -1157,16 +1158,22 @@ answer_notify(struct worker* w, struct query_info* qinfo,
 	int rcode = LDNS_RCODE_NOERROR;
 	uint32_t serial = 0;
 	int has_serial;
+	struct tsig_data* tsig = NULL;
+	int tsig_rcode = 0;
 	if(!w->env.auth_zones) return;
 	has_serial = auth_zone_parse_notify_serial(pkt, &serial);
 	if(auth_zones_notify(w->env.auth_zones, &w->env, qinfo->qname,
-		qinfo->qname_len, qinfo->qclass, addr,
-		addrlen, has_serial, serial, &refused)) {
+		qinfo->qname_len, qinfo->qclass, addr, addrlen, has_serial,
+		serial, &refused, pkt, &tsig, &tsig_rcode, w->scratchpad)) {
 		rcode = LDNS_RCODE_NOERROR;
 	} else {
-		if(refused)
+		if(tsig_rcode != 0) {
+			rcode = tsig_rcode;
+		} else if(refused) {
 			rcode = LDNS_RCODE_REFUSED;
-		else	rcode = LDNS_RCODE_SERVFAIL;
+		} else {
+			rcode = LDNS_RCODE_SERVFAIL;
+		}
 	}
 
 	if(verbosity >= VERB_DETAIL) {
@@ -1184,6 +1191,9 @@ answer_notify(struct worker* w, struct query_info* qinfo,
 		else if(rcode == LDNS_RCODE_SERVFAIL)
 			snprintf(buf, sizeof(buf),
 				"servfail for NOTIFY %sfor %s from", sr, zname);
+		else if(rcode != LDNS_RCODE_NOERROR)
+			snprintf(buf, sizeof(buf),
+				"error for NOTIFY %sfor %s from", sr, zname);
 		else	snprintf(buf, sizeof(buf),
 				"received NOTIFY %sfor %s from", sr, zname);
 		log_addr(VERB_DETAIL, buf, addr, addrlen);
@@ -1196,6 +1206,21 @@ answer_notify(struct worker* w, struct query_info* qinfo,
 		*(uint16_t*)(void *)sldns_buffer_begin(pkt),
 		sldns_buffer_read_u16_at(pkt, 2), edns);
 	LDNS_OPCODE_SET(sldns_buffer_begin(pkt), LDNS_PACKET_NOTIFY);
+	if(tsig) {
+		size_t pos = sldns_buffer_limit(pkt);
+		sldns_buffer_clear(pkt);
+		sldns_buffer_set_position(pkt, pos);
+		if(!tsig_sign_reply(tsig, pkt, w->env.tsig_key_table,
+			(uint64_t)*w->env.now)) {
+			/* Failed to TSIG sign the reply */
+			verbose(VERB_ALGO, "Failed to TSIG sign notify reply");
+			error_encode(pkt, LDNS_RCODE_SERVFAIL, qinfo,
+				*(uint16_t*)(void *)sldns_buffer_begin(pkt),
+				sldns_buffer_read_u16_at(pkt, 2), edns);
+			LDNS_OPCODE_SET(sldns_buffer_begin(pkt), LDNS_PACKET_NOTIFY);
+		}
+		/* The tsig veriable is allocated in the scratch region. */
+	}
 }
 
 static int

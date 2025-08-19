@@ -427,4 +427,13 @@ size_t tsig_reserved_space(struct tsig_data* tsig);
  */
 int tsig_find_rr(struct sldns_buffer* pkt);
 
+/**
+ * See if the packet as a TSIG, or not. Like tsig_find_rr, but it logs
+ * no error for absence of a TSIG.
+ * @param pkt: the packet
+ * @return false if malformed, and false if no tsig. true if tsig,
+ *	and the position is just before the TSIG record. So it can be parsed.
+ */
+int tsig_in_packet(struct sldns_buffer* pkt);
+
 #endif /* UTIL_TSIG_H */
