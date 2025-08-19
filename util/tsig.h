@@ -306,6 +306,13 @@ struct tsig_data* tsig_create_fromstr(struct tsig_key_table* key_table,
 void tsig_delete(struct tsig_data* tsig);
 
 /**
+ * Get memory usage of tsig data.
+ * @param rsig: the tsig data.
+ * @return memory use.
+ */
+size_t tsig_get_mem(struct tsig_data* tsig);
+
+/**
  * Sign a query with TSIG. Appends the TSIG record.
  * @param tsig: the tsig data, keeps state to verify reply.
  * @param pkt: query packet. position must be at end of packet.

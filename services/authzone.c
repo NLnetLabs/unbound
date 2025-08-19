@@ -8880,12 +8880,14 @@ auth_xfer_get_mem(struct auth_xfer* xfr)
 	m += auth_primaries_get_mem(xfr->task_probe->masters);
 	m += comm_point_get_mem(xfr->task_probe->cp);
 	m += comm_timer_get_mem(xfr->task_probe->timer);
+	m += tsig_get_mem(xfr->task_probe->tsig);
 
 	/* auth_transfer */
 	m += auth_chunks_get_mem(xfr->task_transfer->chunks_first);
 	m += auth_primaries_get_mem(xfr->task_transfer->masters);
 	m += comm_point_get_mem(xfr->task_transfer->cp);
 	m += comm_timer_get_mem(xfr->task_transfer->timer);
+	m += tsig_get_mem(xfr->task_transfer->tsig);
 
 	/* allow_notify_list */
 	m += auth_primaries_get_mem(xfr->allow_notify_list);

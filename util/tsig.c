@@ -492,6 +492,14 @@ tsig_delete(struct tsig_data* tsig)
 	free(tsig);
 }
 
+size_t tsig_get_mem(struct tsig_data* tsig)
+{
+	if(!tsig)
+		return 0;
+	return sizeof(*tsig) + tsig->key_name_len + tsig->algo_name_len
+		+ tsig->mac_size;
+}
+
 size_t
 tsig_reserved_space(struct tsig_data* tsig)
 {
