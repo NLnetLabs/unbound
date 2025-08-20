@@ -1179,23 +1179,25 @@ answer_notify(struct worker* w, struct query_info* qinfo,
 	if(verbosity >= VERB_DETAIL) {
 		char buf[380];
 		char zname[LDNS_MAX_DOMAINLEN];
-		char sr[25];
+		char sr[25], rcode_str[32];
 		dname_str(qinfo->qname, zname);
 		sr[0]=0;
 		if(has_serial)
 			snprintf(sr, sizeof(sr), "serial %u ",
 				(unsigned)serial);
-		if(rcode == LDNS_RCODE_REFUSED)
+		if(rcode == LDNS_RCODE_REFUSED) {
 			snprintf(buf, sizeof(buf),
 				"refused NOTIFY %sfor %s from", sr, zname);
-		else if(rcode == LDNS_RCODE_SERVFAIL)
+		} else if(rcode != LDNS_RCODE_NOERROR) {
+			sldns_wire2str_rcode_buf(rcode, rcode_str,
+				sizeof(rcode_str));
 			snprintf(buf, sizeof(buf),
-				"servfail for NOTIFY %sfor %s from", sr, zname);
-		else if(rcode != LDNS_RCODE_NOERROR)
+				"%s for NOTIFY %sfor %s from",
+				rcode_str, sr, zname);
+		} else {
 			snprintf(buf, sizeof(buf),
-				"error for NOTIFY %sfor %s from", sr, zname);
-		else	snprintf(buf, sizeof(buf),
 				"received NOTIFY %sfor %s from", sr, zname);
+		}
 		log_addr(VERB_DETAIL, buf, addr, addrlen);
 	}
 	edns->edns_version = EDNS_ADVERTISED_VERSION;
