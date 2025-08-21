@@ -3836,6 +3836,30 @@ do_print_cookie_secrets(RES* ssl, struct worker* worker) {
 	explicit_bzero(secret_hex, sizeof(secret_hex));
 }
 
+/** check that there is no argument after a command that takes no arguments. */
+static int
+cmd_no_args(RES* ssl, char* cmd, char* p)
+{
+	if(p && *p != 0) {
+		/* cmd contains the command that is called at the start,
+		 * with space or tab after it. */
+		char* c = cmd;
+		if(strchr(c, ' ') && strchr(c, '\t')) {
+			if(strchr(c, ' ') < strchr(c, '\t'))
+				*strchr(c, ' ')=0;
+			else	*strchr(c, '\t')=0;
+		} else if(strchr(c, ' ')) {
+			*strchr(c, ' ')=0;
+		} else if(strchr(c, '\t')) {
+			*strchr(c, '\t')=0;
+		}
+		(void)ssl_printf(ssl, "error command %s takes no arguments,"
+			" have '%s'\n", c, p);
+		return 1;
+	}
+	return 0;
+}
+
 /** check for name with end-of-string, space or tab after it */
 static int
 cmdcmp(char* p, const char* cmd, size_t len)
@@ -3851,27 +3875,41 @@ execute_cmd(struct daemon_remote* rc, struct rc_state* s, RES* ssl, char* cmd,
 	char* p = skipwhite(cmd);
 	/* compare command */
 	if(cmdcmp(p, "stop", 4)) {
+		if(cmd_no_args(ssl, p, skipwhite(p+4)))
+			return;
 		do_stop(ssl, worker);
 		return;
 	} else if(cmdcmp(p, "reload_keep_cache", 17)) {
+		if(cmd_no_args(ssl, p, skipwhite(p+17)))
+			return;
 		do_reload(ssl, worker, 1);
 		return;
 	} else if(cmdcmp(p, "reload", 6)) {
+		if(cmd_no_args(ssl, p, skipwhite(p+6)))
+			return;
 		do_reload(ssl, worker, 0);
 		return;
 	} else if(cmdcmp(p, "fast_reload", 11)) {
 		do_fast_reload(ssl, worker, s, skipwhite(p+11));
 		return;
 	} else if(cmdcmp(p, "stats_noreset", 13)) {
+		if(cmd_no_args(ssl, p, skipwhite(p+13)))
+			return;
 		do_stats(ssl, worker, 0);
 		return;
 	} else if(cmdcmp(p, "stats", 5)) {
+		if(cmd_no_args(ssl, p, skipwhite(p+5)))
+			return;
 		do_stats(ssl, worker, 1);
 		return;
 	} else if(cmdcmp(p, "status", 6)) {
+		if(cmd_no_args(ssl, p, skipwhite(p+6)))
+			return;
 		do_status(ssl, worker);
 		return;
 	} else if(cmdcmp(p, "dump_cache", 10)) {
+		if(cmd_no_args(ssl, p, skipwhite(p+10)))
+			return;
 #ifdef THREADS_DISABLED
 		if(worker->daemon->num > 1) {
 			(void)ssl_printf(ssl, "dump_cache/load_cache is not "
@@ -3882,6 +3920,8 @@ execute_cmd(struct daemon_remote* rc, struct rc_state* s, RES* ssl, char* cmd,
 		(void)dump_cache(ssl, worker);
 		return;
 	} else if(cmdcmp(p, "load_cache", 10)) {
+		if(cmd_no_args(ssl, p, skipwhite(p+10)))
+			return;
 #ifdef THREADS_DISABLED
 		if(worker->daemon->num > 1) {
 			/* The warning can't be printed when stdin is sending
@@ -3892,18 +3932,28 @@ execute_cmd(struct daemon_remote* rc, struct rc_state* s, RES* ssl, char* cmd,
 		if(load_cache(ssl, worker)) send_ok(ssl);
 		return;
 	} else if(cmdcmp(p, "list_forwards", 13)) {
+		if(cmd_no_args(ssl, p, skipwhite(p+13)))
+			return;
 		do_list_forwards(ssl, worker);
 		return;
 	} else if(cmdcmp(p, "list_stubs", 10)) {
+		if(cmd_no_args(ssl, p, skipwhite(p+10)))
+			return;
 		do_list_stubs(ssl, worker);
 		return;
 	} else if(cmdcmp(p, "list_insecure", 13)) {
+		if(cmd_no_args(ssl, p, skipwhite(p+13)))
+			return;
 		do_insecure_list(ssl, worker);
 		return;
 	} else if(cmdcmp(p, "list_local_zones", 16)) {
+		if(cmd_no_args(ssl, p, skipwhite(p+16)))
+			return;
 		do_list_local_zones(ssl, worker->daemon->local_zones);
 		return;
 	} else if(cmdcmp(p, "list_local_data", 15)) {
+		if(cmd_no_args(ssl, p, skipwhite(p+15)))
+			return;
 		do_list_local_data(ssl, worker, worker->daemon->local_zones);
 		return;
 	} else if(cmdcmp(p, "view_list_local_zones", 21)) {
@@ -3919,6 +3969,8 @@ execute_cmd(struct daemon_remote* rc, struct rc_state* s, RES* ssl, char* cmd,
 		do_ip_ratelimit_list(ssl, worker, p+17);
 		return;
 	} else if(cmdcmp(p, "list_auth_zones", 15)) {
+		if(cmd_no_args(ssl, p, skipwhite(p+15)))
+			return;
 		do_list_auth_zones(ssl, worker->env.auth_zones);
 		return;
 	} else if(cmdcmp(p, "auth_zone_reload", 16)) {
@@ -3939,11 +3991,15 @@ execute_cmd(struct daemon_remote* rc, struct rc_state* s, RES* ssl, char* cmd,
 		return;
 	} else if(cmdcmp(p, "flush_stats", 11)) {
 		/* must always distribute this cmd */
+		if(cmd_no_args(ssl, p, skipwhite(p+11)))
+			return;
 		if(rc) distribute_cmd(rc, ssl, cmd);
 		do_flush_stats(ssl, worker);
 		return;
 	} else if(cmdcmp(p, "flush_requestlist", 17)) {
 		/* must always distribute this cmd */
+		if(cmd_no_args(ssl, p, skipwhite(p+17)))
+			return;
 		if(rc) distribute_cmd(rc, ssl, cmd);
 		do_flush_requestlist(ssl, worker);
 		return;
@@ -3957,15 +4013,23 @@ execute_cmd(struct daemon_remote* rc, struct rc_state* s, RES* ssl, char* cmd,
 	 * Each line needs to be distributed if THREADS_DISABLED.
 	 */
 	} else if(cmdcmp(p, "local_zones_remove", 18)) {
+		if(cmd_no_args(ssl, p, skipwhite(p+18)))
+			return;
 		do_zones_remove(rc, ssl, worker);
 		return;
 	} else if(cmdcmp(p, "local_zones", 11)) {
+		if(cmd_no_args(ssl, p, skipwhite(p+11)))
+			return;
 		do_zones_add(rc, ssl, worker);
 		return;
 	} else if(cmdcmp(p, "local_datas_remove", 18)) {
+		if(cmd_no_args(ssl, p, skipwhite(p+18)))
+			return;
 		do_datas_remove(rc, ssl, worker);
 		return;
 	} else if(cmdcmp(p, "local_datas", 11)) {
+		if(cmd_no_args(ssl, p, skipwhite(p+11)))
+			return;
 		do_datas_add(rc, ssl, worker);
 		return;
 	} else if(cmdcmp(p, "view_local_datas_remove", 23)){
@@ -3975,6 +4039,8 @@ execute_cmd(struct daemon_remote* rc, struct rc_state* s, RES* ssl, char* cmd,
 		do_view_datas_add(rc, ssl, worker, skipwhite(p+16));
 		return;
 	} else if(cmdcmp(p, "print_cookie_secrets", 20)) {
+		if(cmd_no_args(ssl, p, skipwhite(p+20)))
+			return;
 		do_print_cookie_secrets(ssl, worker);
 		return;
 	}
@@ -4024,10 +4090,16 @@ execute_cmd(struct daemon_remote* rc, struct rc_state* s, RES* ssl, char* cmd,
 	} else if(cmdcmp(p, "flush", 5)) {
 		do_flush_name(ssl, worker, skipwhite(p+5));
 	} else if(cmdcmp(p, "dump_requestlist", 16)) {
+		if(cmd_no_args(ssl, p, skipwhite(p+16)))
+			return;
 		do_dump_requestlist(ssl, worker);
 	} else if(cmdcmp(p, "dump_infra", 10)) {
+		if(cmd_no_args(ssl, p, skipwhite(p+10)))
+			return;
 		do_dump_infra(ssl, worker);
 	} else if(cmdcmp(p, "log_reopen", 10)) {
+		if(cmd_no_args(ssl, p, skipwhite(p+10)))
+			return;
 		do_log_reopen(ssl, worker);
 	} else if(cmdcmp(p, "set_option", 10)) {
 		do_set_option(ssl, worker, skipwhite(p+10));
@@ -4044,8 +4116,12 @@ execute_cmd(struct daemon_remote* rc, struct rc_state* s, RES* ssl, char* cmd,
 	} else if(cmdcmp(p, "add_cookie_secret", 17)) {
 		do_add_cookie_secret(ssl, worker, skipwhite(p+17));
 	} else if(cmdcmp(p, "drop_cookie_secret", 18)) {
+		if(cmd_no_args(ssl, p, skipwhite(p+18)))
+			return;
 		do_drop_cookie_secret(ssl, worker);
 	} else if(cmdcmp(p, "activate_cookie_secret", 22)) {
+		if(cmd_no_args(ssl, p, skipwhite(p+22)))
+			return;
 		do_activate_cookie_secret(ssl, worker);
 	} else {
 		(void)ssl_printf(ssl, "error unknown command '%s'\n", p);
