@@ -1,6 +1,8 @@
 21 August 2025: Wouter
 	- Fix to check for extraneous command arguments for unbound-control,
 	  when the command takes no arguments but there are arguments present.
+	- Fix #1317: Unbound starts too early. Add
+	  Wants=network-online.target under [Unit] in unbound.service.
 
 15 August 2025: Wouter
 	- unbound-control cache_lookup +t allows tld and root names. And
