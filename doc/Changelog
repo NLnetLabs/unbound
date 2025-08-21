@@ -1,3 +1,7 @@
+21 August 2025: Wouter
+	- Fix to check for extraneous command arguments for unbound-control,
+	  when the command takes no arguments but there are arguments present.
+
 15 August 2025: Wouter
 	- unbound-control cache_lookup +t allows tld and root names. And
 	  subnet cache contents are printed.
