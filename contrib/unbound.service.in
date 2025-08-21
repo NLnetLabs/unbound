@@ -38,7 +38,7 @@
 ;   - `LockPersonality=yes` locks down the personality system call so that the
 ;     kernel execution domain may not be changed from the default.
 ;
-;   - With /etc/systemd/system/*.network a setting to make sure the network
+;   - With /etc/systemd/network/*.network a setting to make sure the network
 ;     is not considered online too early, can reduce network unreachable
 ;     errors on server start:
 ;     [Link]
