@@ -297,7 +297,11 @@ setup_config(FILE* in, int* lineno, int* pass_argc, char* pass_argv[])
 			/* Allow the use of SHA1 signatures for the test,
 			 * in case that OpenSSL disallows use of RSASHA1
 			 * with rh-allow-sha1-signatures disabled. */
+#ifndef UB_ON_WINDOWS
 			setenv("OPENSSL_ENABLE_SHA1_SIGNATURES", "1", 0);
+#else
+			_putenv("OPENSSL_ENABLE_SHA1_SIGNATURES=1");
+#endif
 		}
 		fputs(line, cfg);
 	}
