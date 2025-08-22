@@ -3221,10 +3221,13 @@ do_auth_zone_reload(RES* ssl, struct worker* worker, char* arg)
 			(void)ssl_printf(ssl, "error: no SOA in zone after read %s\n", arg);
 			return;
 		}
-		if(xfr->have_zone)
+		if(xfr->have_zone) {
 			xfr->lease_time = *worker->env.now;
+			xfr->soa_zone_acquired = *worker->env.now;
+		}
 		lock_basic_unlock(&xfr->lock);
 	}
+	z->soa_zone_acquired = *worker->env.now;
 
 	auth_zone_verify_zonemd(z, &worker->env, &worker->env.mesh->mods,
 		&reason, 0, 0);

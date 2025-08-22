@@ -2,6 +2,8 @@
 	- For #1318: Fix compile warnings for DoH compile on windows.
 	- Fix sha1 enable environment variable in test code on windows.
 	- Fix #1319: [FR] zone status for Unbound auth-zones.
+	- Fix that the zone acquired timestamp is set after the
+	  zonefile is read.
 
 21 August 2025: Wouter
 	- Fix to check for extraneous command arguments for unbound-control,

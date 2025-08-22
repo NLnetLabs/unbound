@@ -806,7 +806,7 @@ void auth_xfer_pickup_initial_zone(struct auth_xfer* x,
 
 /**
  * Initial pick up of the auth zone, it sets the acquired time.
- * @param z: the zone, locked by caller.
+ * @param z: the zone, write locked by caller.
  * @param env: environment of the worker, with current time.
  */
 void auth_zone_pickup_initial_zone(struct auth_zone* z,
