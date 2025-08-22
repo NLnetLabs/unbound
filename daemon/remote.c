@@ -3373,7 +3373,7 @@ static void
 do_list_auth_zones(RES* ssl, struct auth_zones* az)
 {
 	struct auth_zone* z;
-	char buf[LDNS_MAX_DOMAINLEN], buf2[256];
+	char buf[LDNS_MAX_DOMAINLEN], buf2[256], buf3[256];
 	lock_rw_rdlock(&az->lock);
 	RBTREE_FOR(z, struct auth_zone*, &az->ztree) {
 		lock_rw_rdlock(&z->lock);
@@ -3382,18 +3382,41 @@ do_list_auth_zones(RES* ssl, struct auth_zones* az)
 			snprintf(buf2, sizeof(buf2), "expired");
 		else {
 			uint32_t serial = 0;
-			if(auth_zone_get_serial(z, &serial))
+			if(auth_zone_get_serial(z, &serial)) {
 				snprintf(buf2, sizeof(buf2), "serial %u",
 					(unsigned)serial);
-			else	snprintf(buf2, sizeof(buf2), "no serial");
+				if(z->soa_zone_acquired != 0) {
+#if defined(HAVE_STRFTIME) && defined(HAVE_LOCALTIME_R)
+					char tmbuf[32];
+					struct tm tm;
+					struct tm *tm_p;
+					tm_p = localtime_r(
+						&z->soa_zone_acquired, &tm);
+					if(!strftime(tmbuf, sizeof(tmbuf), "%Y-%m-%dT%H:%M:%S", tm_p))
+						snprintf(tmbuf, sizeof(tmbuf), "strftime-err-%u", (unsigned)z->soa_zone_acquired);
+					snprintf(buf3, sizeof(buf3),
+						"\t since %u %s",
+						(unsigned)z->soa_zone_acquired,
+						tmbuf);
+#else
+					snprintf(buf3, sizeof(buf3),
+						"\t since %u",
+						(unsigned)z->soa_zone_acquired);
+#endif
+				} else {
+					buf3[0]=0;
+				}
+			} else	{
+				snprintf(buf2, sizeof(buf2), "no serial");
+				buf3[0]=0;
+			}
 		}
-		if(!ssl_printf(ssl, "%s\t%s\n", buf, buf2)) {
+		lock_rw_unlock(&z->lock);
+		if(!ssl_printf(ssl, "%s\t%s%s\n", buf, buf2, buf3)) {
 			/* failure to print */
-			lock_rw_unlock(&z->lock);
 			lock_rw_unlock(&az->lock);
 			return;
 		}
-		lock_rw_unlock(&z->lock);
 	}
 	lock_rw_unlock(&az->lock);
 }
@@ -7461,6 +7484,7 @@ fr_worker_auth_add(struct worker* worker, struct fast_reload_auth_change* item,
 			xfr->serial = 0;
 		}
 	}
+	auth_zone_pickup_initial_zone(item->new_z, &worker->env);
 	lock_rw_unlock(&item->new_z->lock);
 	lock_rw_unlock(&worker->env.auth_zones->lock);
 	lock_rw_unlock(&worker->daemon->fast_reload_thread->old_auth_zones->lock);
