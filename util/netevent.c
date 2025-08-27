@@ -5194,7 +5194,7 @@ ssize_t http2_recv_cb(nghttp2_session* ATTR_UNUSED(session), uint8_t* buf,
 	}
 #endif /* HAVE_SSL */
 
-	ret = recv(h2_session->c->fd, buf, len, MSG_DONTWAIT);
+	ret = recv(h2_session->c->fd, (void*)buf, len, MSG_DONTWAIT);
 	if(ret == 0) {
 		return NGHTTP2_ERR_EOF;
 	} else if(ret < 0) {
@@ -5522,7 +5522,7 @@ ssize_t http2_send_cb(nghttp2_session* ATTR_UNUSED(session), const uint8_t* buf,
 	}
 #endif /* HAVE_SSL */
 
-	ret = send(h2_session->c->fd, buf, len, 0);
+	ret = send(h2_session->c->fd, (void*)buf, len, 0);
 	if(ret == 0) {
 		return NGHTTP2_ERR_CALLBACK_FAILURE;
 	} else if(ret < 0) {

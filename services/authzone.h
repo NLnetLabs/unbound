@@ -120,6 +120,8 @@ struct auth_zone {
 	char* zonefile;
 	/** fallback to the internet on failure or ttl-expiry of auth zone */
 	int fallback_enabled;
+	/** the time when zone was transferred from upstream */
+	time_t soa_zone_acquired;
 	/** the zone has expired (enabled by the xfer worker), fallback
 	 * happens if that option is enabled. */
 	int zone_expired;
@@ -263,6 +265,8 @@ struct auth_xfer {
 	int zone_expired;
 	/** do we have a zone (if 0, no zone data at all) */
 	int have_zone;
+	/** the time when zone was transferred from upstream */
+	time_t soa_zone_acquired;
 
 	/** current serial (from SOA), if we have no zone, 0 */
 	uint32_t serial;
@@ -816,6 +820,14 @@ size_t auth_zones_get_mem(struct auth_zones* zones);
  * @param env: environment of the worker that picks up the task.
  */
 void auth_xfer_pickup_initial_zone(struct auth_xfer* x,
+	struct module_env* env);
+
+/**
+ * Initial pick up of the auth zone, it sets the acquired time.
+ * @param z: the zone, write locked by caller.
+ * @param env: environment of the worker, with current time.
+ */
+void auth_zone_pickup_initial_zone(struct auth_zone* z,
 	struct module_env* env);
 
 /**
