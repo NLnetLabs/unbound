@@ -1,3 +1,6 @@
+27 August 2025: Wouter
+	- Fix unbound-control dump_cache for double unlock of lruhash table.
+
 26 August 2025: Wouter
 	- Fix ports workflow to install expat for macos.
 
