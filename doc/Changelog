@@ -1,3 +1,6 @@
+28 August 2025: Wouter
+	- Fix setup_listen_sslctx warning for nettle compile.
+
 27 August 2025: Wouter
 	- Fix unbound-control dump_cache for double unlock of lruhash table.
 
