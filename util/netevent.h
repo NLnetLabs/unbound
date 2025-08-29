@@ -939,6 +939,8 @@ struct http2_session {
 	/** comm point containing buffer used to build answer in worker or
 	 * module */
 	struct comm_point* c;
+	/** count the number of consecutive reads on the session */
+	uint32_t reads_count;
 	/** session is instructed to get dropped (comm port will be closed) */
 	int is_drop;
 	/** postpone dropping the session, can be used to prevent dropping

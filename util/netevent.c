@@ -5161,6 +5161,15 @@ ssize_t http2_recv_cb(nghttp2_session* ATTR_UNUSED(session), uint8_t* buf,
 
 	log_assert(h2_session->c->type == comm_http);
 	log_assert(h2_session->c->h2_session);
+	if(++h2_session->reads_count > h2_session->c->http2_max_streams) {
+		/* We are somewhat arbitrarily capping the amount of
+		 * consecutive reads on the HTTP2 session to the number of max
+		 * allowed streams.
+		 * When we reach the cap, error out with NGHTTP2_ERR_WOULDBLOCK
+		 * to signal nghttp2_session_recv() to stop reading for now. */
+		h2_session->reads_count = 0;
+		return NGHTTP2_ERR_WOULDBLOCK;
+	}
 
 #ifdef HAVE_SSL
 	if(h2_session->c->ssl) {

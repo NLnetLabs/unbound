@@ -1,3 +1,8 @@
+29 August 2025: Yorgos
+	- Limit the number of consecutive reads on an HTTP/2 session.
+	  Thanks to Gal Bar Nahum for exposing the possibility of infinite
+	  reads on the session.
+
 28 August 2025: Wouter
 	- Fix setup_listen_sslctx warning for nettle compile.
 
