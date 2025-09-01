@@ -1,3 +1,6 @@
+1 September 2025: Wouter
+	- Fix for #1324: Fix to free edns options scratch in ratelimit case.
+
 29 August 2025: Yorgos
 	- Limit the number of consecutive reads on an HTTP/2 session.
 	  Thanks to Gal Bar Nahum for exposing the possibility of infinite
