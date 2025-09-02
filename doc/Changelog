@@ -1,3 +1,7 @@
+2 September 2025: Wouter
+	- Fix #1235: Outdated Python2 code in
+	  unbound/pythonmod/examples/log.py.
+
 1 September 2025: Wouter
 	- Fix for #1324: Fix to free edns options scratch in ratelimit case.
 
