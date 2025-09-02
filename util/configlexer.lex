@@ -275,6 +275,8 @@ use-systemd{COLON}		{ YDVAR(1, VAR_USE_SYSTEMD) }
 do-daemonize{COLON}		{ YDVAR(1, VAR_DO_DAEMONIZE) }
 interface{COLON}		{ YDVAR(1, VAR_INTERFACE) }
 ip-address{COLON}		{ YDVAR(1, VAR_INTERFACE) }
+distribute{COLON}		{ YDVAR(1, VAR_DISTRIBUTE ) }
+allow-response{COLON}		{ YDVAR(2, VAR_ALLOW_RESPONSE) }
 outgoing-interface{COLON}	{ YDVAR(1, VAR_OUTGOING_INTERFACE) }
 interface-automatic{COLON}	{ YDVAR(1, VAR_INTERFACE_AUTOMATIC) }
 interface-automatic-ports{COLON} { YDVAR(1, VAR_INTERFACE_AUTOMATIC_PORTS) }
@@ -606,6 +608,9 @@ proxy-protocol-port{COLON}	{ YDVAR(1, VAR_PROXY_PROTOCOL_PORT) }
 iter-scrub-ns{COLON}		{ YDVAR(1, VAR_ITER_SCRUB_NS) }
 iter-scrub-cname{COLON}		{ YDVAR(1, VAR_ITER_SCRUB_CNAME) }
 max-global-quota{COLON}		{ YDVAR(1, VAR_MAX_GLOBAL_QUOTA) }
+tsig-key{COLON}			{ YDVAR(0, VAR_TSIG_KEY) }
+algorithm{COLON}		{ YDVAR(1, VAR_ALGORITHM) }
+secret{COLON}			{ YDVAR(1, VAR_SECRET) }
 <INITIAL,val>{NEWLINE}		{ LEXOUT(("NL\n")); cfg_parser->line++; }
 
 	/* Quoted strings. Strip leading and ending quotes */
