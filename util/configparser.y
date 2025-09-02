@@ -954,7 +954,7 @@ server_tcp_mss: VAR_TCP_MSS STRING_ARG
 	{
 		OUTYY(("P(server_tcp_mss:%s)\n", $2));
 		if(atoi($2) == 0 && strcmp($2, "0") != 0)
-				yyerror("number expected");
+			yyerror("number expected");
 		else cfg_parser->cfg->tcp_mss = atoi($2);
 		free($2);
 	}

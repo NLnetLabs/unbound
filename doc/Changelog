@@ -3,6 +3,7 @@
 	  unbound/pythonmod/examples/log.py.
 	- Fix #1324: Memory leak in 'msgparse.c' in
 	  'parse_edns_options_from_query(...)'.
+	- Fix indentation in tcp-mss option parsing.
 
 1 September 2025: Wouter
 	- Fix for #1324: Fix to free edns options scratch in ratelimit case.
