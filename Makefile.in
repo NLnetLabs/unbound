@@ -1648,3 +1648,16 @@ sha512.lo sha512.o: $(srcdir)/compat/sha512.c config.h
 reallocarray.lo reallocarray.o: $(srcdir)/compat/reallocarray.c config.h
 isblank.lo isblank.o: $(srcdir)/compat/isblank.c config.h
 strsep.lo strsep.o: $(srcdir)/compat/strsep.c config.h
+
+# Additional dependencies to fix the missing headers
+stats.lo stats.o: validator/val_nsec3.h util/random.h daemon/acl_list.h util/regional.h
+iter_hints.lo iter_hints.o: util/random.h
+iter_resptype.lo iter_resptype.o: services/outbound_list.h util/module.h util/data/msgparse.h util/random.h
+packed_rrset.lo packed_rrset.o: util/random.h
+libunbound.lo libunbound.o: services/listen_dnsport.h daemon/acl_list.h
+acl_list.lo acl_list.o: util/netevent.h util/random.h services/listen_dnsport.h dnscrypt/dnscrypt.h
+ub_event.lo ub_event.o: util/locks.h
+cachedump.lo cachedump.o: util/random.h
+val_neg.lo val_neg.o: util/random.h
+configlexer.lo configlexer.o: sldns/rrdef.h
+iter_scrub.lo iter_scrub.o: util/random.h
