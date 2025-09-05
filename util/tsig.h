@@ -47,6 +47,7 @@ struct sldns_buffer;
 struct config_file;
 struct config_tsig_key;
 struct regional;
+struct tsig_calc_state_crypto;
 
 /**
  * TSIG record, the RR that is in the packet.
@@ -118,6 +119,17 @@ struct tsig_data {
 	uint16_t other_len;
 	/** if other len 6, this is 48bit time of error. */
 	uint64_t other_time;
+	/** For zone transfers, there are several packets and TSIGs,
+	 * this keeps track of the tsig calculation state. It is malloced,
+	 * and the tsig has to be deleted to free it. */
+	struct tsig_calc_state_crypto* calc_state;
+	/** For the first packet it is 0, for later packets 1. */
+	int later_packet;
+	/** The number of update only packets without a tsig. */
+	int num_updates;
+	/** The number of packets after which to sign with TSIG, 1 is every
+	 * time. */
+	int every_nth;
 };
 
 /**
@@ -442,5 +454,46 @@ int tsig_find_rr(struct sldns_buffer* pkt);
  *	and the position is just before the TSIG record. So it can be parsed.
  */
 int tsig_in_packet(struct sldns_buffer* pkt);
+
+/**
+ * Sign XFR reply with TSIG. Appends the TSIG record. Call for later
+ * packets too.
+ * @param tsig: the tsig data. It must be malloced for the crypto state.
+ * @param pkt: the packet to sign.
+ * @param key_table: the tsig key table is used to fetch the key details.
+ * @param now: time to sign the query, the current time.
+ * @param last_packet: set to true for the last packet, that needs to be
+ *	TSIG signed.
+ * @return false on failure.
+ */
+int tsig_sign_reply_xfr(struct tsig_data* tsig, struct sldns_buffer* pkt,
+	struct tsig_key_table* key_table, uint64_t now, int last_packet);
+
+/**
+ * Verify XFR reply with TSIG.
+ * @param tsig: the tsig data.
+ * @param pkt: the reply to verify.
+ * @param rr: the tsig record parsed from the reply.
+ * @param now: time to sign the query, the current time.
+ * @return false on failure, like
+ *	alloc failure, wireformat malformed, did not verify.
+ */
+int tsig_verify_reply_xfr(struct tsig_data* tsig, struct sldns_buffer* pkt,
+	struct tsig_record* rr, uint64_t now);
+
+/**
+ * Parse and verify XFR reply with TSIG. Position at the TSIG record, or
+ * at end of packet if no TSIG record.
+ * @param tsig: the tsig data.
+ * @param pkt: the reply to verify.
+ * @param key_table: the tsig key table is used to fetch the key details.
+ * @param now: time to sign the query, the current time.
+ * @param last_packet: set true for the last packet, it must have a TSIG.
+ * @return false on failure, like
+ *	alloc failure, wireformat malformed, did not verify.
+ */
+int tsig_parse_verify_reply_xfr(struct tsig_data* tsig,
+	struct sldns_buffer* pkt, struct tsig_key_table* key_table,
+	uint64_t now, int last_packet);
 
 #endif /* UTIL_TSIG_H */
