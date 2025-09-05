@@ -128,6 +128,22 @@ static int vtest = 0;
  *	expected result, the result of the verify call is compared with
  *	the expected result2, and the test fails if not equal.
  *
+ * tsig-sign-reply-xfr <num> <time> <expected rcode>
+ * packet
+ * <hex>
+ * endpacket
+ * call <time> <expected>
+ * check-packet
+ * <check hex>
+ * endpacket
+ * ..
+ * 	The data from the previous packet in the buffer is used with
+ * 	tsig-verify-query. Then a number of times, the hex data is
+ * 	used with tsig-sign-reply-xfr and the output is checked with
+ * 	the checkhex.
+ * 	The expected rcode is from tsig_verify_query. The expected from
+ * 	call is from tsig_sign_reply_xfr.
+ *
  */
 
 /** Clean up first keyword */
@@ -980,6 +996,174 @@ handle_tsig_verify_reply(char* line, FILE* in, const char* fname,
 	tsig_delete(tsig);
 }
 
+/** Handle the tsig-sign-reply-xfr */
+static void
+handle_tsig_sign_reply_xfr(char* line, FILE* in, const char* fname,
+	struct tsig_key_table* key_table, struct sldns_buffer* pkt)
+{
+	char* arg = get_arg_on_line(line, "tsig-sign-reply-xfr");
+	char* s, *numstr, *timestr, *expected_rcode_str, *expectedstr2;
+	int expected_rcode, expected_result2, ret, num, i;
+	uint64_t timepoint;
+	struct tsig_data* tsig;
+	size_t pos;
+	uint8_t buf[65536], buf2[65536];
+	sldns_buffer reply_pkt, check_pkt;
+	sldns_buffer_init_frm_data(&reply_pkt, buf, sizeof(buf));
+	sldns_buffer_init_frm_data(&check_pkt, buf2, sizeof(buf2));
+
+	s = arg;
+	timestr = get_next_arg_on_line(&s);
+	numstr = get_next_arg_on_line(&s);
+	expected_rcode_str = get_next_arg_on_line(&s);
+
+	num = atoi(numstr);
+	if(num == 0 && strcmp(numstr, "0") != 0)
+		fatal_exit("expected int argument for %s", numstr);
+	timepoint = (uint64_t)atoll(timestr);
+	if(timepoint == 0 && strcmp(timestr, "0") != 0)
+		fatal_exit("expected time argument for %s", timestr);
+	expected_rcode = str2wire_rcode(expected_rcode_str);
+	if(expected_rcode == 0 && strcmp(expected_rcode_str, "0") != 0 &&
+		strcmp(expected_rcode_str, "NOERROR") != 0 &&
+		strcmp(expected_rcode_str, "RCODE0") != 0)
+		fatal_exit("expected rcode argument for %s",
+			expected_rcode_str);
+
+	if(vtest) {
+		char bufrc[16];
+		sldns_wire2str_rcode_buf(expected_rcode, bufrc, sizeof(bufrc));
+		printf("tsig-sign-reply-xfr with %d %d %s\n", num,
+			(int)timepoint, bufrc);
+	}
+
+	/* Verify the query in the packet buffer. Use that TSIG to sign
+	 * replies. */
+	if(!tsig_find_rr(pkt)) {
+		if(vtest)
+			printf("tsig-verify-query found no TSIG RR\n");
+		unit_assert(0);
+		return;
+	}
+	ret = tsig_parse_verify_query(key_table, pkt, &tsig, NULL, timepoint);
+	if(vtest) {
+		char bufrc[16];
+		sldns_wire2str_rcode_buf(expected_rcode, bufrc, sizeof(bufrc));
+		if(ret == expected_rcode)
+			printf("verify ok, ret %s\n", bufrc);
+		else
+			printf("verify returned %d, expected result %d %s\n",
+				ret, expected_rcode, bufrc);
+	}
+	unit_assert(ret == expected_rcode);
+
+	/* Sign the reply packets. */
+	for(i=0; i<num; i++) {
+		char callline[1024];
+		if(vtest >= 2)
+			printf("xfr packet %d/%d\n", i+1, num);
+
+		/* read packet keyword */
+		if(!fgets(callline, sizeof(callline), in))
+			fatal_exit("could not read line %d of "
+				"tsig-sign-reply-xfr", i);
+		callline[sizeof(callline)-1]=0;
+		if(strcmp(get_keyword(callline), "packet")!=0)
+			fatal_exit("expected 'packet', but read '%s'",
+				callline);
+		if(!read_packet_hex("", &reply_pkt, in, fname))
+			fatal_exit("Could not read reply packet");
+
+		/* read call arguments */
+		if(!fgets(callline, sizeof(callline), in))
+			fatal_exit("could not read line %d of "
+				"tsig-sign-reply-xfr", i);
+		callline[sizeof(callline)-1]=0;
+		s = get_keyword(callline);
+		if(strncmp(s, "call", 4) == 0) {
+			s = get_arg_on_line(s, "call");
+			timestr = get_next_arg_on_line(&s);
+			expectedstr2 = get_next_arg_on_line(&s);
+			timepoint = (uint64_t)atoll(timestr);
+			if(timepoint == 0 && strcmp(timestr, "0") != 0)
+				fatal_exit("expected time argument for %s", timestr);
+			expected_result2 = atoi(expectedstr2);
+			if(expected_result2 == 0 && strcmp(expectedstr2, "0") != 0)
+				fatal_exit("expected int argument for %s", expectedstr2);
+		} else {
+			fatal_exit("unknown line '%s' is not 'call' for %d in "
+				"tsig-sign-reply-xfr", s, i);
+		}
+
+		/* read check-packet keyword */
+		if(!fgets(callline, sizeof(callline), in))
+			fatal_exit("could not read line %d of "
+				"tsig-sign-reply-xfr", i);
+		callline[sizeof(callline)-1]=0;
+		if(strcmp(get_keyword(callline), "check-packet")!=0)
+			fatal_exit("expected 'check-packet', but read '%s'",
+				callline);
+		if(!read_packet_hex("", &check_pkt, in, fname))
+			fatal_exit("Could not read check packet");
+
+		if(vtest >= 2) {
+			char* str = sldns_wire2str_pkt(sldns_buffer_begin(&reply_pkt),
+				sldns_buffer_limit(&reply_pkt));
+			if(str)
+				printf("reply packet: %s\n", str);
+			else
+				printf("could not wire2str_pkt\n");
+			free(str);
+		}
+		if(vtest) {
+			printf("call with %d %d\n", (int)timepoint,
+				expected_result2);
+		}
+
+		/* Put position at the end of the packet to sign it. */
+		pos = sldns_buffer_limit(&reply_pkt);
+		sldns_buffer_clear(&reply_pkt);
+		sldns_buffer_set_position(&reply_pkt, pos);
+		if(ret != 0 && i==0) {
+			/* There was an error from verify, set the rcode
+			 * for it */
+			LDNS_RCODE_SET(sldns_buffer_begin(&reply_pkt), ret);
+		}
+		ret = tsig_sign_reply_xfr(tsig, &reply_pkt, key_table,
+			timepoint, (i==num-1));
+		sldns_buffer_flip(&reply_pkt);
+		if(vtest) {
+			if(ret == expected_result2)
+				printf("function ok, %s\n", (ret?"success":"fail"));
+			else
+				printf("function returned %d, expected result %d\n",
+					ret, expected_result2);
+		}
+		unit_assert(ret == expected_result2);
+
+		if(vtest >= 2) {
+			char* str = sldns_wire2str_pkt(sldns_buffer_begin(
+				&check_pkt), sldns_buffer_limit(
+				&check_pkt));
+			if(str)
+				printf("check packet: %s\n", str);
+			else
+				printf("could not wire2str_pkt\n");
+			free(str);
+		}
+		unit_assert(sldns_buffer_limit(&reply_pkt) ==
+				sldns_buffer_limit(&check_pkt) &&
+			memcmp(sldns_buffer_begin(&reply_pkt),
+				sldns_buffer_begin(&check_pkt),
+				sldns_buffer_limit(&reply_pkt)) == 0);
+		if(vtest)
+			printf("check-packet is equal\n");
+	}
+
+	tsig_delete(tsig);
+	sldns_buffer_copy(pkt, &reply_pkt);
+}
+
 /** Handle one line from the TSIG test file */
 static void
 handle_line(char* line, struct tsig_key_table* key_table,
@@ -1007,6 +1191,8 @@ handle_line(char* line, struct tsig_key_table* key_table,
 		handle_tsig_sign_shared(s, key_table, pkt);
 	} else if(strncmp(s, "tsig-verify-shared", 18) == 0) {
 		handle_tsig_verify_shared(s, key_table, pkt);
+	} else if(strncmp(s, "tsig-sign-reply-xfr", 19) == 0) {
+		handle_tsig_sign_reply_xfr(s, in, fname, key_table, pkt);
 	} else if(strncmp(s, "tsig-sign-reply", 15) == 0) {
 		handle_tsig_sign_reply(s, in, fname, key_table, pkt);
 	} else if(strncmp(s, "tsig-verify-reply", 17) == 0) {
