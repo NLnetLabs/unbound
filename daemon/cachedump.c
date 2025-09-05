@@ -203,7 +203,6 @@ dump_lruhash(struct lruhash* table,
 			}
 			if(!found) {
 				not_done = 0;
-				lock_quick_unlock(&table->lock);
 				break;
 			}
 		}

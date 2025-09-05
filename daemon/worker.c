@@ -1734,6 +1734,7 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 			repinfo->client_addrlen, edns.cookie_valid,
 			c->buffer)) {
 			worker->stats.num_queries_ip_ratelimited++;
+			regional_free_all(worker->scratchpad);
 			comm_point_drop_reply(repinfo);
 			return 0;
 		}
