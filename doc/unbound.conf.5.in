@@ -5146,7 +5146,7 @@ internally reverted to \(dqno\(dq.
 \fBNOTE:\fP
 .INDENT 7.0
 .INDENT 3.5
-Redis SETEX support is required for this option (Redis >= 2.0.0).
+Redis \(dqSET ... EX\(dq support is required for this option (Redis >= 2.6.12).
 .UNINDENT
 .UNINDENT
 .sp
