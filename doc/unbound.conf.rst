@@ -4495,7 +4495,7 @@ The following **cachedb:** options are specific to the ``redis`` backend.
     internally reverted to "no".
 
     .. note::
-        Redis SETEX support is required for this option (Redis >= 2.0.0).
+        Redis "SET ... EX" support is required for this option (Redis >= 2.6.12).
 
     Default: no
 

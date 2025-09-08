@@ -1,3 +1,7 @@
+8 September 2025: Yorgos
+	- Update documentation for using "SET ... EX" in Redis.
+	- Document max buffer sizes for Redis commands.
+
 3 September 2025: Wouter
 	- For #1328: make depend.
 
