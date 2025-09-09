@@ -2071,6 +2071,7 @@ tsig_sign_reply_xfr(struct tsig_data* tsig, struct sldns_buffer* pkt,
 	uint16_t current_query_id;
 	uint8_t timers_var_buf[64];
 	struct sldns_buffer timers_var;
+	struct tsig_key* key;
 
 	sldns_buffer_init_frm_data(&timers_var, timers_var_buf,
 		sizeof(timers_var_buf));
@@ -2121,7 +2122,6 @@ tsig_sign_reply_xfr(struct tsig_data* tsig, struct sldns_buffer* pkt,
 	if(tsig->num_updates == 0) {
 		/* Init the calc state for the new packet, or for the new
 		 * packet sequence. */
-		struct tsig_key* key;
 		if(tsig->calc_state) {
 			tsig_calc_state_delete(tsig->calc_state);
 			tsig->calc_state = NULL;
@@ -2212,8 +2212,20 @@ tsig_sign_reply_xfr(struct tsig_data* tsig, struct sldns_buffer* pkt,
 	sldns_buffer_write_u16_at(pkt, 0, current_query_id);
 	sldns_buffer_write(pkt, tsig->key_name, tsig->key_name_len);
 	aftername_pos = sldns_buffer_position(pkt);
-	tsig_append_rr(tsig, pkt, aftername_pos, tsig->algo_name,
-		tsig->algo_name_len, tsig->mac, tsig->mac_size);
+
+	/* Get the key for the algorithm name. */
+	lock_rw_rdlock(&key_table->lock);
+	key = tsig_key_table_search(key_table, tsig->key_name,
+		tsig->key_name_len);
+	if(!key) {
+		/* The tsig key has disappeared from the key table. */
+		lock_rw_unlock(&key_table->lock);
+		verbose(VERB_ALGO, "tsig_sign_reply_xfr: key not in table");
+		return 0;
+	}
+	tsig_append_rr(tsig, pkt, aftername_pos, key->algo->wireformat_name,
+		key->algo->wireformat_name_len, tsig->mac, tsig->mac_size);
+	lock_rw_unlock(&key_table->lock);
 	tsig->num_updates = 0;
 	return 1;
 }

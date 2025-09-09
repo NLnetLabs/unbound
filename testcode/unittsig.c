@@ -996,6 +996,26 @@ handle_tsig_verify_reply(char* line, FILE* in, const char* fname,
 	tsig_delete(tsig);
 }
 
+/* Read next line from file, skip empty and comment lines. It returns the
+ * key_keyword of the line. Returns false on failure. */
+static char*
+read_next_keyword(char* line, size_t len, FILE* in)
+{
+	char* s = NULL;
+	while(1) {
+		if(!fgets(line, len, in)) {
+			if(vtest) printf("fgets: %s\n", strerror(errno));
+			return NULL;
+		}
+		line[len-1]=0;
+		s = get_keyword(line);
+		if(s[0] == 0 || s[0] == '#')
+			continue;
+		break;
+	}
+	return s;
+}
+
 /** Handle the tsig-sign-reply-xfr */
 static void
 handle_tsig_sign_reply_xfr(char* line, FILE* in, const char* fname,
@@ -1013,8 +1033,8 @@ handle_tsig_sign_reply_xfr(char* line, FILE* in, const char* fname,
 	sldns_buffer_init_frm_data(&check_pkt, buf2, sizeof(buf2));
 
 	s = arg;
-	timestr = get_next_arg_on_line(&s);
 	numstr = get_next_arg_on_line(&s);
+	timestr = get_next_arg_on_line(&s);
 	expected_rcode_str = get_next_arg_on_line(&s);
 
 	num = atoi(numstr);
@@ -1064,22 +1084,19 @@ handle_tsig_sign_reply_xfr(char* line, FILE* in, const char* fname,
 			printf("xfr packet %d/%d\n", i+1, num);
 
 		/* read packet keyword */
-		if(!fgets(callline, sizeof(callline), in))
-			fatal_exit("could not read line %d of "
-				"tsig-sign-reply-xfr", i);
-		callline[sizeof(callline)-1]=0;
-		if(strcmp(get_keyword(callline), "packet")!=0)
+		if(!(s=read_next_keyword(callline, sizeof(callline), in)))
+			fatal_exit("could not read next line for "
+				"tsig-sign-reply-xfr %d", i+1);
+		if(strcmp(s, "packet")!=0)
 			fatal_exit("expected 'packet', but read '%s'",
 				callline);
 		if(!read_packet_hex("", &reply_pkt, in, fname))
 			fatal_exit("Could not read reply packet");
 
 		/* read call arguments */
-		if(!fgets(callline, sizeof(callline), in))
-			fatal_exit("could not read line %d of "
-				"tsig-sign-reply-xfr", i);
-		callline[sizeof(callline)-1]=0;
-		s = get_keyword(callline);
+		if(!(s=read_next_keyword(callline, sizeof(callline), in)))
+			fatal_exit("could not read next line for "
+				"tsig-sign-reply-xfr %d", i+1);
 		if(strncmp(s, "call", 4) == 0) {
 			s = get_arg_on_line(s, "call");
 			timestr = get_next_arg_on_line(&s);
@@ -1092,15 +1109,14 @@ handle_tsig_sign_reply_xfr(char* line, FILE* in, const char* fname,
 				fatal_exit("expected int argument for %s", expectedstr2);
 		} else {
 			fatal_exit("unknown line '%s' is not 'call' for %d in "
-				"tsig-sign-reply-xfr", s, i);
+				"tsig-sign-reply-xfr", s, i+1);
 		}
 
 		/* read check-packet keyword */
-		if(!fgets(callline, sizeof(callline), in))
-			fatal_exit("could not read line %d of "
-				"tsig-sign-reply-xfr", i);
-		callline[sizeof(callline)-1]=0;
-		if(strcmp(get_keyword(callline), "check-packet")!=0)
+		if(!(s=read_next_keyword(callline, sizeof(callline), in)))
+			fatal_exit("could not read next line for "
+				"tsig-sign-reply-xfr %d", i+1);
+		if(strcmp(s, "check-packet")!=0)
 			fatal_exit("expected 'check-packet', but read '%s'",
 				callline);
 		if(!read_packet_hex("", &check_pkt, in, fname))
@@ -1157,7 +1173,8 @@ handle_tsig_sign_reply_xfr(char* line, FILE* in, const char* fname,
 				sldns_buffer_begin(&check_pkt),
 				sldns_buffer_limit(&reply_pkt)) == 0);
 		if(vtest)
-			printf("check-packet is equal\n");
+			printf("check-packet is equal, for %d/%d\n",
+				i+1, num);
 	}
 
 	tsig_delete(tsig);
