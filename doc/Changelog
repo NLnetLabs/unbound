@@ -1,3 +1,12 @@
+9 September 2025: Wouter
+	- Fix #1332: CNAME chains are sometimes not followed when RPZs add a
+	  local CNAME rewrite.
+
+8 September 2025: Yorgos
+	- Update documentation for using "SET ... EX" in Redis.
+	- Document max buffer sizes for Redis commands.
+	- Update man pages.
+
 3 September 2025: Wouter
 	- For #1328: make depend.
 
