@@ -101,6 +101,9 @@
 #ifdef HAVE_NETDB_H
 #include <netdb.h>
 #endif
+#ifdef HAVE_COAP
+#include <coap3/coap.h>
+#endif	/* HAVE_COAP */
 #ifdef USE_CACHEDB
 #include "cachedb/cachedb.h"
 #endif
@@ -320,6 +323,9 @@ daemon_init(void)
 		free(daemon);
 		return NULL;
 	}
+#ifdef HAVE_COAP
+	coap_startup();
+#endif	/* HAVE_COAP */
 	return daemon;	
 }
 
@@ -920,6 +926,9 @@ daemon_cleanup(struct daemon* daemon)
 	doq_table_delete(daemon->doq_table);
 	daemon->doq_table = NULL;
 #endif
+#ifdef HAVE_COAP
+	coap_cleanup();
+#endif	/* HAVE_COAP */
 	daemon->cfg = NULL;
 }
 
