@@ -128,7 +128,7 @@ static int vtest = 0;
  *	expected result, the result of the verify call is compared with
  *	the expected result2, and the test fails if not equal.
  *
- * tsig-sign-reply-xfr <num> <time> <expected rcode>
+ * tsig-sign-reply-xfr <num> <time> <expected rcode> <nth>
  * packet
  * <hex>
  * endpacket
@@ -142,7 +142,9 @@ static int vtest = 0;
  * 	used with tsig-sign-reply-xfr and the output is checked with
  * 	the checkhex.
  * 	The expected rcode is from tsig_verify_query. The expected from
- * 	call is from tsig_sign_reply_xfr.
+ * 	call is from tsig_sign_reply_xfr. The nth value 0 or 1 means
+ * 	sign every packet, but >= 2 signs after a series of unsigned
+ * 	packets.
  * tsig-verify-reply-xfr <num> <key> <time> <result>
  * packet
  * <hex>
@@ -1035,8 +1037,9 @@ handle_tsig_sign_reply_xfr(char* line, FILE* in, const char* fname,
 	struct tsig_key_table* key_table, struct sldns_buffer* pkt)
 {
 	char* arg = get_arg_on_line(line, "tsig-sign-reply-xfr");
-	char* s, *numstr, *timestr, *expected_rcode_str, *expectedstr2;
-	int expected_rcode, expected_result2, ret, num, i;
+	char* s, *numstr, *timestr, *expected_rcode_str, *expectedstr2,
+		*nthstr;
+	int expected_rcode, expected_result2, ret, num, i, nth;
 	uint64_t timepoint;
 	struct tsig_data* tsig;
 	size_t pos;
@@ -1049,6 +1052,7 @@ handle_tsig_sign_reply_xfr(char* line, FILE* in, const char* fname,
 	numstr = get_next_arg_on_line(&s);
 	timestr = get_next_arg_on_line(&s);
 	expected_rcode_str = get_next_arg_on_line(&s);
+	nthstr = get_next_arg_on_line(&s);
 
 	num = atoi(numstr);
 	if(num == 0 && strcmp(numstr, "0") != 0)
@@ -1062,12 +1066,17 @@ handle_tsig_sign_reply_xfr(char* line, FILE* in, const char* fname,
 		strcmp(expected_rcode_str, "RCODE0") != 0)
 		fatal_exit("expected rcode argument for %s",
 			expected_rcode_str);
+	nth = atoi(nthstr);
+	if(nth == 0 && strcmp(nthstr, "0") != 0)
+		fatal_exit("expected int argument for %s", nthstr);
+	if(nth == 0)
+		nth = 1;
 
 	if(vtest) {
 		char bufrc[16];
 		sldns_wire2str_rcode_buf(expected_rcode, bufrc, sizeof(bufrc));
-		printf("tsig-sign-reply-xfr with %d %d %s\n", num,
-			(int)timepoint, bufrc);
+		printf("tsig-sign-reply-xfr with %d %d %s %d\n", num,
+			(int)timepoint, bufrc, nth);
 	}
 
 	/* Verify the query in the packet buffer. Use that TSIG to sign
@@ -1089,6 +1098,7 @@ handle_tsig_sign_reply_xfr(char* line, FILE* in, const char* fname,
 				ret, expected_rcode, bufrc);
 	}
 	unit_assert(ret == expected_rcode);
+	tsig->every_nth = nth;
 
 	/* Sign the reply packets. */
 	for(i=0; i<num; i++) {
