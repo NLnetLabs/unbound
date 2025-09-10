@@ -5877,6 +5877,7 @@ check_xfer_packet(sldns_buffer* pkt, struct auth_xfer* xfr,
 	struct module_env* env, int* gonextonfail, int* transferdone)
 {
 	uint8_t* wire = sldns_buffer_begin(pkt);
+	size_t initial_rr_scan_num = xfr->task_transfer->rr_scan_num;
 	int i;
 	if(sldns_buffer_limit(pkt) < LDNS_HEADER_SIZE) {
 		verbose(VERB_ALGO, "xfr to %s failed, packet too small",
@@ -5898,25 +5899,6 @@ check_xfer_packet(sldns_buffer* pkt, struct auth_xfer* xfr,
 		verbose(VERB_ALGO, "xfr to %s failed, packet wrong ID",
 			xfr->task_transfer->master->host);
 		return 0;
-	}
-	/* check tsig */
-	if(xfr->task_transfer->tsig) {
-		if(xfr->task_transfer->rr_scan_num == 0) {
-			/* Check TSIG reply on first packet. */
-			if(!tsig_find_rr(pkt)) {
-				verbose(VERB_ALGO, "TSIG expected, but not found in reply for xfr to %s",
-					xfr->task_transfer->master->host);
-				return 0;
-			}
-			if(!tsig_parse_verify_reply(xfr->task_transfer->tsig,
-				pkt, env->tsig_key_table,
-				(uint64_t)*env->now)) {
-				verbose(VERB_ALGO, "valid TSIG expected in xfr reply to %s, but it was not valid",
-					xfr->task_transfer->master->host);
-				return 0;
-			}
-		}
-		sldns_buffer_rewind(pkt);
 	}
 	if(LDNS_RCODE_WIRE(wire) != LDNS_RCODE_NOERROR) {
 		char rcode[32];
@@ -6177,6 +6159,28 @@ check_xfer_packet(sldns_buffer* pkt, struct auth_xfer* xfr,
 		}
 		/* skip over RR rdata to go to the next RR */
 		sldns_buffer_skip(pkt, (ssize_t)rdlen);
+	}
+
+	/* check tsig */
+	if(xfr->task_transfer->tsig) {
+		sldns_buffer_rewind(pkt);
+		if(!tsig_find_rr(pkt)) {
+			/* Check TSIG reply on first packet. */
+			if(initial_rr_scan_num == 0) {
+				verbose(VERB_ALGO, "TSIG expected, but not found in reply for xfr to %s",
+					xfr->task_transfer->master->host);
+				return 0;
+			}
+			/* No TSIG could be for sign every NTH packet. */
+			sldns_buffer_set_position(pkt, sldns_buffer_limit(pkt));
+		}
+		if(!tsig_parse_verify_reply_xfr(xfr->task_transfer->tsig,
+			pkt, env->tsig_key_table, (uint64_t)*env->now,
+			*transferdone)) {
+			verbose(VERB_ALGO, "valid TSIG expected in xfr reply to %s, but it was not valid",
+				xfr->task_transfer->master->host);
+			return 0;
+		}
 	}
 
 	return 1;
