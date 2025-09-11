@@ -1,6 +1,7 @@
 11 September 2025: Wouter
 	- version set to 1.24.0 for release.
 	- tag for 1.24.0rc1.
+	- Update contrib/aaaa-filter-iterator.patch so it applies on 1.24.0.
 
 9 September 2025: Wouter
 	- Fix #1332: CNAME chains are sometimes not followed when RPZs add a
