@@ -5473,10 +5473,18 @@ xfr_process_chunk_list(struct auth_xfer* xfr, struct module_env* env,
 	lock_rw_unlock(&z->lock);
 
 	if(verbosity >= VERB_QUERY && xfr->have_zone) {
-		char zname[LDNS_MAX_DOMAINLEN];
+		char zname[LDNS_MAX_DOMAINLEN], tsigtxt[16],
+			tsigkey[LDNS_MAX_DOMAINLEN];
+		tsigkey[0]=0;
+		tsigtxt[0]=0;
+		if(xfr->task_transfer->tsig &&
+			xfr->task_transfer->tsig->key_name) {
+			snprintf(tsigtxt, sizeof(tsigtxt), " with TSIG ");
+			dname_str(xfr->task_transfer->tsig->key_name, tsigkey);
+		}
 		dname_str(xfr->name, zname);
-		verbose(VERB_QUERY, "auth zone %s updated to serial %u", zname,
-			(unsigned)xfr->serial);
+		verbose(VERB_QUERY, "auth zone %s updated%s%s to serial %u",
+			zname, tsigtxt, tsigkey, (unsigned)xfr->serial);
 	}
 	/* see if we need to write to a zonefile */
 	xfr_write_after_update(xfr, env);
@@ -5584,6 +5592,10 @@ xfr_transfer_init_fetch(struct auth_xfer* xfr, struct module_env* env)
 	int timeout;
 	if(!master) return 0;
 	if(master->allow_notify) return 0; /* only for notify */
+	if(xfr->task_transfer->tsig) {
+		tsig_delete(xfr->task_transfer->tsig);
+		xfr->task_transfer->tsig = NULL;
+	}
 
 	/* get master addr */
 	if(xfr->task_transfer->scan_addr) {
@@ -5685,11 +5697,20 @@ xfr_transfer_init_fetch(struct auth_xfer* xfr, struct module_env* env)
 	}
 	comm_timer_set(xfr->task_transfer->timer, &t);
 	if(verbosity >= VERB_ALGO) {
-		char zname[LDNS_MAX_DOMAINLEN], as[256];
+		char zname[LDNS_MAX_DOMAINLEN], as[256], tsigtxt[16],
+			tsigkey[LDNS_MAX_DOMAINLEN];
+		tsigkey[0]=0;
+		tsigtxt[0]=0;
+		if(xfr->task_transfer->tsig &&
+			xfr->task_transfer->tsig->key_name) {
+			snprintf(tsigtxt, sizeof(tsigtxt), " with TSIG ");
+			dname_str(xfr->task_transfer->tsig->key_name, tsigkey);
+		}
  		dname_str(xfr->name, zname);
 		addr_port_to_str(&addr, addrlen, as, sizeof(as));
-		verbose(VERB_ALGO, "auth zone %s transfer next %s fetch from %s started", zname, 
-			(xfr->task_transfer->on_ixfr?"IXFR":"AXFR"), as);
+		verbose(VERB_ALGO, "auth zone %s transfer next %s fetch%s%s from %s started",
+			zname, (xfr->task_transfer->on_ixfr?"IXFR":"AXFR"),
+			tsigtxt, tsigkey, as);
 	}
 	return 1;
 }
@@ -6509,6 +6530,10 @@ xfr_probe_send_probe(struct auth_xfer* xfr, struct module_env* env,
 	if(master->allow_notify) return 0; /* only for notify */
 	if(master->http) return 0; /* only masters get SOA UDP probe,
 		not urls, if those are in this list */
+	if(xfr->task_probe->tsig) {
+		tsig_delete(xfr->task_probe->tsig);
+		xfr->task_probe->tsig = NULL;
+	}
 
 	/* get master addr */
 	if(xfr->task_probe->scan_addr) {
@@ -6600,11 +6625,19 @@ xfr_probe_send_probe(struct auth_xfer* xfr, struct module_env* env,
 		return 0;
 	}
 	if(verbosity >= VERB_ALGO) {
-		char zname[LDNS_MAX_DOMAINLEN], as[256];
+		char zname[LDNS_MAX_DOMAINLEN], as[256], tsigtxt[16],
+			tsigkey[LDNS_MAX_DOMAINLEN];
+		tsigkey[0]=0;
+		tsigtxt[0]=0;
+		if(xfr->task_probe->tsig &&
+			xfr->task_probe->tsig->key_name) {
+			snprintf(tsigtxt, sizeof(tsigtxt), " with TSIG ");
+			dname_str(xfr->task_probe->tsig->key_name, tsigkey);
+		}
 		dname_str(xfr->name, zname);
 		addr_port_to_str(&addr, addrlen, as, sizeof(as));
-		verbose(VERB_ALGO, "auth zone %s soa probe sent to %s", zname,
-			as);
+		verbose(VERB_ALGO, "auth zone %s soa probe%s%s sent to %s",
+			zname, tsigtxt, tsigkey, as);
 	}
 	xfr->task_probe->timeout = timeout;
 #ifndef S_SPLINT_S
@@ -6679,10 +6712,21 @@ auth_xfer_probe_udp_callback(struct comm_point* c, void* arg, int err,
 			&serial, env)) {
 			/* successful lookup */
 			if(verbosity >= VERB_ALGO) {
-				char buf[LDNS_MAX_DOMAINLEN];
+				char buf[LDNS_MAX_DOMAINLEN], tsigtxt[16],
+					tsigkey[LDNS_MAX_DOMAINLEN];
+				tsigkey[0]=0;
+				tsigtxt[0]=0;
+				if(xfr->task_probe->tsig &&
+					xfr->task_probe->tsig->key_name) {
+					snprintf(tsigtxt, sizeof(tsigtxt),
+						" with TSIG ");
+					dname_str(xfr->task_probe->tsig->
+						key_name, tsigkey);
+				}
 				dname_str(xfr->name, buf);
-				verbose(VERB_ALGO, "auth zone %s: soa probe "
-					"serial is %u", buf, (unsigned)serial);
+				verbose(VERB_ALGO, "auth zone %s: soa probe"
+					"%s%s serial is %u", buf, tsigtxt,
+					tsigkey, (unsigned)serial);
 			}
 			/* see if this serial indicates that the zone has
 			 * to be updated */

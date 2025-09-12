@@ -1177,26 +1177,34 @@ answer_notify(struct worker* w, struct query_info* qinfo,
 	}
 
 	if(verbosity >= VERB_DETAIL) {
-		char buf[380];
-		char zname[LDNS_MAX_DOMAINLEN];
-		char sr[25], rcode_str[32];
+		char buf[380+LDNS_MAX_DOMAINLEN];
+		char zname[LDNS_MAX_DOMAINLEN], tsigkey[LDNS_MAX_DOMAINLEN];
+		char sr[25], rcode_str[32], tsigtxt[16];;
 		dname_str(qinfo->qname, zname);
+		tsigkey[0]=0;
+		tsigtxt[0]=0;
+		if(tsig && tsig->key_name) {
+			snprintf(tsigtxt, sizeof(tsigtxt), " with TSIG ");
+			dname_str(tsig->key_name, tsigkey);
+		}
 		sr[0]=0;
 		if(has_serial)
 			snprintf(sr, sizeof(sr), "serial %u ",
 				(unsigned)serial);
 		if(rcode == LDNS_RCODE_REFUSED) {
 			snprintf(buf, sizeof(buf),
-				"refused NOTIFY %sfor %s from", sr, zname);
+				"refused NOTIFY %sfor %s%s%s from", sr, zname,
+				tsigtxt, tsigkey);
 		} else if(rcode != LDNS_RCODE_NOERROR) {
 			sldns_wire2str_rcode_buf(rcode, rcode_str,
 				sizeof(rcode_str));
 			snprintf(buf, sizeof(buf),
-				"%s for NOTIFY %sfor %s from",
-				rcode_str, sr, zname);
+				"%s for NOTIFY %sfor %s%s%s from",
+				rcode_str, sr, zname, tsigtxt, tsigkey);
 		} else {
 			snprintf(buf, sizeof(buf),
-				"received NOTIFY %sfor %s from", sr, zname);
+				"received NOTIFY %sfor %s%s%s from", sr, zname,
+					tsigtxt, tsigkey);
 		}
 		log_addr(VERB_DETAIL, buf, addr, addrlen);
 	}
