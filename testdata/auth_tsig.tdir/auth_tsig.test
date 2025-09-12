@@ -100,4 +100,9 @@ else
 	exit 1
 fi
 
+echo ""
+echo "zonefile: unbound-example.com.zone"
+cat unbound-example.com.zone
+echo ""
+
 exit 0
