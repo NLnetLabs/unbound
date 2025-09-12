@@ -1,0 +1,103 @@
+# #-- auth_tsig.test --#
+# source the master var file when it's there
+[ -f ../.tpkg.var.master ] && source ../.tpkg.var.master
+# use .tpkg.var.test for in test variable passing
+[ -f .tpkg.var.test ] && source .tpkg.var.test
+
+PRE="../.."
+# do the test
+echo "> dig www.example.com."
+dig @127.0.0.1 -p $UNBOUND_PORT www.example.com. | tee outfile
+if grep SERVFAIL outfile; then
+	echo "> try again"
+	dig @127.0.0.1 -p $UNBOUND_PORT www.example.com. | tee outfile
+fi
+if grep SERVFAIL outfile; then
+	echo "> try again"
+	sleep 1
+	dig @127.0.0.1 -p $UNBOUND_PORT www.example.com. | tee outfile
+fi
+if grep SERVFAIL outfile; then
+	echo "> try again"
+	sleep 1
+	dig @127.0.0.1 -p $UNBOUND_PORT www.example.com. | tee outfile
+fi
+if grep SERVFAIL outfile; then
+	echo "> try again"
+	sleep 1
+	dig @127.0.0.1 -p $UNBOUND_PORT www.example.com. | tee outfile
+fi
+if grep SERVFAIL outfile; then
+	echo "> try again"
+	sleep 10
+	dig @127.0.0.1 -p $UNBOUND_PORT www.example.com. | tee outfile
+fi
+if grep SERVFAIL outfile; then
+	echo "> try again"
+	sleep 10
+	dig @127.0.0.1 -p $UNBOUND_PORT www.example.com. | tee outfile
+fi
+echo "> check answer"
+if grep "1.2.3.4" outfile; then
+	echo "OK"
+else
+	echo "Not OK"
+	exit 1
+fi
+
+# update the zonefile.
+echo "www2.example.com. IN A 1.2.3.5" >> example.com.zone
+mv example.com.zone tmp.zone
+sed -e 's/2024082400/2024082401/' <tmp.zone >example.com.zone
+echo ""
+echo "new example.com.zone:"
+cat example.com.zone
+echo ""
+
+# NSD reloads the zone file,
+# sends notify to unbound, with TSIG.
+# unbound replies to the notify, with TSIG.
+# unbound fetches SOA record, with TSIG.
+# unbound fetches zone transfer, with TSIG.
+kill -1 `cat nsd.pid`
+
+# test if the zone has updated.
+dig @127.0.0.1 -p $UNBOUND_PORT www2.example.com. | tee outfile
+if grep NXDOMAIN outfile; then
+	echo "> try again"
+	dig @127.0.0.1 -p $UNBOUND_PORT www2.example.com. | tee outfile
+fi
+if grep NXDOMAIN outfile; then
+	echo "> try again"
+	sleep 1
+	dig @127.0.0.1 -p $UNBOUND_PORT www2.example.com. | tee outfile
+fi
+if grep NXDOMAIN outfile; then
+	echo "> try again"
+	sleep 1
+	dig @127.0.0.1 -p $UNBOUND_PORT www2.example.com. | tee outfile
+fi
+if grep NXDOMAIN outfile; then
+	echo "> try again"
+	sleep 1
+	dig @127.0.0.1 -p $UNBOUND_PORT www2.example.com. | tee outfile
+fi
+if grep NXDOMAIN outfile; then
+	echo "> try again"
+	sleep 10
+	dig @127.0.0.1 -p $UNBOUND_PORT www2.example.com. | tee outfile
+fi
+if grep NXDOMAIN outfile; then
+	echo "> try again"
+	sleep 10
+	dig @127.0.0.1 -p $UNBOUND_PORT www2.example.com. | tee outfile
+fi
+echo "> check answer"
+if grep "1.2.3.5" outfile; then
+	echo "OK"
+else
+	echo "Not OK"
+	exit 1
+fi
+
+exit 0
