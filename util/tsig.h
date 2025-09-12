@@ -183,7 +183,8 @@ struct tsig_key {
  * They are read from config.
  */
 struct tsig_key_table {
-	/* Lock on the tsig key table and all keys. */
+	/* Lock on the tsig key table and all keys.
+	 * This lock is after the forwards, hints and anchor locks. */
 	lock_rw_type lock;
 	/* Tree of tsig keys, by wireformat name. */
 	struct rbtree_type* tree;
@@ -238,6 +239,23 @@ struct tsig_key* tsig_key_table_search(struct tsig_key_table* key_table,
  */
 struct tsig_key* tsig_key_table_search_fromstr(
 	struct tsig_key_table* key_table, char* name);
+
+/**
+ * Get memory usage of tsig key table.
+ * @param tsig_key_table: the tsig key table.
+ * @return memory use.
+ */
+size_t tsig_key_table_get_mem(struct tsig_key_table* tsig_key_table);
+
+/**
+ * Swap internal tree with preallocated entries. Caller should manage
+ * the locks.
+ * @param tsig_key_table: the tsig_key_table data structure.
+ * @param data: the data structure used to take elements from. This contains
+ * 	the old elements on return.
+ */
+void tsig_key_table_swap_tree(struct tsig_key_table* tsig_key_table,
+	struct tsig_key_table* data);
 
 /**
  * Delete TSIG key.

@@ -1509,7 +1509,7 @@ remote.lo remote.o: $(srcdir)/daemon/remote.c config.h \
  $(srcdir)/iterator/iter_delegpt.h $(srcdir)/iterator/iter_utils.h $(srcdir)/iterator/iter_resptype.h \
  $(srcdir)/iterator/iter_donotq.h $(srcdir)/iterator/iter_priv.h $(srcdir)/services/outside_network.h \
  $(srcdir)/util/regional.h $(srcdir)/sldns/str2wire.h $(srcdir)/sldns/parseutil.h $(srcdir)/sldns/wire2str.h \
- $(srcdir)/util/timeval_func.h $(srcdir)/util/tcp_conn_limit.h $(srcdir)/util/edns.h $(srcdir)/cachedb/cachedb.h \
+ $(srcdir)/util/timeval_func.h $(srcdir)/util/tcp_conn_limit.h $(srcdir)/util/edns.h $(srcdir)/util/tsig.h $(srcdir)/cachedb/cachedb.h \
  $(srcdir)/edns-subnet/subnetmod.h $(srcdir)/edns-subnet/addrtree.h $(srcdir)/edns-subnet/edns-subnet.h
 stats.lo stats.o: $(srcdir)/daemon/stats.c config.h $(srcdir)/daemon/stats.h $(srcdir)/util/timehist.h \
  $(srcdir)/libunbound/unbound.h $(srcdir)/daemon/worker.h $(srcdir)/libunbound/worker.h $(srcdir)/sldns/sbuffer.h \

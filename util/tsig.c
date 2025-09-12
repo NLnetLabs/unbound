@@ -271,6 +271,32 @@ tsig_key_table_search_fromstr(struct tsig_key_table* key_table, char* name)
 	return tsig_key_table_search(key_table, buf, len);
 }
 
+size_t
+tsig_key_table_get_mem(struct tsig_key_table* tsig_key_table)
+{
+	size_t s;
+	struct tsig_key* p;
+	if(!tsig_key_table)
+		return 0;
+	lock_rw_rdlock(&tsig_key_table->lock);
+	s = sizeof(*tsig_key_table) + sizeof(rbtree_type);
+	RBTREE_FOR(p, struct tsig_key*, tsig_key_table->tree) {
+		s += sizeof(*p) + strlen(p->name_str)+1
+			+ p->name_len + p->data_len;
+	}
+	lock_rw_unlock(&tsig_key_table->lock);
+	return s;
+}
+
+void
+tsig_key_table_swap_tree(struct tsig_key_table* tsig_key_table,
+	struct tsig_key_table* data)
+{
+	rbtree_type* oldtree = tsig_key_table->tree;
+	tsig_key_table->tree = data->tree;
+	data->tree = oldtree;
+}
+
 void tsig_key_delete(struct tsig_key* key)
 {
 	if(!key)
