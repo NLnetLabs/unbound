@@ -173,6 +173,10 @@
    0 if you don't. */
 #undef HAVE_DECL_SSL_CTX_SET_ECDH_AUTO
 
+/* Define to 1 if you have the declaration of `SSL_CTX_set_tmp_ecdh', and to 0
+   if you don't. */
+#undef HAVE_DECL_SSL_CTX_SET_TMP_ECDH
+
 /* Define to 1 if you have the declaration of `strlcat', and to 0 if you
    don't. */
 #undef HAVE_DECL_STRLCAT
@@ -378,6 +382,9 @@
 /* Define if we have LibreSSL */
 #undef HAVE_LIBRESSL
 
+/* If we have atomic_store */
+#undef HAVE_LINK_ATOMIC_STORE
+
 /* Define to 1 if you have the <linux/net_tstamp.h> header file. */
 #undef HAVE_LINUX_NET_TSTAMP_H
 
@@ -474,12 +481,18 @@
    `ngtcp2_crypto_quictls_from_ossl_encryption_level' function. */
 #undef HAVE_NGTCP2_CRYPTO_QUICTLS_FROM_OSSL_ENCRYPTION_LEVEL
 
+/* Define to 1 if you have the `ngtcp2_crypto_quictls_init' function. */
+#undef HAVE_NGTCP2_CRYPTO_QUICTLS_INIT
+
 /* Define to 1 if the system has the type `ngtcp2_encryption_level'. */
 #undef HAVE_NGTCP2_ENCRYPTION_LEVEL
 
 /* Define to 1 if you have the <ngtcp2/ngtcp2_crypto_openssl.h> header file.
    */
 #undef HAVE_NGTCP2_NGTCP2_CRYPTO_OPENSSL_H
+
+/* Define to 1 if you have the <ngtcp2/ngtcp2_crypto_ossl.h> header file. */
+#undef HAVE_NGTCP2_NGTCP2_CRYPTO_OSSL_H
 
 /* Define to 1 if you have the <ngtcp2/ngtcp2_crypto_quictls.h> header file.
    */
@@ -642,9 +655,6 @@
    function. */
 #undef HAVE_SSL_CTX_SET_TLSEXT_TICKET_KEY_EVP_CB
 
-/* Define to 1 if you have the `SSL_CTX_set_tmp_ecdh' function. */
-#undef HAVE_SSL_CTX_SET_TMP_ECDH
-
 /* Define to 1 if you have the `SSL_get0_alpn_selected' function. */
 #undef HAVE_SSL_GET0_ALPN_SELECTED
 
@@ -662,6 +672,9 @@
 
 /* Define to 1 if you have the <stdarg.h> header file. */
 #undef HAVE_STDARG_H
+
+/* Define to 1 if you have the <stdatomic.h> header file. */
+#undef HAVE_STDATOMIC_H
 
 /* Define to 1 if you have the <stdbool.h> header file. */
 #undef HAVE_STDBOOL_H
@@ -1016,6 +1029,9 @@
 
 /* Define this to enable client TCP Fast Open. */
 #undef USE_MSG_FASTOPEN
+
+/* Define this to use ngtcp2_crypto_ossl. */
+#undef USE_NGTCP2_CRYPTO_OSSL
 
 /* Define this to enable client TCP Fast Open. */
 #undef USE_OSX_MSG_FASTOPEN

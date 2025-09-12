@@ -193,8 +193,12 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: false
+          persist-credentials: false
       - name: test_windows
         if: ${{ matrix.test_windows == 'yes' }}
+        env:
+          LIBEXPAT_FNAME: expat-2.7.0
+          LIBEXPAT_VERSION_DIR: R_2_7_0
         shell: bash
         run: |
           export unboundpath=`pwd`
@@ -237,9 +241,9 @@ jobs:
           cd ..
           mkdir expat
           echo "curl expat"
-          curl -L -k -s -S -o expat-2.2.10.tar.gz https://github.com/libexpat/libexpat/releases/download/R_2_2_10/expat-2.2.10.tar.gz
-          tar xzf expat-2.2.10.tar.gz
-          cd expat-2.2.10
+          curl -L -k -s -S -o $LIBEXPAT_FNAME.tar.gz https://github.com/libexpat/libexpat/releases/download/$LIBEXPAT_VERSION_DIR/$LIBEXPAT_FNAME.tar.gz
+          tar xzf $LIBEXPAT_FNAME.tar.gz
+          cd $LIBEXPAT_FNAME
           echo "./configure SHELL=/usr/bin/bash CONFIG_SHELL=/usr/bin/bash --prefix=\"$prepath/expat\" --exec-prefix=\"$prepath/expat\" --bindir=\"$prepath/expat/bin\" --includedir=\"$prepath/expat/include\" --mandir=\"$prepath/expat/man\" --libdir=\"$prepath/expat/lib\""
           ./configure SHELL=/usr/bin/bash CONFIG_SHELL=/usr/bin/bash --prefix="$prepath/expat" --exec-prefix="$prepath/expat" --bindir="$prepath/expat/bin" --includedir="$prepath/expat/include" --mandir="$prepath/expat/man" --libdir="$prepath/expat/lib"
           # fixup SHELL is treated specially, but SHELZZ is not by make.

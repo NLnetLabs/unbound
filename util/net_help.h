@@ -488,14 +488,23 @@ int listen_sslctx_setup(void* ctxt);
  */
 void listen_sslctx_setup_2(void* ctxt);
 
-/** 
+/**
  * create SSL listen context
  * @param key: private key file.
  * @param pem: public key cert.
  * @param verifypem: if nonNULL, verifylocation file.
+ * @param tls_ciphers: if non empty string, tls ciphers to use.
+ * @param tls_ciphersuites: if non empty string, tls ciphersuites to use.
+ * @param set_ticket_keys_cb: if the callback for configured ticket keys needs
+ *	to be set.
+ * @param is_dot: if the TLS connection is for DoT to set the appropriate ALPN.
+ * @param is_doh: if the TLS connection is for DoH to set the appropriate ALPN.
  * return SSL_CTX* or NULL on failure (logged).
  */
-void* listen_sslctx_create(char* key, char* pem, char* verifypem);
+void* listen_sslctx_create(const char* key, const char* pem,
+	const char* verifypem, const char* tls_ciphers,
+	const char* tls_ciphersuites, int set_ticket_keys_cb,
+	int is_dot, int is_doh);
 
 /**
  * create SSL connect context
@@ -553,12 +562,10 @@ void ub_openssl_lock_delete(void);
 
 /**
  * setup TLS session ticket
- * @param sslctx: the SSL_CTX to use (from connect_sslctx_create())
  * @param tls_session_ticket_keys: TLS ticket secret filenames
  * @return false on failure (alloc failure).
  */
-int listen_sslctx_setup_ticket_keys(void* sslctx,
-	struct config_strlist* tls_session_ticket_keys);
+int listen_sslctx_setup_ticket_keys(struct config_strlist* tls_session_ticket_keys);
 
 /** Free memory used for TLS session ticket keys */
 void listen_sslctx_delete_ticket_keys(void);

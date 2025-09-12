@@ -70,7 +70,8 @@ struct auth_chunk;
  * Authoritative zones, shared.
  */
 struct auth_zones {
-	/** lock on the authzone trees */
+	/** lock on the authzone trees. It is locked after views, respip,
+	 * local_zones and before fwds and stubs. */
 	lock_rw_type lock;
 	/** rbtree of struct auth_zone */
 	rbtree_type ztree;
@@ -78,10 +79,6 @@ struct auth_zones {
 	rbtree_type xtree;
 	/** do we have downstream enabled */
 	int have_downstream;
-	/** number of queries upstream */
-	size_t num_query_up;
-	/** number of queries downstream */
-	size_t num_query_down;
 	/** first auth zone containing rpz item in linked list */
 	struct auth_zone* rpz_first;
 	/** rw lock for rpz linked list, needed when iterating or editing linked
@@ -121,6 +118,8 @@ struct auth_zone {
 	char* zonefile;
 	/** fallback to the internet on failure or ttl-expiry of auth zone */
 	int fallback_enabled;
+	/** the time when zone was transferred from upstream */
+	time_t soa_zone_acquired;
 	/** the zone has expired (enabled by the xfer worker), fallback
 	 * happens if that option is enabled. */
 	int zone_expired;
@@ -211,7 +210,9 @@ struct auth_xfer {
 	 * one of the tasks. 
 	 * Once it has the task assigned to it, the worker can access the
 	 * other elements of the task structure without a lock, because that
-	 * is necessary for the eventloop and callbacks from that. */
+	 * is necessary for the eventloop and callbacks from that.
+	 * The auth_zone->lock is locked before this lock.
+	 */
 	lock_basic_type lock;
 
 	/** zone name, in uncompressed wireformat */
@@ -262,6 +263,8 @@ struct auth_xfer {
 	int zone_expired;
 	/** do we have a zone (if 0, no zone data at all) */
 	int have_zone;
+	/** the time when zone was transferred from upstream */
+	time_t soa_zone_acquired;
 
 	/** current serial (from SOA), if we have no zone, 0 */
 	uint32_t serial;
@@ -551,9 +554,10 @@ int auth_zones_lookup(struct auth_zones* az, struct query_info* qinfo,
  * @param temp: temporary storage region.
  * @return false if not answered
  */
-int auth_zones_answer(struct auth_zones* az, struct module_env* env,
+int auth_zones_downstream_answer(struct auth_zones* az, struct module_env* env,
 	struct query_info* qinfo, struct edns_data* edns,
-	struct comm_reply* repinfo, struct sldns_buffer* buf, struct regional* temp);
+	struct comm_reply* repinfo, struct sldns_buffer* buf,
+	struct regional* temp);
 
 /** 
  * Find the auth zone that is above the given qname.
@@ -786,5 +790,42 @@ void auth_zonemd_dnskey_lookup_callback(void* arg, int rcode,
  */
 void auth_zones_pickup_zonemd_verify(struct auth_zones* az,
 	struct module_env* env);
+
+/** Get memory usage for auth zones. The routine locks and unlocks
+ * for reading. */
+size_t auth_zones_get_mem(struct auth_zones* zones);
+
+/**
+ * Initial pick up of the auth zone nextprobe timeout and that turns
+ * into further zone transfer work, if any. Also sets the lease time.
+ * @param x: xfer structure, locked by caller.
+ * @param env: environment of the worker that picks up the task.
+ */
+void auth_xfer_pickup_initial_zone(struct auth_xfer* x,
+	struct module_env* env);
+
+/**
+ * Initial pick up of the auth zone, it sets the acquired time.
+ * @param z: the zone, write locked by caller.
+ * @param env: environment of the worker, with current time.
+ */
+void auth_zone_pickup_initial_zone(struct auth_zone* z,
+	struct module_env* env);
+
+/**
+ * Delete auth xfer structure
+ * @param xfr: delete this xfer and its tasks.
+ */
+void auth_xfer_delete(struct auth_xfer* xfr);
+
+/**
+ * Disown tasks from the xfr that belong to this worker.
+ * Only tasks for the worker in question, the comm point and timer
+ * delete functions need to run in the thread of that worker to be
+ * able to delete the callback from the event base.
+ * @param xfr: xfr structure
+ * @param worker: the worker for which to stop tasks.
+ */
+void xfr_disown_tasks(struct auth_xfer* xfr, struct worker* worker);
 
 #endif /* SERVICES_AUTHZONE_H */

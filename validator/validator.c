@@ -76,7 +76,7 @@ static void process_ds_response(struct module_qstate* qstate,
 	struct module_qstate* sub_qstate);
 
 
-/* Updates the suplied EDE (RFC8914) code selectively so we don't lose
+/* Updates the supplied EDE (RFC8914) code selectively so we don't lose
  * a more specific code */
 static void
 update_reason_bogus(struct reply_info* rep, sldns_ede_code reason_bogus)
@@ -91,41 +91,89 @@ update_reason_bogus(struct reply_info* rep, sldns_ede_code reason_bogus)
 
 /** fill up nsec3 key iterations config entry */
 static int
-fill_nsec3_iter(struct val_env* ve, char* s, int c)
+fill_nsec3_iter(size_t** keysize, size_t** maxiter, char* s, int c)
 {
 	char* e;
 	int i;
-	free(ve->nsec3_keysize);
-	free(ve->nsec3_maxiter);
-	ve->nsec3_keysize = (size_t*)calloc((size_t)c, sizeof(size_t));
-	ve->nsec3_maxiter = (size_t*)calloc((size_t)c, sizeof(size_t));
-	if(!ve->nsec3_keysize || !ve->nsec3_maxiter) {
+	*keysize = (size_t*)calloc((size_t)c, sizeof(size_t));
+	*maxiter = (size_t*)calloc((size_t)c, sizeof(size_t));
+	if(!*keysize || !*maxiter) {
+		free(*keysize);
+		*keysize = NULL;
+		free(*maxiter);
+		*maxiter = NULL;
 		log_err("out of memory");
 		return 0;
 	}
 	for(i=0; i<c; i++) {
-		ve->nsec3_keysize[i] = (size_t)strtol(s, &e, 10);
+		(*keysize)[i] = (size_t)strtol(s, &e, 10);
 		if(s == e) {
 			log_err("cannot parse: %s", s);
+			free(*keysize);
+			*keysize = NULL;
+			free(*maxiter);
+			*maxiter = NULL;
 			return 0;
 		}
 		s = e;
-		ve->nsec3_maxiter[i] = (size_t)strtol(s, &e, 10);
+		(*maxiter)[i] = (size_t)strtol(s, &e, 10);
 		if(s == e) {
 			log_err("cannot parse: %s", s);
+			free(*keysize);
+			*keysize = NULL;
+			free(*maxiter);
+			*maxiter = NULL;
 			return 0;
 		}
 		s = e;
-		if(i>0 && ve->nsec3_keysize[i-1] >= ve->nsec3_keysize[i]) {
+		if(i>0 && (*keysize)[i-1] >= (*keysize)[i]) {
 			log_err("nsec3 key iterations not ascending: %d %d",
-				(int)ve->nsec3_keysize[i-1], 
-				(int)ve->nsec3_keysize[i]);
+				(int)(*keysize)[i-1], (int)(*keysize)[i]);
+			free(*keysize);
+			*keysize = NULL;
+			free(*maxiter);
+			*maxiter = NULL;
 			return 0;
 		}
 		verbose(VERB_ALGO, "validator nsec3cfg keysz %d mxiter %d",
-			(int)ve->nsec3_keysize[i], (int)ve->nsec3_maxiter[i]);
+			(int)(*keysize)[i], (int)(*maxiter)[i]);
 	}
 	return 1;
+}
+
+int
+val_env_parse_key_iter(char* val_nsec3_key_iterations, size_t** keysize,
+	size_t** maxiter, int* keyiter_count)
+{
+	int c;
+	c = cfg_count_numbers(val_nsec3_key_iterations);
+	if(c < 1 || (c&1)) {
+		log_err("validator: unparsable or odd nsec3 key "
+			"iterations: %s", val_nsec3_key_iterations);
+		return 0;
+	}
+	*keyiter_count = c/2;
+	if(!fill_nsec3_iter(keysize, maxiter, val_nsec3_key_iterations, c/2)) {
+		log_err("validator: cannot apply nsec3 key iterations");
+		return 0;
+	}
+	return 1;
+}
+
+void
+val_env_apply_cfg(struct val_env* val_env, struct config_file* cfg,
+	size_t* keysize, size_t* maxiter, int keyiter_count)
+{
+	free(val_env->nsec3_keysize);
+	free(val_env->nsec3_maxiter);
+	val_env->nsec3_keysize = keysize;
+	val_env->nsec3_maxiter = maxiter;
+	val_env->nsec3_keyiter_count = keyiter_count;
+	val_env->bogus_ttl = (uint32_t)cfg->bogus_ttl;
+	val_env->date_override = cfg->val_date_override;
+	val_env->skew_min = cfg->val_sig_skew_min;
+	val_env->skew_max = cfg->val_sig_skew_max;
+	val_env->max_restart = cfg->val_max_restart;
 }
 
 /** apply config settings to validator */
@@ -133,8 +181,8 @@ static int
 val_apply_cfg(struct module_env* env, struct val_env* val_env, 
 	struct config_file* cfg)
 {
-	int c;
-	val_env->bogus_ttl = (uint32_t)cfg->bogus_ttl;
+	size_t* keysize=NULL, *maxiter=NULL;
+	int keyiter_count = 0;
 	if(!env->anchors)
 		env->anchors = anchors_create();
 	if(!env->anchors) {
@@ -154,21 +202,11 @@ val_apply_cfg(struct module_env* env, struct val_env* val_env,
 		log_err("validator: error in trustanchors config");
 		return 0;
 	}
-	val_env->date_override = cfg->val_date_override;
-	val_env->skew_min = cfg->val_sig_skew_min;
-	val_env->skew_max = cfg->val_sig_skew_max;
-	val_env->max_restart = cfg->val_max_restart;
-	c = cfg_count_numbers(cfg->val_nsec3_key_iterations);
-	if(c < 1 || (c&1)) {
-		log_err("validator: unparsable or odd nsec3 key "
-			"iterations: %s", cfg->val_nsec3_key_iterations);
+	if(!val_env_parse_key_iter(cfg->val_nsec3_key_iterations,
+		&keysize, &maxiter, &keyiter_count)) {
 		return 0;
 	}
-	val_env->nsec3_keyiter_count = c/2;
-	if(!fill_nsec3_iter(val_env, cfg->val_nsec3_key_iterations, c/2)) {
-		log_err("validator: cannot apply nsec3 key iterations");
-		return 0;
-	}
+	val_env_apply_cfg(val_env, cfg, keysize, maxiter, keyiter_count);
 	if (env->neg_cache)
 		val_env->neg_cache = env->neg_cache;
 	if(!val_env->neg_cache)
@@ -210,7 +248,7 @@ val_init(struct module_env* env, int id)
 		struct trust_anchor* anchor = anchors_find_any_noninsecure(
 			env->anchors);
 		if(anchor) {
-			char b[LDNS_MAX_DOMAINLEN+2];
+			char b[LDNS_MAX_DOMAINLEN];
 			dname_str(anchor->name, b);
 			log_warn("validator: disable-edns-do is enabled, but there is a trust anchor for '%s'. Since DNSSEC could not work, the disable-edns-do setting is turned off. Continuing without it.", b);
 			lock_basic_unlock(&anchor->lock);
@@ -361,7 +399,7 @@ needs_validation(struct module_qstate* qstate, int ret_rc,
 	 * For DNS64 bit_cd signals no dns64 processing, but we want to
 	 * provide validation there too */
 	/*
-	if(qstate->query_flags & BIT_CD) {
+	if((qstate->query_flags & BIT_CD)) {
 		verbose(VERB_ALGO, "not validating response due to CD bit");
 		return 0;
 	}
@@ -2555,8 +2593,17 @@ processFinished(struct module_qstate* qstate, struct val_qstate* vq,
 
 	/* Update rep->reason_bogus as it is the one being cached */
 	update_reason_bogus(vq->orig_msg->rep, errinf_to_reason_bogus(qstate));
+	if(vq->orig_msg->rep->security != sec_status_bogus &&
+		vq->orig_msg->rep->security != sec_status_secure_sentinel_fail
+		&& vq->orig_msg->rep->reason_bogus == LDNS_EDE_DNSSEC_BOGUS) {
+		/* Not interested in any DNSSEC EDE here, validator by default
+		 * uses LDNS_EDE_DNSSEC_BOGUS;
+		 * TODO revisit default value for the module */
+		vq->orig_msg->rep->reason_bogus = LDNS_EDE_NONE;
+	}
+
 	/* store results in cache */
-	if(qstate->query_flags&BIT_RD) {
+	if((qstate->query_flags&BIT_RD)) {
 		/* if secure, this will override cache anyway, no need
 		 * to check if from parentNS */
 		if(!qstate->no_cache_store) {
@@ -2870,7 +2917,7 @@ ds_response_to_ke(struct module_qstate* qstate, struct val_qstate* vq,
 		struct ub_packed_rrset_key* ds;
 		enum sec_status sec;
 		ds = reply_find_answer_rrset(qinfo, msg->rep);
-		/* If there was no DS rrset, then we have mis-classified 
+		/* If there was no DS rrset, then we have misclassified
 		 * this message. */
 		if(!ds) {
 			log_warn("internal error: POSITIVE DS response was "
@@ -3422,7 +3469,7 @@ val_inform_super(struct module_qstate* qstate, int id,
 		if(suspend) {
 			/* deep copy the return_msg to vq->sub_ds_msg; it will
 			 * be resumed later in the super state with the caveat
-			 * that the initial calculations will be re-caclulated
+			 * that the initial calculations will be re-calculated
 			 * and re-suspended there before continuing. */
 			vq->sub_ds_msg = dns_msg_deepcopy_region(
 				qstate->return_msg, super->region);
