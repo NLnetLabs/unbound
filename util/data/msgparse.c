@@ -1282,10 +1282,32 @@ parse_edns_from_query_pkt(sldns_buffer* pkt, struct edns_data* edns,
 			return LDNS_RCODE_FORMERR;
 	}
 	/* check edns section is present */
-	if(LDNS_ARCOUNT(sldns_buffer_begin(pkt)) > 1) {
-		return LDNS_RCODE_FORMERR;
-	}
-	if(LDNS_ARCOUNT(sldns_buffer_begin(pkt)) == 0) {
+	if(LDNS_ARCOUNT(sldns_buffer_begin(pkt)) > 0) {
+		int i, edns_found = 0;
+		for(i=0; i<(int)LDNS_ARCOUNT(sldns_buffer_begin(pkt)); i++) {
+			if(sldns_buffer_remaining(pkt) < 1)
+				return LDNS_RCODE_FORMERR;
+			if(sldns_buffer_current(pkt)[0] == 0) {
+				/* The domain name is the root of length 1. */
+				/* See if the RR Type is OPT. */
+				if(sldns_buffer_remaining(pkt) < 3)
+					return LDNS_RCODE_FORMERR;
+				if(sldns_buffer_read_u16_at(pkt,
+					sldns_buffer_position(pkt)+1) ==
+					LDNS_RR_TYPE_OPT) {
+					/* This is the EDNS OPT record */
+					edns_found = 1;
+					break;
+				}
+			}
+			if(!skip_pkt_rrs(pkt, 1))
+				return LDNS_RCODE_FORMERR;
+		}
+		if(!edns_found) {
+			edns->udp_size = 512;
+			return 0;
+		}
+	} else if(LDNS_ARCOUNT(sldns_buffer_begin(pkt)) == 0) {
 		edns->udp_size = 512;
 		return 0;
 	}
