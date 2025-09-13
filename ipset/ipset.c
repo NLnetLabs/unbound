@@ -156,7 +156,7 @@ static int add_to_ipset(filter_dev dev, const char *setname, const void *ipaddr,
 
 	nlh = mnl_nlmsg_put_header(buffer);
 	nlh->nlmsg_type = IPSET_CMD_ADD | (NFNL_SUBSYS_IPSET << 8);
-	nlh->nlmsg_flags = NLM_F_REQUEST|NLM_F_ACK|NLM_F_EXCL;
+	nlh->nlmsg_flags = NLM_F_REQUEST|NLM_F_ACK|NLM_F_REPLACE|NLM_F_CREATE;
 
 	nfg = mnl_nlmsg_put_extra_header(nlh, sizeof(struct nfgenmsg));
 	nfg->nfgen_family = af;
