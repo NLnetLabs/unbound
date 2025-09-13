@@ -996,6 +996,7 @@ that likely the client does not need a reply for any more.
 This could happen if the host has not been able to service the queries for
 a while, i.e. Unbound is not running, and then is enabled again.
 It uses timestamp socket options.
+The socket option is available on the Linux and FreeBSD platforms.
 .sp
 Default: 0 (disabled)
 .UNINDENT
@@ -2283,8 +2284,8 @@ Default: yes
 .INDENT 0.0
 .TP
 .B disable\-dnssec\-lame\-check: \fI<yes or no>\fP 
-If true, disables the DNSSEC lameness check in the iterator.
-This check sees if RRSIGs are present in the answer, when dnssec is
+If yes, disables the DNSSEC lameness check in the iterator.
+This check sees if RRSIGs are present in the answer, when DNSSEC is
 expected, and retries another authority if RRSIGs are unexpectedly missing.
 The validator will insist in RRSIGs for DNSSEC signed domains regardless of
 this setting, if a trust anchor is loaded.
@@ -3799,7 +3800,7 @@ Default: 65001
 .B ede: \fI<yes or no>\fP 
 If enabled, Unbound will respond with Extended DNS Error codes
 (\fI\%RFC 8914\fP).
-These EDEs privide additional information with a response mainly for, but
+These EDEs provide additional information with a response mainly for, but
 not limited to, DNS and DNSSEC errors.
 .sp
 When the \fI\%val\-log\-level\fP option is also
@@ -5194,7 +5195,7 @@ internally reverted to \(dqno\(dq.
 \fBNOTE:\fP
 .INDENT 7.0
 .INDENT 3.5
-Redis SETEX support is required for this option (Redis >= 2.0.0).
+Redis \(dqSET ... EX\(dq support is required for this option (Redis >= 2.6.12).
 .UNINDENT
 .UNINDENT
 .sp

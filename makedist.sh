@@ -59,7 +59,7 @@ Generate a distribution tar file for unbound.
     -wxp expat.xx.tar.gz Also build expat from tarball for windows dist.
     -wdir directory     Build openssl and expat in a persistent directory for
                         windows dist. If builds are already in that directory
-                        they are used right away. Useful when debuggin windows
+                        they are used right away. Useful when debugging windows
                         builds.
     -w32                32bit windows compile.
     -w ...              Build windows binary dist. last args passed to configure.
@@ -538,6 +538,12 @@ if [ "$DOWIN" = "yes" ]; then
 	libunbound/.
     if test -f "$sspdll"; then
 	    cp "$sspdll" libunbound/.
+    fi
+    if test "$W64" = "no"; then
+	# This could be solved with -static -static-libgcc -static-libstdc++.
+	# The dependency on c++ is probably due to libexpat. But the copy
+	# of the dll should work too. It may be needed for the libunbound.dll.
+	cp /usr/i686-w64-mingw32/sys-root/mingw/bin/libgcc_s_dw2-1.dll libunbound/.
     fi
     # zipfile
     zip -r ../$file LICENSE README.txt unbound.exe unbound-anchor.exe unbound-host.exe unbound-control.exe unbound-checkconf.exe unbound-service-install.exe unbound-service-remove.exe unbound-control-setup.cmd example.conf service.conf root.key unbound-website.url create_unbound_ad_servers.cmd warmup.cmd unbound_cache.cmd Changelog libunbound

@@ -3556,14 +3556,17 @@ auth_error_encode(struct query_info* qinfo, struct module_env* env,
 		sldns_buffer_read_u16_at(buf, 2), edns);
 }
 
-int auth_zones_answer(struct auth_zones* az, struct module_env* env,
+int auth_zones_downstream_answer(struct auth_zones* az, struct module_env* env,
 	struct query_info* qinfo, struct edns_data* edns,
-	struct comm_reply* repinfo, struct sldns_buffer* buf, struct regional* temp)
+	struct comm_reply* repinfo, struct sldns_buffer* buf,
+	struct regional* temp)
 {
 	struct dns_msg* msg = NULL;
 	struct auth_zone* z;
 	int r;
 	int fallback = 0;
+	/* Copy the qinfo in case of cname aliasing from local-zone */
+	struct query_info zqinfo = *qinfo;
 
 	lock_rw_rdlock(&az->lock);
 	if(!az->have_downstream) {
@@ -3571,6 +3574,7 @@ int auth_zones_answer(struct auth_zones* az, struct module_env* env,
 		lock_rw_unlock(&az->lock);
 		return 0;
 	}
+
 	if(qinfo->qtype == LDNS_RR_TYPE_DS) {
 		uint8_t* delname = qinfo->qname;
 		size_t delnamelen = qinfo->qname_len;
@@ -3578,8 +3582,14 @@ int auth_zones_answer(struct auth_zones* az, struct module_env* env,
 		z = auth_zones_find_zone(az, delname, delnamelen,
 			qinfo->qclass);
 	} else {
-		z = auth_zones_find_zone(az, qinfo->qname, qinfo->qname_len,
-			qinfo->qclass);
+		if(zqinfo.local_alias && !local_alias_shallow_copy_qname(
+			zqinfo.local_alias, &zqinfo.qname,
+			&zqinfo.qname_len)) {
+			lock_rw_unlock(&az->lock);
+			return 0;
+		}
+		z = auth_zones_find_zone(az, zqinfo.qname, zqinfo.qname_len,
+			zqinfo.qclass);
 	}
 	if(!z) {
 		/* no zone above it */
@@ -3605,7 +3615,7 @@ int auth_zones_answer(struct auth_zones* az, struct module_env* env,
 	}
 
 	/* answer it from zone z */
-	r = auth_zone_generate_answer(z, qinfo, temp, &msg, &fallback);
+	r = auth_zone_generate_answer(z, &zqinfo, temp, &msg, &fallback);
 	lock_rw_unlock(&z->lock);
 	if(!r && fallback) {
 		/* fallback to regular answering (recursive) */
@@ -5014,6 +5024,7 @@ apply_axfr(struct auth_xfer* xfr, struct auth_zone* z,
 
 	xfr->have_zone = 0;
 	xfr->serial = 0;
+	xfr->soa_zone_acquired = 0;
 
 	/* insert all RRs in to the zone */
 	/* insert the SOA only once, skip the last one */
@@ -5115,6 +5126,7 @@ apply_http(struct auth_xfer* xfr, struct auth_zone* z,
 
 	xfr->have_zone = 0;
 	xfr->serial = 0;
+	xfr->soa_zone_acquired = 0;
 
 	chunk = xfr->task_transfer->chunks_first;
 	chunk_pos = 0;
@@ -5325,6 +5337,8 @@ xfr_process_chunk_list(struct auth_xfer* xfr, struct module_env* env,
 			" (or malformed RR)", xfr->task_transfer->master->host);
 		return 0;
 	}
+	z->soa_zone_acquired = *env->now;
+	xfr->soa_zone_acquired = *env->now;
 
 	/* release xfr lock while verifying zonemd because it may have
 	 * to spawn lookups in the state machines */
@@ -6994,13 +7008,23 @@ xfr_set_timeout(struct auth_xfer* xfr, struct module_env* env,
 	comm_timer_set(xfr->task_nextprobe->timer, &tv);
 }
 
+void auth_zone_pickup_initial_zone(struct auth_zone* z, struct module_env* env)
+{
+	/* Set the time, because we now have timestamp in env,
+	 * (not earlier during startup and apply_cfg), and this
+	 * notes the start time when the data was acquired. */
+	z->soa_zone_acquired = *env->now;
+}
+
 void auth_xfer_pickup_initial_zone(struct auth_xfer* x, struct module_env* env)
 {
 	/* set lease_time, because we now have timestamp in env,
 	 * (not earlier during startup and apply_cfg), and this
 	 * notes the start time when the data was acquired */
-	if(x->have_zone)
+	if(x->have_zone) {
 		x->lease_time = *env->now;
+		x->soa_zone_acquired = *env->now;
+	}
 	if(x->task_nextprobe && x->task_nextprobe->worker == NULL) {
 		xfr_set_timeout(x, env, 0, 1);
 	}
@@ -7011,7 +7035,13 @@ void
 auth_xfer_pickup_initial(struct auth_zones* az, struct module_env* env)
 {
 	struct auth_xfer* x;
+	struct auth_zone* z;
 	lock_rw_wrlock(&az->lock);
+	RBTREE_FOR(z, struct auth_zone*, &az->ztree) {
+		lock_rw_wrlock(&z->lock);
+		auth_zone_pickup_initial_zone(z, env);
+		lock_rw_unlock(&z->lock);
+	}
 	RBTREE_FOR(x, struct auth_xfer*, &az->xtree) {
 		lock_basic_lock(&x->lock);
 		auth_xfer_pickup_initial_zone(x, env);
@@ -7096,6 +7126,7 @@ auth_xfer_new(struct auth_zone* z)
 	lock_protect(&xfr->lock, &xfr->notify_serial, sizeof(xfr->notify_serial));
 	lock_protect(&xfr->lock, &xfr->zone_expired, sizeof(xfr->zone_expired));
 	lock_protect(&xfr->lock, &xfr->have_zone, sizeof(xfr->have_zone));
+	lock_protect(&xfr->lock, &xfr->soa_zone_acquired, sizeof(xfr->soa_zone_acquired));
 	lock_protect(&xfr->lock, &xfr->serial, sizeof(xfr->serial));
 	lock_protect(&xfr->lock, &xfr->retry, sizeof(xfr->retry));
 	lock_protect(&xfr->lock, &xfr->refresh, sizeof(xfr->refresh));

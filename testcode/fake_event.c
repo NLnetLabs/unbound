@@ -188,6 +188,22 @@ delete_replay_answer(struct replay_answer* a)
 	free(a);
 }
 
+/** Log the packet for a reply_packet from testpkts. */
+static void
+log_testpkt_reply_pkt(const char* txt, struct reply_packet* reppkt)
+{
+	if(!reppkt) {
+		log_info("%s <null>", txt);
+		return;
+	}
+	if(reppkt->reply_from_hex) {
+		log_pkt(txt, sldns_buffer_begin(reppkt->reply_from_hex),
+			sldns_buffer_limit(reppkt->reply_from_hex));
+		return;
+	}
+	log_pkt(txt, reppkt->reply_pkt, reppkt->reply_len);
+}
+
 /**
  * return: true if pending query matches the now event.
  */
@@ -240,9 +256,8 @@ pending_find_match(struct replay_runtime* runtime, struct entry** entry,
 				p->start_step, p->end_step, (*entry)->lineno);
 			if(p->addrlen != 0)
 				log_addr(0, "matched ip", &p->addr, p->addrlen);
-			log_pkt("matched pkt: ",
-				(*entry)->reply_list->reply_pkt,
-				(*entry)->reply_list->reply_len);
+			log_testpkt_reply_pkt("matched pkt: ",
+				(*entry)->reply_list);
 			return 1;
 		}
 		p = p->next_range;
@@ -330,7 +345,7 @@ fill_buffer_with_reply(sldns_buffer* buffer, struct entry* entry, uint8_t* q,
 		while(reppkt && i--)
 			reppkt = reppkt->next;
 		if(!reppkt) fatal_exit("extra packet read from TCP stream but none is available");
-		log_pkt("extra_packet ", reppkt->reply_pkt, reppkt->reply_len);
+		log_testpkt_reply_pkt("extra packet ", reppkt);
 	}
 	if(reppkt->reply_from_hex) {
 		c = sldns_buffer_begin(reppkt->reply_from_hex);
@@ -462,8 +477,7 @@ fake_front_query(struct replay_runtime* runtime, struct replay_moment *todo)
 		repinfo.c->type = comm_udp;
 	fill_buffer_with_reply(repinfo.c->buffer, todo->match, NULL, 0, 0);
 	log_info("testbound: incoming QUERY");
-	log_pkt("query pkt", todo->match->reply_list->reply_pkt,
-		todo->match->reply_list->reply_len);
+	log_testpkt_reply_pkt("query pkt ", todo->match->reply_list);
 	/* call the callback for incoming queries */
 	if((*runtime->callback_query)(repinfo.c, runtime->cb_arg,
 		NETEVENT_NOERROR, &repinfo)) {
@@ -1256,7 +1270,7 @@ struct serviced_query* outnet_serviced_query(struct outside_network* outnet,
 	struct query_info* qinfo, uint16_t flags, int dnssec,
 	int ATTR_UNUSED(want_dnssec), int ATTR_UNUSED(nocaps),
 	int ATTR_UNUSED(check_ratelimit),
-	int ATTR_UNUSED(tcp_upstream), int ATTR_UNUSED(ssl_upstream),
+	int tcp_upstream, int ATTR_UNUSED(ssl_upstream),
 	char* ATTR_UNUSED(tls_auth_name), struct sockaddr_storage* addr,
 	socklen_t addrlen, uint8_t* zone, size_t zonelen,
 	struct module_qstate* qstate, comm_point_callback_type* callback,
@@ -1353,7 +1367,7 @@ struct serviced_query* outnet_serviced_query(struct outside_network* outnet,
 	pend->callback = callback;
 	pend->cb_arg = callback_arg;
 	pend->timeout = UDP_AUTH_QUERY_TIMEOUT/1000;
-	pend->transport = transport_udp; /* pretend UDP */
+	pend->transport = tcp_upstream?transport_tcp:transport_udp;
 	pend->pkt = NULL;
 	pend->runtime = runtime;
 	pend->serviced = 1;

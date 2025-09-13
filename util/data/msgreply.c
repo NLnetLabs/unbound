@@ -251,7 +251,7 @@ rdata_copy(sldns_buffer* pkt, struct packed_rrset_data* data, uint8_t* to,
 
 	*rr_ttl = sldns_read_uint32(rr->ttl_data);
 	/* RFC 2181 Section 8. if msb of ttl is set treat as if zero. */
-	if(*rr_ttl & 0x80000000U)
+	if((*rr_ttl & 0x80000000U))
 		*rr_ttl = 0;
 	if(type == LDNS_RR_TYPE_SOA && section == LDNS_SECTION_AUTHORITY) {
 		/* negative response. see if TTL of SOA record larger than the
@@ -1470,4 +1470,23 @@ struct edns_option* edns_opt_list_find(struct edns_option* list, uint16_t code)
 			return p;
 	}
 	return NULL;
+}
+
+int local_alias_shallow_copy_qname(struct local_rrset* local_alias, uint8_t** qname,
+	size_t* qname_len)
+{
+	struct ub_packed_rrset_key* rrset = local_alias->rrset;
+	struct packed_rrset_data* d = rrset->entry.data;
+
+	/* Sanity check: our current implementation only supports
+	    * a single CNAME RRset as a local alias. */
+	if(local_alias->next ||
+		rrset->rk.type != htons(LDNS_RR_TYPE_CNAME) ||
+		d->count != 1) {
+		log_err("assumption failure: unexpected local alias");
+		return 0;
+	}
+	*qname = d->rr_data[0] + 2;
+	*qname_len = d->rr_len[0] - 2;
+	return 1;
 }

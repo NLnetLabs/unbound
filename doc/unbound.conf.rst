@@ -910,6 +910,7 @@ These options are part of the **server:** clause.
     This could happen if the host has not been able to service the queries for
     a while, i.e. Unbound is not running, and then is enabled again.
     It uses timestamp socket options.
+    The socket option is available on the Linux and FreeBSD platforms.
 
     Default: 0 (disabled)
 
@@ -2025,8 +2026,8 @@ These options are part of the **server:** clause.
 
 
 @@UAHL@unbound.conf@disable-dnssec-lame-check@@: *<yes or no>*
-    If true, disables the DNSSEC lameness check in the iterator.
-    This check sees if RRSIGs are present in the answer, when dnssec is
+    If yes, disables the DNSSEC lameness check in the iterator.
+    This check sees if RRSIGs are present in the answer, when DNSSEC is
     expected, and retries another authority if RRSIGs are unexpectedly missing.
     The validator will insist in RRSIGs for DNSSEC signed domains regardless of
     this setting, if a trust anchor is loaded.
@@ -3239,7 +3240,7 @@ These options are part of the **server:** clause.
 @@UAHL@unbound.conf@ede@@: *<yes or no>*
     If enabled, Unbound will respond with Extended DNS Error codes
     (:rfc:`8914`).
-    These EDEs privide additional information with a response mainly for, but
+    These EDEs provide additional information with a response mainly for, but
     not limited to, DNS and DNSSEC errors.
 
     When the :ref:`val-log-level<unbound.conf.val-log-level>` option is also
@@ -4494,7 +4495,7 @@ The following **cachedb:** options are specific to the ``redis`` backend.
     internally reverted to "no".
 
     .. note::
-        Redis SETEX support is required for this option (Redis >= 2.0.0).
+        Redis "SET ... EX" support is required for this option (Redis >= 2.6.12).
 
     Default: no
 

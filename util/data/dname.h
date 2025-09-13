@@ -273,7 +273,7 @@ void dname_remove_label(uint8_t** dname, size_t* len);
  * @param dname: from what to strip off. uncompressed wireformat.
  * @param len: length, adjusted to become less.
  * @param lenlimit: length limit that we can't surpass (usually the zone apex).
- * return
+ * @return
  *	o 1,  and dname stripped off, or "." if input was ".", else
  *	o 0, if going up would surpass lenlimit.
  */
