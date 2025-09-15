@@ -597,7 +597,7 @@ int edns_opt_list_append(struct edns_option** list, uint16_t code, size_t len,
 			char text[sizeof(TXT) - 1];			\
 		} ede = { htons(CODE), TXT };				\
                 verbose(VERB_ALGO, "attached EDE code: %d with"		\
-                        " message: %s", CODE, TXT);			\
+                        " message: '%s'", CODE, TXT);			\
 		edns_opt_list_append((LIST), LDNS_EDNS_EDE, 		\
 			sizeof(uint16_t) + sizeof(TXT) - 1,		\
 			(void *)&ede, (REGION));			\
