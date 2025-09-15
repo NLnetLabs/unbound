@@ -496,10 +496,18 @@ packed_rrset_encode(struct ub_packed_rrset_key* key, sldns_buffer* pkt,
 				return r;
 			sldns_buffer_write(pkt, &key->rk.type, 2);
 			sldns_buffer_write(pkt, &key->rk.rrset_class, 2);
-			if(data->rr_ttl[j] < adjust)
+			if(key->rk.flags & PACKED_RRSET_UPSTREAM_0TTL) {
+				sldns_buffer_write_u32(pkt, 0);
+			} else if(adjust == 0) {
+				sldns_buffer_write_u32(pkt, data->rr_ttl[i]);
+			} else if(TTL_IS_EXPIRED(data->rr_ttl[j], adjust)) {
 				sldns_buffer_write_u32(pkt,
-					SERVE_EXPIRED?SERVE_EXPIRED_REPLY_TTL:0);
-			else	sldns_buffer_write_u32(pkt, data->rr_ttl[j]-adjust);
+					EXPIRED_REPLY_TTL_CALC(
+					    data->rr_ttl[i], data->ttl_add));
+			} else {
+				sldns_buffer_write_u32(pkt,
+					data->rr_ttl[i] - adjust);
+			}
 			if(c) {
 				if((r=compress_rdata(pkt, data->rr_data[j],
 					data->rr_len[j], region, tree, c,
@@ -533,10 +541,18 @@ packed_rrset_encode(struct ub_packed_rrset_key* key, sldns_buffer* pkt,
 			}
 			sldns_buffer_write_u16(pkt, LDNS_RR_TYPE_RRSIG);
 			sldns_buffer_write(pkt, &key->rk.rrset_class, 2);
-			if(data->rr_ttl[i] < adjust)
+			if(key->rk.flags & PACKED_RRSET_UPSTREAM_0TTL) {
+				sldns_buffer_write_u32(pkt, 0);
+			} else if(adjust == 0) {
+				sldns_buffer_write_u32(pkt, data->rr_ttl[i]);
+			} else if(TTL_IS_EXPIRED(data->rr_ttl[i], adjust)) {
 				sldns_buffer_write_u32(pkt,
-					SERVE_EXPIRED?SERVE_EXPIRED_REPLY_TTL:0);
-			else	sldns_buffer_write_u32(pkt, data->rr_ttl[i]-adjust);
+					EXPIRED_REPLY_TTL_CALC(
+					    data->rr_ttl[i], data->ttl_add));
+			} else {
+				sldns_buffer_write_u32(pkt,
+					data->rr_ttl[i] - adjust);
+			}
 			/* rrsig rdata cannot be compressed, perform 100+ byte
 			 * memcopy. */
 			sldns_buffer_write(pkt, data->rr_data[i],
@@ -993,11 +1009,11 @@ attach_edns_record(sldns_buffer* pkt, struct edns_data* edns)
 	attach_edns_record_max_msg_sz(pkt, edns, edns->udp_size);
 }
 
-int 
-reply_info_answer_encode(struct query_info* qinf, struct reply_info* rep, 
+int
+reply_info_answer_encode(struct query_info* qinf, struct reply_info* rep,
 	uint16_t id, uint16_t qflags, sldns_buffer* pkt, time_t timenow,
-	int cached, struct regional* region, uint16_t udpsize, 
-	struct edns_data* edns, int dnssec, int secure, int cached_ttl)
+	int cached, struct regional* region, uint16_t udpsize,
+	struct edns_data* edns, int dnssec, int secure)
 {
 	uint16_t flags;
 	unsigned int attach_edns = 0;
@@ -1022,17 +1038,6 @@ reply_info_answer_encode(struct query_info* qinf, struct reply_info* rep,
 		flags &= ~BIT_AD;
 	}
 	log_assert((flags & BIT_QR)); /* QR bit must be on in our replies */
-	if(cached_ttl && rep->ttl - timenow == 0) {
-		/* The last remaining second of the TTL for a cached response
-		 * is replied. This makes a 0 in the protocol message. The
-		 * response is valid for the cache, but the DNS TTL 0 item
-		 * causes the received to drop the contents. Even though the
-		 * contents are cachable, so the time used is decremented
-		 * to change that into 1 second, and it can be cached, and
-		 * used for expired response generation, and does not give
-		 * repeated queries during that last second. */
-		timenow --;
-	}
 	if(udpsize < LDNS_HEADER_SIZE)
 		return 0;
 	/* currently edns does not change during calculations;

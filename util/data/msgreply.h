@@ -60,10 +60,6 @@ struct local_rrset;
 struct dns_msg;
 enum comm_point_type;
 
-/** calculate the prefetch TTL as 90% of original. Calculation
- * without numerical overflow (uin32_t) */
-#define PREFETCH_TTL_CALC(ttl) ((ttl) - (ttl)/10)
-
 /**
  * Structure to store query information that makes answers to queries
  * different.
@@ -339,6 +335,15 @@ void reply_info_sortref(struct reply_info* rep);
  * @param timenow: the current time.
  */
 void reply_info_set_ttls(struct reply_info* rep, time_t timenow);
+
+/**
+ * Set TTLs inside the replyinfo to the given absolute values.
+ * @param rep: reply info. rrsets must be filled in.
+ *	Also refs must be filled in.
+ * @param ttl: absolute ttl value to be set.
+ * @param ttl_add: the current time to be used verbatim for ttl_add in the rrsets.
+ */
+void reply_info_absolute_ttls(struct reply_info* rep, time_t ttl, time_t ttl_add);
 
 /** 
  * Delete reply_info and packed_rrsets (while they are not yet added to the

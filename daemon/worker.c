@@ -651,7 +651,7 @@ answer_norec_from_cache(struct worker* worker, struct query_info* qinfo,
 	}
 	if(!reply_info_answer_encode(&msg->qinfo, msg->rep, id, flags,
 		repinfo->c->buffer, 0, 1, worker->scratchpad,
-		udpsize, edns, (int)(edns->bits & EDNS_DO), secure, 1)) {
+		udpsize, edns, (int)(edns->bits & EDNS_DO), secure)) {
 		if(!inplace_cb_reply_servfail_call(&worker->env, qinfo, NULL, NULL,
 			LDNS_RCODE_SERVFAIL, edns, repinfo, worker->scratchpad,
 			worker->env.now_tv))
@@ -746,7 +746,7 @@ answer_from_cache(struct worker* worker, struct query_info* qinfo,
 	*partial_repp = NULL;  /* avoid accidental further pass */
 
 	/* Check TTL */
-	if(rep->ttl < timenow) {
+	if(TTL_IS_EXPIRED(rep->ttl, timenow)) {
 		/* Check if we need to serve expired now */
 		if(worker->env.cfg->serve_expired &&
 			/* if serve-expired-client-timeout is set, serve
@@ -891,7 +891,7 @@ answer_from_cache(struct worker* worker, struct query_info* qinfo,
 		if(!reply_info_answer_encode(qinfo, encode_rep, id, flags,
 			repinfo->c->buffer, timenow, 1, worker->scratchpad,
 			udpsize, edns, (int)(edns->bits & EDNS_DO),
-			*is_secure_answer, 1)) {
+			*is_secure_answer)) {
 			if(!inplace_cb_reply_servfail_call(&worker->env, qinfo,
 				NULL, NULL, LDNS_RCODE_SERVFAIL, edns, repinfo,
 				worker->scratchpad, worker->env.now_tv))
@@ -1929,11 +1929,11 @@ lookup_cache:
 				if((worker->env.cfg->prefetch &&
 					rep->prefetch_ttl <= *worker->env.now) ||
 					(worker->env.cfg->serve_expired &&
-					rep->ttl < *worker->env.now  &&
+					TTL_IS_EXPIRED(rep->ttl, *worker->env.now) &&
 					!(*worker->env.now < rep->serve_expired_norec_ttl))) {
-					time_t leeway = rep->ttl - *worker->env.now;
-					if(rep->ttl < *worker->env.now)
-						leeway = 0;
+					time_t leeway =
+						TTL_IS_EXPIRED(rep->ttl, *worker->env.now)
+						? 0 : rep->ttl - *worker->env.now;
 					lock_rw_unlock(&e->lock);
 
 					reply_and_prefetch(worker, lookup_qinfo,

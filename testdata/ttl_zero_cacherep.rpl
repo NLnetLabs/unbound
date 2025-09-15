@@ -260,27 +260,6 @@ ENTRY_END
 STEP 140 CHECK_ANSWER
 ENTRY_BEGIN
 MATCH all ttl
-REPLY QR RD RA NOERROR
-SECTION QUESTION
-www.example.com. IN A
-SECTION ANSWER
-; note that it did not send 0 TTL. The message can be cached by the receiver
-; during the last second of the TTL.
-www.example.com. 1 IN A 1.2.3.4
-ENTRY_END
-
-STEP 150 TIME_PASSES ELAPSE 1
-
-STEP 160 QUERY
-ENTRY_BEGIN
-REPLY RD
-SECTION QUESTION
-www.example.com. IN A
-ENTRY_END
-
-STEP 170 CHECK_ANSWER
-ENTRY_BEGIN
-MATCH all ttl
 REPLY QR RD RA SERVFAIL
 SECTION QUESTION
 www.example.com. IN A

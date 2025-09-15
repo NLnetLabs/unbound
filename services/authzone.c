@@ -171,7 +171,7 @@ get_rrset_ttl(struct ub_packed_rrset_key* k)
 /** Copy rrset into region from domain-datanode and packet rrset */
 static struct ub_packed_rrset_key*
 auth_packed_rrset_copy_region(struct auth_zone* z, struct auth_data* node,
-	struct auth_rrset* rrset, struct regional* region, time_t adjust)
+	struct auth_rrset* rrset, struct regional* region)
 {
 	struct ub_packed_rrset_key key;
 	memset(&key, 0, sizeof(key));
@@ -182,7 +182,7 @@ auth_packed_rrset_copy_region(struct auth_zone* z, struct auth_data* node,
 	key.rk.type = htons(rrset->type);
 	key.rk.rrset_class = htons(z->dclass);
 	key.entry.hash = rrset_key_hash(&key.rk);
-	return packed_rrset_copy_region(&key, region, adjust);
+	return packed_rrset_copy_region(&key, region, 0);
 }
 
 /** fix up msg->rep TTL and prefetch ttl */
@@ -236,7 +236,7 @@ msg_add_rrset_an(struct auth_zone* z, struct regional* region,
 		return 0;
 	/* copy it */
 	if(!(msg->rep->rrsets[msg->rep->rrset_count] =
-		auth_packed_rrset_copy_region(z, node, rrset, region, 0)))
+		auth_packed_rrset_copy_region(z, node, rrset, region)))
 		return 0;
 	msg->rep->rrset_count++;
 	msg->rep->an_numrrsets++;
@@ -260,7 +260,7 @@ msg_add_rrset_ns(struct auth_zone* z, struct regional* region,
 		return 0;
 	/* copy it */
 	if(!(msg->rep->rrsets[msg->rep->rrset_count] =
-		auth_packed_rrset_copy_region(z, node, rrset, region, 0)))
+		auth_packed_rrset_copy_region(z, node, rrset, region)))
 		return 0;
 	msg->rep->rrset_count++;
 	msg->rep->ns_numrrsets++;
@@ -283,7 +283,7 @@ msg_add_rrset_ar(struct auth_zone* z, struct regional* region,
 		return 0;
 	/* copy it */
 	if(!(msg->rep->rrsets[msg->rep->rrset_count] =
-		auth_packed_rrset_copy_region(z, node, rrset, region, 0)))
+		auth_packed_rrset_copy_region(z, node, rrset, region)))
 		return 0;
 	msg->rep->rrset_count++;
 	msg->rep->ar_numrrsets++;
@@ -3530,7 +3530,7 @@ auth_answer_encode(struct query_info* qinfo, struct module_env* env,
 		*(uint16_t*)sldns_buffer_begin(buf),
 		sldns_buffer_read_u16_at(buf, 2),
 		buf, 0, 0, temp, udpsize, edns,
-		(int)(edns->bits&EDNS_DO), 0, 0)) {
+		(int)(edns->bits&EDNS_DO), 0)) {
 		error_encode(buf, (LDNS_RCODE_SERVFAIL|BIT_AA), qinfo,
 			*(uint16_t*)sldns_buffer_begin(buf),
 			sldns_buffer_read_u16_at(buf, 2), edns);
