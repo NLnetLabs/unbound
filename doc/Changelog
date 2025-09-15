@@ -1,6 +1,9 @@
 15 September 2025: Yorgos
 	- Small debug output improvement when attaching an EDE.
 
+15 September 2025: Wouter
+	- Fix to print warning for when so-sndbuf setsockopt is not granted.
+
 11 September 2025: Wouter
 	- version set to 1.24.0 for release.
 	- tag for 1.24.0rc1.
