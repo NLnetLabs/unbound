@@ -83,7 +83,8 @@ static void * open_filter() {
 #endif
 
 #ifdef HAVE_NET_PFVAR_H
-static int add_to_ipset(filter_dev dev, const char *setname, const void *ipaddr, int af) {
+static int add_to_ipset(filter_dev dev, const char *setname, const void *ipaddr,
+                        int af, bool _refresh_ttl) {
 	struct pfioc_table io;
 	struct pfr_addr addr;
 	const char *p;
@@ -139,7 +140,8 @@ static int add_to_ipset(filter_dev dev, const char *setname, const void *ipaddr,
 	return 0;
 }
 #else
-static int add_to_ipset(filter_dev dev, const char *setname, const void *ipaddr, int af) {
+static int add_to_ipset(filter_dev dev, const char *setname, const void *ipaddr,
+                        int af, bool refresh_ttl) {
 	struct nlmsghdr *nlh;
 	struct nfgenmsg *nfg;
 	struct nlattr *nested[2];
@@ -156,7 +158,12 @@ static int add_to_ipset(filter_dev dev, const char *setname, const void *ipaddr,
 
 	nlh = mnl_nlmsg_put_header(buffer);
 	nlh->nlmsg_type = IPSET_CMD_ADD | (NFNL_SUBSYS_IPSET << 8);
-	nlh->nlmsg_flags = NLM_F_REQUEST|NLM_F_ACK|NLM_F_REPLACE|NLM_F_CREATE;
+	nlh->nlmsg_flags = NLM_F_REQUEST|NLM_F_ACK;
+    if (refresh_ttl) {
+        nlh->nlmsg_flags |= NLM_F_REPLACE|NLM_F_CREATE;
+    } else {
+        nlh->nlmsg_flags |= NLM_F_EXCL;
+    }
 
 	nfg = mnl_nlmsg_put_extra_header(nlh, sizeof(struct nfgenmsg));
 	nfg->nfgen_family = af;
@@ -182,7 +189,7 @@ static int add_to_ipset(filter_dev dev, const char *setname, const void *ipaddr,
 static void
 ipset_add_rrset_data(struct ipset_env *ie,
 	struct packed_rrset_data *d, const char* setname, int af,
-	const char* dname)
+	const char* dname, bool refresh_ttl)
 {
 	int ret;
 	size_t j, rr_len, rd_len;
@@ -205,7 +212,7 @@ ipset_add_rrset_data(struct ipset_env *ie,
 					snprintf(ip, sizeof(ip), "(inet_ntop_error)");
 				verbose(VERB_QUERY, "ipset: add %s to %s for %s", ip, setname, dname);
 			}
-			ret = add_to_ipset((filter_dev)ie->dev, setname, rr_data + 2, af);
+			ret = add_to_ipset((filter_dev)ie->dev, setname, rr_data + 2, af, refresh_ttl);
 			if (ret < 0) {
 				log_err("ipset: could not add %s into %s", dname, setname);
 
@@ -230,7 +237,7 @@ ipset_check_zones_for_rrset(struct module_env *env, struct ipset_env *ie,
 	const char *ds, *qs;
 	int dlen, plen;
 
-	struct config_strlist *p;
+	struct config_str2list *p;
 	struct packed_rrset_data *d;
 
 	dlen = sldns_wire2str_dname_buf(rrset->rk.dname, rrset->rk.dname_len, dname, BUFF_LEN);
@@ -252,7 +259,7 @@ ipset_check_zones_for_rrset(struct module_env *env, struct ipset_env *ie,
 		if (p->str[plen - 1] == '.') {
 			plen--;
 		}
-
+        const bool refresh_ttl = strncasecmp(p->str2, "refresh_ttl", 11) == 0;
 		if (dlen == plen || (dlen > plen && dname[dlen - plen - 1] == '.' )) {
 			ds = dname + (dlen - plen);
 		}
@@ -262,7 +269,7 @@ ipset_check_zones_for_rrset(struct module_env *env, struct ipset_env *ie,
 		if ((ds && strncasecmp(p->str, ds, plen) == 0)
 			|| (qs && strncasecmp(p->str, qs, plen) == 0)) {
 			d = (struct packed_rrset_data*)rrset->entry.data;
-			ipset_add_rrset_data(ie, d, setname, af, dname);
+			ipset_add_rrset_data(ie, d, setname, af, dname, refresh_ttl);
 			break;
 		}
 	}

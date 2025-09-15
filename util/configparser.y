@@ -2388,20 +2388,28 @@ server_local_zone: VAR_LOCAL_ZONE STRING_ARG STRING_ARG
 			free($3);
 #ifdef USE_IPSET
 		} else if(strcmp($3, "ipset")==0) {
-			size_t len = strlen($2);
-			/* Make sure to add the trailing dot.
-			 * These are str compared to domain names. */
-			if($2[len-1] != '.') {
-				if(!($2 = realloc($2, len+2))) {
-					fatal_exit("out of memory adding local-zone");
-				}
-				$2[len] = '.';
-				$2[len+1] = 0;
-			}
-			if(!cfg_strlist_insert(&cfg_parser->cfg->
-				local_zones_ipset, $2))
-				fatal_exit("out of memory adding local-zone");
-			free($3);
+            if (strncmp($4, "refresh_ttl", 11) != 0
+                || strncmp($4, "no_refresh_ttl", 14)) {
+                yyerror("local-zone ipset TTL behaviour: expected "
+                    "refresh_ttl or no_refresh_ttl");
+                free($3);
+                free($4);
+            } else {
+                size_t len = strlen($2);
+                /* Make sure to add the trailing dot.
+                 * These are str compared to domain names. */
+                if($2[len-1] != '.') {
+                    if(!($2 = realloc($2, len+2))) {
+                        fatal_exit("out of memory adding local-zone");
+                    }
+                    $2[len] = '.';
+                    $2[len+1] = 0;
+                }
+                if(!cfg_str2list_insert(&cfg_parser->cfg->
+                    local_zones_ipset, $2, $4))
+                    fatal_exit("out of memory adding local-zone");
+                free($3);
+            }
 #endif
 		} else {
 			if(!cfg_str2list_insert(&cfg_parser->cfg->local_zones,
