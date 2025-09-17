@@ -499,14 +499,14 @@ packed_rrset_encode(struct ub_packed_rrset_key* key, sldns_buffer* pkt,
 			if(key->rk.flags & PACKED_RRSET_UPSTREAM_0TTL) {
 				sldns_buffer_write_u32(pkt, 0);
 			} else if(adjust == 0) {
-				sldns_buffer_write_u32(pkt, data->rr_ttl[i]);
+				sldns_buffer_write_u32(pkt, data->rr_ttl[j]);
 			} else if(TTL_IS_EXPIRED(data->rr_ttl[j], adjust)) {
 				sldns_buffer_write_u32(pkt,
 					EXPIRED_REPLY_TTL_CALC(
-					    data->rr_ttl[i], data->ttl_add));
+					    data->rr_ttl[j], data->ttl_add));
 			} else {
 				sldns_buffer_write_u32(pkt,
-					data->rr_ttl[i] - adjust);
+					data->rr_ttl[j] - adjust);
 			}
 			if(c) {
 				if((r=compress_rdata(pkt, data->rr_data[j],
