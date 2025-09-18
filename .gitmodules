@@ -1,0 +1,3 @@
+[submodule "simdzone"]
+	path = simdzone
+	url = https://github.com/NLnetLabs/simdzone.git
