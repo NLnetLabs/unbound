@@ -779,6 +779,11 @@ struct config_file {
 #ifdef USE_IPSET
 	char* ipset_name_v4;
 	char* ipset_name_v6;
+	char* ipset_engine;
+	char* ipset_table_v4;
+	char* ipset_table_v6;
+	char* ipset_family_v4;
+	char* ipset_family_v6;
 #endif
 	/** respond with Extended DNS Errors (RFC8914) */
 	int ede;

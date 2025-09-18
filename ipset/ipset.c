@@ -28,6 +28,8 @@ typedef intptr_t filter_dev;
 #include <libmnl/libmnl.h>
 #include <linux/netfilter/nfnetlink.h>
 #include <linux/netfilter/ipset/ip_set.h>
+#include <linux/netfilter/nf_tables.h>
+#include <linux/netfilter.h>
 typedef struct mnl_socket * filter_dev;
 #endif
 
@@ -177,7 +179,165 @@ static int add_to_ipset(filter_dev dev, const char *setname, const void *ipaddr,
 	}
 	return 0;
 }
+
+static struct nlmsghdr *
+build_nft_hdr(char *buf, uint16_t type, uint16_t family,
+              uint16_t flags, uint32_t seq,	uint16_t res_id)
+{
+	struct nlmsghdr *nlh;
+	struct nfgenmsg *nfh;
+
+	nlh = mnl_nlmsg_put_header(buf);
+	nlh->nlmsg_type = type;
+	nlh->nlmsg_flags = NLM_F_REQUEST | flags;
+	nlh->nlmsg_seq = seq;
+
+	nfh = mnl_nlmsg_put_extra_header(nlh, sizeof(struct nfgenmsg));
+	nfh->nfgen_family = family;
+	nfh->version = NFNETLINK_V0;
+	nfh->res_id = htons(res_id);
+
+	return nlh;
+}
+
+static uint16_t parse_nft_proto(const char *protoname)
+{
+	uint16_t proto;
+
+	if (!(protoname && protoname[0]))
+		proto = NFPROTO_INET;
+	else if (!strcmp(protoname, "inet"))
+		proto = NFPROTO_INET;
+	else if (!strcmp(protoname, "ipv4"))
+		proto = NFPROTO_IPV4;
+	else if (!strcmp(protoname, "ipv6"))
+		proto = NFPROTO_IPV6;
+	else
+		proto = NFPROTO_UNSPEC;
+
+   return proto;
+}
+
+static int add_to_nftset(filter_dev dev, struct ipset_env *ie, const void *ipaddr, int af)
+{
+	struct nlmsghdr *nlh;
+	struct nlattr *nested[3];
+	static char b[BUFF_LEN];
+	const char *tablename, *setname;
+	size_t l = 0, addr_size;
+	uint16_t nfproto = NFPROTO_UNSPEC;
+	int err;
+
+	if (af == AF_INET) {
+		nfproto = ie->v4_proto;
+		tablename = ie->table_v4;
+		setname = ie->name_v4;
+		addr_size = sizeof(struct in_addr);
+	} else if (af == AF_INET6) {
+		nfproto = ie->v6_proto;
+		tablename = ie->table_v6;
+		setname = ie->name_v6;
+		addr_size = sizeof(struct in6_addr);
+	} else {
+		errno = EAFNOSUPPORT;
+		return -1;
+	}
+
+	if (!(tablename && setname)) {
+		errno = EINVAL;
+		return -1;
+	}
+
+	if ((strlen(setname) >= NFT_SET_MAXNAMELEN) ||
+		 (strlen(tablename) >= NFT_TABLE_MAXNAMELEN)) {
+		errno = ENAMETOOLONG;
+		return -1;
+	}
+
+	nlh = build_nft_hdr(b, NFNL_MSG_BATCH_BEGIN,
+                      NFPROTO_UNSPEC, 0, 1, NFNL_SUBSYS_NFTABLES);
+	if (!nlh) {
+		errno = ENOMEM;
+		return -1;
+	};
+
+	l += nlh->nlmsg_len;
+
+	nlh = build_nft_hdr(b + l, (NFNL_SUBSYS_NFTABLES << 8) | NFT_MSG_NEWSETELEM,
+				nfproto, NLM_F_CREATE|NLM_F_EXCL, 2, 0);
+	if (!nlh) {
+		errno = ENOMEM;
+		return -1;
+	};
+
+	mnl_attr_put_strz(nlh, NFTA_SET_ELEM_LIST_TABLE, tablename);
+	mnl_attr_put_strz(nlh, NFTA_SET_ELEM_LIST_SET, setname);
+	mnl_attr_put_u32(nlh, NFTA_SET_ELEM_LIST_SET_ID, htonl(1));
+
+	nested[0] = mnl_attr_nest_start(nlh, NFTA_SET_ELEM_LIST_ELEMENTS);
+	nested[1] = mnl_attr_nest_start(nlh, NFTA_SET_ELEM_KEY);
+	nested[2] = mnl_attr_nest_start(nlh, NFTA_SET_ELEM_KEY);
+
+	mnl_attr_put(nlh, NFTA_DATA_VALUE | NLA_F_NET_BYTEORDER, addr_size, ipaddr);
+
+	mnl_attr_nest_end(nlh, nested[2]);
+	mnl_attr_nest_end(nlh, nested[1]);
+	mnl_attr_nest_end(nlh, nested[0]);
+
+	l += nlh->nlmsg_len;
+
+	nlh = build_nft_hdr(b + l, NFNL_MSG_BATCH_END,
+				AF_UNSPEC, 0, 3, NFNL_SUBSYS_NFTABLES);
+	if (!nlh) {
+		errno = ENOMEM;
+		return -1;
+	};
+
+	l += nlh->nlmsg_len;
+
+	err = mnl_socket_sendto(dev, b, l);
+	if (err < 0) {
+		log_err("ipset: can't add address into %u %s->%s (%i)",
+				nfproto, tablename, setname, err);
+		errno = -err;
+		return -1;
+	}
+
+	return 0;
+
+}
 #endif
+
+#ifdef HAVE_NET_PFVAR_H
+	#define IPSET_ENGINE_PF       (0)
+	#define IPSET_ENGINE_DEFAULT  IPSET_ENGINE_PF
+#else
+	#define IPSET_ENGINE_IPTABLES (0)
+	#define IPSET_ENGINE_NFTABLES (1)
+	#define IPSET_ENGINE_DEFAULT  IPSET_ENGINE_IPTABLES
+#endif
+
+static int parse_ipset_engine(const char *enginename)
+{
+	int engine;
+
+	if (!(enginename && enginename[0]))
+		engine = IPSET_ENGINE_DEFAULT;
+	else if (!strcmp(enginename, "default"))
+		engine = IPSET_ENGINE_DEFAULT;
+#ifdef HAVE_NET_PFVAR_H
+	else if (!strcmp(protoname, "pf"))
+		engine = IPSET_ENGINE_PF;
+#else
+	else if (!strcmp(enginename, "iptables"))
+		engine = IPSET_ENGINE_IPTABLES;
+	else if (!strcmp(enginename, "nftables"))
+		engine = IPSET_ENGINE_NFTABLES;
+#endif
+	else
+		engine = -1;
+	return engine;
+}
 
 static void
 ipset_add_rrset_data(struct ipset_env *ie,
@@ -205,7 +365,15 @@ ipset_add_rrset_data(struct ipset_env *ie,
 					snprintf(ip, sizeof(ip), "(inet_ntop_error)");
 				verbose(VERB_QUERY, "ipset: add %s to %s for %s", ip, setname, dname);
 			}
-			ret = add_to_ipset((filter_dev)ie->dev, setname, rr_data + 2, af);
+			switch (ie->engine) {
+				default:
+				case IPSET_ENGINE_DEFAULT:
+					ret = add_to_ipset((filter_dev)ie->dev, setname, rr_data + 2, af);
+				break;
+				case IPSET_ENGINE_NFTABLES:
+					ret = add_to_nftset((filter_dev)ie->dev, ie, rr_data + 2, af);
+				break;
+			}
 			if (ret < 0) {
 				log_err("ipset: could not add %s into %s", dname, setname);
 
@@ -376,6 +544,29 @@ int ipset_init(struct module_env* env, int id) {
 	ipset_env->v4_enabled = !ipset_env->name_v4 || (strlen(ipset_env->name_v4) == 0) ? 0 : 1;
 	ipset_env->v6_enabled = !ipset_env->name_v6 || (strlen(ipset_env->name_v6) == 0) ? 0 : 1;
 
+	ipset_env->table_v4 = env->cfg->ipset_table_v4;
+	ipset_env->table_v6 = env->cfg->ipset_table_v6;
+	ipset_env->engine = parse_ipset_engine(env->cfg->ipset_engine);
+	if (ipset_env->engine < 0) {
+		log_err("ipset: wrong engine %s specified", env->cfg->ipset_engine);
+		return 0;
+	}
+
+	if (ipset_env->engine == IPSET_ENGINE_NFTABLES) {
+		ipset_env->v4_proto = parse_nft_proto(env->cfg->ipset_family_v4);
+		ipset_env->v6_proto = parse_nft_proto(env->cfg->ipset_family_v6);
+
+		if (ipset_env->v4_proto == NFPROTO_UNSPEC || ipset_env->v6_proto == NFPROTO_UNSPEC) {
+			log_err("ipset: wrong proto specified");
+			return 0;
+		}
+
+		if (ipset_env->v4_enabled)
+			ipset_env->v4_enabled = (ipset_env->table_v4 && ipset_env->table_v4[0]) ? 1 : 0;
+		if (ipset_env->v6_enabled)
+			ipset_env->v6_enabled = (ipset_env->table_v6 && ipset_env->table_v6[0]) ? 1 : 0;
+	}
+
 	if ((ipset_env->v4_enabled < 1) && (ipset_env->v6_enabled < 1)) {
 		log_err("ipset: set name no configuration?");
 		return 0;
@@ -487,7 +678,7 @@ size_t ipset_get_mem(struct module_env *env, int id) {
 }
 
 /**
- * The ipset function block 
+ * The ipset function block
  */
 static struct module_func_block ipset_block = {
 	"ipset",
