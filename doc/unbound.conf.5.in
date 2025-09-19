@@ -1969,7 +1969,7 @@ Default:  \(dq3 2 1 0 0\(dq
 .B harden\-short\-bufsize: \fI<yes or no>\fP 
 Very small EDNS buffer sizes from queries are ignored.
 .sp
-Default: yes (as described in the standard)
+Default: yes (per \fI\%RFC 6891\fP)
 .UNINDENT
 .INDENT 0.0
 .TP
@@ -2599,6 +2599,12 @@ TTL value to use when replying with expired data.
 If
 \fI\%serve\-expired\-client\-timeout\fP
 is also used then it is RECOMMENDED to use 30 as the value (\fI\%RFC 8767\fP).
+.sp
+This value is capped by the original TTL of the record.
+This means that records with higher original TTL than this value will use
+this value for expired replies.
+Records with lower original TTL than this value will use their original TTL
+for expired replies.
 .sp
 Default: 30
 .UNINDENT

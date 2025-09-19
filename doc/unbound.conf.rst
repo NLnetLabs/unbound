@@ -1744,7 +1744,7 @@ These options are part of the **server:** clause.
 @@UAHL@unbound.conf@harden-short-bufsize@@: *<yes or no>*
     Very small EDNS buffer sizes from queries are ignored.
 
-    Default: yes (as described in the standard)
+    Default: yes (per :rfc:`6891`)
 
 
 @@UAHL@unbound.conf@harden-large-queries@@: *<yes or no>*
