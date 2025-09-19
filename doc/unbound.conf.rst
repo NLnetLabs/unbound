@@ -2306,6 +2306,12 @@ These options are part of the **server:** clause.
     :ref:`serve-expired-client-timeout<unbound.conf.serve-expired-client-timeout>`
     is also used then it is RECOMMENDED to use 30 as the value (:rfc:`8767`).
 
+    This value is capped by the original TTL of the record.
+    This means that records with higher original TTL than this value will use
+    this value for expired replies.
+    Records with lower original TTL than this value will use their original TTL
+    for expired replies.
+
     Default: 30
 
 

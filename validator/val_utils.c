@@ -1310,6 +1310,7 @@ val_find_DS(struct module_env* env, uint8_t* nm, size_t nmlen, uint16_t c,
 		/* DS rrset exists. Return it to the validator immediately*/
 		struct ub_packed_rrset_key* copy = packed_rrset_copy_region(
 			rrset, region, *env->now);
+		struct packed_rrset_data* d = copy->entry.data;
 		lock_rw_unlock(&rrset->entry.lock);
 		if(!copy)
 			return NULL;
@@ -1319,6 +1320,7 @@ val_find_DS(struct module_env* env, uint8_t* nm, size_t nmlen, uint16_t c,
 		msg->rep->rrsets[0] = copy;
 		msg->rep->rrset_count++;
 		msg->rep->an_numrrsets++;
+		UPDATE_TTL_FROM_RRSET(msg->rep->ttl, d->ttl);
 		return msg;
 	}
 	/* lookup in rrset and negative cache for NSEC/NSEC3 */

@@ -752,6 +752,7 @@ server:
 	# serve-expired-ttl-reset: no
 	#
 	# TTL value to use when replying with expired data.
+	# Capped by the original TTL of the record.
 	# serve-expired-reply-ttl: 30
 	#
 	# Time in milliseconds before replying to the client with expired data.

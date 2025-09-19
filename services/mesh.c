@@ -348,7 +348,7 @@ mesh_serve_expired_lookup(struct module_qstate* qstate,
 
 	key = (struct msgreply_entry*)e->key;
 	data = (struct reply_info*)e->data;
-	if(data->ttl < timenow) *is_expired = 1;
+	if(TTL_IS_EXPIRED(data->ttl, timenow)) *is_expired = 1;
 	msg = tomsg(qstate->env, &key->key, data, qstate->region, timenow,
 		qstate->env->cfg->serve_expired, qstate->env->scratch);
 	if(!msg)
