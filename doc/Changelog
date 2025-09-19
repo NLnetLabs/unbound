@@ -3,6 +3,16 @@
 
 19 September 2025: Yorgos
 	- Update README.man with clearer text.
+	- Merge #1337: 0 TTL cached replies and some TTL behavior changes.
+	- TTL change: Cached records that reach TTL 0 are expired.
+	- TTL change: TTL 0 upstream answers are no longer cached by
+	   cachedb, as they should.
+	- TTL change: 'serve-expired-reply-ttl' is now capped by the original
+	  TTL value of the record to try and make some sense when replying
+	  with expired records.
+	- TTL change: TTL decoding was updated to adhere to RFC8767 section 4
+	  where a 'set high-order bit' means the value is positive instead of
+	  0.
 
 18 September 2025: Wouter
 	- Tag for 1.24.0 release. Includes the fixes below after rc1.
