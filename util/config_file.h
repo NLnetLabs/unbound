@@ -466,7 +466,7 @@ struct config_file {
 	struct config_strlist* local_zones_nodefault;
 #ifdef USE_IPSET
 	/** local zones ipset list */
-	struct config_strlist* local_zones_ipset;
+	struct config_str2list* local_zones_ipset;
 #endif
 	/** do not add any default local zone */
 	int local_zones_disable_default;
@@ -893,7 +893,7 @@ struct config_view {
 	struct config_strlist* local_zones_nodefault;
 #ifdef USE_IPSET
 	/** local zones ipset list */
-	struct config_strlist* local_zones_ipset;
+	struct config_str2list* local_zones_ipset;
 #endif
 	/** Fallback to global local_zones when there is no match in the view
 	 * view specific tree. 1 for yes, 0 for no */

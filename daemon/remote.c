@@ -5153,7 +5153,7 @@ getmem_config_view(struct config_view* p)
 			+ getmem_config_strlist(s->local_data)
 			+ getmem_config_strlist(s->local_zones_nodefault)
 #ifdef USE_IPSET
-			+ getmem_config_strlist(s->local_zones_ipset)
+			+ getmem_config_str2list(s->local_zones_ipset)
 #endif
 			+ getmem_config_str2list(s->respip_actions)
 			+ getmem_config_str2list(s->respip_data);
@@ -5217,7 +5217,7 @@ config_file_getmem(struct config_file* cfg)
 	m += getmem_config_str2list(cfg->local_zones);
 	m += getmem_config_strlist(cfg->local_zones_nodefault);
 #ifdef USE_IPSET
-	m += getmem_config_strlist(cfg->local_zones_ipset);
+	m += getmem_config_str2list(cfg->local_zones_ipset);
 #endif
 	m += getmem_config_strlist(cfg->local_data);
 	m += getmem_config_str3list(cfg->local_zone_overrides);
