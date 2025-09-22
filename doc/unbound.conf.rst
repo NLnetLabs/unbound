@@ -1103,6 +1103,30 @@ These options are part of the **server:** clause.
     Default: ""
 
 
+@@UAHL@unbound.conf@tls-use-sni@@: *<yes or no>*
+    Enable or disable sending the SNI extension on TLS connections.
+
+    .. note:: Changing the value requires a reload.
+
+    Default: yes
+
+
+@@UAHL@unbound.conf@tls-use-system-policy-versions@@: *<yes or no>*
+    Enable or disable general-puspose version-flexible TLS server configuration
+    when serving TLS.
+    This will allow the whole list of available TLS versions provided by the
+    crypto library, which may have been further restricted by the system's
+    crypto policy.
+
+    By default Unbound only uses the latest available TLS version.
+
+    .. caution:: Use only if you want to support legacy TLS client connections.
+
+    .. note:: Changing the value requires a reload.
+
+    Default: no
+
+
 @@UAHL@unbound.conf@pad-responses@@: *<yes or no>*
     If enabled, TLS serviced queries that contained an EDNS Padding option will
     cause responses padded to the closest multiple of the size specified in
@@ -1130,14 +1154,6 @@ These options are part of the **server:** clause.
     The block size with which to pad queries sent over TLS upstreams.
 
     Default: 128
-
-
-@@UAHL@unbound.conf@tls-use-sni@@: *<yes or no>*
-    Enable or disable sending the SNI extension on TLS connections.
-
-    .. note:: Changing the value requires a reload.
-
-    Default: yes
 
 
 @@UAHL@unbound.conf@https-port@@: *<number>*

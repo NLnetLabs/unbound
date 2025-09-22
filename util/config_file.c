@@ -129,6 +129,7 @@ config_create(void)
 	cfg->tls_cert_bundle = NULL;
 	cfg->tls_win_cert = 0;
 	cfg->tls_use_sni = 1;
+	cfg->tls_use_system_policy_versions = 0;
 	cfg->https_port = UNBOUND_DNS_OVER_HTTPS_PORT;
 	if(!(cfg->http_endpoint = strdup("/dns-query"))) goto error_exit;
 	cfg->http_max_streams = 100;
@@ -628,6 +629,7 @@ int config_set_option(struct config_file* cfg, const char* opt,
 	else S_STR("tls-ciphers:", tls_ciphers)
 	else S_STR("tls-ciphersuites:", tls_ciphersuites)
 	else S_YNO("tls-use-sni:", tls_use_sni)
+	else S_YNO("tls-use-system-policy-versions:", tls_use_system_policy_versions)
 	else S_NUMBER_NONZERO("https-port:", https_port)
 	else S_STR("http-endpoint:", http_endpoint)
 	else S_NUMBER_NONZERO("http-max-streams:", http_max_streams)
@@ -1179,6 +1181,7 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_STR(opt, "tls-ciphers", tls_ciphers)
 	else O_STR(opt, "tls-ciphersuites", tls_ciphersuites)
 	else O_YNO(opt, "tls-use-sni", tls_use_sni)
+	else O_YNO(opt, "tls-use-system-policy-versions:", tls_use_system_policy_versions)
 	else O_DEC(opt, "https-port", https_port)
 	else O_STR(opt, "http-endpoint", http_endpoint)
 	else O_UNS(opt, "http-max-streams", http_max_streams)
