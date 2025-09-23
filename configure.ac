@@ -634,19 +634,19 @@ AC_ARG_ENABLE(alloc-nonregional, AS_HELP_STRING([--enable-alloc-nonregional],[ e
 if test x_$enable_alloc_nonregional = x_yes; then
 	AC_DEFINE(UNBOUND_ALLOC_NONREGIONAL, 1, [use malloc not regions, for debug use])
 fi
-if test x_$enable_alloc_checks = x_yes; then
+AS_IF([test x_$enable_alloc_checks = x_yes],[
 	AC_DEFINE(UNBOUND_ALLOC_STATS, 1, [use statistics for allocs and frees, for debug use])
 	SLDNS_ALLOCCHECK_EXTRA_OBJ="alloc.lo log.lo"
 	AC_SUBST(SLDNS_ALLOCCHECK_EXTRA_OBJ)
 	ASYNCLOOK_ALLOCCHECK_EXTRA_OBJ="alloc.lo"
 	AC_SUBST(ASYNCLOOK_ALLOCCHECK_EXTRA_OBJ)
-else
-	if test x_$enable_alloc_lite = x_yes; then
+],[
+	AS_IF([test x_$enable_alloc_lite = x_yes],[
 		AC_DEFINE(UNBOUND_ALLOC_LITE, 1, [use to enable lightweight alloc assertions, for debug use])
-	else
+	],[
 		ACX_FUNC_MALLOC([unbound])
-	fi
-fi
+	])
+])
 
 # check windows threads (we use them, not pthreads, on windows).
 if test "$on_mingw" = "yes"; then

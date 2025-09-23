@@ -1190,8 +1190,9 @@ dnl detect malloc and provide malloc compat prototype.
 dnl $1: unique name for compat code
 AC_DEFUN([ACX_FUNC_MALLOC],
 [
-	AC_MSG_CHECKING([for GNU libc compatible malloc])
-	AC_RUN_IFELSE([AC_LANG_PROGRAM(
+	AC_CACHE_CHECK([for GNU libc compatible malloc],[ac_cv_func_malloc_0_nonnull],
+	[
+		AC_RUN_IFELSE([AC_LANG_PROGRAM(
 [[#if defined STDC_HEADERS || defined HAVE_STDLIB_H
 #include <stdlib.h>
 #else
@@ -1199,14 +1200,16 @@ char *malloc ();
 #endif
 ]], [ if(malloc(0) != 0) return 1;])
 ],
-	[AC_MSG_RESULT([no])
-	AC_LIBOBJ(malloc)
-	AC_DEFINE_UNQUOTED([malloc], [rpl_malloc_$1], [Define if  replacement function should be used.])] ,
-	[AC_MSG_RESULT([yes])
-	AC_DEFINE([HAVE_MALLOC], 1, [If have GNU libc compatible malloc])],
-	[AC_MSG_RESULT([no (crosscompile)])
-	AC_LIBOBJ(malloc)
-	AC_DEFINE_UNQUOTED([malloc], [rpl_malloc_$1], [Define if  replacement function should be used.])] )
+		[ac_cv_func_malloc_0_nonnull=no],
+		[ac_cv_func_malloc_0_nonnull=yes],
+		[ac_cv_func_malloc_0_nonnull="no (crosscompile)"])
+	])
+	AS_IF([test "$ac_cv_func_malloc_0_nonnull" = yes],
+		[AC_DEFINE([HAVE_MALLOC], 1, [If have GNU libc compatible malloc])],
+	[
+		AC_LIBOBJ(malloc)
+		AC_DEFINE_UNQUOTED([malloc], [rpl_malloc_$1], [Define if  replacement function should be used.])
+	])
 ])
 
 dnl Define fallback for fseeko and ftello if needed.
