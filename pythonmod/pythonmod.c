@@ -454,6 +454,7 @@ int pythonmod_init(struct module_env* env, int id)
    if(PyDict_SetItemString(pe->data, "script", fname) < 0) {
 	log_err("pythonmod: could not add item to dictionary");
 	Py_XDECREF(fname);
+	fclose(script_py);
 	goto python_init_fail;
    }
    Py_XDECREF(fname);
@@ -462,6 +463,7 @@ int pythonmod_init(struct module_env* env, int id)
 	log_err("pythonmod: could not add mod_env object");
 	Py_XDECREF(pe->data);  /* 2 times, here and on python_init_fail; */
 	                       /* on failure the reference is not stolen */
+	fclose(script_py);
 	goto python_init_fail;
    }
 
