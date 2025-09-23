@@ -3,6 +3,8 @@
 	  pythonmod_init.
 	- For #1352, align with the current Python<3 code.
 	- Merge #1350 from Maryse47: unbound.service.in: allow CAP_NET_ADMIN.
+	- For #1350, same CAP_NET_ADMIN change for unbound_portable.service.in
+	  as well.
 
 19 September 2025: Wouter
 	- Fix to remove configure~ from release tarballs.
