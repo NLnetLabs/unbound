@@ -1,6 +1,7 @@
 23 September 2025: Yorgos
 	- Merge #1352 from Petr Vaganov: pythonmod: fix HANDLE_LEAK on
 	  pythonmod_init.
+	- For #1352, align with the current Python<3 code.
 
 19 September 2025: Wouter
 	- Fix to remove configure~ from release tarballs.
