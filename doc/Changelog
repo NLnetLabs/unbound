@@ -2,6 +2,7 @@
 	- Merge #1352 from Petr Vaganov: pythonmod: fix HANDLE_LEAK on
 	  pythonmod_init.
 	- For #1352, align with the current Python<3 code.
+	- Merge #1350 from Maryse47: unbound.service.in: allow CAP_NET_ADMIN.
 
 19 September 2025: Wouter
 	- Fix to remove configure~ from release tarballs.
