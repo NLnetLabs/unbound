@@ -1152,8 +1152,7 @@ mesh_detect_cycle_found(struct module_qstate* qstate, struct mesh_state* dep_m)
 {
 	struct mesh_state* cyc_m = qstate->mesh_info;
 	size_t counter = 0;
-	if(!dep_m)
-		return 0;
+	log_assert(dep_m);
 	if(dep_m == cyc_m || find_in_subsub(dep_m, cyc_m, &counter)) {
 		if(counter > MESH_MAX_SUBSUB)
 			return 2;
@@ -1197,10 +1196,6 @@ int mesh_add_sub(struct module_qstate* qstate, struct query_info* qinfo,
 	struct mesh_area* mesh = qstate->env->mesh;
 	*sub = mesh_area_find(mesh, NULL, qinfo, qflags,
 		prime, valrec);
-	if(mesh_detect_cycle_found(qstate, *sub)) {
-		verbose(VERB_ALGO, "attach failed, cycle detected");
-		return 0;
-	}
 	if(!*sub) {
 #ifdef UNBOUND_DEBUG
 		struct rbnode_type* n;
@@ -1230,8 +1225,13 @@ int mesh_add_sub(struct module_qstate* qstate, struct query_info* qinfo,
 		rbtree_insert(&mesh->run, &(*sub)->run_node);
 		log_assert(n != NULL);
 		*newq = &(*sub)->s;
-	} else
+	} else {
 		*newq = NULL;
+		if(mesh_detect_cycle_found(qstate, *sub)) {
+			verbose(VERB_ALGO, "attach failed, cycle detected");
+			return 0;
+		}
+	}
 	return 1;
 }
 
@@ -2297,7 +2297,7 @@ mesh_detect_cycle(struct module_qstate* qstate, struct query_info* qinfo,
 	struct mesh_area* mesh = qstate->env->mesh;
 	struct mesh_state* dep_m = NULL;
 	dep_m = mesh_area_find(mesh, NULL, qinfo, flags, prime, valrec);
-	return mesh_detect_cycle_found(qstate, dep_m);
+	return dep_m?mesh_detect_cycle_found(qstate, dep_m):0;
 }
 
 void mesh_list_insert(struct mesh_state* m, struct mesh_state** fp,

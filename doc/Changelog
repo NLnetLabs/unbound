@@ -1,3 +1,7 @@
+24 September 2025: Yorgos
+	- Avoid calling mesh_detect_cycle_found() when there is no mesh state
+	  to begin with.
+
 23 September 2025: Yorgos
 	- Merge #1352 from Petr Vaganov: pythonmod: fix HANDLE_LEAK on
 	  pythonmod_init.
