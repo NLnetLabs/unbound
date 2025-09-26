@@ -1,3 +1,7 @@
+26 September 2025: Yorgos
+	- Test for nonstring attribute in configure and add
+	  nonstring attribute annotations.
+
 24 September 2025: Yorgos
 	- Avoid calling mesh_detect_cycle_found() when there is no mesh state
 	  to begin with.

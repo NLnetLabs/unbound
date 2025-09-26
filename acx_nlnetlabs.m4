@@ -490,7 +490,7 @@ AC_DEFUN([AHX_CONFIG_FORMAT_ATTRIBUTE],
 ])
 
 dnl Check how to mark function arguments as unused.
-dnl result in HAVE_ATTR_UNUSED.  
+dnl result in HAVE_ATTR_UNUSED.
 dnl Make sure you include AHX_CONFIG_UNUSED_ATTRIBUTE also.
 AC_DEFUN([ACX_CHECK_UNUSED_ATTRIBUTE],
 [AC_REQUIRE([AC_PROG_CC])
@@ -522,6 +522,45 @@ AC_DEFUN([AHX_CONFIG_UNUSED_ATTRIBUTE],
 AC_MSG_RESULT($ac_cv_c_unused_attribute)
 if test $ac_cv_c_unused_attribute = yes; then
   AC_DEFINE(HAVE_ATTR_UNUSED, 1, [Whether the C compiler accepts the "unused" attribute])
+fi
+])dnl
+
+dnl Check how to mark function arguments as nonstring.
+dnl result in HAVE_ATTR_NONSTRING.
+dnl Make sure you include AHX_CONFIG_NONSTRING_ATTRIBUTE also.
+AC_DEFUN([ACX_CHECK_NONSTRING_ATTRIBUTE],
+[AC_REQUIRE([AC_PROG_CC])
+AC_MSG_CHECKING(whether the C compiler (${CC-cc}) accepts the "nonstring" attribute)
+AC_CACHE_VAL(ac_cv_c_nonstring_attribute,
+[ac_cv_c_nonstring_attribute=no
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <stdio.h>
+struct test {
+    char __attribute__((nonstring)) s[1];
+};
+]], [[
+   struct test t = { "1" };
+   (void) t;
+]])],[ac_cv_c_nonstring_attribute="yes"],[ac_cv_c_nonstring_attribute="no"])
+])
+
+dnl Setup ATTR_NONSTRING config.h parts.
+dnl make sure you call ACX_CHECK_NONSTRING_ATTRIBUTE also.
+AC_DEFUN([AHX_CONFIG_NONSTRING_ATTRIBUTE],
+[
+#if defined(DOXYGEN)
+#  define ATTR_NONSTRING(x)  x
+#elif defined(__cplusplus)
+#  define ATTR_NONSTRING(x)  __attribute__((nonstring)) x
+#elif defined(HAVE_ATTR_NONSTRING)
+#  define ATTR_NONSTRING(x)  __attribute__((nonstring)) x
+#else /* !HAVE_ATTR_NONSTRING */
+#  define ATTR_NONSTRING(x)  x
+#endif /* !HAVE_ATTR_NONSTRING */
+])
+
+AC_MSG_RESULT($ac_cv_c_nonstring_attribute)
+if test $ac_cv_c_nonstring_attribute = yes; then
+  AC_DEFINE(HAVE_ATTR_NONSTRING, 1, [Whether the C compiler accepts the "nonstring" attribute])
 fi
 ])dnl
 
