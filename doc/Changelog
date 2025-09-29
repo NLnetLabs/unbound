@@ -8,6 +8,8 @@
 	- Rebuild configure script from its sources.
 	- Fix #1353: auth-zone can not use empty label for $ORIGIN when
 	  http download.
+	- Fix #1344: module conf 'respip dns64 validator cachedb iterator'
+	  is not known to work.
 
 29 September 2025: Yorgos
 	- Merge #1349: Fix #1346: [FR] Please allow back TLS 1.2.
