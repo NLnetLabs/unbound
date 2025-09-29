@@ -9,6 +9,7 @@
 
 29 September 2025: Yorgos
 	- Merge #1349: Fix #1346: [FR] Please allow back TLS 1.2.
+	- Merge #1351: ac_cv_func_malloc_0_nonnull for malloc(0) check.
 
 26 September 2025: Yorgos
 	- Test for nonstring attribute in configure and add
