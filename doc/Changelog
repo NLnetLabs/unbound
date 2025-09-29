@@ -1,3 +1,6 @@
+29 September 2025: Wouter
+	- Rebuild configure script from its sources.
+
 26 September 2025: Yorgos
 	- Test for nonstring attribute in configure and add
 	  nonstring attribute annotations.
