@@ -2,7 +2,9 @@
 # Copyright 2009, Wouter Wijngaards, NLnet Labs.   
 # BSD licensed.
 #
-# Version 49
+# Version 50
+# 2025-09-29 add ac_cv_func_malloc_0_nonnull as a cache value for the malloc(0)
+#            check by ACX_FUNC_MALLOC.
 # 2025-09-29 add ACX_CHECK_NONSTRING_ATTRIBUTE, AHX_CONFIG_NONSTRING_ATTRIBUTE.
 # 2024-01-16 fix to add -l:libssp.a to -lcrypto link check.
 #	     and check for getaddrinfo with only header.
