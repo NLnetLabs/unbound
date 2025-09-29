@@ -6,6 +6,8 @@
 	- Neaten up the change in acx_nlnetlabs.m4 to version 49.
 	- Fix fr_atomic_copy_cfg.
 	- Rebuild configure script from its sources.
+	- Fix #1353: auth-zone can not use empty label for $ORIGIN when
+	  http download.
 
 29 September 2025: Yorgos
 	- Merge #1349: Fix #1346: [FR] Please allow back TLS 1.2.

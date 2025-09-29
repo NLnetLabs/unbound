@@ -4556,6 +4556,23 @@ http_parse_ttl(sldns_buffer* buf, struct sldns_file_parse_state* pstate)
 	return 0;
 }
 
+/** remove newlines from collated line */
+static void
+chunkline_newline_removal(sldns_buffer* buf)
+{
+	size_t i, end=sldns_buffer_limit(buf);
+	for(i=0; i<end; i++) {
+		char c = (char)sldns_buffer_read_u8_at(buf, i);
+		if(c == '\n' && i==end-1) {
+			sldns_buffer_write_u8_at(buf, i, 0);
+			sldns_buffer_set_limit(buf, end-1);
+			return;
+		}
+		if(c == '\n')
+			sldns_buffer_write_u8_at(buf, i, (uint8_t)' ');
+	}
+}
+
 /** find noncomment RR line in chunks, collates lines if ( ) format */
 static int
 chunkline_non_comment_RR(struct auth_chunk** chunk, size_t* chunk_pos,
@@ -4563,6 +4580,7 @@ chunkline_non_comment_RR(struct auth_chunk** chunk, size_t* chunk_pos,
 {
 	int ret;
 	while(chunkline_get_line_collated(chunk, chunk_pos, buf)) {
+		chunkline_newline_removal(buf);
 		if(chunkline_is_comment_line_or_empty(buf)) {
 			/* a comment, go to next line */
 			continue;
@@ -4636,23 +4654,6 @@ chunklist_sum(struct auth_chunk* list)
 		s += p->len;
 	}
 	return s;
-}
-
-/** remove newlines from collated line */
-static void
-chunkline_newline_removal(sldns_buffer* buf)
-{
-	size_t i, end=sldns_buffer_limit(buf);
-	for(i=0; i<end; i++) {
-		char c = (char)sldns_buffer_read_u8_at(buf, i);
-		if(c == '\n' && i==end-1) {
-			sldns_buffer_write_u8_at(buf, i, 0);
-			sldns_buffer_set_limit(buf, end-1);
-			return;
-		}
-		if(c == '\n')
-			sldns_buffer_write_u8_at(buf, i, (uint8_t)' ');
-	}
 }
 
 /** for http download, parse and add RR to zone */
