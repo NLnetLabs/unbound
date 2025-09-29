@@ -1181,7 +1181,7 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_STR(opt, "tls-ciphers", tls_ciphers)
 	else O_STR(opt, "tls-ciphersuites", tls_ciphersuites)
 	else O_YNO(opt, "tls-use-sni", tls_use_sni)
-	else O_YNO(opt, "tls-use-system-policy-versions:", tls_use_system_policy_versions)
+	else O_YNO(opt, "tls-use-system-policy-versions", tls_use_system_policy_versions)
 	else O_DEC(opt, "https-port", https_port)
 	else O_STR(opt, "http-endpoint", http_endpoint)
 	else O_UNS(opt, "http-max-streams", http_max_streams)

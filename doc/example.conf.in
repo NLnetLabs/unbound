@@ -944,7 +944,7 @@ server:
 	# Changing the value requires a reload.
 	# tls-use-sni: yes
 
-	# Allow general-puspose version-flexible TLS server configuration that
+	# Allow general-purpose version-flexible TLS server configuration that
 	# may be further restricted by the system's policy.
 	# Use only if you want to support legacy TLS client connections.
 	# Default is no and Unbound will only use the latest available TLS
