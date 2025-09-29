@@ -5,6 +5,7 @@
 	  in the string correctly. Thanks to Jan Komissar.
 	- Neaten up the change in acx_nlnetlabs.m4 to version 49.
 	- Fix fr_atomic_copy_cfg.
+	- Rebuild configure script from its sources.
 
 29 September 2025: Yorgos
 	- Merge #1349: Fix #1346: [FR] Please allow back TLS 1.2.
