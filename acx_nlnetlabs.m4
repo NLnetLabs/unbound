@@ -2,7 +2,8 @@
 # Copyright 2009, Wouter Wijngaards, NLnet Labs.   
 # BSD licensed.
 #
-# Version 48
+# Version 49
+# 2025-09-29 add ACX_CHECK_NONSTRING_ATTRIBUTE, AHX_CONFIG_NONSTRING_ATTRIBUTE.
 # 2024-01-16 fix to add -l:libssp.a to -lcrypto link check.
 #	     and check for getaddrinfo with only header.
 # 2024-01-15 fix to add crypt32 to -lcrypto link check when checking for gdi32.
@@ -71,6 +72,7 @@
 # ACX_DEPFLAG			- find cc dependency flags.
 # ACX_DETERMINE_EXT_FLAGS_UNBOUND - find out which flags enable BSD and POSIX.
 # ACX_CHECK_FORMAT_ATTRIBUTE	- find cc printf format syntax.
+# ACX_CHECK_NONSTRING_ATTRIBUTE - find cc nonstring attribute syntax.
 # ACX_CHECK_UNUSED_ATTRIBUTE	- find cc variable unused syntax.
 # ACX_CHECK_FLTO		- see if cc supports -flto and use it if so.
 # ACX_LIBTOOL_C_ONLY		- create libtool for C only, improved.
@@ -92,6 +94,7 @@
 # ACX_FUNC_IOCTLSOCKET		- find ioctlsocket, portably.
 # ACX_FUNC_MALLOC		- check malloc, define replacement .
 # AHX_CONFIG_FORMAT_ATTRIBUTE	- config.h text for format.
+# AHX_CONFIG_NONSTRING_ATTRIBUTE - config.h text for nonstring.
 # AHX_CONFIG_UNUSED_ATTRIBUTE	- config.h text for unused.
 # AHX_CONFIG_FSEEKO		- define fseeko, ftello fallback.
 # AHX_CONFIG_RAND_MAX		- define RAND_MAX if needed.
@@ -490,7 +493,7 @@ AC_DEFUN([AHX_CONFIG_FORMAT_ATTRIBUTE],
 ])
 
 dnl Check how to mark function arguments as unused.
-dnl result in HAVE_ATTR_UNUSED.  
+dnl result in HAVE_ATTR_UNUSED.
 dnl Make sure you include AHX_CONFIG_UNUSED_ATTRIBUTE also.
 AC_DEFUN([ACX_CHECK_UNUSED_ATTRIBUTE],
 [AC_REQUIRE([AC_PROG_CC])
@@ -522,6 +525,45 @@ AC_DEFUN([AHX_CONFIG_UNUSED_ATTRIBUTE],
 AC_MSG_RESULT($ac_cv_c_unused_attribute)
 if test $ac_cv_c_unused_attribute = yes; then
   AC_DEFINE(HAVE_ATTR_UNUSED, 1, [Whether the C compiler accepts the "unused" attribute])
+fi
+])dnl
+
+dnl Check how to mark function arguments as nonstring.
+dnl result in HAVE_ATTR_NONSTRING.
+dnl Make sure you include AHX_CONFIG_NONSTRING_ATTRIBUTE also.
+AC_DEFUN([ACX_CHECK_NONSTRING_ATTRIBUTE],
+[AC_REQUIRE([AC_PROG_CC])
+AC_MSG_CHECKING(whether the C compiler (${CC-cc}) accepts the "nonstring" attribute)
+AC_CACHE_VAL(ac_cv_c_nonstring_attribute,
+[ac_cv_c_nonstring_attribute=no
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <stdio.h>
+struct test {
+    char __attribute__((nonstring)) s[1];
+};
+]], [[
+   struct test t = { "1" };
+   (void) t;
+]])],[ac_cv_c_nonstring_attribute="yes"],[ac_cv_c_nonstring_attribute="no"])
+])
+
+dnl Setup ATTR_NONSTRING config.h parts.
+dnl make sure you call ACX_CHECK_NONSTRING_ATTRIBUTE also.
+AC_DEFUN([AHX_CONFIG_NONSTRING_ATTRIBUTE],
+[
+#if defined(DOXYGEN)
+#  define ATTR_NONSTRING(x)  x
+#elif defined(__cplusplus)
+#  define ATTR_NONSTRING(x)  __attribute__((nonstring)) x
+#elif defined(HAVE_ATTR_NONSTRING)
+#  define ATTR_NONSTRING(x)  __attribute__((nonstring)) x
+#else /* !HAVE_ATTR_NONSTRING */
+#  define ATTR_NONSTRING(x)  x
+#endif /* !HAVE_ATTR_NONSTRING */
+])
+
+AC_MSG_RESULT($ac_cv_c_nonstring_attribute)
+if test $ac_cv_c_nonstring_attribute = yes; then
+  AC_DEFINE(HAVE_ATTR_NONSTRING, 1, [Whether the C compiler accepts the "nonstring" attribute])
 fi
 ])dnl
 

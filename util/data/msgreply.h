@@ -577,7 +577,7 @@ void log_query_info(enum verbosity_value v, const char* str,
 	struct query_info* qinf);
 
 /**
- * Append edns option to edns option list
+ * Append edns option to edns option list.
  * @param list: the edns option list to append the edns option to.
  * @param code: the edns option's code.
  * @param len: the edns option's length.
@@ -589,17 +589,20 @@ int edns_opt_list_append(struct edns_option** list, uint16_t code, size_t len,
         uint8_t* data, struct regional* region);
 
 /**
- * Append edns EDE option to edns options list
+ * Append edns EDE option to edns options list.
+ * We need ATTR_NONSTRING because we are trimming the trailing \0 of static
+ * string (TXT) when assigning to ede.text; it silences compiler nonstring
+ * warnings.
  * @param LIST: the edns option list to append the edns option to.
  * @param REGION: region to allocate the new edns option.
  * @param CODE: the EDE code.
- * @param TXT: Additional text for the option
+ * @param TXT: Additional text for the option.
  */
 #define EDNS_OPT_LIST_APPEND_EDE(LIST, REGION, CODE, TXT) 		\
 	do {								\
 		struct {						\
 			uint16_t code;					\
-			char text[sizeof(TXT) - 1];			\
+			char ATTR_NONSTRING(text[sizeof(TXT) - 1]) ;	\
 		} ede = { htons(CODE), TXT };				\
                 verbose(VERB_ALGO, "attached EDE code: %d with"		\
                         " message: '%s'", CODE, TXT);			\

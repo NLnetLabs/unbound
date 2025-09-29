@@ -1,3 +1,30 @@
+29 September 2025: Wouter
+	- Rebuild configure script from its sources.
+	- Fix modstack_call_init to use the original string when it has
+	  changed, to call modstack_config with. And skip the changed name
+	  in the string correctly. Thanks to Jan Komissar.
+	- Neaten up the change in acx_nlnetlabs.m4 to version 49.
+	- Fix fr_atomic_copy_cfg.
+
+29 September 2025: Yorgos
+	- Merge #1349: Fix #1346: [FR] Please allow back TLS 1.2.
+
+26 September 2025: Yorgos
+	- Test for nonstring attribute in configure and add
+	  nonstring attribute annotations.
+
+24 September 2025: Yorgos
+	- Avoid calling mesh_detect_cycle_found() when there is no mesh state
+	  to begin with.
+
+23 September 2025: Yorgos
+	- Merge #1352 from Petr Vaganov: pythonmod: fix HANDLE_LEAK on
+	  pythonmod_init.
+	- For #1352, align with the current Python<3 code.
+	- Merge #1350 from Maryse47: unbound.service.in: allow CAP_NET_ADMIN.
+	- For #1350, same CAP_NET_ADMIN change for unbound_portable.service.in
+	  as well.
+
 19 September 2025: Wouter
 	- Fix to remove configure~ from release tarballs.
 
