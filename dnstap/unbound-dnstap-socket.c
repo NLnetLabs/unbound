@@ -347,7 +347,7 @@ static struct tap_socket* tap_socket_new_tlsaccept(char* ip,
 	s->ev_cb = ev_cb;
 	s->data = data;
 	s->sslctx = listen_sslctx_create(server_key, server_cert, verifypem,
-		NULL, NULL, 0, 0, 0);
+		NULL, NULL, 0, 0, 0, 0);
 	if(!s->sslctx) {
 		log_err("could not create ssl context");
 		free(s->ip);

@@ -1218,6 +1218,47 @@ Default: \(dq\(dq
 .UNINDENT
 .INDENT 0.0
 .TP
+.B tls\-use\-sni: \fI<yes or no>\fP 
+Enable or disable sending the SNI extension on TLS connections.
+.sp
+\fBNOTE:\fP
+.INDENT 7.0
+.INDENT 3.5
+Changing the value requires a reload.
+.UNINDENT
+.UNINDENT
+.sp
+Default: yes
+.UNINDENT
+.INDENT 0.0
+.TP
+.B tls\-use\-system\-policy\-versions: \fI<yes or no>\fP 
+Enable or disable general\-puspose version\-flexible TLS server configuration
+when serving TLS.
+This will allow the whole list of available TLS versions provided by the
+crypto library, which may have been further restricted by the system\(aqs
+crypto policy.
+.sp
+By default Unbound only uses the latest available TLS version.
+.sp
+\fBCAUTION:\fP
+.INDENT 7.0
+.INDENT 3.5
+Use only if you want to support legacy TLS client connections.
+.UNINDENT
+.UNINDENT
+.sp
+\fBNOTE:\fP
+.INDENT 7.0
+.INDENT 3.5
+Changing the value requires a reload.
+.UNINDENT
+.UNINDENT
+.sp
+Default: no
+.UNINDENT
+.INDENT 0.0
+.TP
 .B pad\-responses: \fI<yes or no>\fP 
 If enabled, TLS serviced queries that contained an EDNS Padding option will
 cause responses padded to the closest multiple of the size specified in
@@ -1248,20 +1289,6 @@ Default: yes
 The block size with which to pad queries sent over TLS upstreams.
 .sp
 Default: 128
-.UNINDENT
-.INDENT 0.0
-.TP
-.B tls\-use\-sni: \fI<yes or no>\fP 
-Enable or disable sending the SNI extension on TLS connections.
-.sp
-\fBNOTE:\fP
-.INDENT 7.0
-.INDENT 3.5
-Changing the value requires a reload.
-.UNINDENT
-.UNINDENT
-.sp
-Default: yes
 .UNINDENT
 .INDENT 0.0
 .TP

@@ -153,7 +153,7 @@ remote_setup_ctx(struct daemon_remote* rc, struct config_file* cfg)
 		log_crypto_err("could not SSL_CTX_new");
 		return 0;
 	}
-	if(!listen_sslctx_setup(rc->ctx)) {
+	if(!listen_sslctx_setup(rc->ctx, cfg->tls_use_system_policy_versions)) {
 		return 0;
 	}
 
