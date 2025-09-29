@@ -1,5 +1,8 @@
 29 September 2025: Wouter
 	- Rebuild configure script from its sources.
+	- Fix modstack_call_init to use the original string when it has
+	  changed, to call modstack_config with. And skip the changed name
+	  in the string correctly. Thanks to Jan Komissar.
 
 26 September 2025: Yorgos
 	- Test for nonstring attribute in configure and add
