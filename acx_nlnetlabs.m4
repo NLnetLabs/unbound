@@ -2,7 +2,8 @@
 # Copyright 2009, Wouter Wijngaards, NLnet Labs.   
 # BSD licensed.
 #
-# Version 48
+# Version 49
+# 2025-09-29 add ACX_CHECK_NONSTRING_ATTRIBUTE, AHX_CONFIG_NONSTRING_ATTRIBUTE.
 # 2024-01-16 fix to add -l:libssp.a to -lcrypto link check.
 #	     and check for getaddrinfo with only header.
 # 2024-01-15 fix to add crypt32 to -lcrypto link check when checking for gdi32.
@@ -71,6 +72,7 @@
 # ACX_DEPFLAG			- find cc dependency flags.
 # ACX_DETERMINE_EXT_FLAGS_UNBOUND - find out which flags enable BSD and POSIX.
 # ACX_CHECK_FORMAT_ATTRIBUTE	- find cc printf format syntax.
+# ACX_CHECK_NONSTRING_ATTRIBUTE - find cc nonstring attribute syntax.
 # ACX_CHECK_UNUSED_ATTRIBUTE	- find cc variable unused syntax.
 # ACX_CHECK_FLTO		- see if cc supports -flto and use it if so.
 # ACX_LIBTOOL_C_ONLY		- create libtool for C only, improved.
@@ -92,6 +94,7 @@
 # ACX_FUNC_IOCTLSOCKET		- find ioctlsocket, portably.
 # ACX_FUNC_MALLOC		- check malloc, define replacement .
 # AHX_CONFIG_FORMAT_ATTRIBUTE	- config.h text for format.
+# AHX_CONFIG_NONSTRING_ATTRIBUTE - config.h text for nonstring.
 # AHX_CONFIG_UNUSED_ATTRIBUTE	- config.h text for unused.
 # AHX_CONFIG_FSEEKO		- define fseeko, ftello fallback.
 # AHX_CONFIG_RAND_MAX		- define RAND_MAX if needed.
