@@ -4,6 +4,7 @@
 	  changed, to call modstack_config with. And skip the changed name
 	  in the string correctly. Thanks to Jan Komissar.
 	- Neaten up the change in acx_nlnetlabs.m4 to version 49.
+	- Fix fr_atomic_copy_cfg.
 
 26 September 2025: Yorgos
 	- Test for nonstring attribute in configure and add
