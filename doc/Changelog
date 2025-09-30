@@ -1,3 +1,10 @@
+30 September 2025: Wouter
+	- Fix for #1344: Fix that respip and dns64 can be enabled at the
+	  same time, the client info is copied for attach_sub and add_sub
+	  calls. That makes respip work on dns64 synthesized answers, and
+	  also makes RPZ work with DNS64. The order for the modules is
+	  module-config: "respip dns64 validator iterator".
+
 29 September 2025: Wouter
 	- Rebuild configure script from its sources.
 	- Fix modstack_call_init to use the original string when it has

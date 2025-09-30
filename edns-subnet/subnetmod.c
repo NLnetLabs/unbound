@@ -567,8 +567,8 @@ generate_sub_request(struct module_qstate *qstate, int id, struct subnet_qstate*
 	}
 
 	fptr_ok(fptr_whitelist_modenv_attach_sub(qstate->env->attach_sub));
-	if(!(*qstate->env->attach_sub)(qstate, &qinf, qflags, prime, valrec,
-		&subq)) {
+	if(!(*qstate->env->attach_sub)(qstate, &qinf, qstate->client_info,
+		qflags, prime, valrec, &subq)) {
 		return 0;
 	}
 	if(subq) {

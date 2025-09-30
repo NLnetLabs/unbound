@@ -496,7 +496,7 @@ generate_request(struct module_qstate* qstate, int id, uint8_t* name,
 		struct mesh_state* sub = NULL;
 		fptr_ok(fptr_whitelist_modenv_add_sub(
 			qstate->env->add_sub));
-		if(!(*qstate->env->add_sub)(qstate, &ask, 
+		if(!(*qstate->env->add_sub)(qstate, &ask, NULL,
 			(uint16_t)(BIT_RD|flags), 0, valrec, newq, &sub)){
 			log_err("Could not generate request: out of memory");
 			return 0;
@@ -505,7 +505,7 @@ generate_request(struct module_qstate* qstate, int id, uint8_t* name,
 	else {
 		fptr_ok(fptr_whitelist_modenv_attach_sub(
 			qstate->env->attach_sub));
-		if(!(*qstate->env->attach_sub)(qstate, &ask, 
+		if(!(*qstate->env->attach_sub)(qstate, &ask, NULL,
 			(uint16_t)(BIT_RD|flags), 0, valrec, newq)){
 			log_err("Could not generate request: out of memory");
 			return 0;

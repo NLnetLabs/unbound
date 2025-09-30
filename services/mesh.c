@@ -1189,20 +1189,19 @@ void mesh_detach_subs(struct module_qstate* qstate)
 }
 
 int mesh_add_sub(struct module_qstate* qstate, struct query_info* qinfo,
-        uint16_t qflags, int prime, int valrec, struct module_qstate** newq,
-	struct mesh_state** sub)
+	struct respip_client_info* cinfo, uint16_t qflags, int prime,
+	int valrec, struct module_qstate** newq, struct mesh_state** sub)
 {
 	/* find it, if not, create it */
 	struct mesh_area* mesh = qstate->env->mesh;
-	*sub = mesh_area_find(mesh, NULL, qinfo, qflags,
-		prime, valrec);
+	*sub = mesh_area_find(mesh, cinfo, qinfo, qflags, prime, valrec);
 	if(!*sub) {
 #ifdef UNBOUND_DEBUG
 		struct rbnode_type* n;
 #endif
 		/* create a new one */
-		*sub = mesh_state_create(qstate->env, qinfo, NULL, qflags, prime,
-			valrec);
+		*sub = mesh_state_create(qstate->env, qinfo, cinfo, qflags,
+			prime, valrec);
 		if(!*sub) {
 			log_err("mesh_attach_sub: out of memory");
 			return 0;
@@ -1236,12 +1235,14 @@ int mesh_add_sub(struct module_qstate* qstate, struct query_info* qinfo,
 }
 
 int mesh_attach_sub(struct module_qstate* qstate, struct query_info* qinfo,
-        uint16_t qflags, int prime, int valrec, struct module_qstate** newq)
+	struct respip_client_info* cinfo, uint16_t qflags, int prime,
+	int valrec, struct module_qstate** newq)
 {
 	struct mesh_area* mesh = qstate->env->mesh;
 	struct mesh_state* sub = NULL;
 	int was_detached;
-	if(!mesh_add_sub(qstate, qinfo, qflags, prime, valrec, newq, &sub))
+	if(!mesh_add_sub(qstate, qinfo, cinfo, qflags, prime, valrec, newq,
+		&sub))
 		return 0;
 	was_detached = (sub->super_set.count == 0);
 	if(!mesh_state_attachment(qstate->mesh_info, sub))
@@ -1684,7 +1685,7 @@ static void dns_error_reporting(struct module_qstate* qstate,
 
 	log_query_info(VERB_ALGO, "DNS Error Reporting: generating report "
 		"query for", &qinfo);
-	if(mesh_add_sub(qstate, &qinfo, BIT_RD, 0, 0, &newq, &sub)) {
+	if(mesh_add_sub(qstate, &qinfo, NULL, BIT_RD, 0, 0, &newq, &sub)) {
 		qstate->env->mesh->num_dns_error_reports++;
 	}
 	return;
