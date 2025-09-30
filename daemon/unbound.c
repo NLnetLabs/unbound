@@ -714,6 +714,27 @@ perform_setup(struct daemon* daemon, struct config_file* cfg, int debug_mode,
 }
 
 /**
+ * Reload CA bundle if we are not using chroot
+ */
+static void reload_public_sslctxs(struct daemon* daemon, struct config_file* cfg) {
+	#ifdef HAVE_SSL
+	/* if chrootdir was used, then we can not know whether CA bundle
+	 * is accessible anymore, thus do not refresh it */
+	if (cfg->chrootdir && cfg->chrootdir[0]) {
+		verbose(VERB_ALGO, "Chroot is used, will not "
+			"refresh CA bundle.");
+		return;
+	}
+	SSL_CTX_free(daemon->connect_dot_sslctx);
+	if(!(daemon->connect_dot_sslctx = connect_sslctx_create(NULL, NULL,
+		cfg->tls_cert_bundle, cfg->tls_win_cert)))
+		fatal_exit("could not refresh connect SSL_CTX");
+	#else
+	(void)daemon;(void)cfg;
+	#endif
+}
+
+/**
  * Run the daemon. 
  * @param cfgfile: the config file name.
  * @param cmdline_verbose: verbosity resulting from commandline -v.
@@ -761,6 +782,8 @@ run_daemon(const char* cfgfile, int cmdline_verbose, int debug_mode, int need_pi
 			/* reopen log after HUP to facilitate log rotation */
 			if(!cfg->use_syslog)
 				log_init(cfg->logfile, 0, cfg->chrootdir);
+			/* reload CA bundle */
+			reload_public_sslctxs(daemon, cfg);
 		}
 		/* work */
 		daemon_fork(daemon);
