@@ -12,14 +12,14 @@ sinclude(dnscrypt/dnscrypt.m4)
 # must be numbers. ac_defun because of later processing
 m4_define([VERSION_MAJOR],[1])
 m4_define([VERSION_MINOR],[24])
-m4_define([VERSION_MICRO],[0])
+m4_define([VERSION_MICRO],[1])
 AC_INIT([unbound],m4_defn([VERSION_MAJOR]).m4_defn([VERSION_MINOR]).m4_defn([VERSION_MICRO]),[unbound-bugs@nlnetlabs.nl or https://github.com/NLnetLabs/unbound/issues],[unbound])
 AC_SUBST(UNBOUND_VERSION_MAJOR, [VERSION_MAJOR])
 AC_SUBST(UNBOUND_VERSION_MINOR, [VERSION_MINOR])
 AC_SUBST(UNBOUND_VERSION_MICRO, [VERSION_MICRO])
 
 LIBUNBOUND_CURRENT=9
-LIBUNBOUND_REVISION=33
+LIBUNBOUND_REVISION=34
 LIBUNBOUND_AGE=1
 # 1.0.0 had 0:12:0
 # 1.0.1 had 0:13:0
@@ -120,6 +120,7 @@ LIBUNBOUND_AGE=1
 # 1.23.0 had 9:31:1
 # 1.23.1 had 9:32:1
 # 1.24.0 had 9:33:1
+# 1.24.1 had 9:34:1
 
 #   Current  -- the number of the binary API that we're implementing
 #   Revision -- which iteration of the implementation of the binary
@@ -328,6 +329,7 @@ fi
 AC_C_INLINE
 ACX_CHECK_FORMAT_ATTRIBUTE
 ACX_CHECK_UNUSED_ATTRIBUTE
+ACX_CHECK_NONSTRING_ATTRIBUTE
 
 AC_DEFUN([CHECK_WEAK_ATTRIBUTE],
 [AC_REQUIRE([AC_PROG_CC])
@@ -633,19 +635,19 @@ AC_ARG_ENABLE(alloc-nonregional, AS_HELP_STRING([--enable-alloc-nonregional],[ e
 if test x_$enable_alloc_nonregional = x_yes; then
 	AC_DEFINE(UNBOUND_ALLOC_NONREGIONAL, 1, [use malloc not regions, for debug use])
 fi
-if test x_$enable_alloc_checks = x_yes; then
+AS_IF([test x_$enable_alloc_checks = x_yes],[
 	AC_DEFINE(UNBOUND_ALLOC_STATS, 1, [use statistics for allocs and frees, for debug use])
 	SLDNS_ALLOCCHECK_EXTRA_OBJ="alloc.lo log.lo"
 	AC_SUBST(SLDNS_ALLOCCHECK_EXTRA_OBJ)
 	ASYNCLOOK_ALLOCCHECK_EXTRA_OBJ="alloc.lo"
 	AC_SUBST(ASYNCLOOK_ALLOCCHECK_EXTRA_OBJ)
-else
-	if test x_$enable_alloc_lite = x_yes; then
+],[
+	AS_IF([test x_$enable_alloc_lite = x_yes],[
 		AC_DEFINE(UNBOUND_ALLOC_LITE, 1, [use to enable lightweight alloc assertions, for debug use])
-	else
+	],[
 		ACX_FUNC_MALLOC([unbound])
-	fi
-fi
+	])
+])
 
 # check windows threads (we use them, not pthreads, on windows).
 if test "$on_mingw" = "yes"; then
@@ -2291,6 +2293,7 @@ dnl includes
 
 AHX_CONFIG_FORMAT_ATTRIBUTE
 AHX_CONFIG_UNUSED_ATTRIBUTE
+AHX_CONFIG_NONSTRING_ATTRIBUTE
 AHX_CONFIG_FSEEKO
 AHX_CONFIG_MAXHOSTNAMELEN
 #if !defined(HAVE_SNPRINTF) || defined(SNPRINTF_RET_BROKEN)

@@ -450,7 +450,7 @@ create_udp_sock(int family, int socktype, struct sockaddr* addr,
 		 * /proc/sys/net/core/wmem_max or sysctl net.core.wmem_max */
 		if(setsockopt(s, SOL_SOCKET, SO_SNDBUFFORCE, (void*)&snd,
 			(socklen_t)sizeof(snd)) < 0) {
-			if(errno != EPERM) {
+			if(errno != EPERM && errno != ENOBUFS) {
 				log_err("setsockopt(..., SO_SNDBUFFORCE, "
 					"...) failed: %s", sock_strerror(errno));
 				sock_close(s);
@@ -458,15 +458,23 @@ create_udp_sock(int family, int socktype, struct sockaddr* addr,
 				*inuse = 0;
 				return -1;
 			}
+			if(errno != EPERM) {
+				verbose(VERB_ALGO, "setsockopt(..., SO_SNDBUFFORCE, "
+					"...) was not granted: %s", sock_strerror(errno));
+			}
 #  endif /* SO_SNDBUFFORCE */
 			if(setsockopt(s, SOL_SOCKET, SO_SNDBUF, (void*)&snd,
 				(socklen_t)sizeof(snd)) < 0) {
-				log_err("setsockopt(..., SO_SNDBUF, "
-					"...) failed: %s", sock_strerror(errno));
-				sock_close(s);
-				*noproto = 0;
-				*inuse = 0;
-				return -1;
+				if(errno != ENOSYS && errno != ENOBUFS) {
+					log_err("setsockopt(..., SO_SNDBUF, "
+						"...) failed: %s", sock_strerror(errno));
+					sock_close(s);
+					*noproto = 0;
+					*inuse = 0;
+					return -1;
+				}
+				log_warn("setsockopt(..., SO_SNDBUF, "
+					"...) was not granted: %s", sock_strerror(errno));
 			}
 			/* check if we got the right thing or if system
 			 * reduced to some system max.  Warn if so */

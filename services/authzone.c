@@ -172,7 +172,7 @@ get_rrset_ttl(struct ub_packed_rrset_key* k)
 /** Copy rrset into region from domain-datanode and packet rrset */
 static struct ub_packed_rrset_key*
 auth_packed_rrset_copy_region(struct auth_zone* z, struct auth_data* node,
-	struct auth_rrset* rrset, struct regional* region, time_t adjust)
+	struct auth_rrset* rrset, struct regional* region)
 {
 	struct ub_packed_rrset_key key;
 	memset(&key, 0, sizeof(key));
@@ -183,7 +183,7 @@ auth_packed_rrset_copy_region(struct auth_zone* z, struct auth_data* node,
 	key.rk.type = htons(rrset->type);
 	key.rk.rrset_class = htons(z->dclass);
 	key.entry.hash = rrset_key_hash(&key.rk);
-	return packed_rrset_copy_region(&key, region, adjust);
+	return packed_rrset_copy_region(&key, region, 0);
 }
 
 /** fix up msg->rep TTL and prefetch ttl */
@@ -237,7 +237,7 @@ msg_add_rrset_an(struct auth_zone* z, struct regional* region,
 		return 0;
 	/* copy it */
 	if(!(msg->rep->rrsets[msg->rep->rrset_count] =
-		auth_packed_rrset_copy_region(z, node, rrset, region, 0)))
+		auth_packed_rrset_copy_region(z, node, rrset, region)))
 		return 0;
 	msg->rep->rrset_count++;
 	msg->rep->an_numrrsets++;
@@ -261,7 +261,7 @@ msg_add_rrset_ns(struct auth_zone* z, struct regional* region,
 		return 0;
 	/* copy it */
 	if(!(msg->rep->rrsets[msg->rep->rrset_count] =
-		auth_packed_rrset_copy_region(z, node, rrset, region, 0)))
+		auth_packed_rrset_copy_region(z, node, rrset, region)))
 		return 0;
 	msg->rep->rrset_count++;
 	msg->rep->ns_numrrsets++;
@@ -284,7 +284,7 @@ msg_add_rrset_ar(struct auth_zone* z, struct regional* region,
 		return 0;
 	/* copy it */
 	if(!(msg->rep->rrsets[msg->rep->rrset_count] =
-		auth_packed_rrset_copy_region(z, node, rrset, region, 0)))
+		auth_packed_rrset_copy_region(z, node, rrset, region)))
 		return 0;
 	msg->rep->rrset_count++;
 	msg->rep->ar_numrrsets++;
@@ -4651,6 +4651,23 @@ http_parse_ttl(sldns_buffer* buf, struct sldns_file_parse_state* pstate)
 	return 0;
 }
 
+/** remove newlines from collated line */
+static void
+chunkline_newline_removal(sldns_buffer* buf)
+{
+	size_t i, end=sldns_buffer_limit(buf);
+	for(i=0; i<end; i++) {
+		char c = (char)sldns_buffer_read_u8_at(buf, i);
+		if(c == '\n' && i==end-1) {
+			sldns_buffer_write_u8_at(buf, i, 0);
+			sldns_buffer_set_limit(buf, end-1);
+			return;
+		}
+		if(c == '\n')
+			sldns_buffer_write_u8_at(buf, i, (uint8_t)' ');
+	}
+}
+
 /** find noncomment RR line in chunks, collates lines if ( ) format */
 static int
 chunkline_non_comment_RR(struct auth_chunk** chunk, size_t* chunk_pos,
@@ -4658,6 +4675,7 @@ chunkline_non_comment_RR(struct auth_chunk** chunk, size_t* chunk_pos,
 {
 	int ret;
 	while(chunkline_get_line_collated(chunk, chunk_pos, buf)) {
+		chunkline_newline_removal(buf);
 		if(chunkline_is_comment_line_or_empty(buf)) {
 			/* a comment, go to next line */
 			continue;
@@ -4731,23 +4749,6 @@ chunklist_sum(struct auth_chunk* list)
 		s += p->len;
 	}
 	return s;
-}
-
-/** remove newlines from collated line */
-static void
-chunkline_newline_removal(sldns_buffer* buf)
-{
-	size_t i, end=sldns_buffer_limit(buf);
-	for(i=0; i<end; i++) {
-		char c = (char)sldns_buffer_read_u8_at(buf, i);
-		if(c == '\n' && i==end-1) {
-			sldns_buffer_write_u8_at(buf, i, 0);
-			sldns_buffer_set_limit(buf, end-1);
-			return;
-		}
-		if(c == '\n')
-			sldns_buffer_write_u8_at(buf, i, (uint8_t)' ');
-	}
 }
 
 /** for http download, parse and add RR to zone */

@@ -1383,3 +1383,13 @@ msgparse_rrset_remove_rr(const char* str, sldns_buffer* pkt, struct rrset_parse*
 	 * the rr->next works fine to continue. */
 	return rrset->rr_count == 0;
 }
+
+#ifdef UNBOUND_DEBUG
+time_t debug_expired_reply_ttl_calc(time_t ttl, time_t ttl_add) {
+	/* Check that we are serving expired when this is called */
+	/* ttl (absolute) should be later than ttl_add */
+	log_assert(SERVE_EXPIRED && ttl_add <= ttl);
+	return (SERVE_EXPIRED_REPLY_TTL < (ttl) - (ttl_add) ?
+		SERVE_EXPIRED_REPLY_TTL : (ttl) - (ttl_add));
+}
+#endif

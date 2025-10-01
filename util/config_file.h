@@ -149,6 +149,8 @@ struct config_file {
 	char* tls_ciphersuites;
 	/** if SNI is to be used */
 	int tls_use_sni;
+	/** if all TLS versions can be used; based on system policy (if any) */
+	int tls_use_system_policy_versions;
 
 	/** port on which to provide DNS over HTTPS service */
 	int https_port;

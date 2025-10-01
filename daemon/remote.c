@@ -154,7 +154,7 @@ remote_setup_ctx(struct daemon_remote* rc, struct config_file* cfg)
 		log_crypto_err("could not SSL_CTX_new");
 		return 0;
 	}
-	if(!listen_sslctx_setup(rc->ctx)) {
+	if(!listen_sslctx_setup(rc->ctx, cfg->tls_use_system_policy_versions)) {
 		return 0;
 	}
 
@@ -5895,6 +5895,7 @@ fr_atomic_copy_cfg(struct config_file* oldcfg, struct config_file* cfg,
 	COPY_VAR_ptr(tls_ciphers);
 	COPY_VAR_ptr(tls_ciphersuites);
 	COPY_VAR_int(tls_use_sni);
+	COPY_VAR_int(tls_use_system_policy_versions);
 	COPY_VAR_int(https_port);
 	COPY_VAR_ptr(http_endpoint);
 	COPY_VAR_uint32_t(http_max_streams);

@@ -829,7 +829,7 @@ generate_sub_request(uint8_t* qname, size_t qnamelen, uint16_t qtype,
 		struct mesh_state* sub = NULL;
 		fptr_ok(fptr_whitelist_modenv_add_sub(
 			qstate->env->add_sub));
-		if(!(*qstate->env->add_sub)(qstate, &qinf,
+		if(!(*qstate->env->add_sub)(qstate, &qinf, NULL,
 			qflags, prime, valrec, &subq, &sub)){
 			return 0;
 		}
@@ -838,8 +838,8 @@ generate_sub_request(uint8_t* qname, size_t qnamelen, uint16_t qtype,
 		/* attach subquery, lookup existing or make a new one */
 		fptr_ok(fptr_whitelist_modenv_attach_sub(
 			qstate->env->attach_sub));
-		if(!(*qstate->env->attach_sub)(qstate, &qinf, qflags, prime,
-			valrec, &subq)) {
+		if(!(*qstate->env->attach_sub)(qstate, &qinf, NULL, qflags,
+			prime, valrec, &subq)) {
 			return 0;
 		}
 	}

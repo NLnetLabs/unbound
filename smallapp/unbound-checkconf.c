@@ -784,7 +784,6 @@ morechecks(struct config_file* cfg)
 	/* check that the modules listed in module_conf exist */
 	check_modules_exist(cfg->module_conf);
 
-	/* Respip is known to *not* work with dns64. */
 	if(strcmp(cfg->module_conf, "iterator") != 0
 		&& strcmp(cfg->module_conf, "validator iterator") != 0
 		&& strcmp(cfg->module_conf, "dns64 validator iterator") != 0
@@ -870,6 +869,7 @@ morechecks(struct config_file* cfg)
 		&& strcmp(cfg->module_conf, "respip cachedb iterator") != 0
 		&& strcmp(cfg->module_conf, "dns64 validator cachedb iterator") != 0
 		&& strcmp(cfg->module_conf, "dns64 cachedb iterator") != 0
+		&& strcmp(cfg->module_conf, "respip dns64 validator cachedb iterator") != 0
 #endif
 #if defined(WITH_PYTHONMODULE) && defined(USE_CACHEDB)
 		&& strcmp(cfg->module_conf, "python dns64 cachedb iterator") != 0

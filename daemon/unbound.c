@@ -473,7 +473,7 @@ setup_listen_sslctx(void** ctx, int is_dot, int is_doh, struct config_file* cfg)
 		cfg->tls_ciphers, cfg->tls_ciphersuites,
 		(cfg->tls_session_ticket_keys.first &&
 		cfg->tls_session_ticket_keys.first->str[0] != 0),
-		is_dot, is_doh))) {
+		is_dot, is_doh, cfg->tls_use_system_policy_versions))) {
 		fatal_exit("could not set up listen SSL_CTX");
 	}
 }
