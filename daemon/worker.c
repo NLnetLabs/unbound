@@ -1228,8 +1228,10 @@ answer_notify(struct worker* w, struct query_info* qinfo,
 				*(uint16_t*)(void *)sldns_buffer_begin(pkt),
 				sldns_buffer_read_u16_at(pkt, 2), edns);
 			LDNS_OPCODE_SET(sldns_buffer_begin(pkt), LDNS_PACKET_NOTIFY);
+		} else {
+			/* Flip to delimit buffer after tsig_sign_reply. */
+			sldns_buffer_flip(pkt);
 		}
-		sldns_buffer_flip(pkt);
 		/* The tsig veriable is allocated in the scratch region. */
 	}
 }
