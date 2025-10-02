@@ -660,7 +660,10 @@ ac_includes_default="\
 
 ac_header_c_list=
 ac_func_c_list=
+enable_option_checking=no
 ac_subst_vars='LTLIBOBJS
+SIMDZONE_OBJ
+subdirs
 date
 version
 INSTALLTARGET
@@ -941,6 +944,8 @@ with_libmnl
 enable_explicit_port_randomisation
 enable_linux_ip_local_port_range
 with_libunbound_only
+enable_westmere
+enable_haswell
 '
       ac_precious_vars='build_alias
 host_alias
@@ -965,7 +970,7 @@ PYTHON_VERSION
 SOURCE_DATE_EPOCH
 PROTOBUFC_CFLAGS
 PROTOBUFC_LIBS'
-
+ac_subdirs_all='simdzone'
 
 # Initialize some variables set by options.
 ac_init_help=
@@ -1655,6 +1660,8 @@ Optional Features:
                           randomness. Define this only when the target system
                           restricts (e.g. some of SELinux enabled
                           distributions) the use of non-ephemeral ports.
+  --disable-westmere      Disable Westmere (SSE4.2) parser kernel
+  --disable-haswell       Disable Haswell (AVX2) parser kernel
 
 Optional Packages:
   --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
@@ -24730,6 +24737,9 @@ printf "%s\n" "#define DNSTAP_SOCKET_PATH \"$hdr_dnstap_socket_path\"" >>confdef
 
         DNSTAP_OBJ="dnstap.lo dnstap.pb-c.lo dnstap_fstrm.lo dtstream.lo"
 
+	dnstap_config="dnstap/dnstap_config.h.tmp:dnstap/dnstap_config.h.in"
+	dnstap_config_tmp="dnstap/dnstap_config.h.tmp"
+	dnstap_config_out="dnstap/dnstap_config.h"
 
     else
 
@@ -25315,9 +25325,31 @@ printf "%s\n" "$date" >&6; }
 
 
 
-ac_config_files="$ac_config_files Makefile doc/example.conf doc/libunbound.3 doc/unbound.8 doc/unbound-anchor.8 doc/unbound-checkconf.8 doc/unbound.conf.5 doc/unbound-control.8 doc/unbound-host.1 smallapp/unbound-control-setup.sh dnstap/dnstap_config.h dnscrypt/dnscrypt_config.h contrib/libunbound.pc contrib/unbound.socket contrib/unbound.service contrib/unbound_portable.service"
+ac_config_files="$ac_config_files Makefile doc/example.conf doc/libunbound.3 doc/unbound.8 doc/unbound-anchor.8 doc/unbound-checkconf.8 doc/unbound.conf.5 doc/unbound-control.8 doc/unbound-host.1 smallapp/unbound-control-setup.sh $dnstap_config dnscrypt/dnscrypt_config.h contrib/libunbound.pc contrib/unbound.socket contrib/unbound.service contrib/unbound_portable.service"
 
 ac_config_headers="$ac_config_headers config.h"
+
+
+# Arguments introduced specifically for simdzone.
+# Check whether --enable-westmere was given.
+if test ${enable_westmere+y}
+then :
+  enableval=$enable_westmere;
+fi
+
+# Check whether --enable-haswell was given.
+if test ${enable_haswell+y}
+then :
+  enableval=$enable_haswell;
+fi
+
+
+
+subdirs="$subdirs simdzone"
+
+# Pick up the objects for simdzone.
+SIMDZONE_OBJ=`(cd simdzone; make list_objs) | sed -e 's?src?simdzone/src?g'`
+
 
 cat >confcache <<\_ACEOF
 # This file is a shell script that caches the results of configure
@@ -26311,7 +26343,7 @@ do
     "doc/unbound-control.8") CONFIG_FILES="$CONFIG_FILES doc/unbound-control.8" ;;
     "doc/unbound-host.1") CONFIG_FILES="$CONFIG_FILES doc/unbound-host.1" ;;
     "smallapp/unbound-control-setup.sh") CONFIG_FILES="$CONFIG_FILES smallapp/unbound-control-setup.sh" ;;
-    "dnstap/dnstap_config.h") CONFIG_FILES="$CONFIG_FILES dnstap/dnstap_config.h" ;;
+    "$dnstap_config") CONFIG_FILES="$CONFIG_FILES $dnstap_config" ;;
     "dnscrypt/dnscrypt_config.h") CONFIG_FILES="$CONFIG_FILES dnscrypt/dnscrypt_config.h" ;;
     "contrib/libunbound.pc") CONFIG_FILES="$CONFIG_FILES contrib/libunbound.pc" ;;
     "contrib/unbound.socket") CONFIG_FILES="$CONFIG_FILES contrib/unbound.socket" ;;
@@ -27452,9 +27484,166 @@ if test "$no_create" != yes; then
   # would make configure fail if this is the last instruction.
   $ac_cs_success || as_fn_exit 1
 fi
+
+#
+# CONFIG_SUBDIRS section.
+#
+if test "$no_recursion" != yes; then
+
+  # Remove --cache-file, --srcdir, and --disable-option-checking arguments
+  # so they do not pile up.
+  ac_sub_configure_args=
+  ac_prev=
+  eval "set x $ac_configure_args"
+  shift
+  for ac_arg
+  do
+    if test -n "$ac_prev"; then
+      ac_prev=
+      continue
+    fi
+    case $ac_arg in
+    -cache-file | --cache-file | --cache-fil | --cache-fi \
+    | --cache-f | --cache- | --cache | --cach | --cac | --ca | --c)
+      ac_prev=cache_file ;;
+    -cache-file=* | --cache-file=* | --cache-fil=* | --cache-fi=* \
+    | --cache-f=* | --cache-=* | --cache=* | --cach=* | --cac=* | --ca=* \
+    | --c=*)
+      ;;
+    --config-cache | -C)
+      ;;
+    -srcdir | --srcdir | --srcdi | --srcd | --src | --sr)
+      ac_prev=srcdir ;;
+    -srcdir=* | --srcdir=* | --srcdi=* | --srcd=* | --src=* | --sr=*)
+      ;;
+    -prefix | --prefix | --prefi | --pref | --pre | --pr | --p)
+      ac_prev=prefix ;;
+    -prefix=* | --prefix=* | --prefi=* | --pref=* | --pre=* | --pr=* | --p=*)
+      ;;
+    --disable-option-checking)
+      ;;
+    *)
+      case $ac_arg in
+      *\'*) ac_arg=`printf "%s\n" "$ac_arg" | sed "s/'/'\\\\\\\\''/g"` ;;
+      esac
+      as_fn_append ac_sub_configure_args " '$ac_arg'" ;;
+    esac
+  done
+
+  # Always prepend --prefix to ensure using the same prefix
+  # in subdir configurations.
+  ac_arg="--prefix=$prefix"
+  case $ac_arg in
+  *\'*) ac_arg=`printf "%s\n" "$ac_arg" | sed "s/'/'\\\\\\\\''/g"` ;;
+  esac
+  ac_sub_configure_args="'$ac_arg' $ac_sub_configure_args"
+
+  # Pass --silent
+  if test "$silent" = yes; then
+    ac_sub_configure_args="--silent $ac_sub_configure_args"
+  fi
+
+  # Always prepend --disable-option-checking to silence warnings, since
+  # different subdirs can have different --enable and --with options.
+  ac_sub_configure_args="--disable-option-checking $ac_sub_configure_args"
+
+  ac_popdir=`pwd`
+  for ac_dir in : $subdirs; do test "x$ac_dir" = x: && continue
+
+    # Do not complain, so a configure script can configure whichever
+    # parts of a large source tree are present.
+    test -d "$srcdir/$ac_dir" || continue
+
+    ac_msg="=== configuring in $ac_dir (`pwd`/$ac_dir)"
+    printf "%s\n" "$as_me:${as_lineno-$LINENO}: $ac_msg" >&5
+    printf "%s\n" "$ac_msg" >&6
+    as_dir="$ac_dir"; as_fn_mkdir_p
+    ac_builddir=.
+
+case "$ac_dir" in
+.) ac_dir_suffix= ac_top_builddir_sub=. ac_top_build_prefix= ;;
+*)
+  ac_dir_suffix=/`printf "%s\n" "$ac_dir" | sed 's|^\.[\\/]||'`
+  # A ".." for each directory in $ac_dir_suffix.
+  ac_top_builddir_sub=`printf "%s\n" "$ac_dir_suffix" | sed 's|/[^\\/]*|/..|g;s|/||'`
+  case $ac_top_builddir_sub in
+  "") ac_top_builddir_sub=. ac_top_build_prefix= ;;
+  *)  ac_top_build_prefix=$ac_top_builddir_sub/ ;;
+  esac ;;
+esac
+ac_abs_top_builddir=$ac_pwd
+ac_abs_builddir=$ac_pwd$ac_dir_suffix
+# for backward compatibility:
+ac_top_builddir=$ac_top_build_prefix
+
+case $srcdir in
+  .)  # We are building in place.
+    ac_srcdir=.
+    ac_top_srcdir=$ac_top_builddir_sub
+    ac_abs_top_srcdir=$ac_pwd ;;
+  [\\/]* | ?:[\\/]* )  # Absolute name.
+    ac_srcdir=$srcdir$ac_dir_suffix;
+    ac_top_srcdir=$srcdir
+    ac_abs_top_srcdir=$srcdir ;;
+  *) # Relative name.
+    ac_srcdir=$ac_top_build_prefix$srcdir$ac_dir_suffix
+    ac_top_srcdir=$ac_top_build_prefix$srcdir
+    ac_abs_top_srcdir=$ac_pwd/$srcdir ;;
+esac
+ac_abs_srcdir=$ac_abs_top_srcdir$ac_dir_suffix
+
+
+    cd "$ac_dir"
+
+    # Check for configure.gnu first; this name is used for a wrapper for
+    # Metaconfig's "Configure" on case-insensitive file systems.
+    if test -f "$ac_srcdir/configure.gnu"; then
+      ac_sub_configure=$ac_srcdir/configure.gnu
+    elif test -f "$ac_srcdir/configure"; then
+      ac_sub_configure=$ac_srcdir/configure
+    else
+      { printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING: no configuration information is in $ac_dir" >&5
+printf "%s\n" "$as_me: WARNING: no configuration information is in $ac_dir" >&2;}
+      ac_sub_configure=
+    fi
+
+    # The recursion is here.
+    if test -n "$ac_sub_configure"; then
+      # Make the cache file name correct relative to the subdirectory.
+      case $cache_file in
+      [\\/]* | ?:[\\/]* ) ac_sub_cache_file=$cache_file ;;
+      *) # Relative name.
+	ac_sub_cache_file=$ac_top_build_prefix$cache_file ;;
+      esac
+
+      { printf "%s\n" "$as_me:${as_lineno-$LINENO}: running $SHELL $ac_sub_configure $ac_sub_configure_args --cache-file=$ac_sub_cache_file --srcdir=$ac_srcdir" >&5
+printf "%s\n" "$as_me: running $SHELL $ac_sub_configure $ac_sub_configure_args --cache-file=$ac_sub_cache_file --srcdir=$ac_srcdir" >&6;}
+      # The eval makes quoting arguments work.
+      eval "\$SHELL \"\$ac_sub_configure\" $ac_sub_configure_args \
+	   --cache-file=\"\$ac_sub_cache_file\" --srcdir=\"\$ac_srcdir\"" ||
+	as_fn_error $? "$ac_sub_configure failed for $ac_dir" "$LINENO" 5
+    fi
+
+    cd "$ac_popdir"
+  done
+fi
 if test -n "$ac_unrecognized_opts" && test "$enable_option_checking" != no; then
   { printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING: unrecognized options: $ac_unrecognized_opts" >&5
 printf "%s\n" "$as_me: WARNING: unrecognized options: $ac_unrecognized_opts" >&2;}
 fi
 
+# If dnstap config has changed, overwrite it.
+if test -n "$dnstap_config"; then
+	if test ! -f "$dnstap_config_out"; then
+		mv "$dnstap_config_tmp" "$dnstap_config_out" || as_fn_error $? "Could not create $dnstap_config_out" "$LINENO" 5
+	else if diff "$dnstap_config_out" "$dnstap_config_tmp" >/dev/null 2>&1; then
+		{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: In $srcdir: $dnstap_config_out is unchanged" >&5
+printf "%s\n" "$as_me: In $srcdir: $dnstap_config_out is unchanged" >&6;}
+		rm -f "$dnstap_config_tmp"
+	else
+		rm -f "$dnstap_config_out"
+		mv "$dnstap_config_tmp" "$dnstap_config_out" || as_fn_error $? "Could not create $dnstap_config_out" "$LINENO" 5
+	  fi
+	fi
+fi
 

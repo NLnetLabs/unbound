@@ -2017,6 +2017,9 @@ dt_DNSTAP([$UNBOUND_RUN_DIR/dnstap.sock],
 	AC_SUBST(DNSTAP_SOCKET_TESTBIN,['unbound-dnstap-socket$(EXEEXT)'])
         AC_SUBST([DNSTAP_SRC], ["dnstap/dnstap.c dnstap/dnstap.pb-c.c dnstap/dnstap_fstrm.c dnstap/dtstream.c"])
         AC_SUBST([DNSTAP_OBJ], ["dnstap.lo dnstap.pb-c.lo dnstap_fstrm.lo dtstream.lo"])
+	dnstap_config="dnstap/dnstap_config.h.tmp:dnstap/dnstap_config.h.in"
+	dnstap_config_tmp="dnstap/dnstap_config.h.tmp"
+	dnstap_config_out="dnstap/dnstap_config.h"
     ],
     [
         AC_SUBST([ENABLE_DNSTAP], [0])
@@ -2475,6 +2478,28 @@ AC_SUBST(version, [VERSION_MAJOR.VERSION_MINOR.VERSION_MICRO])
 AX_BUILD_DATE_EPOCH(date, [[%b %e, %Y]])
 AC_SUBST(date)
 
-AC_CONFIG_FILES([Makefile doc/example.conf doc/libunbound.3 doc/unbound.8 doc/unbound-anchor.8 doc/unbound-checkconf.8 doc/unbound.conf.5 doc/unbound-control.8 doc/unbound-host.1 smallapp/unbound-control-setup.sh dnstap/dnstap_config.h dnscrypt/dnscrypt_config.h contrib/libunbound.pc contrib/unbound.socket contrib/unbound.service contrib/unbound_portable.service])
+AC_CONFIG_FILES([Makefile doc/example.conf doc/libunbound.3 doc/unbound.8 doc/unbound-anchor.8 doc/unbound-checkconf.8 doc/unbound.conf.5 doc/unbound-control.8 doc/unbound-host.1 smallapp/unbound-control-setup.sh $dnstap_config dnscrypt/dnscrypt_config.h contrib/libunbound.pc contrib/unbound.socket contrib/unbound.service contrib/unbound_portable.service])
 AC_CONFIG_HEADERS([config.h])
+
+# Arguments introduced specifically for simdzone.
+AC_ARG_ENABLE(westmere, AS_HELP_STRING([--disable-westmere], [Disable Westmere (SSE4.2) parser kernel]))
+AC_ARG_ENABLE(haswell, AS_HELP_STRING([--disable-haswell], [Disable Haswell (AVX2) parser kernel]))
+AC_CONFIG_SUBDIRS([simdzone])
+# Pick up the objects for simdzone.
+SIMDZONE_OBJ=`(cd simdzone; make list_objs) | sed -e 's?src?simdzone/src?g'`
+AC_SUBST(SIMDZONE_OBJ)
+
 AC_OUTPUT
+# If dnstap config has changed, overwrite it.
+if test -n "$dnstap_config"; then
+	if test ! -f "$dnstap_config_out"; then
+		mv "$dnstap_config_tmp" "$dnstap_config_out" || AC_MSG_ERROR([Could not create $dnstap_config_out])
+	else if diff "$dnstap_config_out" "$dnstap_config_tmp" >/dev/null 2>&1; then
+		AC_MSG_NOTICE([In $srcdir: $dnstap_config_out is unchanged])
+		rm -f "$dnstap_config_tmp"
+	else
+		rm -f "$dnstap_config_out"
+		mv "$dnstap_config_tmp" "$dnstap_config_out" || AC_MSG_ERROR([Could not create $dnstap_config_out])
+	  fi
+	fi
+fi
