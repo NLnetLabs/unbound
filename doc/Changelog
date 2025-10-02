@@ -1,3 +1,8 @@
+2 October 2025: Wouter
+	- Fix that https is set up as enabled when the port is listed in
+	  interface-automatic-ports. Also for the set up of quic it is
+	  enabled when listed there.
+
 30 September 2025: Wouter
 	- Fix for #1344: Fix that respip and dns64 can be enabled at the
 	  same time, the client info is copied for attach_sub and add_sub

@@ -2923,6 +2923,29 @@ if_is_quic(const char* ifname, int default_port, int quic_port)
 }
 
 int
+cfg_ports_list_contains(char* ports, int p)
+{
+	char* now = ports, *after;
+	int extraport;
+	while(now && *now) {
+		while(isspace((unsigned char)*now))
+			now++;
+		if(!now)
+			break;
+		after = now;
+		extraport = (int)strtol(now, &after, 10);
+		if(extraport < 0 || extraport > 65535)
+			continue; /* Out of range. */
+		if(extraport == 0 && now == after)
+			return 0; /* Number could not be parsed. */
+		now = after;
+		if(extraport == p)
+			return 1;
+	}
+	return 0;
+}
+
+int
 cfg_has_https(struct config_file* cfg)
 {
 	int i;
@@ -2930,6 +2953,8 @@ cfg_has_https(struct config_file* cfg)
 		if(if_is_https(cfg->ifs[i], cfg->port, cfg->https_port))
 			return 1;
 	}
+	if(cfg_ports_list_contains(cfg->if_automatic_ports, cfg->https_port))
+		return 1;
 	return 0;
 }
 
@@ -2942,6 +2967,8 @@ cfg_has_quic(struct config_file* cfg)
 		if(if_is_quic(cfg->ifs[i], cfg->port, cfg->quic_port))
 			return 1;
 	}
+	if(cfg_ports_list_contains(cfg->if_automatic_ports, cfg->quic_port))
+		return 1;
 	return 0;
 #else
 	(void)cfg;
