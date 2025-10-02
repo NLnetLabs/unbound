@@ -1,3 +1,65 @@
+2 October 2025: Wouter
+	- Fix that https is set up as enabled when the port is listed in
+	  interface-automatic-ports. Also for the set up of quic it is
+	  enabled when listed there.
+
+30 September 2025: Wouter
+	- Fix for #1344: Fix that respip and dns64 can be enabled at the
+	  same time, the client info is copied for attach_sub and add_sub
+	  calls. That makes respip work on dns64 synthesized answers, and
+	  also makes RPZ work with DNS64. The order for the modules is
+	  module-config: "respip dns64 validator iterator".
+
+29 September 2025: Wouter
+	- Rebuild configure script from its sources.
+	- Fix modstack_call_init to use the original string when it has
+	  changed, to call modstack_config with. And skip the changed name
+	  in the string correctly. Thanks to Jan Komissar.
+	- Neaten up the change in acx_nlnetlabs.m4 to version 49.
+	- Fix fr_atomic_copy_cfg.
+	- Rebuild configure script from its sources.
+	- Fix #1353: auth-zone can not use empty label for $ORIGIN when
+	  http download.
+	- Fix #1344: module conf 'respip dns64 validator cachedb iterator'
+	  is not known to work.
+
+29 September 2025: Yorgos
+	- Merge #1349: Fix #1346: [FR] Please allow back TLS 1.2.
+	- Merge #1351: ac_cv_func_malloc_0_nonnull for malloc(0) check.
+
+26 September 2025: Yorgos
+	- Test for nonstring attribute in configure and add
+	  nonstring attribute annotations.
+
+24 September 2025: Yorgos
+	- Avoid calling mesh_detect_cycle_found() when there is no mesh state
+	  to begin with.
+
+23 September 2025: Yorgos
+	- Merge #1352 from Petr Vaganov: pythonmod: fix HANDLE_LEAK on
+	  pythonmod_init.
+	- For #1352, align with the current Python<3 code.
+	- Merge #1350 from Maryse47: unbound.service.in: allow CAP_NET_ADMIN.
+	- For #1350, same CAP_NET_ADMIN change for unbound_portable.service.in
+	  as well.
+
+19 September 2025: Wouter
+	- Fix to remove configure~ from release tarballs.
+
+19 September 2025: Yorgos
+	- Update README.man with clearer text.
+	- Merge #1337: 0 TTL cached replies and some TTL behavior changes.
+	- TTL change: Cached records that reach TTL 0 are expired.
+	- TTL change: TTL 0 upstream answers are no longer cached by
+	   cachedb, as they should.
+	- TTL change: 'serve-expired-reply-ttl' is now capped by the original
+	  TTL value of the record to try and make some sense when replying
+	  with expired records.
+	- TTL change: TTL decoding was updated to adhere to RFC8767 section 4
+	  where a 'set high-order bit' means the value is positive instead of
+	  0.
+	- unbound.conf manpage: explicitly mention RFC6891.
+
 18 September 2025: Wouter
 	- Tag for 1.24.0 release. Includes the fixes below after rc1.
 	  The repository continues with version 1.24.1.

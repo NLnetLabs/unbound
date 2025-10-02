@@ -148,6 +148,8 @@ struct config_file {
 	char* tls_ciphersuites;
 	/** if SNI is to be used */
 	int tls_use_sni;
+	/** if all TLS versions can be used; based on system policy (if any) */
+	int tls_use_system_policy_versions;
 
 	/** port on which to provide DNS over HTTPS service */
 	int https_port;
@@ -1477,5 +1479,13 @@ int cfg_has_quic(struct config_file* cfg);
 
 /** get memory for string */
 size_t getmem_str(char* str);
+
+/**
+ * See if the if_automatic_ports list contains the value.
+ * @param ports: String with port numbers.
+ * @param p: number looked for.
+ * @return true if found, false if not found or parse failure.
+ */
+int cfg_ports_list_contains(char* ports, int p);
 
 #endif /* UTIL_CONFIG_FILE_H */

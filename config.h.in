@@ -66,6 +66,9 @@
 /* Whether the C compiler accepts the "format" attribute */
 #undef HAVE_ATTR_FORMAT
 
+/* Whether the C compiler accepts the "nonstring" attribute */
+#undef HAVE_ATTR_NONSTRING
+
 /* Whether the C compiler accepts the "noreturn" attribute */
 #undef HAVE_ATTR_NORETURN
 
@@ -1379,6 +1382,17 @@
 #else /* !HAVE_ATTR_UNUSED */
 #  define ATTR_UNUSED(x)  x
 #endif /* !HAVE_ATTR_UNUSED */
+
+
+#if defined(DOXYGEN)
+#  define ATTR_NONSTRING(x)  x
+#elif defined(__cplusplus)
+#  define ATTR_NONSTRING(x)  __attribute__((nonstring)) x
+#elif defined(HAVE_ATTR_NONSTRING)
+#  define ATTR_NONSTRING(x)  __attribute__((nonstring)) x
+#else /* !HAVE_ATTR_NONSTRING */
+#  define ATTR_NONSTRING(x)  x
+#endif /* !HAVE_ATTR_NONSTRING */
 
 
 #ifndef HAVE_FSEEKO

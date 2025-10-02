@@ -496,8 +496,8 @@ handle_ipv6_ptr(struct module_qstate* qstate, int id)
 
     /* Create the new sub-query. */
     fptr_ok(fptr_whitelist_modenv_attach_sub(qstate->env->attach_sub));
-    if(!(*qstate->env->attach_sub)(qstate, &qinfo, qstate->query_flags, 0, 0,
-                &subq))
+    if(!(*qstate->env->attach_sub)(qstate, &qinfo, qstate->client_info,
+	    qstate->query_flags, 0, 0, &subq))
         return module_error;
     if (subq) {
         subq->curmod = id;
@@ -522,8 +522,8 @@ generate_type_A_query(struct module_qstate* qstate, int id)
 
 	/* Start the sub-query. */
 	fptr_ok(fptr_whitelist_modenv_attach_sub(qstate->env->attach_sub));
-	if(!(*qstate->env->attach_sub)(qstate, &qinfo, qstate->query_flags, 0,
-				       0, &subq))
+	if(!(*qstate->env->attach_sub)(qstate, &qinfo, qstate->client_info,
+		qstate->query_flags, 0, 0, &subq))
 	{
 		verbose(VERB_ALGO, "dns64: sub-query creation failed");
 		return module_error;
