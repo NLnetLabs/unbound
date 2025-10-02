@@ -8,6 +8,7 @@
 /config.h.in~
 /config.log
 /config.status
+/configure~
 /dnstap/dnstap_config.h
 /dnscrypt/dnscrypt_config.h
 /util/configlexer.c
