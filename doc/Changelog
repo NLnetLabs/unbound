@@ -1,6 +1,9 @@
 3 October 2025: Yorgos
 	- Note 'respip' and 'dns64' module order in the unbound.conf
 	  man page.
+	- Note clearly that 'wait-limit: 0' disables all wait limits.
+	- 'wait-limit-cookie: 0' can now disable cookie validated wait
+	  limits.
 
 2 October 2025: Wouter
 	- Fix that https is set up as enabled when the port is listed in

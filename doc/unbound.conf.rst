@@ -510,7 +510,7 @@ These options are part of the **server:** clause.
     This makes a ratelimit per IP address of waiting replies for recursion.
     It stops very large amounts of queries waiting to be returned to one
     destination.
-    The value ``0`` disables wait limits.
+    The value ``0`` disables all wait limits.
 
     Default: 1000
 
@@ -518,7 +518,11 @@ These options are part of the **server:** clause.
 @@UAHL@unbound.conf@wait-limit-cookie@@: *<number>*
     The number of replies that can wait for recursion, for an IP address
     that sent the query with a valid DNS Cookie.
-    Since the cookie validates the client address, this limit can be higher.
+    Since the cookie already validates the client address, this option allows
+    to override a configured
+    :ref:`wait-limit<unbound.conf.wait-limit>` value usually with a higher one
+    for cookie validated queries.
+    The value ``0`` disables wait limits for cookie validated queries.
 
     Default: 10000
 
