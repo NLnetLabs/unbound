@@ -43,6 +43,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <assert.h>
+#include <stdbool.h>
 
 #include "util/configyyrename.h"
 #include "util/config_file.h"
@@ -52,11 +53,14 @@
 int ub_c_lex(void);
 void ub_c_error(const char *message);
 
+static void yywarn(const char *str);
 static void validate_respip_action(const char* action);
 static void validate_acl_action(const char* action);
 
 /* these need to be global, otherwise they cannot be used inside yacc */
 extern struct config_parser_state* cfg_parser;
+
+static bool ttl_pf_has_warned = false;
 
 #if 0
 #define OUTYY(s)  printf s /* used ONLY when debugging */
@@ -223,9 +227,9 @@ toplevelvar: serverstart contents_server | stub_clause |
 	forward_clause | pythonstart contents_py |
 	rcstart contents_rc | dtstart contents_dt | view_clause |
 	dnscstart contents_dnsc | cachedbstart contents_cachedb |
-	ipsetstart contents_ipset | authstart contents_auth |
-	rpzstart contents_rpz | dynlibstart contents_dl |
-	force_toplevel
+    ipsetstart contents_ipset |authstart contents_auth | 
+    rpzstart contents_rpz | dynlibstart contents_dl | 
+    force_toplevel
 	;
 force_toplevel: VAR_FORCE_TOPLEVEL
 	{
@@ -2397,22 +2401,24 @@ server_local_zone: VAR_LOCAL_ZONE STRING_ARG STRING_ARG
 				local_zones_nodefault, $2))
 				fatal_exit("out of memory adding local-zone");
 			free($3);
-#ifdef USE_IPSET
-		} else if(strcmp($3, "ipset")==0) {
-			size_t len = strlen($2);
-			/* Make sure to add the trailing dot.
-			 * These are str compared to domain names. */
-			if($2[len-1] != '.') {
-				if(!($2 = realloc($2, len+2))) {
-					fatal_exit("out of memory adding local-zone");
-				}
-				$2[len] = '.';
-				$2[len+1] = 0;
-			}
-			if(!cfg_strlist_insert(&cfg_parser->cfg->
-				local_zones_ipset, $2))
-				fatal_exit("out of memory adding local-zone");
-			free($3);
+#ifdef USE_IPSET 
+        } else if (strcmp($3, "ipset") == 0) {
+            /* Transform existing 2 param variant into 5 param with global lookup */
+            size_t len = strlen($2);
+            /* Make sure to add the trailing dot.
+             * These are str compared to domain names. */
+            if ($2[len-1] != '.') {
+                if (!($2 = realloc($2, len+2))) {
+                    fatal_exit("out of memory adding local-zone");
+                }
+                $2[len] = '.';
+                $2[len+1] = 0;
+            }
+            if(!cfg_str4list_insert(&cfg_parser->cfg->
+                local_zones_ipset, $2, strdup("@global@"), strdup("@global@"), strdup("no-ttl"))) {
+                fatal_exit("out of memory adding local-zone");
+            }
+            free($3);
 #endif
 		} else {
 			if(!cfg_str2list_insert(&cfg_parser->cfg->local_zones,
@@ -2420,6 +2426,68 @@ server_local_zone: VAR_LOCAL_ZONE STRING_ARG STRING_ARG
 				fatal_exit("out of memory adding local-zone");
 		}
 	}
+                 | VAR_LOCAL_ZONE STRING_ARG STRING_ARG STRING_ARG STRING_ARG STRING_ARG
+    {
+        OUTYY(("P(server_local_zone: %s %s %s %s %s)\n", $2, $3, $4, $5, $6));
+        if (strcmp($3, "ipset") != 0) {
+			yyerror("local-zone type: expected static, deny, "
+				"refuse, redirect, transparent, "
+				"typetransparent, inform, inform_deny, "
+				"inform_redirect, always_transparent, block_a,"
+				"always_refuse, always_nxdomain, "
+				"always_nodata, always_deny, always_null, "
+				"noview, nodefault or ipset");
+			free($2);
+			free($3);
+            free($4);
+            free($5);
+            free($6);
+#ifdef USE_IPSET
+        } else if (strncmp($3, "ipset", 5) == 0) {
+            /* Format: <domain> ipset <protocol> <set name> <ttl/no-ttl> */
+            if (strncmp($6, "ttl", 3) != 0
+                && strncmp($6, "no-ttl", 6) != 0) {
+                yyerror("local-zone with ipset expected ttl/no-ttl");
+                free($2);
+                free($3);
+                free($4);
+                free($5);
+                free($6);
+            } else {
+#ifdef HAVE_NET_PFVAR_H
+                if (!ttl_pf_has_warned && strncmp($6, "ttl", 3) == 0) {
+                    yywarn(
+                        "local-zone ipset: per-address TTL not supported in"
+                        "BSD packet filter tables, ignoring"
+                    );
+                    ttl_pf_has_warned = true;
+                }
+#endif
+                size_t len = strlen($2);
+                /* Make sure to add the trailing dot.
+                 * These are str compared to domain names. */
+                if ($2[len-1] != '.') {
+                    if (!($2 = realloc($2, len+2))) {
+                        fatal_exit("out of memory adding local-zone");
+                    }
+                    $2[len] = '.';
+                    $2[len+1] = 0;
+                }
+                if(!cfg_str4list_insert(&cfg_parser->cfg->
+                    local_zones_ipset, $2, $4, $5, $6))
+                    fatal_exit("out of memory adding local-zone");
+                free($3);
+            }
+#endif
+        } else {
+            yyerror("local-zone: too many parameters");
+            free($2);
+            free($3);
+            free($4);
+            free($5);
+            free($6);
+        }
+    }
 	;
 server_local_data: VAR_LOCAL_DATA STRING_ARG
 	{
@@ -3368,22 +3436,24 @@ view_local_zone: VAR_LOCAL_ZONE STRING_ARG STRING_ARG
 				local_zones_nodefault, $2))
 				fatal_exit("out of memory adding local-zone");
 			free($3);
-#ifdef USE_IPSET
-		} else if(strcmp($3, "ipset")==0) {
-			size_t len = strlen($2);
-			/* Make sure to add the trailing dot.
-			 * These are str compared to domain names. */
-			if($2[len-1] != '.') {
-				if(!($2 = realloc($2, len+2))) {
-					fatal_exit("out of memory adding local-zone");
-				}
-				$2[len] = '.';
-				$2[len+1] = 0;
-			}
-			if(!cfg_strlist_insert(&cfg_parser->cfg->views->
-				local_zones_ipset, $2))
-				fatal_exit("out of memory adding local-zone");
-			free($3);
+#ifdef USE_IPSET 
+        } else if (strcmp($3, "ipset") == 0) {
+            /* Transform existing 2 param variant into 5 param with global lookup */
+            size_t len = strlen($2);
+            /* Make sure to add the trailing dot.
+             * These are str compared to domain names. */
+            if ($2[len-1] != '.') {
+                if (!($2 = realloc($2, len+2))) {
+                    fatal_exit("out of memory adding local-zone");
+                }
+                $2[len] = '.';
+                $2[len+1] = 0;
+            }
+            if(!cfg_str4list_insert(&cfg_parser->cfg->views->
+                local_zones_ipset, $2, strdup("@global@"), strdup("@global@"), strdup("no-ttl"))) {
+                fatal_exit("out of memory adding local-zone");
+            }
+            free($3);
 #endif
 		} else {
 			if(!cfg_str2list_insert(
@@ -3392,6 +3462,68 @@ view_local_zone: VAR_LOCAL_ZONE STRING_ARG STRING_ARG
 				fatal_exit("out of memory adding local-zone");
 		}
 	}
+                 | VAR_LOCAL_ZONE STRING_ARG STRING_ARG STRING_ARG STRING_ARG STRING_ARG
+    {
+        OUTYY(("P(server_local_zone: %s %s %s %s %s)\n", $2, $3, $4, $5, $6));
+        if (strcmp($3, "ipset") != 0) {
+			yyerror("local-zone type: expected static, deny, "
+				"refuse, redirect, transparent, "
+				"typetransparent, inform, inform_deny, "
+				"inform_redirect, always_transparent, "
+				"always_refuse, always_nxdomain, "
+				"always_nodata, always_deny, always_null, "
+				"noview, nodefault or ipset");
+			free($2);
+			free($3);
+            free($4);
+            free($5);
+            free($6);
+#ifdef USE_IPSET
+        } else if (strcmp($3, "ipset") == 0) {
+            /* Format: <domain> ipset <protocol> <set name> <ttl/no-ttl> */
+            if (strncmp($6, "ttl", 3) != 0
+                || strncmp($6, "no-ttl", 6) != 0) {
+                yyerror("local-zone with ipset expected ttl/no-ttl");
+                free($2);
+                free($3);
+                free($4);
+                free($5);
+                free($6);
+            } else {
+#ifdef HAVE_NET_PFVAR_H
+                if (!ttl_pf_has_warned && strncmp($6, "ttl", 3) == 0) {
+                    yywarn(
+                        "local-zone ipset: per-address TTL not supported in"
+                        "BSD packet filter tables, ignoring"
+                    );
+                    ttl_pf_has_warned = true;
+                }
+#endif
+                size_t len = strlen($2);
+                /* Make sure to add the trailing dot.
+                 * These are str compared to domain names. */
+                if ($2[len-1] != '.') {
+                    if (!($2 = realloc($2, len+2))) {
+                        fatal_exit("out of memory adding local-zone");
+                    }
+                    $2[len] = '.';
+                    $2[len+1] = 0;
+                }
+                if(!cfg_str4list_insert(&cfg_parser->cfg->views->
+                    local_zones_ipset, $2, $4, $5, $6))
+                    fatal_exit("out of memory adding local-zone");
+                free($3);
+            }
+#endif
+        } else {
+            yyerror("local-zone: too many parameters");
+            free($2);
+            free($3);
+            free($4);
+            free($5);
+            free($6);
+        }
+    }
 	;
 view_response_ip: VAR_RESPONSE_IP STRING_ARG STRING_ARG
 	{
@@ -4250,7 +4382,7 @@ server_max_global_quota: VAR_MAX_GLOBAL_QUOTA STRING_ARG
 		else cfg_parser->cfg->max_global_quota = atoi($2);
 		free($2);
 	}
-	;
+    ;
 ipsetstart: VAR_IPSET
 	{
 		OUTYY(("\nP(ipset:)\n"));
@@ -4327,4 +4459,8 @@ validate_acl_action(const char* action)
 			"refuse_non_local, allow, allow_setrd, "
 			"allow_snoop or allow_cookie as access control action");
 	}
+}
+
+static void yywarn(const char *str) {
+    fprintf(stderr, "warning: %s\n", str);
 }

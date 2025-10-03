@@ -2351,6 +2351,11 @@ queries.
 Most modules that need to be listed here have to be listed at the beginning
 of the line.
 .sp
+When the server is built with ipset support and has is run with the \fICAP_NET_ADMIN\fR
+capability, the \fBipset\fP module can be utilised. Example configuration for this is
+"\fIipset iterator\fR". It can easily be combined with any other module without
+any issues.
+.sp
 The \fBsubnetcache\fP module has to be listed just before the iterator.
 .sp
 The \fBpython\fP module can be listed in different places, it then processes
@@ -3028,6 +3033,50 @@ If \fI\%view\-first\fP is enabled, it\(aqll
 break perform that step and check the global answers.
 For when the view has view specific overrides but some zone has to be
 answered from global local zone contents.
+.UNINDENT
+.INDENT 7.0
+.TP
+.B ipset
+Used to specify an ipset to insert resolved addresses into. If the deprecated
+global \fIipset\fR block is used, then it can be referenced using the form:
+.INDENT 7.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+server:
+    lcoal\-zone: "example.com." ipset
+ipset:
+    name\-v4: <ipset name>
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+However, per-rule declarations are also supported where delineation of
+addresses is required. This is done via the form:
+.INDENT 7.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+local\-zone: "example.net." ipset <protocol> <ipset name> <tll | no\-ttl>
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+Here you can specify the \fIprotocol\fR as \fIipv4\fR or \fIipv6\fR, the
+name of the ipset and finally whether to use the DNS record TTL as an
+auto-expiry on the inserted ipset entry. When declaring a local-zone with
+TTL support, the associated ipset must be created with \fIIPSET_EXT_TIMEOUT\fR,
+or with the \fIipset\fR CLI, using the \fItimeout <seconds>\fR option.
+Note that on a BSD distribution, where the server is compiled with the packet
+filter framework, there is no support for TTLs to be set on individual table
+entries. The only support that pf provides is invoking manual expiry of table
+entries past a delta of \fIn\fR seconds via the \fIpfctl -t <table> -T expire <seconds>\fR
+flag (See \fIpftcl\fR(8)). Thus no support is added there for TTLs and a suitable
+warning is raised from the parser when the config is checked.
 .UNINDENT
 .INDENT 7.0
 .TP
