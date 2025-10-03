@@ -3959,6 +3959,13 @@ and be compiled into the daemon to be enabled.
 .. note::
     These settings go in the :ref:`server:<unbound.conf.server>` section.
 
+.. note::
+    If combining the ``respip`` and ``dns64`` modules, the ``respip`` module
+    needs to appear before the ``dns64`` module in the
+    :ref:`module-config<unbound.conf.module-config>`
+    configuration option so that response IP and/or RPZ feeds can properly
+    filter responses regardless of DNS64 synthesis.
+
 
 @@UAHL@unbound.conf.dns64@dns64-prefix@@: *<IPv6 prefix>*
     This sets the DNS64 prefix to use to synthesize AAAA records with.
@@ -4776,6 +4783,13 @@ The respip module needs to be added to the
 .. code-block:: text
 
     module-config: "respip validator iterator"
+
+.. note::
+    If combining the ``respip`` and ``dns64`` modules, the ``respip`` module
+    needs to appear before the ``dns64`` module in the
+    :ref:`module-config<unbound.conf.module-config>`
+    configuration option so that response IP and/or RPZ feeds can properly
+    filter responses regardless of DNS64 synthesis.
 
 QNAME, Response IP Address, nsdname, nsip and clientip triggers are supported.
 Supported actions are: NXDOMAIN, NODATA, PASSTHRU, DROP, Local Data, tcp-only

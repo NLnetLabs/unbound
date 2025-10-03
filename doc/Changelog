@@ -1,3 +1,7 @@
+3 October 2025: Yorgos
+	- Note 'respip' and 'dns64' module order in the unbound.conf
+	  man page.
+
 2 October 2025: Wouter
 	- Fix that https is set up as enabled when the port is listed in
 	  interface-automatic-ports. Also for the set up of quic it is
