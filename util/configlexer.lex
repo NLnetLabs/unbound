@@ -362,8 +362,11 @@ rpz-signal-nxdomain-ra{COLON}	{ YDVAR(1, VAR_RPZ_SIGNAL_NXDOMAIN_RA) }
 zonefile{COLON}			{ YDVAR(1, VAR_ZONEFILE) }
 master{COLON}			{ YDVAR(1, VAR_MASTER) }
 primary{COLON}			{ YDVAR(1, VAR_MASTER) }
+master-tsig{COLON}		{ YDVAR(2, VAR_MASTER_TSIG) }
+primary-tsig{COLON}		{ YDVAR(2, VAR_MASTER_TSIG) }
 url{COLON}			{ YDVAR(1, VAR_URL) }
 allow-notify{COLON}		{ YDVAR(1, VAR_ALLOW_NOTIFY) }
+allow-notify-tsig{COLON}	{ YDVAR(2, VAR_ALLOW_NOTIFY_TSIG) }
 for-downstream{COLON}		{ YDVAR(1, VAR_FOR_DOWNSTREAM) }
 for-upstream{COLON}		{ YDVAR(1, VAR_FOR_UPSTREAM) }
 fallback-enabled{COLON}		{ YDVAR(1, VAR_FALLBACK_ENABLED) }
@@ -607,6 +610,9 @@ proxy-protocol-port{COLON}	{ YDVAR(1, VAR_PROXY_PROTOCOL_PORT) }
 iter-scrub-ns{COLON}		{ YDVAR(1, VAR_ITER_SCRUB_NS) }
 iter-scrub-cname{COLON}		{ YDVAR(1, VAR_ITER_SCRUB_CNAME) }
 max-global-quota{COLON}		{ YDVAR(1, VAR_MAX_GLOBAL_QUOTA) }
+tsig-key{COLON}			{ YDVAR(0, VAR_TSIG_KEY) }
+algorithm{COLON}		{ YDVAR(1, VAR_ALGORITHM) }
+secret{COLON}			{ YDVAR(1, VAR_SECRET) }
 <INITIAL,val>{NEWLINE}		{ LEXOUT(("NL\n")); cfg_parser->line++; }
 
 	/* Quoted strings. Strip leading and ending quotes */
