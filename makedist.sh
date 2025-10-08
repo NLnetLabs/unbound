@@ -409,7 +409,13 @@ if [ "$DOWIN" = "yes" ]; then
 	info "git clone --depth=1 --no-tags -b $GITBRANCH $GITREPO unbound"
 	git clone --depth=1 --no-tags -b $GITBRANCH $GITREPO unbound || error_cleanup "git clone failed"
 	cd unbound || error_cleanup "Unbound not exported correctly from git"
+	git submodule update --init || error_cleanup "Could not fetch submodule"
 	rm -rf .git .travis.yml .gitattributes .github .gitignore || error_cleanup "Failed to remove .git tracking and ci information"
+	rm -rf simdzone/.git simdzone/.github simdzone/.gitignore \
+	       simdzone/cmake simdzone/CMakeLists.txt simdzone/simdzoneConfig.cmake.in \
+	       simdzone/conanfile.txt simdzone/tests simdzone/.readthedocs.yaml \
+	       simdzone/doc simdzone/scripts || \
+	       error_cleanup "Failed to remove simdzone .git tracking and ci information"
 
 	# on a re-configure the cache may no longer be valid...
 	if test -f mingw32-config.cache; then rm mingw32-config.cache; fi
@@ -436,7 +442,7 @@ if [ "$DOWIN" = "yes" ]; then
 	replace_version "configure.ac" "$version" "$version2"
     	version="$version2"
     	info "Rebuilding configure script (autoconf) snapshot."
-	autoconf -f || error_cleanup "Autoconf failed."
+	autoreconf -fi || error_cleanup "Autoconf failed."
 	autoheader -f || error_cleanup "Autoheader failed."
     	rm -r autom4te* || echo "ignored"
 	rm -f config.h.in~ || echo "ignore absence of config.h.in~ file."
@@ -598,7 +604,14 @@ info "git clone --depth=1 --no-tags -b $GITBRANCH $GITREPO unbound"
 git clone --depth=1 --no-tags -b $GITBRANCH $GITREPO unbound || error_cleanup "git clone failed"
 
 cd unbound || error_cleanup "Unbound not exported correctly from git"
+git submodule update --init || error_cleanup "Could not fetch submodule"
 rm -rf .git .travis.yml .gitattributes .github .gitignore || error_cleanup "Failed to remove .git tracking and ci information"
+rm -rf simdzone/.git simdzone/.github simdzone/.gitignore \
+       simdzone/cmake simdzone/CMakeLists.txt simdzone/simdzoneConfig.cmake.in \
+       simdzone/conanfile.txt simdzone/tests simdzone/.readthedocs.yaml \
+       simdzone/doc simdzone/scripts || \
+       error_cleanup "Failed to remove simdzone .git tracking and ci information"
+
 
 info "Adding libtool utils (libtoolize)."
 libtoolize -c --install || libtoolize -c || error_cleanup "Libtoolize failed."
@@ -618,7 +631,7 @@ if [ `uname -s | grep -i -c darwin` -ne 0 ]; then
 fi
 
 info "Building configure script (autoreconf)."
-autoreconf -f || error_cleanup "Autoconf failed."
+autoreconf -fi || error_cleanup "Autoconf failed."
 
 rm -r autom4te* || error_cleanup "Failed to remove autoconf cache directory."
 rm -f config.h.in~ || echo "ignore absence of config.h.in~ file."
@@ -665,7 +678,7 @@ fi
 
 if [ "$RECONFIGURE" = "yes" ]; then
     info "Rebuilding configure script (autoconf) snapshot."
-    autoreconf -f || error_cleanup "Autoconf failed."
+    autoreconf -fi || error_cleanup "Autoconf failed."
     rm -r autom4te* || error_cleanup "Failed to remove autoconf cache directory."
     rm -f config.h.in~ || echo "ignore absence of config.h.in~ file."
     rm -f configure~ || echo "ignore absence of configure~ file."
