@@ -2486,6 +2486,8 @@ AC_CONFIG_HEADERS([config.h])
 # Arguments introduced specifically for simdzone.
 AC_ARG_ENABLE(westmere, AS_HELP_STRING([--disable-westmere], [Disable Westmere (SSE4.2) parser kernel]))
 AC_ARG_ENABLE(haswell, AS_HELP_STRING([--disable-haswell], [Disable Haswell (AVX2) parser kernel]))
+if test ! -f simdzone/configure.ac; then AC_MSG_ERROR([There is no "simdzone/configure.ac" file. The simdzone directory has not been fetched, perhaps get it with 'git submodule update --init'.]); fi
+if test ! -f simdzone/configure; then AC_MSG_ERROR([There is no "simdzone/configure" file. The simdzone directory has no configure script file, perhaps run 'autoreconf -fi'.]); fi
 AC_CONFIG_SUBDIRS([simdzone])
 # Pick up the objects for simdzone.
 SIMDZONE_OBJ=`(cd simdzone; make list_objs) | sed -e 's?src?simdzone/src?g'`

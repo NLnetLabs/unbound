@@ -25403,6 +25403,8 @@ then :
   enableval=$enable_haswell;
 fi
 
+if test ! -f simdzone/configure.ac; then as_fn_error $? "There is no \"simdzone/configure.ac\" file. The simdzone directory has not been fetched, perhaps get it with 'git submodule update --init'." "$LINENO" 5; fi
+if test ! -f simdzone/configure; then as_fn_error $? "There is no \"simdzone/configure\" file. The simdzone directory has no configure script file, perhaps run 'autoreconf -fi'." "$LINENO" 5; fi
 
 
 subdirs="$subdirs simdzone"
