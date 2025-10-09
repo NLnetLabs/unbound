@@ -2018,14 +2018,14 @@ dt_DNSTAP([$UNBOUND_RUN_DIR/dnstap.sock],
 	AC_SUBST(DNSTAP_SOCKET_TESTBIN,['unbound-dnstap-socket$(EXEEXT)'])
         AC_SUBST([DNSTAP_SRC], ["dnstap/dnstap.c dnstap/dnstap.pb-c.c dnstap/dnstap_fstrm.c dnstap/dtstream.c"])
         AC_SUBST([DNSTAP_OBJ], ["dnstap.lo dnstap.pb-c.lo dnstap_fstrm.lo dtstream.lo"])
-	dnstap_config="dnstap/dnstap_config.h.tmp:dnstap/dnstap_config.h.in"
-	dnstap_config_tmp="dnstap/dnstap_config.h.tmp"
-	dnstap_config_out="dnstap/dnstap_config.h"
     ],
     [
         AC_SUBST([ENABLE_DNSTAP], [0])
     ]
 )
+dnstap_config="dnstap/dnstap_config.h.tmp:dnstap/dnstap_config.h.in"
+dnstap_config_tmp="dnstap/dnstap_config.h.tmp"
+dnstap_config_out="dnstap/dnstap_config.h"
 
 # check for dnscrypt if requested
 dnsc_DNSCRYPT([
@@ -2499,7 +2499,9 @@ if test -n "$dnstap_config"; then
 	if test ! -f "$dnstap_config_out"; then
 		mv "$dnstap_config_tmp" "$dnstap_config_out" || AC_MSG_ERROR([Could not create $dnstap_config_out])
 	else if diff "$dnstap_config_out" "$dnstap_config_tmp" >/dev/null 2>&1; then
-		AC_MSG_NOTICE([In $srcdir: $dnstap_config_out is unchanged])
+		if test "x$opt_dnstap" != "xno"; then
+		  AC_MSG_NOTICE([In $srcdir: $dnstap_config_out is unchanged])
+		fi
 		rm -f "$dnstap_config_tmp"
 	else
 		rm -f "$dnstap_config_out"
