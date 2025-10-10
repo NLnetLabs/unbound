@@ -1,3 +1,6 @@
+10 October 2025: Wouter
+	- Fix #1358 Enabling FIPS in OpenSSL causes unit test to fail.
+
 3 October 2025: Yorgos
 	- Note 'respip' and 'dns64' module order in the unbound.conf
 	  man page.
