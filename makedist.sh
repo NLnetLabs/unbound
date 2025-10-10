@@ -410,8 +410,9 @@ if [ "$DOWIN" = "yes" ]; then
 	git clone --depth=1 --no-tags -b $GITBRANCH $GITREPO unbound || error_cleanup "git clone failed"
 	cd unbound || error_cleanup "Unbound not exported correctly from git"
 	git submodule update --init || error_cleanup "Could not fetch submodule"
-	rm -rf .git .travis.yml .gitattributes .github .gitignore || error_cleanup "Failed to remove .git tracking and ci information"
+	rm -rf .git .travis.yml .gitattributes .gitmodules .github .gitignore || error_cleanup "Failed to remove .git tracking and ci information"
 	rm -rf simdzone/.git simdzone/.github simdzone/.gitignore \
+	       simdzone/configure~ simdzone/config.h.in~ simdzone/autom4te.cache \
 	       simdzone/cmake simdzone/CMakeLists.txt simdzone/simdzoneConfig.cmake.in \
 	       simdzone/conanfile.txt simdzone/tests simdzone/.readthedocs.yaml \
 	       simdzone/doc simdzone/scripts || \
@@ -605,8 +606,9 @@ git clone --depth=1 --no-tags -b $GITBRANCH $GITREPO unbound || error_cleanup "g
 
 cd unbound || error_cleanup "Unbound not exported correctly from git"
 git submodule update --init || error_cleanup "Could not fetch submodule"
-rm -rf .git .travis.yml .gitattributes .github .gitignore || error_cleanup "Failed to remove .git tracking and ci information"
+rm -rf .git .travis.yml .gitattributes .gitmodules .github .gitignore || error_cleanup "Failed to remove .git tracking and ci information"
 rm -rf simdzone/.git simdzone/.github simdzone/.gitignore \
+       simdzone/configure~ simdzone/config.h.in~ simdzone/autom4te.cache \
        simdzone/cmake simdzone/CMakeLists.txt simdzone/simdzoneConfig.cmake.in \
        simdzone/conanfile.txt simdzone/tests simdzone/.readthedocs.yaml \
        simdzone/doc simdzone/scripts || \
