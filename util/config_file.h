@@ -48,6 +48,7 @@ struct config_view;
 struct config_strlist;
 struct config_str2list;
 struct config_str3list;
+struct config_str4list;
 struct config_strbytelist;
 struct module_qstate;
 struct sock_list;
@@ -468,7 +469,7 @@ struct config_file {
 	struct config_strlist* local_zones_nodefault;
 #ifdef USE_IPSET
 	/** local zones ipset list */
-	struct config_strlist* local_zones_ipset;
+    struct config_str4list* local_zones_ipset;
 #endif
 	/** do not add any default local zone */
 	int local_zones_disable_default;
@@ -776,11 +777,9 @@ struct config_file {
 	size_t  cookie_secret_len;
 	/** path to cookie secret store */
 	char* cookie_secret_file;
-
-	/* ipset module */
 #ifdef USE_IPSET
-	char* ipset_name_v4;
-	char* ipset_name_v6;
+    char* ipset_name_v4;
+    char* ipset_name_v6;
 #endif
 	/** respond with Extended DNS Errors (RFC8914) */
 	int ede;
@@ -895,7 +894,7 @@ struct config_view {
 	struct config_strlist* local_zones_nodefault;
 #ifdef USE_IPSET
 	/** local zones ipset list */
-	struct config_strlist* local_zones_ipset;
+	struct config_str4list* local_zones_ipset;
 #endif
 	/** Fallback to global local_zones when there is no match in the view
 	 * view specific tree. 1 for yes, 0 for no */
@@ -940,6 +939,21 @@ struct config_str3list {
 	char* str2;
 	/** third string */
 	char* str3;
+};
+
+struct config_str4list {
+	/** next item in list */
+	struct config_str4list* next;
+	/** first string */
+	char* str;
+	/** second string */
+	char* str2;
+	/** third string */
+	char* str3;
+    /** fourth string */
+    char* str4;
+    /** fifth string */
+    char* str5;
 };
 
 
@@ -1135,6 +1149,18 @@ int cfg_str2list_insert(struct config_str2list** head, char* item, char* i2);
  */
 int cfg_str3list_insert(struct config_str3list** head, char* item, char* i2,
 	char* i3);
+
+/**
+ * Insert string into str4list.
+ * @param head: pointer to str4list head variable.
+ * @param item: new item. malloced by caller. If NULL the insertion fails.
+ * @param i2: 2nd string, malloced by caller. If NULL the insertion fails.
+ * @param i3: 3rd string, malloced by caller. If NULL the insertion fails.
+ * @param i4: 4th string, malloced by caller. If NULL the insertion fails.
+ * @return: true on success.
+ */
+int cfg_str4list_insert(struct config_str4list** head, char* item, char* i2,
+	char* i3, char* i4);
 
 /**
  * Insert string into strbytelist.

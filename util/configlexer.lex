@@ -32,13 +32,18 @@ void ub_c_error(const char *message);
 /** avoid warning in about fwrite return value */
 #define ECHO ub_c_error_msg("syntax error at text: %s", yytext)
 
-/** A parser variable, this is a statement in the config file which is
- * of the form variable: value1 value2 ...  nargs is the number of values. */
-#define YDVAR(nargs, var) \
-	num_args=(nargs); \
-	LEXOUT(("v(%s%d) ", yytext, num_args)); \
+/* A parser variable of variable argument count in the range [min, max] in
+ * the config of the form: value1 value 2 ... */
+#define YDVARMM(nargs_min, nargs_max, var) \
+	num_args=(nargs_min); \
+	num_args_max=(nargs_max); \
+	LEXOUT(("v(%s%d-%d) ", yytext, num_args, num_args_max)); \
 	if(num_args > 0) { BEGIN(val); } \
 	return (var);
+
+/** A parser variable, this is a statement in the config file which is
+ * of the form variable: value1 value2 ...  nargs is the number of values. */
+#define YDVAR(nargs, var) YDVARMM(nargs, nargs, var)
 
 struct inc_state {
 	char* filename;
@@ -51,6 +56,7 @@ static struct inc_state* config_include_stack = NULL;
 static int inc_depth = 0;
 static int inc_prev = 0;
 static int num_args = 0;
+static int num_args_max = 0;
 static int inc_toplevel = 0;
 
 void init_cfg_parse(void)
@@ -183,6 +189,22 @@ static void config_end_include(void)
 	        yy_current_buffer->yy_ch_buf[0] = ((at_bol)?'\n':' '); \
         }
 #endif
+
+#define ENSURE_VARARG_CONSISTENCY \
+    if (num_args == 0 && num_args_max > 0) { \
+        num_args = num_args_max; \
+    } \
+    num_args_max--; \
+	if(--num_args == 0) { \
+        if (num_args_max > 0) { \
+            LEXOUT(("ARGC(0,%d) ",num_args_max)); \
+            BEGIN(val); \
+        } else { \
+            BEGIN(INITIAL); \
+        } \
+    } else { \
+        BEGIN(val); \
+    }
 
 %}
 %option noinput
@@ -441,7 +463,7 @@ log-tag-queryreply{COLON}	{ YDVAR(1, VAR_LOG_TAG_QUERYREPLY) }
 log-local-actions{COLON}       { YDVAR(1, VAR_LOG_LOCAL_ACTIONS) }
 log-servfail{COLON}		{ YDVAR(1, VAR_LOG_SERVFAIL) }
 log-destaddr{COLON}		{ YDVAR(1, VAR_LOG_DESTADDR) }
-local-zone{COLON}		{ YDVAR(2, VAR_LOCAL_ZONE) }
+local-zone{COLON}		{ YDVARMM(2, 5, VAR_LOCAL_ZONE) }
 local-data{COLON}		{ YDVAR(1, VAR_LOCAL_DATA) }
 local-data-ptr{COLON}		{ YDVAR(1, VAR_LOCAL_DATA_PTR) }
 unblock-lan-zones{COLON}	{ YDVAR(1, VAR_UNBLOCK_LAN_ZONES) }
@@ -607,23 +629,31 @@ proxy-protocol-port{COLON}	{ YDVAR(1, VAR_PROXY_PROTOCOL_PORT) }
 iter-scrub-ns{COLON}		{ YDVAR(1, VAR_ITER_SCRUB_NS) }
 iter-scrub-cname{COLON}		{ YDVAR(1, VAR_ITER_SCRUB_CNAME) }
 max-global-quota{COLON}		{ YDVAR(1, VAR_MAX_GLOBAL_QUOTA) }
-<INITIAL,val>{NEWLINE}		{ LEXOUT(("NL\n")); cfg_parser->line++; }
+<INITIAL,val>{NEWLINE}		{
+    LEXOUT(("NL(%d,%d)\n", num_args, num_args_max));
+    if (num_args == 0 && num_args_max > 0) {
+        /* Early match a set of tokens between the min and max */
+        num_args = 0;
+        num_args_max = 0;
+        BEGIN(INITIAL);
+    } else {
+        cfg_parser->line++;
+    }
+}
 
 	/* Quoted strings. Strip leading and ending quotes */
 <val>\"			{ BEGIN(quotedstring); LEXOUT(("QS ")); }
 <quotedstring><<EOF>>   {
-        yyerror("EOF inside quoted string");
-	if(--num_args == 0) { BEGIN(INITIAL); }
-	else		    { BEGIN(val); }
+    yyerror("EOF inside quoted string");
+    ENSURE_VARARG_CONSISTENCY
 }
 <quotedstring>{DQANY}*  { LEXOUT(("STR(%s) ", yytext)); yymore(); }
 <quotedstring>{NEWLINE} { yyerror("newline inside quoted string, no end \"");
 			  cfg_parser->line++; BEGIN(INITIAL); }
 <quotedstring>\" {
-        LEXOUT(("QE "));
-	if(--num_args == 0) { BEGIN(INITIAL); }
-	else		    { BEGIN(val); }
-        yytext[yyleng - 1] = '\0';
+    LEXOUT(("QE "));
+    ENSURE_VARARG_CONSISTENCY
+    yytext[yyleng - 1] = '\0';
 	yylval.str = strdup(yytext);
 	if(!yylval.str)
 		yyerror("out of memory");
@@ -633,18 +663,16 @@ max-global-quota{COLON}		{ YDVAR(1, VAR_MAX_GLOBAL_QUOTA) }
 	/* Single Quoted strings. Strip leading and ending quotes */
 <val>\'			{ BEGIN(singlequotedstr); LEXOUT(("SQS ")); }
 <singlequotedstr><<EOF>>   {
-        yyerror("EOF inside quoted string");
-	if(--num_args == 0) { BEGIN(INITIAL); }
-	else		    { BEGIN(val); }
+    yyerror("EOF inside quoted string");
+    ENSURE_VARARG_CONSISTENCY
 }
 <singlequotedstr>{SQANY}*  { LEXOUT(("STR(%s) ", yytext)); yymore(); }
 <singlequotedstr>{NEWLINE} { yyerror("newline inside quoted string, no end '");
 			     cfg_parser->line++; BEGIN(INITIAL); }
 <singlequotedstr>\' {
-        LEXOUT(("SQE "));
-	if(--num_args == 0) { BEGIN(INITIAL); }
-	else		    { BEGIN(val); }
-        yytext[yyleng - 1] = '\0';
+    LEXOUT(("SQE "));
+    ENSURE_VARARG_CONSISTENCY
+    yytext[yyleng - 1] = '\0';
 	yylval.str = strdup(yytext);
 	if(!yylval.str)
 		yyerror("out of memory");
@@ -726,9 +754,12 @@ max-global-quota{COLON}		{ YDVAR(1, VAR_MAX_GLOBAL_QUOTA) }
 	return (VAR_FORCE_TOPLEVEL);
 }
 
-<val>{UNQUOTEDLETTER}*	{ LEXOUT(("unquotedstr(%s) ", yytext));
-			if(--num_args == 0) { BEGIN(INITIAL); }
-			yylval.str = strdup(yytext); return STRING_ARG; }
+<val>{UNQUOTEDLETTER}*	{
+    LEXOUT(("unquotedstr(%s) ", yytext));
+    ENSURE_VARARG_CONSISTENCY
+    yylval.str = strdup(yytext);
+    return STRING_ARG;
+}
 
 {UNQUOTEDLETTER_NOCOLON}*	{
 	ub_c_error_msg("unknown keyword '%s'", yytext);
