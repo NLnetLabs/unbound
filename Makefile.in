@@ -1027,7 +1027,9 @@ authzone.lo authzone.o: $(srcdir)/services/authzone.c config.h $(srcdir)/service
  $(srcdir)/services/listen_dnsport.h $(srcdir)/daemon/acl_list.h \
  $(srcdir)/sldns/str2wire.h $(srcdir)/sldns/wire2str.h $(srcdir)/sldns/parseutil.h $(srcdir)/sldns/keyraw.h \
  $(srcdir)/validator/val_nsec3.h $(srcdir)/validator/val_nsec.h $(srcdir)/validator/val_secalgo.h \
- $(srcdir)/validator/val_sigcrypt.h $(srcdir)/validator/val_anchor.h $(srcdir)/validator/val_utils.h
+ $(srcdir)/validator/val_sigcrypt.h $(srcdir)/validator/val_anchor.h $(srcdir)/validator/val_utils.h \
+ $(srcdir)/simdzone/include/zone.h $(srcdir)/simdzone/include/zone/attributes.h \
+ simdzone/include/zone/export.h
 fptr_wlist.lo fptr_wlist.o: $(srcdir)/util/fptr_wlist.c config.h $(srcdir)/util/fptr_wlist.h \
  $(srcdir)/util/netevent.h $(srcdir)/dnscrypt/dnscrypt.h  \
  $(srcdir)/dnscrypt/cert.h $(srcdir)/util/locks.h $(srcdir)/util/log.h \

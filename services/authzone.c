@@ -72,6 +72,7 @@
 #include "validator/val_sigcrypt.h"
 #include "validator/val_anchor.h"
 #include "validator/val_utils.h"
+#include "zone.h"
 #include <ctype.h>
 
 /** bytes to use for NSEC3 hash buffer. 20 for sha1 */
@@ -1563,6 +1564,114 @@ az_parse_file(struct auth_zone* z, FILE* in, uint8_t* rr, size_t rrbuflen,
 	return 1;
 }
 
+/** Structure for simdzone parse state */
+struct az_parse_state {
+	/** number of errors, if 0 it was read successfully. */
+	int errors;
+};
+
+/** Callback for simdzone parse, log an error */
+static void
+az_parse_log(zone_parser_t *parser, uint32_t category,
+	const char *file, size_t line, const char *message, void *user_data)
+{
+	struct az_parse_state* state = (struct az_parse_state*)user_data;
+	(void)parser;
+
+	switch (category) {
+	case ZONE_INFO:
+		if (file)
+			log_info("%s:%d: %s", file, (int)line, message);
+		else
+			log_info("%s", message);
+		break;
+	case ZONE_WARNING:
+		if (file)
+			log_warn("%s:%d: %s", file, (int)line, message);
+		else
+			log_warn("%s", message);
+		break;
+	default:
+		if (file)
+			log_err("%s:%d: %s", file, (int)line, message);
+		else
+			log_err("%s", message);
+		state->errors++;
+		break;
+	}
+}
+
+/** Callback for simdzone parse, accept an RR that has been read in. */
+int32_t
+az_parse_accept(zone_parser_t *parser, const zone_name_t *owner,
+	uint16_t type, uint16_t dclass, uint32_t ttl, uint16_t rdlength,
+	const uint8_t *rdata, void *user_data)
+{
+	struct az_parse_state* state = (struct az_parse_state*)user_data;
+
+	(void)parser;
+	(void)owner;
+	(void)type;
+	(void)dclass;
+	(void)ttl;
+	(void)rdlength;
+	(void)rdata;
+	(void)state;
+	return 0;
+}
+
+/**
+ * Callback for simdzone parse, include a zone file.
+ * It is called for every $INCLUDE entry. It could be used to save
+ * the file names, so that it can track if the files have changed, later.
+ */
+static int32_t
+az_parse_include(zone_parser_t *parser, const char *file,
+	const char *path, void *user_data)
+{
+	struct az_parse_state* state = (struct az_parse_state*)user_data;
+	(void)parser;
+	(void)file;
+	(void)path;
+	(void)state;
+	return 0;
+}
+
+/**
+ * Parse file with simdzone.
+ */
+static int
+az_parse_file_simdzone(struct auth_zone* z, char* zfilename,
+	struct config_file* cfg)
+{
+	zone_parser_t parser;
+	zone_options_t options;
+	zone_name_buffer_t name_buffer;
+	zone_rdata_buffer_t rdata_buffer;
+	zone_buffers_t buffers = { 1, &name_buffer, &rdata_buffer };
+	struct az_parse_state state;
+
+	memset(&options, 0, sizeof(options));
+	options.origin.octets = z->name;
+	options.origin.length = z->namelen;
+	options.default_ttl = 3600;
+	options.default_class = LDNS_RR_CLASS_IN;
+	options.secondary = z->zone_is_slave;
+	options.pretty_ttls = true; /* non-standard, for backwards compatibility */
+	options.log.callback = &az_parse_log;
+	options.accept.callback = &az_parse_accept;
+	options.include.callback = &az_parse_include;
+
+	memset(&state, 0, sizeof(state));
+	(void)cfg;
+
+	/* Parse and process all RRs.  */
+	if (zone_parse(&parser, &options, &buffers, zfilename, &state) != 0) {
+		return 0;
+	}
+	return 1;
+}
+
 int
 auth_zone_read_zonefile(struct auth_zone* z, struct config_file* cfg)
 {
@@ -1614,15 +1723,27 @@ auth_zone_read_zonefile(struct auth_zone* z, struct config_file* cfg)
 		state.origin_len = z->namelen;
 	}
 	/* parse the (toplevel) file */
-	if(!az_parse_file(z, in, rr, sizeof(rr), &state, zfilename, 0, cfg)) {
-		char* n = sldns_wire2str_dname(z->name, z->namelen);
-		log_err("error parsing zonefile %s for %s",
-			zfilename, n?n:"error");
-		free(n);
+	if(0) {
+		/* Use simdzone. */
+		fclose(in); /* simdzone is going to open the file. */
+		if(!az_parse_file_simdzone(z, zfilename, cfg)) {
+			char* n = sldns_wire2str_dname(z->name, z->namelen);
+			log_err("error parsing zonefile %s for %s",
+				zfilename, n?n:"error");
+			free(n);
+			return 0;
+		}
+	} else {
+		if(!az_parse_file(z, in, rr, sizeof(rr), &state, zfilename, 0, cfg)) {
+			char* n = sldns_wire2str_dname(z->name, z->namelen);
+			log_err("error parsing zonefile %s for %s",
+				zfilename, n?n:"error");
+			free(n);
+			fclose(in);
+			return 0;
+		}
 		fclose(in);
-		return 0;
 	}
-	fclose(in);
 
 	if(z->rpz)
 		rpz_finish_config(z->rpz);
