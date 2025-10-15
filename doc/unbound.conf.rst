@@ -496,6 +496,9 @@ These options are part of the **server:** clause.
     The wait time in msec where recursion requests are dropped.
     This is to stop a large number of replies from accumulating.
     They receive no reply, the work item continues to recurse.
+    For UDP the replies are dropped, for stream connections the reply
+    is not dropped if the stream connection is still open ready to receive
+    answers.
     It is nice to be a bit larger than
     :ref:`serve-expired-client-timeout<unbound.conf.serve-expired-client-timeout>`
     if that is enabled.
