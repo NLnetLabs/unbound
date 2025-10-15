@@ -4,6 +4,8 @@
 	- Add extended dns error code for invalid query type to definition
 	  list.
 	- Fix to update openssl version in ios ci.
+	- Fix unbound.conf man page entry for root-hints to say it can
+	  be used without strongly recommending it.
 
 10 October 2025: Wouter
 	- Fix #1358 Enabling FIPS in OpenSSL causes unit test to fail.
