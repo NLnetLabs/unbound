@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-OPENSSL_VERSION=3.0.18
+OPENSSL_VERSION=1.1.1d
 
 echo "Downloading OpenSSL"
 if ! curl -L -k -s -o openssl-$OPENSSL_VERSION.tar.gz https://www.openssl.org/source/openssl-$OPENSSL_VERSION.tar.gz;
@@ -33,7 +33,7 @@ if ! patch -u -p0 < ../contrib/ios/openssl.patch; then
 fi
 
 echo "Configuring OpenSSL"
-if ! ./Configure "$OPENSSL_HOST" -DNO_FORK no-comp no-asm no-engine no-tests no-unit-test \
+if ! ./Configure "$OPENSSL_HOST" -DNO_FORK no-comp no-asm no-hw no-engine no-tests no-unit-test \
        --prefix="$IOS_PREFIX" --openssldir="$IOS_PREFIX"; then
     echo "Failed to configure OpenSSL"
     exit 1
