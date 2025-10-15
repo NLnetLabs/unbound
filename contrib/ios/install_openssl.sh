@@ -33,7 +33,7 @@ if ! patch -u -p0 < ../contrib/ios/openssl.patch; then
 fi
 
 echo "Configuring OpenSSL"
-if ! ./Configure "$OPENSSL_HOST" -DNO_FORK no-comp no-shared no-asm no-hw no-engine no-tests no-unit-test \
+if ! ./Configure "$OPENSSL_HOST" -DNO_FORK no-comp no-asm no-hw no-engine no-tests no-unit-test \
        --prefix="$IOS_PREFIX" --openssldir="$IOS_PREFIX"; then
     echo "Failed to configure OpenSSL"
     exit 1

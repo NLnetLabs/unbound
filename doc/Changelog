@@ -3,7 +3,10 @@
 	- Fix to reply with SERVFAIL when the wait-limit is exceeded.
 	- Add extended dns error code for invalid query type to definition
 	  list.
-	- Fix to update openssl version in ios ci.
+	- Remove iPhone armv7s, and iPhoneSimulator i386 from ios ci.
+	  The lib system does not provide symbols for it on the new macos
+	  runner.
+	- Fix to exclude libssp for windows compiles.
 
 10 October 2025: Wouter
 	- Fix #1358 Enabling FIPS in OpenSSL causes unit test to fail.
