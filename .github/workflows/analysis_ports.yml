@@ -49,23 +49,12 @@ jobs:
             os: ubuntu-latest
             config: 'CFLAGS="-DNDEBUG -g2 -O3 -fsanitize=address" --disable-flto --disable-static'
             make_test: "yes"
-          - name: Apple iPhone on iOS, armv7
-            os: macos-latest
-            AUTOTOOLS_HOST: armv7-apple-ios
-            OPENSSL_HOST: ios-cross
-            IOS_SDK: iPhoneOS
-            IOS_CPU: armv7s
-            SDK_VERSION: 18.0
-            test_ios: "yes"
-            config: "no"
-            make: "no"
           - name: Apple iPhone on iOS, arm64
             os: macos-latest
             AUTOTOOLS_HOST: aarch64-apple-ios
             OPENSSL_HOST: ios64-cross
             IOS_SDK: iPhoneOS
             IOS_CPU: arm64
-            SDK_VERSION: 18.0
             test_ios: "yes"
             config: "no"
             make: "no"
@@ -75,7 +64,6 @@ jobs:
             OPENSSL_HOST: ios64-cross
             IOS_SDK: AppleTVOS
             IOS_CPU: arm64
-            SDK_VERSION: 18.0
             test_ios: "yes"
             config: "no"
             make: "no"
@@ -88,23 +76,12 @@ jobs:
             test_ios: "yes"
             config: "no"
             make: "no"
-          - name: iPhoneSimulator on OS X, i386
-            os: macos-latest
-            AUTOTOOLS_HOST: i386-apple-ios
-            OPENSSL_HOST: iphoneos-cross
-            IOS_SDK: iPhoneSimulator
-            IOS_CPU: i386
-            SDK_VERSION: 18.0
-            test_ios: "yes"
-            config: "no"
-            make: "no"
           - name: iPhoneSimulator on OS X, x86_64
             os: macos-latest
             AUTOTOOLS_HOST: x86_64-apple-ios
             OPENSSL_HOST: iphoneos-cross
             IOS_SDK: iPhoneSimulator
             IOS_CPU: x86_64
-            SDK_VERSION: 18.0
             test_ios: "yes"
             config: "no"
             make: "no"
@@ -114,7 +91,6 @@ jobs:
             OPENSSL_HOST: iphoneos-cross
             IOS_SDK: AppleTVSimulator
             IOS_CPU: x86_64
-            SDK_VERSION: 18.0
             test_ios: "yes"
             config: "no"
             make: "no"
@@ -336,7 +312,6 @@ jobs:
           OPENSSL_HOST: ${{ matrix.OPENSSL_HOST }}
           IOS_SDK: ${{ matrix.IOS_SDK }}
           IOS_CPU: ${{ matrix.IOS_CPU }}
-          SDK_VERSION: ${{ matrix.SDK_VERSION }}
         run: |
           #(already installed) ./contrib/ios/install_tools.sh
           export AUTOTOOLS_BUILD="$(./config.guess)"
