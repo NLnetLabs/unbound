@@ -14,7 +14,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
+        exclude:
           - name: GCC on Linux
             os: ubuntu-latest
             config: "--enable-debug --disable-flto"
@@ -49,72 +49,12 @@ jobs:
             os: ubuntu-latest
             config: 'CFLAGS="-DNDEBUG -g2 -O3 -fsanitize=address" --disable-flto --disable-static'
             make_test: "yes"
-          - name: Apple iPhone on iOS, armv7
-            os: macos-latest
-            AUTOTOOLS_HOST: armv7-apple-ios
-            OPENSSL_HOST: ios-cross
-            IOS_SDK: iPhoneOS
-            IOS_CPU: armv7s
-            SDK_VERSION: 18.0
-            test_ios: "yes"
-            config: "no"
-            make: "no"
-          - name: Apple iPhone on iOS, arm64
-            os: macos-latest
-            AUTOTOOLS_HOST: aarch64-apple-ios
-            OPENSSL_HOST: ios64-cross
-            IOS_SDK: iPhoneOS
-            IOS_CPU: arm64
-            SDK_VERSION: 18.0
-            test_ios: "yes"
-            config: "no"
-            make: "no"
-          - name: Apple TV on iOS, arm64
-            os: macos-latest
-            AUTOTOOLS_HOST: aarch64-apple-ios
-            OPENSSL_HOST: ios64-cross
-            IOS_SDK: AppleTVOS
-            IOS_CPU: arm64
-            SDK_VERSION: 18.0
-            test_ios: "yes"
-            config: "no"
-            make: "no"
           - name: Apple Watch on iOS, armv7
             os: macos-latest
             AUTOTOOLS_HOST: armv7-apple-ios
             OPENSSL_HOST: ios-cross
             IOS_SDK: WatchOS
             IOS_CPU: armv7k
-            test_ios: "yes"
-            config: "no"
-            make: "no"
-          - name: iPhoneSimulator on OS X, i386
-            os: macos-latest
-            AUTOTOOLS_HOST: i386-apple-ios
-            OPENSSL_HOST: iphoneos-cross
-            IOS_SDK: iPhoneSimulator
-            IOS_CPU: i386
-            SDK_VERSION: 18.0
-            test_ios: "yes"
-            config: "no"
-            make: "no"
-          - name: iPhoneSimulator on OS X, x86_64
-            os: macos-latest
-            AUTOTOOLS_HOST: x86_64-apple-ios
-            OPENSSL_HOST: iphoneos-cross
-            IOS_SDK: iPhoneSimulator
-            IOS_CPU: x86_64
-            SDK_VERSION: 18.0
-            test_ios: "yes"
-            config: "no"
-            make: "no"
-          - name: AppleTVSimulator on OS X, x86_64
-            os: macos-latest
-            AUTOTOOLS_HOST: x86_64-apple-ios
-            OPENSSL_HOST: iphoneos-cross
-            IOS_SDK: AppleTVSimulator
-            IOS_CPU: x86_64
-            SDK_VERSION: 18.0
             test_ios: "yes"
             config: "no"
             make: "no"
@@ -163,11 +103,6 @@ jobs:
             test_android: "yes"
             config: "no"
             make: "no"
-          - name: Windows
-            os: windows-latest
-            test_windows: "yes"
-            config: "no"
-            make: "no"
           - name: FreeBSD
             os: ubuntu-latest
             config: "no"
@@ -195,6 +130,66 @@ jobs:
             cross_platform_arch: "x86-64"
             cross_platform_version: "10.0"
             cross_platform_config: "--enable-debug --disable-flto --with-libevent --disable-static"
+        include:
+          - name: Apple iPhone on iOS, armv7
+            os: macos-latest
+            AUTOTOOLS_HOST: armv7-apple-ios
+            OPENSSL_HOST: ios-cross
+            IOS_SDK: iPhoneOS
+            IOS_CPU: armv7s
+            test_ios: "yes"
+            config: "no"
+            make: "no"
+          - name: Apple iPhone on iOS, arm64
+            os: macos-latest
+            AUTOTOOLS_HOST: aarch64-apple-ios
+            OPENSSL_HOST: ios64-cross
+            IOS_SDK: iPhoneOS
+            IOS_CPU: arm64
+            test_ios: "yes"
+            config: "no"
+            make: "no"
+          - name: Apple TV on iOS, arm64
+            os: macos-latest
+            AUTOTOOLS_HOST: aarch64-apple-ios
+            OPENSSL_HOST: ios64-cross
+            IOS_SDK: AppleTVOS
+            IOS_CPU: arm64
+            test_ios: "yes"
+            config: "no"
+            make: "no"
+          - name: iPhoneSimulator on OS X, i386
+            os: macos-latest
+            AUTOTOOLS_HOST: i386-apple-ios
+            OPENSSL_HOST: iphoneos-cross
+            IOS_SDK: iPhoneSimulator
+            IOS_CPU: i386
+            test_ios: "yes"
+            config: "no"
+            make: "no"
+          - name: iPhoneSimulator on OS X, x86_64
+            os: macos-latest
+            AUTOTOOLS_HOST: x86_64-apple-ios
+            OPENSSL_HOST: iphoneos-cross
+            IOS_SDK: iPhoneSimulator
+            IOS_CPU: x86_64
+            test_ios: "yes"
+            config: "no"
+            make: "no"
+          - name: AppleTVSimulator on OS X, x86_64
+            os: macos-latest
+            AUTOTOOLS_HOST: x86_64-apple-ios
+            OPENSSL_HOST: iphoneos-cross
+            IOS_SDK: AppleTVSimulator
+            IOS_CPU: x86_64
+            test_ios: "yes"
+            config: "no"
+            make: "no"
+          - name: Windows
+            os: windows-latest
+            test_windows: "yes"
+            config: "no"
+            make: "no"
  
     steps:
       - uses: actions/checkout@v4
@@ -276,6 +271,8 @@ jobs:
           cd unbound
           echo "./configure --enable-debug --enable-static-exe --disable-flto \"--with-ssl=$prepath/openssl\" --with-libexpat=\"$prepath/expat\" --disable-shared"
           ./configure --enable-debug --enable-static-exe --disable-flto "--with-ssl=$prepath/openssl" --with-libexpat="$prepath/expat" --disable-shared
+          # for the check results.
+          cat config.log
           make
           # specific test output
           #make testbound.exe; ./testbound.exe -s
@@ -336,7 +333,6 @@ jobs:
           OPENSSL_HOST: ${{ matrix.OPENSSL_HOST }}
           IOS_SDK: ${{ matrix.IOS_SDK }}
           IOS_CPU: ${{ matrix.IOS_CPU }}
-          SDK_VERSION: ${{ matrix.SDK_VERSION }}
         run: |
           #(already installed) ./contrib/ios/install_tools.sh
           export AUTOTOOLS_BUILD="$(./config.guess)"
