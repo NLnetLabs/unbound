@@ -1680,8 +1680,8 @@ These options are part of the **server:** clause.
     Default is nothing, using builtin hints for the IN class.
     The file has the format of zone files, with root nameserver names and
     addresses only.
-    The default may become outdated, when servers change, therefore it is good
-    practice to use a root hints file.
+    The default may become outdated, when servers change, and then it is
+    possible to use a root hints file with specific servers.
 
     Default: ""
 

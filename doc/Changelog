@@ -3,6 +3,8 @@
 	- Fix to reply with SERVFAIL when the wait-limit is exceeded.
 	- Add extended dns error code for invalid query type to definition
 	  list.
+	- Fix unbound.conf man page entry for root-hints to say it can
+	  be used without strongly recommending it.
 	- Remove iPhone armv7s, and iPhoneSimulator i386 from ios ci.
 	  The lib system does not provide symbols for it on the new macos
 	  runner.
