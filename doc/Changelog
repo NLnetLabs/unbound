@@ -1,5 +1,6 @@
 15 October 2025: Wouter
 	- Fix to drop UDP for discard-timeout, but not stream connections.
+	- Fix to reply with SERVFAIL when the wait-limit is exceeded.
 
 10 October 2025: Wouter
 	- Fix #1358 Enabling FIPS in OpenSSL causes unit test to fail.

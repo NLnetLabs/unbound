@@ -441,9 +441,18 @@ void mesh_new_client(struct mesh_area* mesh, struct query_info* qinfo,
 	if(!infra_wait_limit_allowed(mesh->env->infra_cache, rep,
 		edns->cookie_valid, mesh->env->cfg)) {
 		verbose(VERB_ALGO, "Too many queries waiting from the IP. "
-			"dropping incoming query.");
-		comm_point_drop_reply(rep);
+			"servfail incoming query.");
 		mesh->num_queries_wait_limit++;
+		edns_opt_list_append_ede(&edns->opt_list_out,
+			mesh->env->scratch, LDNS_EDE_OTHER,
+			"Too many queries queued up and waiting from the IP");
+		if(!inplace_cb_reply_servfail_call(mesh->env, qinfo, NULL, NULL,
+			LDNS_RCODE_SERVFAIL, edns, rep, mesh->env->scratch, mesh->env->now_tv))
+				edns->opt_list_inplace_cb_out = NULL;
+		error_encode(r_buffer, LDNS_RCODE_SERVFAIL,
+			qinfo, qid, qflags, edns);
+		regional_free_all(mesh->env->scratch);
+		comm_point_send_reply(rep);
 		return;
 	}
 	if(!unique)
