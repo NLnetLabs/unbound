@@ -495,6 +495,7 @@ typedef enum sldns_enum_ede_code sldns_ede_code;
 #define LDNS_TSIG_ERROR_BADMODE  19
 #define LDNS_TSIG_ERROR_BADNAME  20
 #define LDNS_TSIG_ERROR_BADALG   21
+#define LDNS_TSIG_ERROR_BADTRUNC 22
 
 /** DNS Cookie extended rcode */
 #define LDNS_EXT_RCODE_BADCOOKIE 23

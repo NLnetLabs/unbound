@@ -150,6 +150,7 @@ There are several commands that the server understands.
     :ref:`trusted-keys-file<unbound.conf.trusted-keys-file>`,
     :ref:`auto-trust-anchor-file<unbound.conf.auto-trust-anchor-file>`,
     :ref:`edns-client-string<unbound.conf.edns-client-string>`,
+    :ref:`tsig-key<unbound.conf.tsig-key>`,
     ipset,
     :ref:`log-identity<unbound.conf.log-identity>`,
     :ref:`infra-cache-numhosts<unbound.conf.infra-cache-numhosts>`,
