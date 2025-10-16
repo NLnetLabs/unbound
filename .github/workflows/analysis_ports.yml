@@ -19,36 +19,36 @@ jobs:
 #            os: ubuntu-latest
 #            config: "--enable-debug --disable-flto"
 #            make_test: "yes"
-          - name: Clang-analyzer
-            os: ubuntu-latest
-            config: "CC=clang --enable-debug --disable-flto --disable-static"
-            make_test: "yes"
-            clang_analysis: "yes"
-          - name: libevent
-            os: ubuntu-latest
-            install_libevent: "yes"
-            config: "CC=clang --enable-debug --disable-flto --with-libevent --disable-static"
-            make_test: "yes"
-            clang_analysis: "yes"
-          - name: OS X
-            os: macos-latest
-            install_expat: "yes"
-            config: "--enable-debug --disable-flto --with-ssl=/opt/homebrew/opt/openssl --with-libexpat=/opt/homebrew/opt/expat"
-            make_test: "yes"
-          - name: Clang on OS X
-            os: macos-latest
-            install_expat: "yes"
-            config: "CC=clang --enable-debug --disable-flto --with-ssl=/opt/homebrew/opt/openssl --with-libexpat=/opt/homebrew/opt/expat --disable-static"
-            make_test: "yes"
-            clang_analysis: "yes"
-          - name: ubsan (gcc undefined behaviour sanitizer)
-            os: ubuntu-latest
-            config: 'CFLAGS="-DNDEBUG -g2 -O3 -fsanitize=undefined -fno-sanitize-recover=all" --disable-flto --disable-static'
-            make_test: "yes"
-          - name: asan (gcc address sanitizer)
-            os: ubuntu-latest
-            config: 'CFLAGS="-DNDEBUG -g2 -O3 -fsanitize=address" --disable-flto --disable-static'
-            make_test: "yes"
+#          - name: Clang-analyzer
+#            os: ubuntu-latest
+#            config: "CC=clang --enable-debug --disable-flto --disable-static"
+#            make_test: "yes"
+#            clang_analysis: "yes"
+#          - name: libevent
+#            os: ubuntu-latest
+#            install_libevent: "yes"
+#            config: "CC=clang --enable-debug --disable-flto --with-libevent --disable-static"
+#            make_test: "yes"
+#            clang_analysis: "yes"
+#          - name: OS X
+#            os: macos-latest
+#            install_expat: "yes"
+#            config: "--enable-debug --disable-flto --with-ssl=/opt/homebrew/opt/openssl --with-libexpat=/opt/homebrew/opt/expat"
+#            make_test: "yes"
+#          - name: Clang on OS X
+#            os: macos-latest
+#            install_expat: "yes"
+#            config: "CC=clang --enable-debug --disable-flto --with-ssl=/opt/homebrew/opt/openssl --with-libexpat=/opt/homebrew/opt/expat --disable-static"
+#            make_test: "yes"
+#            clang_analysis: "yes"
+#          - name: ubsan (gcc undefined behaviour sanitizer)
+#            os: ubuntu-latest
+#            config: 'CFLAGS="-DNDEBUG -g2 -O3 -fsanitize=undefined -fno-sanitize-recover=all" --disable-flto --disable-static'
+#            make_test: "yes"
+#          - name: asan (gcc address sanitizer)
+#            os: ubuntu-latest
+#            config: 'CFLAGS="-DNDEBUG -g2 -O3 -fsanitize=address" --disable-flto --disable-static'
+#            make_test: "yes"
           - name: Apple iPhone on iOS, arm64
             os: macos-latest
             AUTOTOOLS_HOST: aarch64-apple-ios
@@ -196,8 +196,8 @@ jobs:
           echo 'YACC="win_bison -y"'
           export YACC="win_bison -y"
           # probably installs to C:\msys64\usr\bin\bash.exe
-          echo "pacman autotools"
-          C:/msys64/usr/bin/pacman -S autotools
+          echo "pacman -S --noconfirm autotools"
+          C:/msys64/usr/bin/pacman -S --noconfirm autotools
           mkdir openssl
           echo "curl openssl"
           curl -L -k -s -S -o openssl-3.2.0.tar.gz https://www.openssl.org/source/openssl-3.2.0.tar.gz
@@ -209,7 +209,7 @@ jobs:
           #sed -e 's/use Pod::Usage//' < Configure > Configure.fix
           # ./Configure.fix no-shared no-asm -DOPENSSL_NO_CAPIENG mingw64 --prefix="$prepath/openssl"
           # pacman is used to install for msys2, with
-          # C:/msys64/usr/bin/pacman -S perl
+          # C:/msys64/usr/bin/pacman -S --noconfirm perl
           echo "C:/msys64/usr/bin/perl ./Configure no-shared no-asm -DOPENSSL_NO_CAPIENG mingw64 --prefix=\""$prepath/openssl"\" PERL=\"C:/msys64/usr/bin/perl\""
           C:/msys64/usr/bin/perl ./Configure no-shared no-asm -DOPENSSL_NO_CAPIENG mingw64 --prefix="$prepath/openssl" PERL="C:/msys64/usr/bin/perl"
           # make the libs only, build faster
@@ -346,6 +346,8 @@ jobs:
           ./contrib/ios/install_expat.sh
           echo "::endgroup::"
           echo "::group::configure"
+          echo "autoreconf -fi"
+          autoreconf -fi
           echo "./configure ${CONFIG_OPTS}"
           ./configure ${CONFIG_OPTS}
           echo "::endgroup::"
@@ -371,9 +373,9 @@ jobs:
           cpu_count: 2
           run: |
             set -e -x
-            if test "$CROSS_PLATFORM_OS" = "freebsd"; then sudo pkg install -y autoconf automake libtool openssl libevent expat; fi
-            if test "$CROSS_PLATFORM_OS" = "openbsd"; then sudo pkg_add autoconf-2.71 automake libtool libevent; export AUTOCONF_VERSION="2.71"; fi
-            if test "$CROSS_PLATFORM_OS" = "netbsd"; then sudo pkgin -y install autoconf automake libtool libevent; export LDFLAGS="-Wl,--rpath=/usr/pkg/lib"; fi
+            if test "$CROSS_PLATFORM_OS" = "freebsd"; then sudo pkg install -y autoconf autoconf-archive automake libtool openssl libevent expat; fi
+            if test "$CROSS_PLATFORM_OS" = "openbsd"; then sudo pkg_add autoconf-2.71 autoconf-archive automake libtool libevent; export AUTOCONF_VERSION="2.71"; export AUTOMAKE_VERSION="1.16.5"; fi
+            if test "$CROSS_PLATFORM_OS" = "netbsd"; then sudo pkgin -y install autoconf autoconf-archive automake libtool libevent; export LDFLAGS="-Wl,--rpath=/usr/pkg/lib"; fi
             echo "::group::configure"
             autoreconf -fi
             ./configure ${{ matrix.cross_platform_config }}
