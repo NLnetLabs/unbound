@@ -215,7 +215,7 @@ jobs:
           # make the libs only, build faster
           echo "make build_libs"
           #make
-          make build_libs
+          #DEBUG disabled: make build_libs
           mv Makefile Makefile.orig
           # fixup \\ in the installtop to /.
           echo "fixup INSTALLTOP"
@@ -223,7 +223,7 @@ jobs:
           # install the includes and libs only, build faster
           echo "make install_dev"
           #make install_sw
-          make install_dev
+          #DEBUG disabled: make install_dev
           cd ..
           mkdir expat
           echo "curl expat"
@@ -247,14 +247,14 @@ jobs:
           mv xmlwf/Makefile xmlwf/Makefile.orig
           sed -e 's/SHELL/SHELLZZ/g' < xmlwf/Makefile.orig > xmlwf/Makefile
           echo "make"
-          make
+          #DEBUG disabled: make
           echo "make install"
-          make install
+          #DEBUG disabled: make install
           cd ..
           echo "unbound"
           cd unbound
           echo 'autoreconf -fi'
-          PERL5LIB="/c/msys64/usr/share/autoconf-2.71;/c/msys64/usr/share/autoconf" PERL="C:/msys64/usr/bin/perl" PATH="/c/msys64/usr/bin:$PATH" autoreconf -fi
+          PERL5LIB="/c/msys64/usr/share/autoconf-2.71:/c/msys64/usr/share/autoconf" PERL="C:/msys64/usr/bin/perl" PATH="/c/msys64/usr/bin:$PATH" autoreconf -fi
           echo "./configure --enable-debug --enable-static-exe --disable-flto \"--with-ssl=$prepath/openssl\" --with-libexpat=\"$prepath/expat\" --disable-shared"
           ./configure --enable-debug --enable-static-exe --disable-flto "--with-ssl=$prepath/openssl" --with-libexpat="$prepath/expat" --disable-shared
           make
@@ -376,7 +376,13 @@ jobs:
             echo "::group::configure"
             autoconf && autoheader
             (cd simdzone && autoconf && autoheader)
+            aclocal
+            (cd simdzone; aclocal)
             libtoolize -c -i || glibtoolize -c -i
+            (cd simdzone; libtoolize -c -i || glibtoolize -c -i)
+            # run autoconf again.
+            autoconf && autoheader
+            (cd simdzone && autoconf && autoheader)
             ./configure ${{ matrix.cross_platform_config }}
             echo "::endgroup::"
             echo "::group::make"
