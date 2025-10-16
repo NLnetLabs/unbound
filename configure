@@ -22811,10 +22811,12 @@ then :
    LIBS="$LIBS -lz"
 fi
 
-		if echo "$LIBS" | grep -e "libssp.a" -e "lssp" >/dev/null; then
-			:
-		else
-			LIBS="$LIBS -l:libssp.a"
+		if echo "$host" | $GREP -i -e linux >/dev/null; then
+			if echo "$LIBS" | grep -e "libssp.a" -e "lssp" >/dev/null; then
+				:
+			else
+				LIBS="$LIBS -l:libssp.a"
+			fi
 		fi
 	fi
 fi
@@ -22875,10 +22877,12 @@ then :
    LIBS="$LIBS -lz"
 fi
 
-		if echo "$LIBS" | grep -e "libssp.a" -e "lssp" >/dev/null; then
-			:
-		else
-			LIBS="$LIBS -l:libssp.a"
+		if echo "$host" | $GREP -i -e linux >/dev/null; then
+			if echo "$LIBS" | grep -e "libssp.a" -e "lssp" >/dev/null; then
+				:
+			else
+				LIBS="$LIBS -l:libssp.a"
+			fi
 		fi
 	fi
 fi

@@ -1673,10 +1673,12 @@ if test x_$enable_static_exe = x_yes; then
 			LIBS="$LIBS -lgdi32"
 		fi
 		AC_CHECK_LIB([z], [compress], [ LIBS="$LIBS -lz" ])
-		if echo "$LIBS" | grep -e "libssp.a" -e "lssp" >/dev/null; then
-			:
-		else
-			LIBS="$LIBS -l:libssp.a"
+		if echo "$host" | $GREP -i -e linux >/dev/null; then
+			if echo "$LIBS" | grep -e "libssp.a" -e "lssp" >/dev/null; then
+				:
+			else
+				LIBS="$LIBS -l:libssp.a"
+			fi
 		fi
 	fi
 fi
@@ -1694,10 +1696,12 @@ if test x_$enable_fully_static = x_yes; then
 			LIBS="$LIBS -lgdi32"
 		fi
 		AC_CHECK_LIB([z], [compress], [ LIBS="$LIBS -lz" ])
-		if echo "$LIBS" | grep -e "libssp.a" -e "lssp" >/dev/null; then
-			:
-		else
-			LIBS="$LIBS -l:libssp.a"
+		if echo "$host" | $GREP -i -e linux >/dev/null; then
+			if echo "$LIBS" | grep -e "libssp.a" -e "lssp" >/dev/null; then
+				:
+			else
+				LIBS="$LIBS -l:libssp.a"
+			fi
 		fi
 	fi
 fi

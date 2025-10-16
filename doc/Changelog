@@ -1,3 +1,25 @@
+15 October 2025: Wouter
+	- Fix to drop UDP for discard-timeout, but not stream connections.
+	- Fix to reply with SERVFAIL when the wait-limit is exceeded.
+	- Add extended dns error code for invalid query type to definition
+	  list.
+	- Fix unbound.conf man page entry for root-hints to say it can
+	  be used without strongly recommending it.
+	- Remove iPhone armv7s, and iPhoneSimulator i386 from ios ci.
+	  The lib system does not provide symbols for it on the new macos
+	  runner.
+	- Fix to exclude libssp for windows compiles.
+
+10 October 2025: Wouter
+	- Fix #1358 Enabling FIPS in OpenSSL causes unit test to fail.
+
+3 October 2025: Yorgos
+	- Note 'respip' and 'dns64' module order in the unbound.conf
+	  man page.
+	- Note clearly that 'wait-limit: 0' disables all wait limits.
+	- 'wait-limit-cookie: 0' can now disable cookie validated wait
+	  limits.
+
 2 October 2025: Wouter
 	- Fix that https is set up as enabled when the port is listed in
 	  interface-automatic-ports. Also for the set up of quic it is

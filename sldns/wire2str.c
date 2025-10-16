@@ -233,6 +233,7 @@ static sldns_lookup_table sldns_edns_ede_codes_data[] = {
 	{ LDNS_EDE_UNSUPPORTED_NSEC3_ITERATIONS, "Unsupported NSEC3 Iterations Value" },
 	{ LDNS_EDE_BADPROXYPOLICY, "Unable to Conform to Policy" },
 	{ LDNS_EDE_SYNTHESIZED, "Synthesized Answer" },
+	{ LDNS_EDE_INVALID_QUERY_TYPE, "Invalid Query Type" },
 	{ 0, NULL}
 };
 sldns_lookup_table* sldns_edns_ede_codes = sldns_edns_ede_codes_data;

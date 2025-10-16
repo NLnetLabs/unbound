@@ -496,6 +496,9 @@ These options are part of the **server:** clause.
     The wait time in msec where recursion requests are dropped.
     This is to stop a large number of replies from accumulating.
     They receive no reply, the work item continues to recurse.
+    For UDP the replies are dropped, for stream connections the reply
+    is not dropped if the stream connection is still open ready to receive
+    answers.
     It is nice to be a bit larger than
     :ref:`serve-expired-client-timeout<unbound.conf.serve-expired-client-timeout>`
     if that is enabled.
@@ -510,7 +513,7 @@ These options are part of the **server:** clause.
     This makes a ratelimit per IP address of waiting replies for recursion.
     It stops very large amounts of queries waiting to be returned to one
     destination.
-    The value ``0`` disables wait limits.
+    The value ``0`` disables all wait limits.
 
     Default: 1000
 
@@ -518,7 +521,11 @@ These options are part of the **server:** clause.
 @@UAHL@unbound.conf@wait-limit-cookie@@: *<number>*
     The number of replies that can wait for recursion, for an IP address
     that sent the query with a valid DNS Cookie.
-    Since the cookie validates the client address, this limit can be higher.
+    Since the cookie already validates the client address, this option allows
+    to override a configured
+    :ref:`wait-limit<unbound.conf.wait-limit>` value usually with a higher one
+    for cookie validated queries.
+    The value ``0`` disables wait limits for cookie validated queries.
 
     Default: 10000
 
@@ -1673,8 +1680,8 @@ These options are part of the **server:** clause.
     Default is nothing, using builtin hints for the IN class.
     The file has the format of zone files, with root nameserver names and
     addresses only.
-    The default may become outdated, when servers change, therefore it is good
-    practice to use a root hints file.
+    The default may become outdated, when servers change, and then it is
+    possible to use a root hints file with specific servers.
 
     Default: ""
 
@@ -3959,6 +3966,13 @@ and be compiled into the daemon to be enabled.
 .. note::
     These settings go in the :ref:`server:<unbound.conf.server>` section.
 
+.. note::
+    If combining the ``respip`` and ``dns64`` modules, the ``respip`` module
+    needs to appear before the ``dns64`` module in the
+    :ref:`module-config<unbound.conf.module-config>`
+    configuration option so that response IP and/or RPZ feeds can properly
+    filter responses regardless of DNS64 synthesis.
+
 
 @@UAHL@unbound.conf.dns64@dns64-prefix@@: *<IPv6 prefix>*
     This sets the DNS64 prefix to use to synthesize AAAA records with.
@@ -4776,6 +4790,13 @@ The respip module needs to be added to the
 .. code-block:: text
 
     module-config: "respip validator iterator"
+
+.. note::
+    If combining the ``respip`` and ``dns64`` modules, the ``respip`` module
+    needs to appear before the ``dns64`` module in the
+    :ref:`module-config<unbound.conf.module-config>`
+    configuration option so that response IP and/or RPZ feeds can properly
+    filter responses regardless of DNS64 synthesis.
 
 QNAME, Response IP Address, nsdname, nsip and clientip triggers are supported.
 Supported actions are: NXDOMAIN, NODATA, PASSTHRU, DROP, Local Data, tcp-only
