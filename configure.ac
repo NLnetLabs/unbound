@@ -2493,11 +2493,13 @@ AC_ARG_ENABLE(haswell, AS_HELP_STRING([--disable-haswell], [Disable Haswell (AVX
 if test ! -f simdzone/configure.ac; then AC_MSG_ERROR([There is no "simdzone/configure.ac" file. The simdzone directory has not been fetched, perhaps get it with 'git submodule update --init'.]); fi
 if test ! -f simdzone/configure; then AC_MSG_ERROR([There is no "simdzone/configure" file. The simdzone directory has no configure script file, perhaps run 'autoreconf -fi'.]); fi
 AC_CONFIG_SUBDIRS([simdzone])
+
+AC_OUTPUT
 # Pick up the objects for simdzone.
 SIMDZONE_OBJ=`(cd simdzone; make list_objs) | sed -e 's?src?simdzone/src?g'`
 AC_SUBST(SIMDZONE_OBJ)
-
-AC_OUTPUT
+sed -e 's?^SIMDZONE_OBJ=.*$?SIMDZONE_OBJ='"$SIMDZONE_OBJ"'?' < Makefile > Makefile.tmp.$$
+mv -f Makefile.tmp.$$ Makefile
 # If dnstap config has changed, overwrite it.
 if test -n "$dnstap_config"; then
 	if test ! -f "$dnstap_config_out"; then

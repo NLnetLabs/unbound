@@ -661,8 +661,8 @@ ac_includes_default="\
 ac_header_c_list=
 ac_func_c_list=
 enable_option_checking=no
-ac_subst_vars='LTLIBOBJS
-SIMDZONE_OBJ
+ac_subst_vars='SIMDZONE_OBJ
+LTLIBOBJS
 subdirs
 date
 version
@@ -25413,9 +25413,6 @@ if test ! -f simdzone/configure; then as_fn_error $? "There is no \"simdzone/con
 
 subdirs="$subdirs simdzone"
 
-# Pick up the objects for simdzone.
-SIMDZONE_OBJ=`(cd simdzone; make list_objs) | sed -e 's?src?simdzone/src?g'`
-
 
 cat >confcache <<\_ACEOF
 # This file is a shell script that caches the results of configure
@@ -27698,6 +27695,11 @@ if test -n "$ac_unrecognized_opts" && test "$enable_option_checking" != no; then
 printf "%s\n" "$as_me: WARNING: unrecognized options: $ac_unrecognized_opts" >&2;}
 fi
 
+# Pick up the objects for simdzone.
+SIMDZONE_OBJ=`(cd simdzone; make list_objs) | sed -e 's?src?simdzone/src?g'`
+
+sed -e 's?^SIMDZONE_OBJ=.*$?SIMDZONE_OBJ='"$SIMDZONE_OBJ"'?' < Makefile > Makefile.tmp.$$
+mv -f Makefile.tmp.$$ Makefile
 # If dnstap config has changed, overwrite it.
 if test -n "$dnstap_config"; then
 	if test ! -f "$dnstap_config_out"; then
