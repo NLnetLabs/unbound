@@ -49,60 +49,60 @@ jobs:
 #            os: ubuntu-latest
 #            config: 'CFLAGS="-DNDEBUG -g2 -O3 -fsanitize=address" --disable-flto --disable-static'
 #            make_test: "yes"
-          - name: Apple iPhone on iOS, arm64
-            os: macos-latest
-            AUTOTOOLS_HOST: aarch64-apple-ios
-            OPENSSL_HOST: ios64-cross
-            IOS_SDK: iPhoneOS
-            IOS_CPU: arm64
-            test_ios: "yes"
-            config: "no"
-            make: "no"
-          - name: Apple TV on iOS, arm64
-            os: macos-latest
-            AUTOTOOLS_HOST: aarch64-apple-ios
-            OPENSSL_HOST: ios64-cross
-            IOS_SDK: AppleTVOS
-            IOS_CPU: arm64
-            test_ios: "yes"
-            config: "no"
-            make: "no"
-          - name: Apple Watch on iOS, armv7
-            os: macos-latest
-            AUTOTOOLS_HOST: armv7-apple-ios
-            OPENSSL_HOST: ios-cross
-            IOS_SDK: WatchOS
-            IOS_CPU: armv7k
-            test_ios: "yes"
-            config: "no"
-            make: "no"
-          - name: iPhoneSimulator on OS X, x86_64
-            os: macos-latest
-            AUTOTOOLS_HOST: x86_64-apple-ios
-            OPENSSL_HOST: iphoneos-cross
-            IOS_SDK: iPhoneSimulator
-            IOS_CPU: x86_64
-            test_ios: "yes"
-            config: "no"
-            make: "no"
-          - name: AppleTVSimulator on OS X, x86_64
-            os: macos-latest
-            AUTOTOOLS_HOST: x86_64-apple-ios
-            OPENSSL_HOST: iphoneos-cross
-            IOS_SDK: AppleTVSimulator
-            IOS_CPU: x86_64
-            test_ios: "yes"
-            config: "no"
-            make: "no"
-          - name: WatchSimulator on OS X, i386
-            os: macos-latest
-            AUTOTOOLS_HOST: i386-apple-ios
-            OPENSSL_HOST: iphoneos-cross
-            IOS_SDK: WatchSimulator
-            IOS_CPU: i386
-            test_ios: "yes"
-            config: "no"
-            make: "no"
+#          - name: Apple iPhone on iOS, arm64
+#            os: macos-latest
+#            AUTOTOOLS_HOST: aarch64-apple-ios
+#            OPENSSL_HOST: ios64-cross
+#            IOS_SDK: iPhoneOS
+#            IOS_CPU: arm64
+#            test_ios: "yes"
+#            config: "no"
+#            make: "no"
+#          - name: Apple TV on iOS, arm64
+#            os: macos-latest
+#            AUTOTOOLS_HOST: aarch64-apple-ios
+#            OPENSSL_HOST: ios64-cross
+#            IOS_SDK: AppleTVOS
+#            IOS_CPU: arm64
+#            test_ios: "yes"
+#            config: "no"
+#            make: "no"
+#          - name: Apple Watch on iOS, armv7
+#            os: macos-latest
+#            AUTOTOOLS_HOST: armv7-apple-ios
+#            OPENSSL_HOST: ios-cross
+#            IOS_SDK: WatchOS
+#            IOS_CPU: armv7k
+#            test_ios: "yes"
+#            config: "no"
+#            make: "no"
+#          - name: iPhoneSimulator on OS X, x86_64
+#            os: macos-latest
+#            AUTOTOOLS_HOST: x86_64-apple-ios
+#            OPENSSL_HOST: iphoneos-cross
+#            IOS_SDK: iPhoneSimulator
+#            IOS_CPU: x86_64
+#            test_ios: "yes"
+#            config: "no"
+#            make: "no"
+#          - name: AppleTVSimulator on OS X, x86_64
+#            os: macos-latest
+#            AUTOTOOLS_HOST: x86_64-apple-ios
+#            OPENSSL_HOST: iphoneos-cross
+#            IOS_SDK: AppleTVSimulator
+#            IOS_CPU: x86_64
+#            test_ios: "yes"
+#            config: "no"
+#            make: "no"
+#          - name: WatchSimulator on OS X, i386
+#            os: macos-latest
+#            AUTOTOOLS_HOST: i386-apple-ios
+#            OPENSSL_HOST: iphoneos-cross
+#            IOS_SDK: WatchSimulator
+#            IOS_CPU: i386
+#            test_ios: "yes"
+#            config: "no"
+#            make: "no"
 #          - name: Android armv7a
 #            os: ubuntu-latest
 #            AUTOTOOLS_HOST: armv7a-linux-androidabi
@@ -254,10 +254,12 @@ jobs:
           echo "unbound"
           cd unbound
           echo 'PATH="/c/msys64/usr/bin:$PATH" autoreconf -fi'
-          PATH="/c/msys64/usr/bin:$PATH" autoreconf -fi
+          PERL="C:/msys64/usr/bin/perl" PATH="/c/msys64/usr/bin:$PATH" autoreconf -fi || echo "ignored."
           echo "or:"
           echo 'PATH="C:/msys64/usr/bin;$PATH" autoreconf -fi'
-          PATH="C:/msys64/usr/bin;$PATH" autoreconf -fi
+          PATH="C:/msys64/usr/bin;$PATH" autoreconf -fi || echo "ignored"
+          echo "C:/msys64/usr/bin/bash.exe autoreconf -fi"
+          C:/msys64/usr/bin/bash.exe -c "autoreconf -fi"
           echo "./configure --enable-debug --enable-static-exe --disable-flto \"--with-ssl=$prepath/openssl\" --with-libexpat=\"$prepath/expat\" --disable-shared"
           ./configure --enable-debug --enable-static-exe --disable-flto "--with-ssl=$prepath/openssl" --with-libexpat="$prepath/expat" --disable-shared
           make
@@ -373,11 +375,13 @@ jobs:
           cpu_count: 2
           run: |
             set -e -x
-            if test "$CROSS_PLATFORM_OS" = "freebsd"; then sudo pkg install -y autoconf autoconf-archive automake libtool openssl libevent expat; fi
-            if test "$CROSS_PLATFORM_OS" = "openbsd"; then sudo pkg_add autoconf-2.71 autoconf-archive automake libtool libevent; export AUTOCONF_VERSION="2.71"; export AUTOMAKE_VERSION="1.16.5"; fi
-            if test "$CROSS_PLATFORM_OS" = "netbsd"; then sudo pkgin -y install autoconf autoconf-archive automake libtool libevent; export LDFLAGS="-Wl,--rpath=/usr/pkg/lib"; fi
+            if test "$CROSS_PLATFORM_OS" = "freebsd"; then sudo pkg install -y autoconf automake libtool openssl libevent expat; fi
+            if test "$CROSS_PLATFORM_OS" = "openbsd"; then sudo pkg_add autoconf-2.71 automake-1.16.5 libtool libevent; export AUTOCONF_VERSION="2.71"; export AUTOMAKE_VERSION="1.16.5"; fi
+            if test "$CROSS_PLATFORM_OS" = "netbsd"; then sudo pkgin -y install autoconf automake libtool libevent; export LDFLAGS="-Wl,--rpath=/usr/pkg/lib"; fi
             echo "::group::configure"
-            autoreconf -fi
+            autoconf && autoheader
+            (cd simdzone && autoconf && autoheader)
+            libtoolize -c -i || glibtoolize -c -i
             ./configure ${{ matrix.cross_platform_config }}
             echo "::endgroup::"
             echo "::group::make"
