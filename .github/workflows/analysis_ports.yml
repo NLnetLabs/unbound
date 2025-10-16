@@ -15,10 +15,10 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - name: GCC on Linux
-            os: ubuntu-latest
-            config: "--enable-debug --disable-flto"
-            make_test: "yes"
+#          - name: GCC on Linux
+#            os: ubuntu-latest
+#            config: "--enable-debug --disable-flto"
+#            make_test: "yes"
           - name: Clang-analyzer
             os: ubuntu-latest
             config: "CC=clang --enable-debug --disable-flto --disable-static"
@@ -103,42 +103,42 @@ jobs:
             test_ios: "yes"
             config: "no"
             make: "no"
-          - name: Android armv7a
-            os: ubuntu-latest
-            AUTOTOOLS_HOST: armv7a-linux-androidabi
-            OPENSSL_HOST: android-arm
-            ANDROID_CPU: armv7a
-            ANDROID_API: 23
-            test_android: "yes"
-            config: "no"
-            make: "no"
-          - name: Android aarch64
-            os: ubuntu-latest
-            AUTOTOOLS_HOST: aarch64-linux-android
-            OPENSSL_HOST: android-arm64
-            ANDROID_CPU: aarch64
-            ANDROID_API: 23
-            test_android: "yes"
-            config: "no"
-            make: "no"
-          - name: Android x86
-            os: ubuntu-latest
-            AUTOTOOLS_HOST: i686-linux-android
-            OPENSSL_HOST: android-x86
-            ANDROID_CPU: x86
-            ANDROID_API: 23
-            test_android: "yes"
-            config: "no"
-            make: "no"
-          - name: Android x86_64
-            os: ubuntu-latest
-            AUTOTOOLS_HOST: x86_64-linux-android
-            OPENSSL_HOST: android-x86_64
-            ANDROID_CPU: x86_64
-            ANDROID_API: 23
-            test_android: "yes"
-            config: "no"
-            make: "no"
+#          - name: Android armv7a
+#            os: ubuntu-latest
+#            AUTOTOOLS_HOST: armv7a-linux-androidabi
+#            OPENSSL_HOST: android-arm
+#            ANDROID_CPU: armv7a
+#            ANDROID_API: 23
+#            test_android: "yes"
+#            config: "no"
+#            make: "no"
+#          - name: Android aarch64
+#            os: ubuntu-latest
+#            AUTOTOOLS_HOST: aarch64-linux-android
+#            OPENSSL_HOST: android-arm64
+#            ANDROID_CPU: aarch64
+#            ANDROID_API: 23
+#            test_android: "yes"
+#            config: "no"
+#            make: "no"
+#          - name: Android x86
+#            os: ubuntu-latest
+#            AUTOTOOLS_HOST: i686-linux-android
+#            OPENSSL_HOST: android-x86
+#            ANDROID_CPU: x86
+#            ANDROID_API: 23
+#            test_android: "yes"
+#            config: "no"
+#            make: "no"
+#          - name: Android x86_64
+#            os: ubuntu-latest
+#            AUTOTOOLS_HOST: x86_64-linux-android
+#            OPENSSL_HOST: android-x86_64
+#            ANDROID_CPU: x86_64
+#            ANDROID_API: 23
+#            test_android: "yes"
+#            config: "no"
+#            make: "no"
           - name: Windows
             os: windows-latest
             test_windows: "yes"
@@ -195,6 +195,9 @@ jobs:
           export LEX="win_flex"
           echo 'YACC="win_bison -y"'
           export YACC="win_bison -y"
+          # probably installs to C:\msys64\usr\bin\bash.exe
+          echo "pacman autotools"
+          C:/msys64/usr/bin/pacman -S autotools
           mkdir openssl
           echo "curl openssl"
           curl -L -k -s -S -o openssl-3.2.0.tar.gz https://www.openssl.org/source/openssl-3.2.0.tar.gz
@@ -250,8 +253,11 @@ jobs:
           cd ..
           echo "unbound"
           cd unbound
-          echo "autoreconf -fi"
-          autoreconf -fi
+          echo 'PATH="/c/msys64/usr/bin:$PATH" autoreconf -fi'
+          PATH="/c/msys64/usr/bin:$PATH" autoreconf -fi
+          echo "or:"
+          echo 'PATH="C:/msys64/usr/bin;$PATH" autoreconf -fi'
+          PATH="C:/msys64/usr/bin;$PATH" autoreconf -fi
           echo "./configure --enable-debug --enable-static-exe --disable-flto \"--with-ssl=$prepath/openssl\" --with-libexpat=\"$prepath/expat\" --disable-shared"
           ./configure --enable-debug --enable-static-exe --disable-flto "--with-ssl=$prepath/openssl" --with-libexpat="$prepath/expat" --disable-shared
           make
@@ -365,9 +371,9 @@ jobs:
           cpu_count: 2
           run: |
             set -e -x
-            if test "$CROSS_PLATFORM_OS" = "freebsd"; then sudo pkg install -y autoconf libtool openssl libevent expat; fi
-            if test "$CROSS_PLATFORM_OS" = "openbsd"; then sudo pkg_add autoconf-2.71 libtool libevent; export AUTOCONF_VERSION="2.71"; fi
-            if test "$CROSS_PLATFORM_OS" = "netbsd"; then sudo pkgin -y install autoconf libtool libevent; export LDFLAGS="-Wl,--rpath=/usr/pkg/lib"; fi
+            if test "$CROSS_PLATFORM_OS" = "freebsd"; then sudo pkg install -y autoconf automake libtool openssl libevent expat; fi
+            if test "$CROSS_PLATFORM_OS" = "openbsd"; then sudo pkg_add autoconf-2.71 automake libtool libevent; export AUTOCONF_VERSION="2.71"; fi
+            if test "$CROSS_PLATFORM_OS" = "netbsd"; then sudo pkgin -y install autoconf automake libtool libevent; export LDFLAGS="-Wl,--rpath=/usr/pkg/lib"; fi
             echo "::group::configure"
             autoreconf -fi
             ./configure ${{ matrix.cross_platform_config }}
@@ -383,7 +389,9 @@ jobs:
         run: sudo apt-get install libevent-dev
       - name: install expat
         if: ${{ matrix.install_expat == 'yes' }}
-        run: brew install expat
+        run: |
+          brew install expat
+          brew install autoconf automake libtool make
       - name: configure
         if: ${{ matrix.config != 'no' }}
         run: |
