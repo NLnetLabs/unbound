@@ -254,7 +254,7 @@ jobs:
           echo "unbound"
           cd unbound
           echo 'autoreconf -fi'
-          PERL5LIB="/c/msys64/usr/share/autoconf-2.71:/c/msys64/usr/share/autoconf" PERL="C:/msys64/usr/bin/perl" PATH="/c/msys64/usr/bin:$PATH" autoreconf -fi
+          PERL5LIB="/c/msys64/usr/share/autoconf-2.71:/c/msys64/usr/share/autoconf:/c/msys64/usr/share/automake-1.16:/c/msys64/usr/share/automake" PERL="C:/msys64/usr/bin/perl" PATH="/c/msys64/usr/bin:$PATH" autoreconf -fi
           echo "./configure --enable-debug --enable-static-exe --disable-flto \"--with-ssl=$prepath/openssl\" --with-libexpat=\"$prepath/expat\" --disable-shared"
           ./configure --enable-debug --enable-static-exe --disable-flto "--with-ssl=$prepath/openssl" --with-libexpat="$prepath/expat" --disable-shared
           make
@@ -371,7 +371,7 @@ jobs:
           run: |
             set -e -x
             if test "$CROSS_PLATFORM_OS" = "freebsd"; then sudo pkg install -y autoconf automake libtool openssl libevent expat; fi
-            if test "$CROSS_PLATFORM_OS" = "openbsd"; then sudo pkg_add autoconf-2.71 automake-1.16.5 libtool libevent; export AUTOCONF_VERSION="2.71"; export AUTOMAKE_VERSION="1.16.5"; fi
+            if test "$CROSS_PLATFORM_OS" = "openbsd"; then sudo pkg_add autoconf-2.71 automake-1.16.5 libtool libevent; export AUTOCONF_VERSION="2.71"; export AUTOMAKE_VERSION="1.16"; fi
             if test "$CROSS_PLATFORM_OS" = "netbsd"; then sudo pkgin -y install autoconf automake libtool libevent; export LDFLAGS="-Wl,--rpath=/usr/pkg/lib"; fi
             echo "::group::configure"
             autoconf && autoheader
@@ -381,6 +381,8 @@ jobs:
             libtoolize -c -i || glibtoolize -c -i
             (cd simdzone; libtoolize -c -i || glibtoolize -c -i)
             # run autoconf again.
+            aclocal
+            (cd simdzone; aclocal)
             autoconf && autoheader
             (cd simdzone && autoconf && autoheader)
             ./configure ${{ matrix.cross_platform_config }}
