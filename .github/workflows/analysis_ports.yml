@@ -253,13 +253,8 @@ jobs:
           cd ..
           echo "unbound"
           cd unbound
-          echo 'PATH="/c/msys64/usr/bin:$PATH" autoreconf -fi'
-          PERL="C:/msys64/usr/bin/perl" PATH="/c/msys64/usr/bin:$PATH" autoreconf -fi || echo "ignored."
-          echo "or:"
-          echo 'PATH="C:/msys64/usr/bin;$PATH" autoreconf -fi'
-          PATH="C:/msys64/usr/bin;$PATH" autoreconf -fi || echo "ignored"
-          echo "C:/msys64/usr/bin/bash.exe autoreconf -fi"
-          C:/msys64/usr/bin/bash.exe -c "autoreconf -fi"
+          echo 'autoreconf -fi'
+          PERL5LIB="/c/msys64/usr/share/autoconf-2.71;/c/msys64/usr/share/autoconf" PERL="C:/msys64/usr/bin/perl" PATH="/c/msys64/usr/bin:$PATH" autoreconf -fi
           echo "./configure --enable-debug --enable-static-exe --disable-flto \"--with-ssl=$prepath/openssl\" --with-libexpat=\"$prepath/expat\" --disable-shared"
           ./configure --enable-debug --enable-static-exe --disable-flto "--with-ssl=$prepath/openssl" --with-libexpat="$prepath/expat" --disable-shared
           make
