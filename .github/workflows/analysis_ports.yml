@@ -175,7 +175,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: false
+          submodules: recursive
           persist-credentials: false
       - name: test_windows
         if: ${{ matrix.test_windows == 'yes' }}
@@ -250,6 +250,8 @@ jobs:
           cd ..
           echo "unbound"
           cd unbound
+          echo "autoreconf -fi"
+          autoreconf -fi
           echo "./configure --enable-debug --enable-static-exe --disable-flto \"--with-ssl=$prepath/openssl\" --with-libexpat=\"$prepath/expat\" --disable-shared"
           ./configure --enable-debug --enable-static-exe --disable-flto "--with-ssl=$prepath/openssl" --with-libexpat="$prepath/expat" --disable-shared
           make
@@ -295,6 +297,8 @@ jobs:
           ./contrib/android/install_expat.sh
           echo "::endgroup::"
           echo "::group::configure"
+          echo "autoreconf -fi"
+          autoreconf -fi
           echo "./configure ${CONFIG_OPTS}"
           ./configure ${CONFIG_OPTS}
           echo "::endgroup::"
@@ -314,6 +318,7 @@ jobs:
           IOS_CPU: ${{ matrix.IOS_CPU }}
         run: |
           #(already installed) ./contrib/ios/install_tools.sh
+          brew install autoconf automake libtool make
           export AUTOTOOLS_BUILD="$(./config.guess)"
           echo AUTOTOOLS_BUILD=${AUTOTOOLS_BUILD}
           export IOS_PREFIX="$HOME/$IOS_SDK-$IOS_CPU"
@@ -360,10 +365,11 @@ jobs:
           cpu_count: 2
           run: |
             set -e -x
-            if test "$CROSS_PLATFORM_OS" = "freebsd"; then sudo pkg install -y openssl libevent expat; fi
-            if test "$CROSS_PLATFORM_OS" = "openbsd"; then sudo pkg_add libevent; fi
-            if test "$CROSS_PLATFORM_OS" = "netbsd"; then sudo pkgin -y install libevent; fi
+            if test "$CROSS_PLATFORM_OS" = "freebsd"; then sudo pkg install -y autoconf libtool openssl libevent expat; fi
+            if test "$CROSS_PLATFORM_OS" = "openbsd"; then sudo pkg_add autoconf-2.71 libtool libevent; export AUTOCONF_VERSION="2.71"; fi
+            if test "$CROSS_PLATFORM_OS" = "netbsd"; then sudo pkgin -y install autoconf libtool libevent; export LDFLAGS="-Wl,--rpath=/usr/pkg/lib"; fi
             echo "::group::configure"
+            autoreconf -fi
             ./configure ${{ matrix.cross_platform_config }}
             echo "::endgroup::"
             echo "::group::make"
@@ -380,7 +386,10 @@ jobs:
         run: brew install expat
       - name: configure
         if: ${{ matrix.config != 'no' }}
-        run: ./configure ${{ matrix.config }}
+        run: |
+          if test `uname` = "Linux"; then sudo apt-get install autoconf automake libtool make; fi
+          autoreconf -fi
+          ./configure ${{ matrix.config }}
       - name: make
         if: ${{ matrix.make != 'no' }}
         run: make

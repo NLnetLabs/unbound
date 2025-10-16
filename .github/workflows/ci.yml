@@ -14,9 +14,14 @@ jobs:
     steps:
     - uses: actions/checkout@v4
       with:
+        submodules: recursive
         persist-credentials: false
+    - name: install packages
+      run: sudo apt-get install autoconf automake libtool make
     - name: configure
-      run: ./configure --enable-debug
+      run: |
+        autoreconf -fi
+        ./configure --enable-debug
     - name: make
       run: make
     - name: make test
