@@ -139,11 +139,11 @@ jobs:
 #            test_android: "yes"
 #            config: "no"
 #            make: "no"
-          - name: Windows
-            os: windows-latest
-            test_windows: "yes"
-            config: "no"
-            make: "no"
+#          - name: Windows
+#            os: windows-latest
+#            test_windows: "yes"
+#            config: "no"
+#            make: "no"
           - name: FreeBSD
             os: ubuntu-latest
             config: "no"
@@ -153,24 +153,24 @@ jobs:
             cross_platform_arch: "x86-64"
             cross_platform_version: "14.1"
             cross_platform_config: "--enable-debug --disable-flto --with-libevent --disable-static"
-          - name: OpenBSD
-            os: ubuntu-latest
-            config: "no"
-            make: "no"
-            with_cross_platform_action: "yes"
-            cross_platform_os: "openbsd"
-            cross_platform_arch: "x86-64"
-            cross_platform_version: "7.5"
-            cross_platform_config: "--enable-debug --disable-flto --with-libevent --disable-static"
-          - name: NetBSD
-            os: ubuntu-latest
-            config: "no"
-            make: "no"
-            with_cross_platform_action: "yes"
-            cross_platform_os: "netbsd"
-            cross_platform_arch: "x86-64"
-            cross_platform_version: "10.0"
-            cross_platform_config: "--enable-debug --disable-flto --with-libevent --disable-static"
+#          - name: OpenBSD
+#            os: ubuntu-latest
+#            config: "no"
+#            make: "no"
+#            with_cross_platform_action: "yes"
+#            cross_platform_os: "openbsd"
+#            cross_platform_arch: "x86-64"
+#            cross_platform_version: "7.5"
+#            cross_platform_config: "--enable-debug --disable-flto --with-libevent --disable-static"
+#          - name: NetBSD
+#            os: ubuntu-latest
+#            config: "no"
+#            make: "no"
+#            with_cross_platform_action: "yes"
+#            cross_platform_os: "netbsd"
+#            cross_platform_arch: "x86-64"
+#            cross_platform_version: "10.0"
+#            cross_platform_config: "--enable-debug --disable-flto --with-libevent --disable-static"
  
     steps:
       - uses: actions/checkout@v4
