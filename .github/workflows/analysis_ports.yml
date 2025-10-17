@@ -372,18 +372,19 @@ jobs:
           cpu_count: 2
           run: |
             set -e -x
-            if test "$CROSS_PLATFORM_OS" = "freebsd"; then sudo pkg install -y autoconf automake libtool openssl libevent expat; fi
+            if test "$CROSS_PLATFORM_OS" = "freebsd"; then sudo pkg install -y autoconf automake libtool openssl libevent expat; export AUTOCONF_VERSION="2.72"; export AUTOMAKE_VERSION="1.17"; fi
             if test "$CROSS_PLATFORM_OS" = "openbsd"; then sudo pkg_add autoconf-2.71 automake-1.16.5 libtool libevent; export AUTOCONF_VERSION="2.71"; export AUTOMAKE_VERSION="1.16"; fi
             if test "$CROSS_PLATFORM_OS" = "netbsd"; then sudo pkgin -y install autoconf automake libtool libevent; export LDFLAGS="-Wl,--rpath=/usr/pkg/lib"; fi
             echo "::group::configure"
             rm -f aclocal.m4
-            libtoolize -c -i || glibtoolize -c -i
-            aclocal
-            libtoolize -c -i || glibtoolize -c -i
-            aclocal
-            autoconf && autoheader
-            (cd simdzone && autoconf && autoheader)
-            (cd simdzone; libtoolize -c -i || glibtoolize -c -i)
+            autoreconf -fi
+            #libtoolize -c -i || glibtoolize -c -i
+            #aclocal
+            #libtoolize -c -i || glibtoolize -c -i
+            #aclocal
+            #autoconf && autoheader
+            #(cd simdzone && autoconf && autoheader)
+            #(cd simdzone; libtoolize -c -i || glibtoolize -c -i)
             #aclocal
             #(cd simdzone; aclocal)
             #autoconf && autoheader
