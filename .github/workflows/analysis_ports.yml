@@ -139,38 +139,38 @@ jobs:
 #            test_android: "yes"
 #            config: "no"
 #            make: "no"
-#          - name: Windows
-#            os: windows-latest
-#            test_windows: "yes"
+          - name: Windows
+            os: windows-latest
+            test_windows: "yes"
+            config: "no"
+            make: "no"
+#          - name: FreeBSD
+#            os: ubuntu-latest
 #            config: "no"
 #            make: "no"
-          - name: FreeBSD
-            os: ubuntu-latest
-            config: "no"
-            make: "no"
-            with_cross_platform_action: "yes"
-            cross_platform_os: "freebsd"
-            cross_platform_arch: "x86-64"
-            cross_platform_version: "14.1"
-            cross_platform_config: "--enable-debug --disable-flto --with-libevent --disable-static"
-          - name: OpenBSD
-            os: ubuntu-latest
-            config: "no"
-            make: "no"
-            with_cross_platform_action: "yes"
-            cross_platform_os: "openbsd"
-            cross_platform_arch: "x86-64"
-            cross_platform_version: "7.5"
-            cross_platform_config: "--enable-debug --disable-flto --with-libevent --disable-static"
-          - name: NetBSD
-            os: ubuntu-latest
-            config: "no"
-            make: "no"
-            with_cross_platform_action: "yes"
-            cross_platform_os: "netbsd"
-            cross_platform_arch: "x86-64"
-            cross_platform_version: "10.0"
-            cross_platform_config: "--enable-debug --disable-flto --with-libevent --disable-static"
+#            with_cross_platform_action: "yes"
+#            cross_platform_os: "freebsd"
+#            cross_platform_arch: "x86-64"
+#            cross_platform_version: "14.1"
+#            cross_platform_config: "--enable-debug --disable-flto --with-libevent --disable-static"
+#          - name: OpenBSD
+#            os: ubuntu-latest
+#            config: "no"
+#            make: "no"
+#            with_cross_platform_action: "yes"
+#            cross_platform_os: "openbsd"
+#            cross_platform_arch: "x86-64"
+#            cross_platform_version: "7.5"
+#            cross_platform_config: "--enable-debug --disable-flto --with-libevent --disable-static"
+#          - name: NetBSD
+#            os: ubuntu-latest
+#            config: "no"
+#            make: "no"
+#            with_cross_platform_action: "yes"
+#            cross_platform_os: "netbsd"
+#            cross_platform_arch: "x86-64"
+#            cross_platform_version: "10.0"
+#            cross_platform_config: "--enable-debug --disable-flto --with-libevent --disable-static"
  
     steps:
       - uses: actions/checkout@v4
@@ -255,8 +255,12 @@ jobs:
           cd unbound
           #echo 'aclocal'
           #PERL5LIB="/c/msys64/usr/share/autoconf-2.71:/c/msys64/usr/share/autoconf:/c/msys64/usr/share/automake-1.16:/c/msys64/usr/share/automake" PERL="C:/msys64/usr/bin/perl" PATH="/c/msys64/usr/bin:$PATH" aclocal-1.16 --automake-acdir=/c/msys64/usr/share/aclocal-1.16
+          echo "mount /c/msys64/usr /usr"
+          mount /c/msys64/usr /usr
           echo 'autoreconf -fi'
-          PERL5LIB="/c/msys64/usr/share/autoconf-2.71:/c/msys64/usr/share/autoconf:/c/msys64/usr/share/automake-1.16:/c/msys64/usr/share/automake" PERL="C:/msys64/usr/bin/perl" PATH="/c/msys64/usr/bin:$PATH" autoreconf -fi -I /c/msys64/usr/share/aclocal-1.16
+          PATH="/c/msys64/usr/bin:$PATH" autoreconf -fi || echo "ignored"
+          echo 'autoreconf -fi with paths'
+          PERL5LIB="/c/msys64/usr/share/autoconf-2.71:/c/msys64/usr/share/autoconf:/c/msys64/usr/share/automake-1.16:/c/msys64/usr/share/automake" PERL="C:/msys64/usr/bin/perl" PATH="/c/msys64/usr/bin:$PATH" autoreconf -fi
           echo "./configure --enable-debug --enable-static-exe --disable-flto \"--with-ssl=$prepath/openssl\" --with-libexpat=\"$prepath/expat\" --disable-shared"
           ./configure --enable-debug --enable-static-exe --disable-flto "--with-ssl=$prepath/openssl" --with-libexpat="$prepath/expat" --disable-shared
           make
