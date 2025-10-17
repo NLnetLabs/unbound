@@ -192,6 +192,7 @@ jobs:
           # Now there is:
           # C:/msys64 on /
           # C:/msys64/usr/bin on /bin
+          # And those mount points should go away for the next 'run:' shell.
           echo "mount"
           mount || echo "ignored"
           # probably installs to C:\msys64\usr\bin\bash.exe
@@ -240,7 +241,7 @@ jobs:
           # make the libs only, build faster
           echo "make build_libs"
           #make
-          #DEBUG disabled: make build_libs
+          make build_libs
           mv Makefile Makefile.orig
           # fixup \\ in the installtop to /.
           echo "fixup INSTALLTOP"
@@ -248,7 +249,7 @@ jobs:
           # install the includes and libs only, build faster
           echo "make install_dev"
           #make install_sw
-          #DEBUG disabled: make install_dev
+          make install_dev
           cd ..
           mkdir expat
           echo "curl expat"
@@ -272,33 +273,12 @@ jobs:
           mv xmlwf/Makefile xmlwf/Makefile.orig
           sed -e 's/SHELL/SHELLZZ/g' < xmlwf/Makefile.orig > xmlwf/Makefile
           echo "make"
-          #DEBUG disabled: make
+          make
           echo "make install"
-          #DEBUG disabled: make install
+          make install
           cd ..
           echo "unbound"
           cd unbound
-          #echo 'aclocal'
-          #PERL5LIB="/c/msys64/usr/share/autoconf-2.71:/c/msys64/usr/share/autoconf:/c/msys64/usr/share/automake-1.16:/c/msys64/usr/share/automake" PERL="C:/msys64/usr/bin/perl" PATH="/c/msys64/usr/bin:$PATH" aclocal-1.16 --automake-acdir=/c/msys64/usr/share/aclocal-1.16
-          # mount so that /c/msys64/usr/share/autoconf-2.71 and
-          # /c/msys64/usr/share/automake-1.16 and
-          # /c/msys64/usr/share/aclocal-1.16 are in /usr for autoconf, aclocal.
-          #echo 'autoreconf -fi'
-          #rm -f aclocal.m4
-          #PATH="/c/msys64/usr/bin:$PATH" autoreconf -fi || echo "ignored"
-          #echo 'autoreconf -fi with paths'
-          #PERL5LIB="/c/msys64/usr/share/autoconf-2.71:/c/msys64/usr/share/autoconf:/c/msys64/usr/share/automake-1.16:/c/msys64/usr/share/automake" PERL="C:/msys64/usr/bin/perl" PATH="/c/msys64/usr/bin:$PATH" autoreconf -fi
-          # the /usr/share use is done, remove the mount.
-          #echo "mount"
-          #mount || echo "ignored"
-          #echo "mount -o bind C:/Program Files/Git /"
-          #mount -o bind C:/Program Files/Git /
-          #echo "mount -o bind C:/Program Files/Git/usr/bin /bin"
-          #mount -o bind C:/Program Files/Git/usr/bin /bin
-          #echo "umount -h"
-          #umount -h || echo "ignored"
-          #echo "umount /usr"
-          #umount /usr || echo "ignored"
           echo "./configure --enable-debug --enable-static-exe --disable-flto \"--with-ssl=$prepath/openssl\" --with-libexpat=\"$prepath/expat\" --disable-shared"
           ./configure --enable-debug --enable-static-exe --disable-flto "--with-ssl=$prepath/openssl" --with-libexpat="$prepath/expat" --disable-shared
           make
