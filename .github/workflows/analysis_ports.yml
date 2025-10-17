@@ -377,10 +377,10 @@ jobs:
             if test "$CROSS_PLATFORM_OS" = "netbsd"; then sudo pkgin -y install autoconf automake libtool libevent; export LDFLAGS="-Wl,--rpath=/usr/pkg/lib"; fi
             echo "::group::configure"
             rm -f aclocal.m4
+            libtoolize -c -i || glibtoolize -c -i
             aclocal
             autoconf && autoheader
             (cd simdzone && autoconf && autoheader)
-            libtoolize -c -i || glibtoolize -c -i
             (cd simdzone; libtoolize -c -i || glibtoolize -c -i)
             #aclocal
             #(cd simdzone; aclocal)
