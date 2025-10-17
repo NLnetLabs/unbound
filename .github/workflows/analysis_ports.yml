@@ -179,11 +179,17 @@ jobs:
           persist-credentials: false
       - name: test_windows_configure
         if: ${{ matrix.test_windows == 'yes' }}
-        shell: C:\msys64\usr\bin\bash.exe {0}
+        shell: bash
         run: |
           echo "mount"
           mount || echo "ignored"
-          cd unbound
+          echo "mount -o bind /c/msys64/usr /usr"
+          mount -o bind /c/msys64/usr /usr || echo "ignored"
+          echo "mount"
+          mount || echo "ignored"
+          # probably installs to C:\msys64\usr\bin\bash.exe
+          echo "pacman -S --noconfirm autotools"
+          C:/msys64/usr/bin/pacman -S --noconfirm autotools
           rm -f aclocal.m4
           autoreconf -fi
       - name: test_windows
@@ -204,8 +210,8 @@ jobs:
           # C:/Users/RUNNER~1/AppData/Local/Temp on /tmp
           echo "mount"
           mount || echo "ignored"
-          echo "mount -o bind /c/msys64/usr /usr"
-          mount -o bind /c/msys64/usr /usr || echo "ignored"
+          #echo "mount -o bind /c/msys64/usr /usr"
+          #mount -o bind /c/msys64/usr /usr || echo "ignored"
           # Now the msys64 mount is done. Remove it to go back to the start.
           # there is:
           # C:/msys64 on /
@@ -233,8 +239,8 @@ jobs:
           echo 'YACC="win_bison -y"'
           export YACC="win_bison -y"
           # probably installs to C:\msys64\usr\bin\bash.exe
-          echo "pacman -S --noconfirm autotools"
-          C:/msys64/usr/bin/pacman -S --noconfirm autotools
+          #echo "pacman -S --noconfirm autotools"
+          #C:/msys64/usr/bin/pacman -S --noconfirm autotools
           mkdir openssl
           echo "curl openssl"
           curl -L -k -s -S -o openssl-3.2.0.tar.gz https://www.openssl.org/source/openssl-3.2.0.tar.gz
