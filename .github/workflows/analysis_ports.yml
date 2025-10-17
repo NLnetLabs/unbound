@@ -189,6 +189,17 @@ jobs:
           cd ..
           export prepath=`pwd`
           echo prepath=${prepath}
+          echo "mount -h"
+          mount -h || echo "ignored"
+          echo "mount"
+          mount || echo "ignored"
+          echo "mount --bind /c/msys64/usr /usr"
+          mount -o bind /c/msys64/usr /usr || echo "ignored"
+          echo "mount with backslash"
+          mount C:\msys64\usr /usr || echo "ignored"
+          echo "umount"
+          umount /usr
+          mount /c/msys64/usr /usr
           echo "choco install winflexbison3"
           choco install winflexbison3
           echo 'LEX="win_flex"'
@@ -255,10 +266,8 @@ jobs:
           cd unbound
           #echo 'aclocal'
           #PERL5LIB="/c/msys64/usr/share/autoconf-2.71:/c/msys64/usr/share/autoconf:/c/msys64/usr/share/automake-1.16:/c/msys64/usr/share/automake" PERL="C:/msys64/usr/bin/perl" PATH="/c/msys64/usr/bin:$PATH" aclocal-1.16 --automake-acdir=/c/msys64/usr/share/aclocal-1.16
-          echo "mount -h"
-          mount -h || echo "ignored"
-          echo "mount --bind /c/msys64/usr /usr"
-          mount --bind /c/msys64/usr /usr
+          echo "mount"
+          mount C:\msys64\usr /usr
           echo 'autoreconf -fi'
           PATH="/c/msys64/usr/bin:$PATH" autoreconf -fi || echo "ignored"
           echo 'autoreconf -fi with paths'
