@@ -181,16 +181,26 @@ jobs:
         if: ${{ matrix.test_windows == 'yes' }}
         shell: bash
         run: |
+          # The run starts with mount points for /c, /d, and
+          # C:/Program Files/Git on /
+          # C:/Program Files/Git/usr/bin on /bin
+          # C:/Users/RUNNER~1/AppData/Local/Temp on /tmp
           echo "mount"
           mount || echo "ignored"
           echo "mount -o bind /c/msys64/usr /usr"
           mount -o bind /c/msys64/usr /usr || echo "ignored"
+          # Now there is:
+          # C:/msys64 on /
+          # C:/msys64/usr/bin on /bin
           echo "mount"
           mount || echo "ignored"
           # probably installs to C:\msys64\usr\bin\bash.exe
           echo "pacman -S --noconfirm autotools"
           C:/msys64/usr/bin/pacman -S --noconfirm autotools
+          echo "rm -f aclocal.m4"
           rm -f aclocal.m4
+          echo "autoreconf -fi"
+          #PATH="/c/msys64/usr/bin:$PATH" autoreconf -fi || echo "ignored"
           autoreconf -fi
       - name: test_windows
         if: ${{ matrix.test_windows == 'yes' }}
@@ -204,43 +214,15 @@ jobs:
           cd ..
           export prepath=`pwd`
           echo prepath=${prepath}
-          # The run starts with mount points for /c, /d, and
-          # C:/Program Files/Git on /
-          # C:/Program Files/Git/usr/bin on /bin
-          # C:/Users/RUNNER~1/AppData/Local/Temp on /tmp
+          # The mount should have the git directories.
           echo "mount"
           mount || echo "ignored"
-          #echo "mount -o bind /c/msys64/usr /usr"
-          #mount -o bind /c/msys64/usr /usr || echo "ignored"
-          # Now the msys64 mount is done. Remove it to go back to the start.
-          # there is:
-          # C:/msys64 on /
-          # C:/msys64/usr/bin on /bin
-          echo "mount"
-          mount || echo "ignored"
-          echo 'mount -o bind "C:/Program Files/Git/usr" /usr'
-          mount -o bind "C:/Program Files/Git/usr" /usr || echo "ignored"
-          echo "umount /"
-          umount / || echo "ignored"
-          echo "umount /bin"
-          umount /bin || echo "ignored"
-          echo 'mount -o bind "C:/Program Files/Git" /'
-          mount -o bind "C:/Program Files/Git" / || echo "ignored"
-          echo 'mount -o bind "C:/Program Files/Git/usr/bin" /bin'
-          mount -o bind "C:/Program Files/Git/usr/bin" /bin || echo "ignored"
-          echo "mount"
-          mount || echo "ignored"
-          echo "umount"
-          umount /usr
           echo "choco install winflexbison3"
           choco install winflexbison3
           echo 'LEX="win_flex"'
           export LEX="win_flex"
           echo 'YACC="win_bison -y"'
           export YACC="win_bison -y"
-          # probably installs to C:\msys64\usr\bin\bash.exe
-          #echo "pacman -S --noconfirm autotools"
-          #C:/msys64/usr/bin/pacman -S --noconfirm autotools
           mkdir openssl
           echo "curl openssl"
           curl -L -k -s -S -o openssl-3.2.0.tar.gz https://www.openssl.org/source/openssl-3.2.0.tar.gz
@@ -301,23 +283,22 @@ jobs:
           # mount so that /c/msys64/usr/share/autoconf-2.71 and
           # /c/msys64/usr/share/automake-1.16 and
           # /c/msys64/usr/share/aclocal-1.16 are in /usr for autoconf, aclocal.
-          echo "mount -o bind /c/msys64/usr /usr"
-          mount -o bind /c/msys64/usr /usr || echo "ignored"
-          echo 'autoreconf -fi'
-          PATH="/c/msys64/usr/bin:$PATH" autoreconf -fi || echo "ignored"
+          #echo 'autoreconf -fi'
+          #rm -f aclocal.m4
+          #PATH="/c/msys64/usr/bin:$PATH" autoreconf -fi || echo "ignored"
           #echo 'autoreconf -fi with paths'
           #PERL5LIB="/c/msys64/usr/share/autoconf-2.71:/c/msys64/usr/share/autoconf:/c/msys64/usr/share/automake-1.16:/c/msys64/usr/share/automake" PERL="C:/msys64/usr/bin/perl" PATH="/c/msys64/usr/bin:$PATH" autoreconf -fi
           # the /usr/share use is done, remove the mount.
-          echo "mount"
-          mount || echo "ignored"
-          echo "mount -o bind C:/Program Files/Git /"
-          mount -o bind C:/Program Files/Git /
-          echo "mount -o bind C:/Program Files/Git/usr/bin /bin"
-          mount -o bind C:/Program Files/Git/usr/bin /bin
-          echo "umount -h"
-          umount -h || echo "ignored"
-          echo "umount /usr"
-          umount /usr || echo "ignored"
+          #echo "mount"
+          #mount || echo "ignored"
+          #echo "mount -o bind C:/Program Files/Git /"
+          #mount -o bind C:/Program Files/Git /
+          #echo "mount -o bind C:/Program Files/Git/usr/bin /bin"
+          #mount -o bind C:/Program Files/Git/usr/bin /bin
+          #echo "umount -h"
+          #umount -h || echo "ignored"
+          #echo "umount /usr"
+          #umount /usr || echo "ignored"
           echo "./configure --enable-debug --enable-static-exe --disable-flto \"--with-ssl=$prepath/openssl\" --with-libexpat=\"$prepath/expat\" --disable-shared"
           ./configure --enable-debug --enable-static-exe --disable-flto "--with-ssl=$prepath/openssl" --with-libexpat="$prepath/expat" --disable-shared
           make
