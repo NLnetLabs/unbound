@@ -179,7 +179,7 @@ jobs:
           persist-credentials: false
       - name: test_windows_configure
         if: ${{ matrix.test_windows == 'yes' }}
-        shell: msys2bash
+        shell: msys2bash.cmd
         run: |
           echo "mount"
           mount || echo "ignored"
