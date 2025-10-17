@@ -262,8 +262,11 @@ jobs:
           mount -o bind /c/msys64/usr /usr || echo "ignored"
           echo 'autoreconf -fi'
           PATH="/c/msys64/usr/bin:$PATH" autoreconf -fi || echo "ignored"
-          echo 'autoreconf -fi with paths'
-          PERL5LIB="/c/msys64/usr/share/autoconf-2.71:/c/msys64/usr/share/autoconf:/c/msys64/usr/share/automake-1.16:/c/msys64/usr/share/automake" PERL="C:/msys64/usr/bin/perl" PATH="/c/msys64/usr/bin:$PATH" autoreconf -fi
+          #echo 'autoreconf -fi with paths'
+          #PERL5LIB="/c/msys64/usr/share/autoconf-2.71:/c/msys64/usr/share/autoconf:/c/msys64/usr/share/automake-1.16:/c/msys64/usr/share/automake" PERL="C:/msys64/usr/bin/perl" PATH="/c/msys64/usr/bin:$PATH" autoreconf -fi
+          # the /usr/share use is done, remove the mount.
+          echo "umount /c/msys64/usr"
+          umount /c/msys64/usr
           echo "./configure --enable-debug --enable-static-exe --disable-flto \"--with-ssl=$prepath/openssl\" --with-libexpat=\"$prepath/expat\" --disable-shared"
           ./configure --enable-debug --enable-static-exe --disable-flto "--with-ssl=$prepath/openssl" --with-libexpat="$prepath/expat" --disable-shared
           make
