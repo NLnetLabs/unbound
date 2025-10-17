@@ -280,9 +280,7 @@ jobs:
           echo "unbound"
           cd unbound
           echo "./configure --enable-debug --enable-static-exe --disable-flto \"--with-ssl=$prepath/openssl\" --with-libexpat=\"$prepath/expat\" --disable-shared"
-          ./configure --enable-debug --enable-static-exe --disable-flto "--with-ssl=$prepath/openssl" --with-libexpat="$prepath/expat" --disable-shared || echo "ignored"
-          cat simdzone/config.log
-          exit 1 #DEBUG, why is _fullpath missing.
+          ./configure --enable-debug --enable-static-exe --disable-flto "--with-ssl=$prepath/openssl" --with-libexpat="$prepath/expat" --disable-shared
           make
           # specific test output
           #make testbound.exe; ./testbound.exe -s
