@@ -203,10 +203,10 @@ jobs:
           # C:/msys64/usr/bin on /bin
           echo "mount"
           mount || echo "ignored"
-          echo "mount -o bind C:/Program Files/Git /"
-          mount -o bind C:/Program Files/Git /
-          echo "mount -o bind C:/Program Files/Git/usr/bin /bin"
-          mount -o bind C:/Program Files/Git/usr/bin /bin
+          echo 'mount -o bind "C:/Program Files/Git" /'
+          mount -o bind "C:/Program Files/Git" /
+          echo 'mount -o bind "C:/Program Files/Git/usr/bin" /bin'
+          mount -o bind "C:/Program Files/Git/usr/bin" /bin
           echo "mount"
           mount || echo "ignored"
           echo "umount"
