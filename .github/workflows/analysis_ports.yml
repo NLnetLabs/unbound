@@ -379,6 +379,8 @@ jobs:
             rm -f aclocal.m4
             libtoolize -c -i || glibtoolize -c -i
             aclocal
+            libtoolize -c -i || glibtoolize -c -i
+            aclocal
             autoconf && autoheader
             (cd simdzone && autoconf && autoheader)
             (cd simdzone; libtoolize -c -i || glibtoolize -c -i)
