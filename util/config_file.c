@@ -223,6 +223,7 @@ config_create(void)
 	cfg->stubs = NULL;
 	cfg->forwards = NULL;
 	cfg->auths = NULL;
+	cfg->tsig_keys = NULL;
 #ifdef CLIENT_SUBNET
 	cfg->client_subnet = NULL;
 	cfg->client_subnet_zone = NULL;
@@ -930,7 +931,7 @@ int config_set_option(struct config_file* cfg, const char* opt,
 		 * max-client-subnet-ipv4, max-client-subnet-ipv6,
 		 * min-client-subnet-ipv4, min-client-subnet-ipv6,
 		 * max-ecs-tree-size-ipv4, max-ecs-tree-size-ipv6, ipsecmod_hook,
-		 * ipsecmod_whitelist. */
+		 * ipsecmod_whitelist, tsig-key. */
 		return 0;
 	}
 	return 1;
@@ -1436,6 +1437,7 @@ config_get_option(struct config_file* cfg, const char* opt,
 	 * local-data-ptr - converted to local-data entries
 	 * stub-zone, name, stub-addr, stub-host, stub-prime
 	 * forward-zone, name, forward-addr, forward-host
+	 * tsig-key
 	 */
 	else return 0;
 	return 1;
@@ -1642,6 +1644,8 @@ config_delauth(struct config_auth* p)
 	config_delstrlist(p->masters);
 	config_delstrlist(p->urls);
 	config_delstrlist(p->allow_notify);
+	config_deldblstrlist(p->masters_tsig);
+	config_deldblstrlist(p->allow_notify_tsig);
 	free(p->zonefile);
 	free(p->rpz_taglist);
 	free(p->rpz_action_override);
@@ -1708,6 +1712,27 @@ config_delviews(struct config_view* p)
 }
 
 void
+config_deltsig_key(struct config_tsig_key* p)
+{
+	if(!p) return;
+	free(p->name);
+	free(p->algorithm);
+	free(p->secret);
+	free(p);
+}
+
+void
+config_deltsig_keys(struct config_tsig_key* p)
+{
+	struct config_tsig_key* np;
+	while(p) {
+		np = p->next;
+		config_deltsig_key(p);
+		p = np;
+	}
+}
+
+void
 config_del_strarray(char** array, int num)
 {
 	int i;
@@ -1761,6 +1786,7 @@ config_delete(struct config_file* cfg)
 	config_delstubs(cfg->forwards);
 	config_delauths(cfg->auths);
 	config_delviews(cfg->views);
+	config_deltsig_keys(cfg->tsig_keys);
 	config_delstrlist(cfg->donotqueryaddrs);
 	config_delstrlist(cfg->root_hints);
 #ifdef CLIENT_SUBNET

@@ -3720,6 +3720,12 @@ fallback activates to fetch from the upstream instead of the SERVFAIL.
     Alternate syntax for :ref:`primary<unbound.conf.auth.primary>`.
 
 
+@@UAHL@unbound.conf.auth@primary-tsig@@: *<IP address or host name>* *<tsig key>*
+    Similar to :ref:`primary<unbound.conf.auth.primary>` and the tsig key
+    is used for TSIG.
+    The key name is from a :ref:`tsig-key<unbound.conf.tsig-key>` entry.
+
+
 @@UAHL@unbound.conf.auth@url@@: *<URL to zone file>*
     Where to download a zonefile for the zone.
     With HTTP or HTTPS.
@@ -3764,6 +3770,12 @@ fallback activates to fetch from the upstream instead of the SERVFAIL.
         The primaries from :ref:`primary<unbound.conf.auth.primary>` and
         :ref:`url<unbound.conf.auth.url>` statements are allowed notify by
         default.
+
+
+@@UAHL@unbound.conf.auth@allow-notify-tsig@@: *<IP address or host name or netblockIP/prefix>* *<tsig key>*
+    Similar to :ref:`allow-notify<unbound.conf.auth.allow-notify>` and the
+    tsig key is used for TSIG.
+    The key name is from a :ref:`tsig-key<unbound.conf.tsig-key>` entry.
 
 
 @@UAHL@unbound.conf.auth@fallback-enabled@@: *<yes or no>*
@@ -4883,6 +4895,12 @@ The RPZ zones can be configured in the config file with these settings in the
     Alternate syntax for :ref:`primary<unbound.conf.rpz.primary>`.
 
 
+@@UAHL@unbound.conf.rpz@primary-tsig@@: *<IP address or host name>* *<tsig key>*
+    Similar to :ref:`primary<unbound.conf.rpz.primary>` and the tsig key
+    is used for TSIG.
+    The key name is from a :ref:`tsig-key<unbound.conf.tsig-key>` entry.
+
+
 @@UAHL@unbound.conf.rpz@url@@: *<url to zonefile>*
     Where to download a zonefile for the zone.
     With HTTP or HTTPS.
@@ -4918,6 +4936,12 @@ The RPZ zones can be configured in the config file with these settings in the
         The primaries from :ref:`primary<unbound.conf.rpz.primary>` and
         :ref:`url<unbound.conf.rpz.url>` statements are allowed notify by
         default.
+
+
+@@UAHL@unbound.conf.rpz@allow-notify-tsig@@: *<IP address or host name or netblockIP/prefix>* *<tsig key>*
+    Similar to :ref:`allow-notify<unbound.conf.rpz.allow-notify>` and the
+    tsig key is used for TSIG.
+    The key name is from a :ref:`tsig-key<unbound.conf.tsig-key>` entry.
 
 
 @@UAHL@unbound.conf.rpz@zonefile@@: *<filename>*
@@ -4977,6 +5001,42 @@ The RPZ zones can be configured in the config file with these settings in the
 
     If no tags are specified the policies from this clause will be applied for
     all clients.
+
+.. _unbound.conf.tsig-key:
+
+TSIG Key Options
+^^^^^^^^^^^^^^^^^
+
+The **tsig-key:** clauses specify the TSIG keys that are used.
+There can be multiple **tsig-key:** clauses, with each specifying a
+different key.
+Each key has a name, algorithm and secret key material.
+
+TSIG keys are shared secrets.
+Both sides of the connection share the secret information.
+Also they must both use the same name for the key, and same algorithm.
+
+With ``include: "key.conf"`` it is possible to put the declaration of the key
+or some lines of it in an external file from the main configuration file.
+It can also be used without such an include, with it the config statements
+and key material can be put in separate files.
+
+
+@@UAHL@unbound.conf.tsig-key@name@@: *"<key name>"*
+    Name of the TSIG key.
+    The key name is transferred in DNS wireformat in the TSIG record, and
+    is used to reference the TSIG key from where it is configured to be used.
+
+
+@@UAHL@unbound.conf.tsig-key@algorithm@@: *<algorithm name>*
+    Name of the algorithm to use with this TSIG key.
+    This can be md5, sha1, sha224, sha256, sha384 or sha512.
+
+
+@@UAHL@unbound.conf.tsig-key@secret@@: *"<base64 blob>"*
+    The secret contents is a base64 string.
+    A way to get random base64 bytes is e.g.
+    from ``dd if=/dev/random of=/dev/stdout count=1 bs=32 | base64``
 
 Memory Control Example
 ----------------------

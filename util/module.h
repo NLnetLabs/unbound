@@ -181,6 +181,7 @@ struct views;
 struct respip_set;
 struct respip_client_info;
 struct respip_addr_info;
+struct tsig_key_table;
 struct module_stack;
 
 /** Maximum number of modules in operation */
@@ -534,6 +535,8 @@ struct module_env {
 	struct views* views;
 	/** response-ip set with associated actions and tags. */
 	struct respip_set* respip_set;
+	/** the TSIG keys */
+	struct tsig_key_table* tsig_key_table;
 	/** module specific data. indexed by module id. */
 	void* modinfo[MAX_MODULE];
 
