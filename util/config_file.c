@@ -1635,6 +1635,21 @@ config_deltrplstrlist(struct config_str3list* p)
 }
 
 void
+config_delstr4list(struct config_str4list* p)
+{
+	struct config_str4list *np;
+	while(p) {
+		np = p->next;
+		free(p->str);
+		free(p->str2);
+		free(p->str3);
+		free(p->str4);
+		free(p);
+		p = np;
+	}
+}
+
+void
 config_delauth(struct config_auth* p)
 {
 	if(!p) return;
@@ -1690,7 +1705,7 @@ config_delview(struct config_view* p)
 	config_deldblstrlist(p->local_zones);
 	config_delstrlist(p->local_zones_nodefault);
 #ifdef USE_IPSET
-	config_delstrlist(p->local_zones_ipset);
+	config_delstr4list(p->local_zones_ipset);
 #endif
 	config_delstrlist(p->local_data);
 	free(p);
@@ -1788,7 +1803,7 @@ config_delete(struct config_file* cfg)
 	config_deldblstrlist(cfg->local_zones);
 	config_delstrlist(cfg->local_zones_nodefault);
 #ifdef USE_IPSET
-	config_delstrlist(cfg->local_zones_ipset);
+	config_delstr4list(cfg->local_zones_ipset);
 #endif
 	config_delstrlist(cfg->local_data);
 	config_deltrplstrlist(cfg->local_zone_overrides);
@@ -1847,8 +1862,12 @@ config_delete(struct config_file* cfg)
 #endif  /* USE_REDIS */
 #endif  /* USE_CACHEDB */
 #ifdef USE_IPSET
-	free(cfg->ipset_name_v4);
-	free(cfg->ipset_name_v6);
+    if (cfg->ipset_name_v4 != NULL) {
+        free(cfg->ipset_name_v4);
+    }
+    if (cfg->ipset_name_v6 != NULL) {
+        free(cfg->ipset_name_v6);
+    }
 #endif
 	free(cfg);
 }
@@ -2206,6 +2225,25 @@ cfg_str3list_insert(struct config_str3list** head, char* item, char* i2,
 	s->str = item;
 	s->str2 = i2;
 	s->str3 = i3;
+	s->next = *head;
+	*head = s;
+	return 1;
+}
+
+int
+cfg_str4list_insert(struct config_str4list** head, char* item, char* i2,
+	char* i3, char* i4)
+{
+	struct config_str4list *s;
+	if(!item || !i2 || !i3 || !i4 || !head)
+		return 0;
+	s = (struct config_str4list*)calloc(1, sizeof(struct config_str4list));
+	if(!s)
+		return 0;
+	s->str = item;
+	s->str2 = i2;
+	s->str3 = i3;
+    s->str4 = i4;
 	s->next = *head;
 	*head = s;
 	return 1;
@@ -2653,14 +2691,27 @@ static char* last_space_pos(const char* str)
 	return (sp>tab)?sp:tab;
 }
 
+static int get_next_token(const char* str, char** start, char** end) {
+	while(*start && **start && isspace((unsigned char)*str))
+		start++;
+	if(!*start || !**start) {
+		return 1;
+	}
+    *end = next_space_pos(*start);
+    if (!*end || !**end) {
+        return 2;
+    }
+    return 0;
+}
+
 int
 cfg_parse_local_zone(struct config_file* cfg, const char* val)
 {
-	const char *type, *name_end, *name;
+	char *type, *type_end, *name_end, *name;
 	char buf[256];
 
 	/* parse it as: [zone_name] [between stuff] [zone_type] */
-	name = val;
+	name = (char*) val;
 	while(*name && isspace((unsigned char)*name))
 		name++;
 	if(!*name) {
@@ -2678,7 +2729,40 @@ cfg_parse_local_zone(struct config_file* cfg, const char* val)
 	}
 	(void)strlcpy(buf, name, sizeof(buf));
 	buf[name_end-name] = '\0';
-
+#ifdef USE_IPSET
+    type = name_end;
+    int result = get_next_token(name_end, &type, &type_end);
+    if (result == 1) {
+        log_err("syntax error: expected zone type: %s", val);
+    } else if (result == 0 && strcmp(type, "ipset") == 0) {
+        char *protocol, *protocol_end, *ip_table, *ip_table_end,
+            *ipset_name, *ipset_name_end, *ttl;
+        protocol = type_end;
+        if (get_next_token(type_end, &protocol, &protocol_end)) {
+            /* We don't have the 5 argument variant, so defer to 2 arg variant */
+            goto parse_global_ipset;
+        }
+        ipset_name = protocol_end;
+        if (get_next_token(protocol_end,  &ipset_name, &ipset_name_end)) {
+            log_err("syntax error: expected ipset zone set name: %s", val);
+            return 0;
+        }
+        ttl = last_space_pos(ipset_name_end);
+        while(ttl && *ttl && isspace((unsigned char)*ttl))
+            ttl++;
+        if(!ttl || !*ttl) {
+            log_err("syntax error: expected ipset zone ttl: %s", val);
+            return 0;
+        }
+		return cfg_str4list_insert(&cfg->local_zones_ipset,
+			strdup(name), strdup(protocol),
+            strdup(ipset_name), strdup(ttl));
+    }
+parse_global_ipset:;
+    /* There was no next-space after this token, so it must be final
+     * and as such we don't have enough tokens*/
+#endif
+    
 	type = last_space_pos(name_end);
 	while(type && *type && isspace((unsigned char)*type))
 		type++;
@@ -2692,8 +2776,8 @@ cfg_parse_local_zone(struct config_file* cfg, const char* val)
 			strdup(name));
 #ifdef USE_IPSET
 	} else if(strcmp(type, "ipset")==0) {
-		return cfg_strlist_insert(&cfg->local_zones_ipset,
-			strdup(name));
+		return cfg_str4list_insert(&cfg->local_zones_ipset,
+			strdup(name), "@global@", "@global@", "no-ttl");
 #endif
 	} else {
 		return cfg_str2list_insert(&cfg->local_zones, strdup(buf),
