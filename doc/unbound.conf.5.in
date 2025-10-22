@@ -3656,6 +3656,15 @@ Default: 200
 .UNINDENT
 .INDENT 0.0
 .TP
+.B iter\-scrub\-promiscuous: \fI<yes or no>\fP 
+Should the iterator scrubber remove promiscuous NS from positive answers.
+This protects against poisonous contents, that could affect names in the
+same zone as a spoofed packet.
+.sp
+Default: yes
+.UNINDENT
+.INDENT 0.0
+.TP
 .B fast\-server\-permil: \fI<number>\fP 
 Specify how many times out of 1000 to pick from the set of fastest servers.
 0 turns the feature off.
