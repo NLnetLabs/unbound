@@ -1,3 +1,7 @@
+22 October 2025: Yorgos
+	- Tag for 1.24.1 release.
+	  The repository continues with version 1.24.2.
+
 15 October 2025: Wouter
 	- Fix to drop UDP for discard-timeout, but not stream connections.
 	- Fix to reply with SERVFAIL when the wait-limit is exceeded.
