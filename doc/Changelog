@@ -1,7 +1,8 @@
 24 October 2025: Yorgos
 	- unbound.conf man page updates to include a preview of the section
 	  clauses and some reformatting around the use of "clause", "option"
-	  and "attributes".
+	  and "attributes". Based on Havard Eidnes' suggestions on the
+	  mailing list.
 
 22 October 2025: Yorgos
 	- Tag for 1.24.1 release.
