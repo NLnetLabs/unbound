@@ -3,6 +3,8 @@
 	  clauses and some reformatting around the use of "clause", "option"
 	  and "attributes". Based on Havard Eidnes' suggestions on the
 	  mailing list.
+	- Fix unused attribute warning in redis.c when threads are not
+	  supported.
 
 22 October 2025: Yorgos
 	- Tag for 1.24.1 release.
