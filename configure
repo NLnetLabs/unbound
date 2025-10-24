@@ -21520,7 +21520,7 @@ fi
 	      { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking if openssl supports SHA2 and ECDSA with EVP" >&5
 printf %s "checking if openssl supports SHA2 and ECDSA with EVP... " >&6; }
 	      if grep OPENSSL_VERSION_TEXT $ssldir_include/openssl/opensslv.h | grep "OpenSSL" >/dev/null; then
-		if grep OPENSSL_VERSION_NUMBER $ssldir_include/openssl/opensslv.h | grep 0x0 >/dev/null; then
+		if grep OPENSSL_VERSION_TEXT $ssldir_include/openssl/opensslv.h | grep "OpenSSL 0\." >/dev/null; then
 		  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
 printf "%s\n" "no" >&6; }
 

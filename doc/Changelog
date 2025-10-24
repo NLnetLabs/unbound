@@ -5,6 +5,9 @@
 	  mailing list.
 	- Fix unused attribute warning in redis.c when threads are not
 	  supported.
+	- For #1364, use OPENSSL_VERSION_TEXT instead of OPENSSL_VERSION_NUMBER
+	  for part of the configure script. OPENSSL_VERSION_TEXT is more
+	  consistent across versions.
 
 22 October 2025: Yorgos
 	- Tag for 1.24.1 release.
