@@ -1,3 +1,7 @@
+27 October 2025: Yorgos
+	- Merge #1331 from Jitka Plesníková: Replace deprecated $function by
+	  new $action, for SWIG.
+
 24 October 2025: Yorgos
 	- unbound.conf man page updates to include a preview of the section
 	  clauses and some reformatting around the use of "clause", "option"
