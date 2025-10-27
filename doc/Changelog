@@ -1,6 +1,9 @@
 27 October 2025: Yorgos
 	- Merge #1331 from Jitka Plesníková: Replace deprecated $function by
 	  new $action, for SWIG.
+	- Fix #1165, document the possible circular dependency when using
+	  host names instead of IP addresses for name servers in stub/forward
+	  zones and log a warning when spotted in the configuration.
 
 24 October 2025: Yorgos
 	- unbound.conf man page updates to include a preview of the section

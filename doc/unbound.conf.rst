@@ -3534,6 +3534,19 @@ The :ref:`local-zone: nodefault<unbound.conf.local-zone.type.nodefault>` (or
     Name of stub zone nameserver.
     Is itself resolved before it is used.
 
+    .. caution::
+        If the domain (or a subdomain) from this zone is used as the host, it
+        will unavoidably introduce a circular dependency on retrieving the IP
+        addresses of the name server.
+        In that case, it is suggested to use
+        :ref:`stub-addr<unbound.conf.stub.stub-addr>` instead.
+        Alternatively,
+        :ref:`stub-first: yes<unbound.conf.stub.stub-first>` can also work
+        around the circular dependency by trying resolution outside of this
+        zone.
+        However this has the caveat that it would allow escaping this zone when
+        any resolution attempt fails within this zone.
+
     To use a non-default port for DNS communication append ``'@'`` with the
     port number.
 
@@ -3638,6 +3651,19 @@ cache).
 @@UAHL@unbound.conf.forward@forward-host@@: *<domain name>*
     Name of server to forward to.
     Is itself resolved before it is used.
+
+    .. caution::
+        If the domain (or a subdomain) from this zone is used as the host, it
+        will unavoidably introduce a circular dependency on retrieving the IP
+        addresses of the name server.
+        In that case, it is suggested to use
+        :ref:`forward-addr<unbound.conf.forward.forward-addr>` instead.
+        Alternatively,
+        :ref:`forward-first: yes<unbound.conf.forward.forward-first>` can also
+        work around the circular dependency by trying resolution outside of
+        this zone.
+        However this has the caveat that it would allow escaping this zone when
+        any resolution attempt fails within this zone.
 
     To use a non-default port for DNS communication append ``'@'`` with the
     port number.
@@ -3786,9 +3812,11 @@ fallback activates to fetch from the upstream instead of the SERVFAIL.
     :ref:`url<unbound.conf.auth.url>` to download the zonefile as a text file
     from a webserver that would work.
 
-    If you specify the hostname, you cannot use the domain from the zonefile,
-    because it may not have that when retrieving that data, instead use a plain
-    IP address to avoid a circular dependency on retrieving that IP address.
+    .. caution::
+        If you specify the hostname, you cannot use the domain from the
+        zonefile, because it may not have that when retrieving that data,
+        instead use a plain IP address to avoid a circular dependency on
+        retrieving that IP address.
 
 
 @@UAHL@unbound.conf.auth@master@@: *<IP address or host name>*
