@@ -98,8 +98,13 @@
 #include "util/timeval_func.h"
 #include "util/tcp_conn_limit.h"
 #include "util/edns.h"
+#include "util/tsig.h"
 #ifdef USE_CACHEDB
 #include "cachedb/cachedb.h"
+#endif
+#ifdef CLIENT_SUBNET
+#include "edns-subnet/subnetmod.h"
+#include "edns-subnet/addrtree.h"
 #endif
 
 #ifdef HAVE_SYS_TYPES_H
@@ -149,7 +154,7 @@ remote_setup_ctx(struct daemon_remote* rc, struct config_file* cfg)
 		log_crypto_err("could not SSL_CTX_new");
 		return 0;
 	}
-	if(!listen_sslctx_setup(rc->ctx)) {
+	if(!listen_sslctx_setup(rc->ctx, cfg->tls_use_system_policy_versions)) {
 		return 0;
 	}
 
@@ -1742,6 +1747,334 @@ do_view_datas_remove(struct daemon_remote* rc, RES* ssl, struct worker* worker,
 	(void)ssl_printf(ssl, "removed %d datas\n", num);
 }
 
+/** information for the domain search */
+struct cache_lookup_info {
+	/** The connection to print on. */
+	RES* ssl;
+	/** The worker. */
+	struct worker* worker;
+	/** The domain, in wireformat. */
+	uint8_t* nm;
+	/** The length of nm. */
+	size_t nmlen;
+};
+
+#ifdef CLIENT_SUBNET
+static void addrtree_traverse_visit_node(struct addrnode* n, addrkey_t* addr,
+	size_t addr_size, int is_ipv6, time_t now, struct query_info* q,
+	void (*func)(struct query_info*, struct reply_info*, addrkey_t*,
+		size_t, int, addrlen_t, int, time_t, void*), void* arg);
+
+/** Lookup in subnet addrtree */
+static void
+cache_lookup_subnet_addrnode(struct query_info* q, struct reply_info* d,
+	addrkey_t* addr, size_t addr_size, int is_ipv6, addrlen_t scope,
+	int only_match_scope_zero, time_t ttl, void* arg)
+{
+	size_t i;
+	char s[65535], tp[32], cl[32], rc[32], fg[32], astr[64];
+	struct cache_lookup_info* inf = (struct cache_lookup_info*)arg;
+	if(is_ipv6) {
+		if(addr_size < 16 || inet_ntop(AF_INET6, addr, astr,
+			sizeof(astr)) == NULL)
+			snprintf(astr, sizeof(astr), "(inet6ntoperror)");
+	} else {
+		if(addr_size < 4 || inet_ntop(AF_INET, addr, astr,
+			sizeof(astr)) == NULL)
+			snprintf(astr, sizeof(astr), "(inetntoperror)");
+	}
+	sldns_wire2str_dname_buf(q->qname, q->qname_len, s, sizeof(s));
+	sldns_wire2str_type_buf(q->qtype, tp, sizeof(tp));
+	sldns_wire2str_class_buf(q->qclass, cl, sizeof(cl));
+	sldns_wire2str_rcode_buf(FLAGS_GET_RCODE(d->flags),
+		rc, sizeof(rc));
+	snprintf(fg, sizeof(fg), "%s%s%s%s%s%s%s%s",
+		((d->flags&BIT_QR)?" QR":""),
+		((d->flags&BIT_AA)?" AA":""),
+		((d->flags&BIT_TC)?" TC":""),
+		((d->flags&BIT_RD)?" RD":""),
+		((d->flags&BIT_RA)?" RA":""),
+		((d->flags&BIT_Z)?" Z":""),
+		((d->flags&BIT_AD)?" AD":""),
+		((d->flags&BIT_CD)?" CD":""));
+	if(!rrset_array_lock(d->ref, d->rrset_count,
+		*inf->worker->env.now)) {
+		/* rrsets have timed out or do not exist */
+		return;
+	}
+	if(!ssl_printf(inf->ssl, "subnet %s/%d%s %s %s %s " ARG_LL "d\n", astr,
+		(int)scope, (only_match_scope_zero?" scope_zero":""),
+		s, cl, tp, (long long)(ttl-*inf->worker->env.now))) {
+		rrset_array_unlock(d->ref, d->rrset_count);
+		return;
+	}
+	ssl_printf(inf->ssl,
+		"subnet msg %s %s %s%s %s %d %d " ARG_LL "d %d %u %u %u %d %s\n",
+		s, cl, tp, fg, rc,
+		(int)d->flags, (int)d->qdcount,
+		(long long)(d->ttl-*inf->worker->env.now),
+		(int)d->security,
+		(unsigned)d->an_numrrsets,
+		(unsigned)d->ns_numrrsets,
+		(unsigned)d->ar_numrrsets,
+		(int)d->reason_bogus,
+		d->reason_bogus_str?d->reason_bogus_str:"");
+	for(i=0; i<d->rrset_count; i++) {
+		struct ub_packed_rrset_key* rk = d->rrsets[i];
+		struct packed_rrset_data* rd = (struct packed_rrset_data*)rk->entry.data;
+		size_t j;
+		for(j=0; j<rd->count + rd->rrsig_count; j++) {
+			if(!packed_rr_to_string(rk, j,
+				*inf->worker->env.now, s, sizeof(s))) {
+				ssl_printf(inf->ssl, "BADRR\n");
+			} else {
+				ssl_printf(inf->ssl, "%s", s);
+			}
+		}
+	}
+	rrset_array_unlock(d->ref, d->rrset_count);
+	ssl_printf(inf->ssl, "\n");
+}
+
+/** Visit an edge in subnet addrtree traverse */
+static void
+addrtree_traverse_visit_edge(struct addredge* edge, addrkey_t* addr,
+	size_t addr_size, int is_ipv6, time_t now, struct query_info* q,
+	void (*func)(struct query_info*, struct reply_info*, addrkey_t*,
+		size_t, int, addrlen_t, int, time_t, void*), void* arg)
+{
+	size_t n;
+	addrlen_t addrlen;
+	if(!edge || !edge->node)
+		return;
+	addrlen = edge->len;
+	/* ceil() */
+	n = (size_t)((addrlen / KEYWIDTH) + ((addrlen % KEYWIDTH != 0)?1:0));
+	if(n > addr_size)
+		n = addr_size;
+	memset(addr, 0, addr_size);
+	memcpy(addr, edge->str, n);
+	addrtree_traverse_visit_node(edge->node, addr, addr_size, is_ipv6,
+		now, q, func, arg);
+}
+
+/** Visit a node in subnet addrtree traverse */
+static void
+addrtree_traverse_visit_node(struct addrnode* n, addrkey_t* addr,
+	size_t addr_size, int is_ipv6, time_t now, struct query_info* q,
+	void (*func)(struct query_info*, struct reply_info*, addrkey_t*,
+		size_t, int, addrlen_t, int, time_t, void*), void* arg)
+{
+	/* If this node has data, and not expired. */
+	if(n->elem && n->ttl >= now) {
+		func(q, (struct reply_info*)n->elem, addr, addr_size, is_ipv6,
+			n->scope, n->only_match_scope_zero, n->ttl, arg);
+	}
+	/* Traverse edges. */
+	addrtree_traverse_visit_edge(n->edge[0], addr, addr_size, is_ipv6,
+		now, q, func, arg);
+	addrtree_traverse_visit_edge(n->edge[1], addr, addr_size, is_ipv6,
+		now, q, func, arg);
+}
+
+/** Traverse subnet addrtree */
+static void
+addrtree_traverse(struct addrtree* tree, int is_ipv6, time_t now,
+	struct query_info* q,
+	void (*func)(struct query_info*, struct reply_info*, addrkey_t*,
+		size_t, int, addrlen_t, int, time_t, void*), void* arg)
+{
+	uint8_t addr[16]; /* Large enough for IPv4 and IPv6. */
+	memset(addr, 0, sizeof(addr));
+	addrtree_traverse_visit_node(tree->root, (addrkey_t*)addr,
+		sizeof(addr), is_ipv6, now, q, func, arg);
+}
+
+/** Lookup cache_lookup for subnet content. */
+static void
+cache_lookup_subnet_msg(struct lruhash_entry* e, void* arg)
+{
+	struct cache_lookup_info* inf = (struct cache_lookup_info*)arg;
+	struct msgreply_entry *k = (struct msgreply_entry*)e->key;
+	struct subnet_msg_cache_data* d =
+		(struct subnet_msg_cache_data*)e->data;
+	if(!dname_subdomain_c(k->key.qname, inf->nm))
+		return;
+
+	if(d->tree4) {
+		addrtree_traverse(d->tree4, 0, *inf->worker->env.now, &k->key,
+			&cache_lookup_subnet_addrnode, inf);
+	}
+	if(d->tree6) {
+		addrtree_traverse(d->tree6, 1, *inf->worker->env.now, &k->key,
+			&cache_lookup_subnet_addrnode, inf);
+	}
+}
+#endif /* CLIENT_SUBNET */
+
+static void
+cache_lookup_rrset(struct lruhash_entry* e, void* arg)
+{
+	struct cache_lookup_info* inf = (struct cache_lookup_info*)arg;
+	struct ub_packed_rrset_key* k = (struct ub_packed_rrset_key*)e->key;
+	struct packed_rrset_data* d = (struct packed_rrset_data*)e->data;
+	if(*inf->worker->env.now < d->ttl &&
+		k->id != 0 && /* not deleted */
+		dname_subdomain_c(k->rk.dname, inf->nm)) {
+		size_t i;
+		for(i=0; i<d->count + d->rrsig_count; i++) {
+			char s[65535];
+			if(!packed_rr_to_string(k, i, *inf->worker->env.now,
+				s, sizeof(s))) {
+				ssl_printf(inf->ssl, "BADRR\n");
+				return;
+			}
+			ssl_printf(inf->ssl, "%s", s);
+		}
+		ssl_printf(inf->ssl, "\n");
+	}
+}
+
+static void
+cache_lookup_msg(struct lruhash_entry* e, void* arg)
+{
+	struct cache_lookup_info* inf = (struct cache_lookup_info*)arg;
+	struct msgreply_entry* k = (struct msgreply_entry*)e->key;
+	struct reply_info* d = (struct reply_info*)e->data;
+	if(*inf->worker->env.now < d->ttl &&
+		dname_subdomain_c(k->key.qname, inf->nm)) {
+		size_t i;
+		char s[65535], tp[32], cl[32], rc[32], fg[32];
+		sldns_wire2str_dname_buf(k->key.qname, k->key.qname_len,
+			s, sizeof(s));
+		sldns_wire2str_type_buf(k->key.qtype, tp, sizeof(tp));
+		sldns_wire2str_class_buf(k->key.qclass, cl, sizeof(cl));
+		sldns_wire2str_rcode_buf(FLAGS_GET_RCODE(d->flags),
+			rc, sizeof(rc));
+		snprintf(fg, sizeof(fg), "%s%s%s%s%s%s%s%s",
+			((d->flags&BIT_QR)?" QR":""),
+			((d->flags&BIT_AA)?" AA":""),
+			((d->flags&BIT_TC)?" TC":""),
+			((d->flags&BIT_RD)?" RD":""),
+			((d->flags&BIT_RA)?" RA":""),
+			((d->flags&BIT_Z)?" Z":""),
+			((d->flags&BIT_AD)?" AD":""),
+			((d->flags&BIT_CD)?" CD":""));
+		if(!rrset_array_lock(d->ref, d->rrset_count,
+			*inf->worker->env.now)) {
+			/* rrsets have timed out or do not exist */
+			return;
+		}
+		ssl_printf(inf->ssl,
+			"msg %s %s %s%s %s %d %d " ARG_LL "d %d %u %u %u %d %s\n",
+			s, cl, tp, fg, rc,
+			(int)d->flags, (int)d->qdcount,
+			(long long)(d->ttl-*inf->worker->env.now),
+			(int)d->security,
+			(unsigned)d->an_numrrsets,
+			(unsigned)d->ns_numrrsets,
+			(unsigned)d->ar_numrrsets,
+			(int)d->reason_bogus,
+			d->reason_bogus_str?d->reason_bogus_str:"");
+		for(i=0; i<d->rrset_count; i++) {
+			struct ub_packed_rrset_key* rk = d->rrsets[i];
+			struct packed_rrset_data* rd = (struct packed_rrset_data*)rk->entry.data;
+			size_t j;
+			for(j=0; j<rd->count + rd->rrsig_count; j++) {
+				if(!packed_rr_to_string(rk, j,
+					*inf->worker->env.now, s, sizeof(s))) {
+					rrset_array_unlock(d->ref, d->rrset_count);
+					ssl_printf(inf->ssl, "BADRR\n");
+					return;
+				}
+				ssl_printf(inf->ssl, "%s", s);
+			}
+		}
+		rrset_array_unlock(d->ref, d->rrset_count);
+		ssl_printf(inf->ssl, "\n");
+	}
+}
+
+/** perform cache search for domain */
+static void
+do_cache_lookup_domain(RES* ssl, struct worker* worker, uint8_t* nm,
+	size_t nmlen)
+{
+#ifdef CLIENT_SUBNET
+	int m;
+	struct subnet_env* sn_env = NULL;
+#endif /* CLIENT_SUBNET */
+	struct cache_lookup_info inf;
+	inf.ssl = ssl;
+	inf.worker = worker;
+	inf.nm = nm;
+	inf.nmlen = nmlen;
+
+#ifdef CLIENT_SUBNET
+	m = modstack_find(worker->env.modstack, "subnetcache");
+	if(m != -1) sn_env = (struct subnet_env*)worker->env.modinfo[m];
+	if(sn_env) {
+		lock_rw_rdlock(&sn_env->biglock);
+		slabhash_traverse(sn_env->subnet_msg_cache, 0,
+			&cache_lookup_subnet_msg, &inf);
+		lock_rw_unlock(&sn_env->biglock);
+	}
+#endif /* CLIENT_SUBNET */
+
+	slabhash_traverse(&worker->env.rrset_cache->table, 0,
+		&cache_lookup_rrset, &inf);
+	slabhash_traverse(worker->env.msg_cache, 0, &cache_lookup_msg, &inf);
+}
+
+/** cache lookup of domain */
+static void
+do_cache_lookup(RES* ssl, struct worker* worker, char* arg)
+{
+	uint8_t nm[LDNS_MAX_DOMAINLEN+1];
+	size_t nmlen;
+	int status;
+	char* s = arg, *next = NULL;
+	int allow_long = 0;
+
+	if(arg[0] == '+' && arg[1] == 't' && (arg[2]==' ' || arg[2]=='\t')) {
+		allow_long = 1;
+		s = arg+2;
+	}
+
+	/* Find the commandline arguments of domains. */
+	while(s && *s != 0) {
+		s = skipwhite(s);
+		if(*s == 0)
+			break;
+		if(strchr(s, ' ') || strchr(s, '\t')) {
+			char* sp = strchr(s, ' ');
+			if(strchr(s, '\t') != 0 && strchr(s, '\t') < sp)
+				sp = strchr(s, '\t');
+			*sp = 0;
+			next = sp+1;
+		} else {
+			next = NULL;
+		}
+
+		nmlen = sizeof(nm);
+		status = sldns_str2wire_dname_buf(s, nm, &nmlen);
+		if(status != 0) {
+			ssl_printf(ssl, "error cannot parse name %s at %d: %s\n", s,
+				LDNS_WIREPARSE_OFFSET(status),
+				sldns_get_errorstr_parse(status));
+			return;
+		}
+		if(!allow_long && dname_count_labels(nm) < 3) {
+			ssl_printf(ssl, "error name too short: '%s'. Need example.com. or longer, short names take very long, use +t to allow them.\n", s);
+			return;
+		}
+
+		do_cache_lookup_domain(ssl, worker, nm, nmlen);
+
+		s = next;
+	}
+}
+
 /** cache lookup of nameservers */
 static void
 do_lookup(RES* ssl, struct worker* worker, char* arg)
@@ -2889,10 +3222,13 @@ do_auth_zone_reload(RES* ssl, struct worker* worker, char* arg)
 			(void)ssl_printf(ssl, "error: no SOA in zone after read %s\n", arg);
 			return;
 		}
-		if(xfr->have_zone)
+		if(xfr->have_zone) {
 			xfr->lease_time = *worker->env.now;
+			xfr->soa_zone_acquired = *worker->env.now;
+		}
 		lock_basic_unlock(&xfr->lock);
 	}
+	z->soa_zone_acquired = *worker->env.now;
 
 	auth_zone_verify_zonemd(z, &worker->env, &worker->env.mesh->mods,
 		&reason, 0, 0);
@@ -3041,7 +3377,7 @@ static void
 do_list_auth_zones(RES* ssl, struct auth_zones* az)
 {
 	struct auth_zone* z;
-	char buf[LDNS_MAX_DOMAINLEN], buf2[256];
+	char buf[LDNS_MAX_DOMAINLEN], buf2[256], buf3[256];
 	lock_rw_rdlock(&az->lock);
 	RBTREE_FOR(z, struct auth_zone*, &az->ztree) {
 		lock_rw_rdlock(&z->lock);
@@ -3050,18 +3386,41 @@ do_list_auth_zones(RES* ssl, struct auth_zones* az)
 			snprintf(buf2, sizeof(buf2), "expired");
 		else {
 			uint32_t serial = 0;
-			if(auth_zone_get_serial(z, &serial))
+			if(auth_zone_get_serial(z, &serial)) {
 				snprintf(buf2, sizeof(buf2), "serial %u",
 					(unsigned)serial);
-			else	snprintf(buf2, sizeof(buf2), "no serial");
+				if(z->soa_zone_acquired != 0) {
+#if defined(HAVE_STRFTIME) && defined(HAVE_LOCALTIME_R)
+					char tmbuf[32];
+					struct tm tm;
+					struct tm *tm_p;
+					tm_p = localtime_r(
+						&z->soa_zone_acquired, &tm);
+					if(!strftime(tmbuf, sizeof(tmbuf), "%Y-%m-%dT%H:%M:%S", tm_p))
+						snprintf(tmbuf, sizeof(tmbuf), "strftime-err-%u", (unsigned)z->soa_zone_acquired);
+					snprintf(buf3, sizeof(buf3),
+						"\t since %u %s",
+						(unsigned)z->soa_zone_acquired,
+						tmbuf);
+#else
+					snprintf(buf3, sizeof(buf3),
+						"\t since %u",
+						(unsigned)z->soa_zone_acquired);
+#endif
+				} else {
+					buf3[0]=0;
+				}
+			} else	{
+				snprintf(buf2, sizeof(buf2), "no serial");
+				buf3[0]=0;
+			}
 		}
-		if(!ssl_printf(ssl, "%s\t%s\n", buf, buf2)) {
+		lock_rw_unlock(&z->lock);
+		if(!ssl_printf(ssl, "%s\t%s%s\n", buf, buf2, buf3)) {
 			/* failure to print */
-			lock_rw_unlock(&z->lock);
 			lock_rw_unlock(&az->lock);
 			return;
 		}
-		lock_rw_unlock(&z->lock);
 	}
 	lock_rw_unlock(&az->lock);
 }
@@ -3504,6 +3863,30 @@ do_print_cookie_secrets(RES* ssl, struct worker* worker) {
 	explicit_bzero(secret_hex, sizeof(secret_hex));
 }
 
+/** check that there is no argument after a command that takes no arguments. */
+static int
+cmd_no_args(RES* ssl, char* cmd, char* p)
+{
+	if(p && *p != 0) {
+		/* cmd contains the command that is called at the start,
+		 * with space or tab after it. */
+		char* c = cmd;
+		if(strchr(c, ' ') && strchr(c, '\t')) {
+			if(strchr(c, ' ') < strchr(c, '\t'))
+				*strchr(c, ' ')=0;
+			else	*strchr(c, '\t')=0;
+		} else if(strchr(c, ' ')) {
+			*strchr(c, ' ')=0;
+		} else if(strchr(c, '\t')) {
+			*strchr(c, '\t')=0;
+		}
+		(void)ssl_printf(ssl, "error command %s takes no arguments,"
+			" have '%s'\n", c, p);
+		return 1;
+	}
+	return 0;
+}
+
 /** check for name with end-of-string, space or tab after it */
 static int
 cmdcmp(char* p, const char* cmd, size_t len)
@@ -3519,27 +3902,41 @@ execute_cmd(struct daemon_remote* rc, struct rc_state* s, RES* ssl, char* cmd,
 	char* p = skipwhite(cmd);
 	/* compare command */
 	if(cmdcmp(p, "stop", 4)) {
+		if(cmd_no_args(ssl, p, skipwhite(p+4)))
+			return;
 		do_stop(ssl, worker);
 		return;
 	} else if(cmdcmp(p, "reload_keep_cache", 17)) {
+		if(cmd_no_args(ssl, p, skipwhite(p+17)))
+			return;
 		do_reload(ssl, worker, 1);
 		return;
 	} else if(cmdcmp(p, "reload", 6)) {
+		if(cmd_no_args(ssl, p, skipwhite(p+6)))
+			return;
 		do_reload(ssl, worker, 0);
 		return;
 	} else if(cmdcmp(p, "fast_reload", 11)) {
 		do_fast_reload(ssl, worker, s, skipwhite(p+11));
 		return;
 	} else if(cmdcmp(p, "stats_noreset", 13)) {
+		if(cmd_no_args(ssl, p, skipwhite(p+13)))
+			return;
 		do_stats(ssl, worker, 0);
 		return;
 	} else if(cmdcmp(p, "stats", 5)) {
+		if(cmd_no_args(ssl, p, skipwhite(p+5)))
+			return;
 		do_stats(ssl, worker, 1);
 		return;
 	} else if(cmdcmp(p, "status", 6)) {
+		if(cmd_no_args(ssl, p, skipwhite(p+6)))
+			return;
 		do_status(ssl, worker);
 		return;
 	} else if(cmdcmp(p, "dump_cache", 10)) {
+		if(cmd_no_args(ssl, p, skipwhite(p+10)))
+			return;
 #ifdef THREADS_DISABLED
 		if(worker->daemon->num > 1) {
 			(void)ssl_printf(ssl, "dump_cache/load_cache is not "
@@ -3550,6 +3947,8 @@ execute_cmd(struct daemon_remote* rc, struct rc_state* s, RES* ssl, char* cmd,
 		(void)dump_cache(ssl, worker);
 		return;
 	} else if(cmdcmp(p, "load_cache", 10)) {
+		if(cmd_no_args(ssl, p, skipwhite(p+10)))
+			return;
 #ifdef THREADS_DISABLED
 		if(worker->daemon->num > 1) {
 			/* The warning can't be printed when stdin is sending
@@ -3560,18 +3959,28 @@ execute_cmd(struct daemon_remote* rc, struct rc_state* s, RES* ssl, char* cmd,
 		if(load_cache(ssl, worker)) send_ok(ssl);
 		return;
 	} else if(cmdcmp(p, "list_forwards", 13)) {
+		if(cmd_no_args(ssl, p, skipwhite(p+13)))
+			return;
 		do_list_forwards(ssl, worker);
 		return;
 	} else if(cmdcmp(p, "list_stubs", 10)) {
+		if(cmd_no_args(ssl, p, skipwhite(p+10)))
+			return;
 		do_list_stubs(ssl, worker);
 		return;
 	} else if(cmdcmp(p, "list_insecure", 13)) {
+		if(cmd_no_args(ssl, p, skipwhite(p+13)))
+			return;
 		do_insecure_list(ssl, worker);
 		return;
 	} else if(cmdcmp(p, "list_local_zones", 16)) {
+		if(cmd_no_args(ssl, p, skipwhite(p+16)))
+			return;
 		do_list_local_zones(ssl, worker->daemon->local_zones);
 		return;
 	} else if(cmdcmp(p, "list_local_data", 15)) {
+		if(cmd_no_args(ssl, p, skipwhite(p+15)))
+			return;
 		do_list_local_data(ssl, worker, worker->daemon->local_zones);
 		return;
 	} else if(cmdcmp(p, "view_list_local_zones", 21)) {
@@ -3587,6 +3996,8 @@ execute_cmd(struct daemon_remote* rc, struct rc_state* s, RES* ssl, char* cmd,
 		do_ip_ratelimit_list(ssl, worker, p+17);
 		return;
 	} else if(cmdcmp(p, "list_auth_zones", 15)) {
+		if(cmd_no_args(ssl, p, skipwhite(p+15)))
+			return;
 		do_list_auth_zones(ssl, worker->env.auth_zones);
 		return;
 	} else if(cmdcmp(p, "auth_zone_reload", 16)) {
@@ -3607,13 +4018,20 @@ execute_cmd(struct daemon_remote* rc, struct rc_state* s, RES* ssl, char* cmd,
 		return;
 	} else if(cmdcmp(p, "flush_stats", 11)) {
 		/* must always distribute this cmd */
+		if(cmd_no_args(ssl, p, skipwhite(p+11)))
+			return;
 		if(rc) distribute_cmd(rc, ssl, cmd);
 		do_flush_stats(ssl, worker);
 		return;
 	} else if(cmdcmp(p, "flush_requestlist", 17)) {
 		/* must always distribute this cmd */
+		if(cmd_no_args(ssl, p, skipwhite(p+17)))
+			return;
 		if(rc) distribute_cmd(rc, ssl, cmd);
 		do_flush_requestlist(ssl, worker);
+		return;
+	} else if(cmdcmp(p, "cache_lookup", 12)) {
+		do_cache_lookup(ssl, worker, skipwhite(p+12));
 		return;
 	} else if(cmdcmp(p, "lookup", 6)) {
 		do_lookup(ssl, worker, skipwhite(p+6));
@@ -3622,15 +4040,23 @@ execute_cmd(struct daemon_remote* rc, struct rc_state* s, RES* ssl, char* cmd,
 	 * Each line needs to be distributed if THREADS_DISABLED.
 	 */
 	} else if(cmdcmp(p, "local_zones_remove", 18)) {
+		if(cmd_no_args(ssl, p, skipwhite(p+18)))
+			return;
 		do_zones_remove(rc, ssl, worker);
 		return;
 	} else if(cmdcmp(p, "local_zones", 11)) {
+		if(cmd_no_args(ssl, p, skipwhite(p+11)))
+			return;
 		do_zones_add(rc, ssl, worker);
 		return;
 	} else if(cmdcmp(p, "local_datas_remove", 18)) {
+		if(cmd_no_args(ssl, p, skipwhite(p+18)))
+			return;
 		do_datas_remove(rc, ssl, worker);
 		return;
 	} else if(cmdcmp(p, "local_datas", 11)) {
+		if(cmd_no_args(ssl, p, skipwhite(p+11)))
+			return;
 		do_datas_add(rc, ssl, worker);
 		return;
 	} else if(cmdcmp(p, "view_local_datas_remove", 23)){
@@ -3640,6 +4066,8 @@ execute_cmd(struct daemon_remote* rc, struct rc_state* s, RES* ssl, char* cmd,
 		do_view_datas_add(rc, ssl, worker, skipwhite(p+16));
 		return;
 	} else if(cmdcmp(p, "print_cookie_secrets", 20)) {
+		if(cmd_no_args(ssl, p, skipwhite(p+20)))
+			return;
 		do_print_cookie_secrets(ssl, worker);
 		return;
 	}
@@ -3689,10 +4117,16 @@ execute_cmd(struct daemon_remote* rc, struct rc_state* s, RES* ssl, char* cmd,
 	} else if(cmdcmp(p, "flush", 5)) {
 		do_flush_name(ssl, worker, skipwhite(p+5));
 	} else if(cmdcmp(p, "dump_requestlist", 16)) {
+		if(cmd_no_args(ssl, p, skipwhite(p+16)))
+			return;
 		do_dump_requestlist(ssl, worker);
 	} else if(cmdcmp(p, "dump_infra", 10)) {
+		if(cmd_no_args(ssl, p, skipwhite(p+10)))
+			return;
 		do_dump_infra(ssl, worker);
 	} else if(cmdcmp(p, "log_reopen", 10)) {
+		if(cmd_no_args(ssl, p, skipwhite(p+10)))
+			return;
 		do_log_reopen(ssl, worker);
 	} else if(cmdcmp(p, "set_option", 10)) {
 		do_set_option(ssl, worker, skipwhite(p+10));
@@ -3709,8 +4143,12 @@ execute_cmd(struct daemon_remote* rc, struct rc_state* s, RES* ssl, char* cmd,
 	} else if(cmdcmp(p, "add_cookie_secret", 17)) {
 		do_add_cookie_secret(ssl, worker, skipwhite(p+17));
 	} else if(cmdcmp(p, "drop_cookie_secret", 18)) {
+		if(cmd_no_args(ssl, p, skipwhite(p+18)))
+			return;
 		do_drop_cookie_secret(ssl, worker);
 	} else if(cmdcmp(p, "activate_cookie_secret", 22)) {
+		if(cmd_no_args(ssl, p, skipwhite(p+22)))
+			return;
 		do_activate_cookie_secret(ssl, worker);
 	} else {
 		(void)ssl_printf(ssl, "error unknown command '%s'\n", p);
@@ -4208,6 +4646,8 @@ struct fast_reload_construct {
 	struct acl_list* acl_interface;
 	/** construct for tcp connection limit */
 	struct tcl_list* tcl;
+	/** tsig key table */
+	struct tsig_key_table* tsig_key_table;
 	/** construct for local zones */
 	struct local_zones* local_zones;
 	/** if there is response ip configuration in use */
@@ -4594,6 +5034,7 @@ fr_construct_clear(struct fast_reload_construct* ct)
 	acl_list_delete(ct->acl);
 	acl_list_delete(ct->acl_interface);
 	tcl_list_delete(ct->tcl);
+	tsig_key_table_delete(ct->tsig_key_table);
 	edns_strings_delete(ct->edns_strings);
 	anchors_delete(ct->anchors);
 	views_delete(ct->views);
@@ -4696,6 +5137,8 @@ getmem_config_auth(struct config_auth* p)
 			+ getmem_config_strlist(s->masters)
 			+ getmem_config_strlist(s->urls)
 			+ getmem_config_strlist(s->allow_notify)
+			+ getmem_config_str2list(s->masters_tsig)
+			+ getmem_config_str2list(s->allow_notify_tsig)
 			+ getmem_str(s->zonefile)
 			+ s->rpz_taglistlen
 			+ getmem_str(s->rpz_action_override)
@@ -4860,6 +5303,7 @@ fr_printmem(struct fast_reload_thread* fr,
 	mem += auth_zones_get_mem(ct->auth_zones);
 	mem += forwards_get_mem(ct->fwds);
 	mem += hints_get_mem(ct->hints);
+	mem += tsig_key_table_get_mem(ct->tsig_key_table);
 	mem += local_zones_get_mem(ct->local_zones);
 	mem += acl_list_get_mem(ct->acl);
 	mem += acl_list_get_mem(ct->acl_interface);
@@ -4948,6 +5392,12 @@ xfr_auth_master_equal(struct auth_master* m1, struct auth_master* m2)
 		return 0;
 	if(m1->port != m2->port)
 		return 0;
+
+	if((m1->tsig_key_name && !m2->tsig_key_name) || (!m1->tsig_key_name && m2->tsig_key_name))
+		return 0;
+	if(m1->tsig_key_name && m2->tsig_key_name && strcmp(m1->tsig_key_name, m2->tsig_key_name) != 0)
+		return 0;
+
 	return 1;
 }
 
@@ -5147,12 +5597,24 @@ fr_construct_from_config(struct fast_reload_thread* fr,
 	if(fr_poll_for_quit(fr))
 		return 1;
 
+	if(!(ct->tsig_key_table = tsig_key_table_create())) {
+		fr_construct_clear(ct);
+		return 0;
+	}
+	if(!tsig_key_table_apply_cfg(ct->tsig_key_table, newcfg)) {
+		fr_construct_clear(ct);
+		return 0;
+	}
+	if(fr_poll_for_quit(fr))
+		return 1;
+
 	if(!(ct->auth_zones = auth_zones_create())) {
 		fr_construct_clear(ct);
 		return 0;
 	}
 	if(!auth_zones_apply_cfg(ct->auth_zones, newcfg, 1, &ct->use_rpz,
-		fr->worker->daemon->env, &fr->worker->daemon->mods)) {
+		fr->worker->daemon->env, &fr->worker->daemon->mods,
+		ct->tsig_key_table)) {
 		fr_construct_clear(ct);
 		return 0;
 	}
@@ -5434,6 +5896,7 @@ fr_atomic_copy_cfg(struct config_file* oldcfg, struct config_file* cfg,
 	COPY_VAR_ptr(tls_ciphers);
 	COPY_VAR_ptr(tls_ciphersuites);
 	COPY_VAR_int(tls_use_sni);
+	COPY_VAR_int(tls_use_system_policy_versions);
 	COPY_VAR_int(https_port);
 	COPY_VAR_ptr(http_endpoint);
 	COPY_VAR_uint32_t(http_max_streams);
@@ -5481,6 +5944,7 @@ fr_atomic_copy_cfg(struct config_file* oldcfg, struct config_file* cfg,
 	COPY_VAR_ptr(forwards);
 	COPY_VAR_ptr(auths);
 	COPY_VAR_ptr(views);
+	COPY_VAR_ptr(tsig_keys);
 	COPY_VAR_ptr(donotqueryaddrs);
 #ifdef CLIENT_SUBNET
 	COPY_VAR_ptr(client_subnet);
@@ -5919,6 +6383,7 @@ fr_reload_config(struct fast_reload_thread* fr, struct config_file* newcfg,
 		lock_basic_lock(&ct->anchors->lock);
 		lock_basic_lock(&env->anchors->lock);
 	}
+	lock_rw_wrlock(&env->tsig_key_table->lock);
 
 #if defined(ATOMIC_POINTER_LOCK_FREE) && defined(HAVE_LINK_ATOMIC_STORE)
 	if(fr->fr_nopause) {
@@ -5955,6 +6420,8 @@ fr_reload_config(struct fast_reload_thread* fr, struct config_file* newcfg,
 	acl_list_swap_tree(daemon->acl, ct->acl);
 	acl_list_swap_tree(daemon->acl_interface, ct->acl_interface);
 	tcl_list_swap_tree(daemon->tcl, ct->tcl);
+	tsig_key_table_swap_tree(daemon->env->tsig_key_table,
+		ct->tsig_key_table);
 	local_zones_swap_tree(daemon->local_zones, ct->local_zones);
 	respip_set_swap_tree(env->respip_set, ct->respip_set);
 	daemon->use_response_ip = ct->use_response_ip;
@@ -6001,6 +6468,7 @@ fr_reload_config(struct fast_reload_thread* fr, struct config_file* newcfg,
 		lock_basic_unlock(&ct->anchors->lock);
 		lock_basic_unlock(&env->anchors->lock);
 	}
+	lock_rw_unlock(&env->tsig_key_table->lock);
 
 	return 1;
 }
@@ -7052,6 +7520,7 @@ fr_worker_auth_add(struct worker* worker, struct fast_reload_auth_change* item,
 			xfr->serial = 0;
 		}
 	}
+	auth_zone_pickup_initial_zone(item->new_z, &worker->env);
 	lock_rw_unlock(&item->new_z->lock);
 	lock_rw_unlock(&worker->env.auth_zones->lock);
 	lock_rw_unlock(&worker->daemon->fast_reload_thread->old_auth_zones->lock);

@@ -1103,6 +1103,30 @@ These options are part of the **server:** clause.
     Default: ""
 
 
+@@UAHL@unbound.conf@tls-use-sni@@: *<yes or no>*
+    Enable or disable sending the SNI extension on TLS connections.
+
+    .. note:: Changing the value requires a reload.
+
+    Default: yes
+
+
+@@UAHL@unbound.conf@tls-use-system-policy-versions@@: *<yes or no>*
+    Enable or disable general-puspose version-flexible TLS server configuration
+    when serving TLS.
+    This will allow the whole list of available TLS versions provided by the
+    crypto library, which may have been further restricted by the system's
+    crypto policy.
+
+    By default Unbound only uses the latest available TLS version.
+
+    .. caution:: Use only if you want to support legacy TLS client connections.
+
+    .. note:: Changing the value requires a reload.
+
+    Default: no
+
+
 @@UAHL@unbound.conf@pad-responses@@: *<yes or no>*
     If enabled, TLS serviced queries that contained an EDNS Padding option will
     cause responses padded to the closest multiple of the size specified in
@@ -1130,14 +1154,6 @@ These options are part of the **server:** clause.
     The block size with which to pad queries sent over TLS upstreams.
 
     Default: 128
-
-
-@@UAHL@unbound.conf@tls-use-sni@@: *<yes or no>*
-    Enable or disable sending the SNI extension on TLS connections.
-
-    .. note:: Changing the value requires a reload.
-
-    Default: yes
 
 
 @@UAHL@unbound.conf@https-port@@: *<number>*
@@ -1744,7 +1760,7 @@ These options are part of the **server:** clause.
 @@UAHL@unbound.conf@harden-short-bufsize@@: *<yes or no>*
     Very small EDNS buffer sizes from queries are ignored.
 
-    Default: yes (as described in the standard)
+    Default: yes (per :rfc:`6891`)
 
 
 @@UAHL@unbound.conf@harden-large-queries@@: *<yes or no>*
@@ -2305,6 +2321,12 @@ These options are part of the **server:** clause.
     If
     :ref:`serve-expired-client-timeout<unbound.conf.serve-expired-client-timeout>`
     is also used then it is RECOMMENDED to use 30 as the value (:rfc:`8767`).
+
+    This value is capped by the original TTL of the record.
+    This means that records with higher original TTL than this value will use
+    this value for expired replies.
+    Records with lower original TTL than this value will use their original TTL
+    for expired replies.
 
     Default: 30
 
@@ -3691,6 +3713,12 @@ fallback activates to fetch from the upstream instead of the SERVFAIL.
     Alternate syntax for :ref:`primary<unbound.conf.auth.primary>`.
 
 
+@@UAHL@unbound.conf.auth@primary-tsig@@: *<IP address or host name>* *<tsig key>*
+    Similar to :ref:`primary<unbound.conf.auth.primary>` and the tsig key
+    is used for TSIG.
+    The key name is from a :ref:`tsig-key<unbound.conf.tsig-key>` entry.
+
+
 @@UAHL@unbound.conf.auth@url@@: *<URL to zone file>*
     Where to download a zonefile for the zone.
     With HTTP or HTTPS.
@@ -3735,6 +3763,12 @@ fallback activates to fetch from the upstream instead of the SERVFAIL.
         The primaries from :ref:`primary<unbound.conf.auth.primary>` and
         :ref:`url<unbound.conf.auth.url>` statements are allowed notify by
         default.
+
+
+@@UAHL@unbound.conf.auth@allow-notify-tsig@@: *<IP address or host name or netblockIP/prefix>* *<tsig key>*
+    Similar to :ref:`allow-notify<unbound.conf.auth.allow-notify>` and the
+    tsig key is used for TSIG.
+    The key name is from a :ref:`tsig-key<unbound.conf.tsig-key>` entry.
 
 
 @@UAHL@unbound.conf.auth@fallback-enabled@@: *<yes or no>*
@@ -4495,7 +4529,7 @@ The following **cachedb:** options are specific to the ``redis`` backend.
     internally reverted to "no".
 
     .. note::
-        Redis SETEX support is required for this option (Redis >= 2.0.0).
+        Redis "SET ... EX" support is required for this option (Redis >= 2.6.12).
 
     Default: no
 
@@ -4840,6 +4874,12 @@ The RPZ zones can be configured in the config file with these settings in the
     Alternate syntax for :ref:`primary<unbound.conf.rpz.primary>`.
 
 
+@@UAHL@unbound.conf.rpz@primary-tsig@@: *<IP address or host name>* *<tsig key>*
+    Similar to :ref:`primary<unbound.conf.rpz.primary>` and the tsig key
+    is used for TSIG.
+    The key name is from a :ref:`tsig-key<unbound.conf.tsig-key>` entry.
+
+
 @@UAHL@unbound.conf.rpz@url@@: *<url to zonefile>*
     Where to download a zonefile for the zone.
     With HTTP or HTTPS.
@@ -4875,6 +4915,12 @@ The RPZ zones can be configured in the config file with these settings in the
         The primaries from :ref:`primary<unbound.conf.rpz.primary>` and
         :ref:`url<unbound.conf.rpz.url>` statements are allowed notify by
         default.
+
+
+@@UAHL@unbound.conf.rpz@allow-notify-tsig@@: *<IP address or host name or netblockIP/prefix>* *<tsig key>*
+    Similar to :ref:`allow-notify<unbound.conf.rpz.allow-notify>` and the
+    tsig key is used for TSIG.
+    The key name is from a :ref:`tsig-key<unbound.conf.tsig-key>` entry.
 
 
 @@UAHL@unbound.conf.rpz@zonefile@@: *<filename>*

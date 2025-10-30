@@ -68,6 +68,7 @@
 #include "util/data/dname.h"
 #include "util/fptr_wlist.h"
 #include "util/proxy_protocol.h"
+#include "util/tsig.h"
 #include "util/tube.h"
 #include "util/edns.h"
 #include "util/timeval_func.h"
@@ -785,7 +786,7 @@ answer_from_cache(struct worker* worker, struct query_info* qinfo,
 	*partial_repp = NULL;  /* avoid accidental further pass */
 
 	/* Check TTL */
-	if(rep->ttl < timenow) {
+	if(TTL_IS_EXPIRED(rep->ttl, timenow)) {
 		/* Check if we need to serve expired now */
 		if(worker->env.cfg->serve_expired &&
 			/* if serve-expired-client-timeout is set, serve
@@ -1196,35 +1197,54 @@ answer_notify(struct worker* w, struct query_info* qinfo,
 	int rcode = LDNS_RCODE_NOERROR;
 	uint32_t serial = 0;
 	int has_serial;
+	struct tsig_data* tsig = NULL;
+	int tsig_rcode = 0;
 	if(!w->env.auth_zones) return;
 	has_serial = auth_zone_parse_notify_serial(pkt, &serial);
 	if(auth_zones_notify(w->env.auth_zones, &w->env, qinfo->qname,
-		qinfo->qname_len, qinfo->qclass, addr,
-		addrlen, has_serial, serial, &refused)) {
+		qinfo->qname_len, qinfo->qclass, addr, addrlen, has_serial,
+		serial, &refused, pkt, &tsig, &tsig_rcode, w->scratchpad)) {
 		rcode = LDNS_RCODE_NOERROR;
 	} else {
-		if(refused)
+		if(tsig_rcode != 0) {
+			rcode = tsig_rcode;
+		} else if(refused) {
 			rcode = LDNS_RCODE_REFUSED;
-		else	rcode = LDNS_RCODE_SERVFAIL;
+		} else {
+			rcode = LDNS_RCODE_SERVFAIL;
+		}
 	}
 
 	if(verbosity >= VERB_DETAIL) {
-		char buf[380];
-		char zname[LDNS_MAX_DOMAINLEN];
-		char sr[25];
+		char buf[380+LDNS_MAX_DOMAINLEN];
+		char zname[LDNS_MAX_DOMAINLEN], tsigkey[LDNS_MAX_DOMAINLEN];
+		char sr[25], rcode_str[32], tsigtxt[16];;
 		dname_str(qinfo->qname, zname);
+		tsigkey[0]=0;
+		tsigtxt[0]=0;
+		if(tsig && tsig->key_name) {
+			snprintf(tsigtxt, sizeof(tsigtxt), " with TSIG ");
+			dname_str(tsig->key_name, tsigkey);
+		}
 		sr[0]=0;
 		if(has_serial)
 			snprintf(sr, sizeof(sr), "serial %u ",
 				(unsigned)serial);
-		if(rcode == LDNS_RCODE_REFUSED)
+		if(rcode == LDNS_RCODE_REFUSED) {
 			snprintf(buf, sizeof(buf),
-				"refused NOTIFY %sfor %s from", sr, zname);
-		else if(rcode == LDNS_RCODE_SERVFAIL)
+				"refused NOTIFY %sfor %s%s%s from", sr, zname,
+				tsigtxt, tsigkey);
+		} else if(rcode != LDNS_RCODE_NOERROR) {
+			sldns_wire2str_rcode_buf(rcode, rcode_str,
+				sizeof(rcode_str));
 			snprintf(buf, sizeof(buf),
-				"servfail for NOTIFY %sfor %s from", sr, zname);
-		else	snprintf(buf, sizeof(buf),
-				"received NOTIFY %sfor %s from", sr, zname);
+				"%s for NOTIFY %sfor %s%s%s from",
+				rcode_str, sr, zname, tsigtxt, tsigkey);
+		} else {
+			snprintf(buf, sizeof(buf),
+				"received NOTIFY %sfor %s%s%s from", sr, zname,
+					tsigtxt, tsigkey);
+		}
 		log_addr(VERB_DETAIL, buf, addr, addrlen);
 	}
 	edns->edns_version = EDNS_ADVERTISED_VERSION;
@@ -1235,6 +1255,24 @@ answer_notify(struct worker* w, struct query_info* qinfo,
 		*(uint16_t*)(void *)sldns_buffer_begin(pkt),
 		sldns_buffer_read_u16_at(pkt, 2), edns);
 	LDNS_OPCODE_SET(sldns_buffer_begin(pkt), LDNS_PACKET_NOTIFY);
+	if(tsig) {
+		size_t pos = sldns_buffer_limit(pkt);
+		sldns_buffer_clear(pkt);
+		sldns_buffer_set_position(pkt, pos);
+		if(!tsig_sign_reply(tsig, pkt, w->env.tsig_key_table,
+			(uint64_t)*w->env.now)) {
+			/* Failed to TSIG sign the reply */
+			verbose(VERB_ALGO, "Failed to TSIG sign notify reply");
+			error_encode(pkt, LDNS_RCODE_SERVFAIL, qinfo,
+				*(uint16_t*)(void *)sldns_buffer_begin(pkt),
+				sldns_buffer_read_u16_at(pkt, 2), edns);
+			LDNS_OPCODE_SET(sldns_buffer_begin(pkt), LDNS_PACKET_NOTIFY);
+		} else {
+			/* Flip to delimit buffer after tsig_sign_reply. */
+			sldns_buffer_flip(pkt);
+		}
+		/* The tsig veriable is allocated in the scratch region. */
+	}
 }
 
 static int
@@ -1785,6 +1823,7 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 			repinfo->client_addrlen, edns.cookie_valid,
 			c->buffer)) {
 			worker->stats.num_queries_ip_ratelimited++;
+			regional_free_all(worker->scratchpad);
 			comm_point_drop_reply(repinfo);
 			return 0;
 		}
@@ -2006,11 +2045,11 @@ lookup_cache:
 				if((worker->env.cfg->prefetch &&
 					rep->prefetch_ttl <= *worker->env.now) ||
 					(worker->env.cfg->serve_expired &&
-					rep->ttl < *worker->env.now  &&
+					TTL_IS_EXPIRED(rep->ttl, *worker->env.now) &&
 					!(*worker->env.now < rep->serve_expired_norec_ttl))) {
-					time_t leeway = rep->ttl - *worker->env.now;
-					if(rep->ttl < *worker->env.now)
-						leeway = 0;
+					time_t leeway =
+						TTL_IS_EXPIRED(rep->ttl, *worker->env.now)
+						? 0 : rep->ttl - *worker->env.now;
 					lock_rw_unlock(&e->lock);
 
 					reply_and_prefetch(worker, lookup_qinfo,

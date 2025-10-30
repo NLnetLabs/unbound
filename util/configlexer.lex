@@ -262,6 +262,7 @@ tls-session-ticket-keys{COLON}	{ YDVAR(1, VAR_TLS_SESSION_TICKET_KEYS) }
 tls-ciphers{COLON}		{ YDVAR(1, VAR_TLS_CIPHERS) }
 tls-ciphersuites{COLON}		{ YDVAR(1, VAR_TLS_CIPHERSUITES) }
 tls-use-sni{COLON}		{ YDVAR(1, VAR_TLS_USE_SNI) }
+tls-use-system-policy-versions{COLON}		{ YDVAR(1, VAR_TLS_USE_SYSTEM_POLICY_VERSIONS) }
 https-port{COLON}		{ YDVAR(1, VAR_HTTPS_PORT) }
 http-endpoint{COLON}		{ YDVAR(1, VAR_HTTP_ENDPOINT) }
 http-max-streams{COLON}		{ YDVAR(1, VAR_HTTP_MAX_STREAMS) }
@@ -363,8 +364,11 @@ rpz-signal-nxdomain-ra{COLON}	{ YDVAR(1, VAR_RPZ_SIGNAL_NXDOMAIN_RA) }
 zonefile{COLON}			{ YDVAR(1, VAR_ZONEFILE) }
 master{COLON}			{ YDVAR(1, VAR_MASTER) }
 primary{COLON}			{ YDVAR(1, VAR_MASTER) }
+master-tsig{COLON}		{ YDVAR(2, VAR_MASTER_TSIG) }
+primary-tsig{COLON}		{ YDVAR(2, VAR_MASTER_TSIG) }
 url{COLON}			{ YDVAR(1, VAR_URL) }
 allow-notify{COLON}		{ YDVAR(1, VAR_ALLOW_NOTIFY) }
+allow-notify-tsig{COLON}	{ YDVAR(2, VAR_ALLOW_NOTIFY_TSIG) }
 for-downstream{COLON}		{ YDVAR(1, VAR_FOR_DOWNSTREAM) }
 for-upstream{COLON}		{ YDVAR(1, VAR_FOR_UPSTREAM) }
 fallback-enabled{COLON}		{ YDVAR(1, VAR_FALLBACK_ENABLED) }

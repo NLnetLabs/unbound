@@ -792,7 +792,8 @@ daemon_fork(struct daemon* daemon)
 
 	/* read auth zonefiles */
 	if(!auth_zones_apply_cfg(daemon->env->auth_zones, daemon->cfg, 1,
-		&daemon->use_rpz, daemon->env, &daemon->mods))
+		&daemon->use_rpz, daemon->env, &daemon->mods,
+		daemon->env->tsig_key_table))
 		fatal_exit("auth_zones could not be setup");
 
 	/* Set-up EDNS strings */

@@ -150,6 +150,7 @@ There are several commands that the server understands.
     :ref:`trusted-keys-file<unbound.conf.trusted-keys-file>`,
     :ref:`auto-trust-anchor-file<unbound.conf.auto-trust-anchor-file>`,
     :ref:`edns-client-string<unbound.conf.edns-client-string>`,
+    :ref:`tsig-key<unbound.conf.tsig-key>`,
     ipset,
     :ref:`log-identity<unbound.conf.log-identity>`,
     :ref:`infra-cache-numhosts<unbound.conf.infra-cache-numhosts>`,
@@ -384,6 +385,18 @@ There are several commands that the server understands.
     Loading data into the cache in this way is supported in order to aid with
     debugging.
     Not supported in remote Unbounds in multi-process operation.
+
+
+@@UAHL@unbound-control.commands@cache_lookup@@ [``+t``] *names*
+    Print to stdout the RRsets and messages that are in the cache.
+    For every name listed the content at or under the name is printed.
+    Several names separated by spaces can be given, each is printed.
+    When subnetcache is enabled, also matching entries from the subnet
+    cache are printed.
+
+    The ``+t`` option allows tld and root names.
+    With it names like 'com' and '.' can be used, but it takes a lot of
+    effort to look up in the cache.
 
 
 @@UAHL@unbound-control.commands@lookup@@ *name*

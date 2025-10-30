@@ -1066,11 +1066,7 @@ grab_nsec(struct rrset_cache* rrset_cache, uint8_t* qname, size_t qname_len,
 		qname, qname_len, qtype, qclass, flags, now, 0);
 	struct packed_rrset_data* d;
 	if(!k) return NULL;
-	d = (struct packed_rrset_data*)k->entry.data;
-	if(d->ttl < now) {
-		lock_rw_unlock(&k->entry.lock);
-		return NULL;
-	}
+	d = k->entry.data;
 	/* only secure or unchecked records that have signatures. */
 	if( ! ( d->security == sec_status_secure ||
 		(d->security == sec_status_unchecked &&

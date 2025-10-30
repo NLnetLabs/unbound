@@ -60,6 +60,9 @@
 
 /** Fudge time to allow in signed time for TSIG records. In seconds. */
 #define TSIG_FUDGE_TIME 300
+/** Maximum number of unsigned TSIG packets. +3 for interoperability, off by
+ * one errors. */
+#define TSIG_MAX_UNSIGNED 103
 
 /**
  * The list of TSIG algorithms. It has short_name, wireformat_name,
@@ -75,6 +78,10 @@ static struct tsig_algorithm tsig_algorithm_table[] = {
 	{ "hmac-sha384", (uint8_t*)"\x0Bhmac-sha384\x00", 13, "sha384", 48 },
 	{ "hmac-sha512", (uint8_t*)"\x0Bhmac-sha512\x00", 13, "sha512", 64 }
 };
+
+/** Delete the tsig calc state. */
+static void tsig_calc_state_delete(
+	struct tsig_calc_state_crypto* calc_state_crypto);
 
 int
 tsig_key_compare(const void* v1, const void* v2)
@@ -250,6 +257,44 @@ tsig_key_table_search(struct tsig_key_table* key_table, uint8_t* name,
 	node = rbtree_search(key_table->tree, &k);
 	if(!node) return NULL;
 	return (struct tsig_key*)node->key;
+}
+
+struct tsig_key*
+tsig_key_table_search_fromstr(struct tsig_key_table* key_table, char* name)
+{
+	uint8_t buf[LDNS_MAX_DOMAINLEN+1];
+	size_t len = sizeof(buf);
+	if(sldns_str2wire_dname_buf(name, buf, &len) != 0) {
+		log_err("could not parse '%s'", name);
+		return NULL;
+	}
+	return tsig_key_table_search(key_table, buf, len);
+}
+
+size_t
+tsig_key_table_get_mem(struct tsig_key_table* tsig_key_table)
+{
+	size_t s;
+	struct tsig_key* p;
+	if(!tsig_key_table)
+		return 0;
+	lock_rw_rdlock(&tsig_key_table->lock);
+	s = sizeof(*tsig_key_table) + sizeof(rbtree_type);
+	RBTREE_FOR(p, struct tsig_key*, tsig_key_table->tree) {
+		s += sizeof(*p) + strlen(p->name_str)+1
+			+ p->name_len + p->data_len;
+	}
+	lock_rw_unlock(&tsig_key_table->lock);
+	return s;
+}
+
+void
+tsig_key_table_swap_tree(struct tsig_key_table* tsig_key_table,
+	struct tsig_key_table* data)
+{
+	rbtree_type* oldtree = tsig_key_table->tree;
+	tsig_key_table->tree = data->tree;
+	data->tree = oldtree;
 }
 
 void tsig_key_delete(struct tsig_key* key)
@@ -455,6 +500,7 @@ tsig_create(struct tsig_key_table* key_table, uint8_t* name, size_t namelen)
 	tsig->error = 0;
 	tsig->other_len = 0;
 	tsig->other_time = 0;
+	tsig->every_nth = 1;
 	return tsig;
 }
 
@@ -474,10 +520,22 @@ void
 tsig_delete(struct tsig_data* tsig)
 {
 	if(!tsig) return;
+	if(tsig->calc_state) {
+		tsig_calc_state_delete(tsig->calc_state);
+		tsig->calc_state = NULL;
+	}
 	free(tsig->key_name);
 	free(tsig->algo_name);
 	free(tsig->mac);
 	free(tsig);
+}
+
+size_t tsig_get_mem(struct tsig_data* tsig)
+{
+	if(!tsig)
+		return 0;
+	return sizeof(*tsig) + tsig->key_name_len + tsig->algo_name_len
+		+ tsig->mac_size;
 }
 
 size_t
@@ -1385,6 +1443,7 @@ tsig_lookup_key(struct tsig_key_table* key_table,
 	}
 	tsig->fudge = TSIG_FUDGE_TIME; /* seconds */
 	tsig->klass = LDNS_RR_CLASS_ANY;
+	tsig->every_nth = 1;
 	if(region)
 		tsig->key_name = regional_alloc(region, rr->key_name_len);
 	else
@@ -1585,6 +1644,51 @@ tsig_find_rr(struct sldns_buffer* pkt)
 	}
 	if(sldns_buffer_read_u16(pkt) != LDNS_RR_TYPE_TSIG) {
 		verbose(VERB_ALGO, "No TSIG, last RR not type TSIG");
+		return 0;
+	}
+
+	sldns_buffer_set_position(pkt, end_pos);
+	return 1;
+}
+
+int tsig_in_packet(struct sldns_buffer* pkt)
+{
+	size_t end_pos, n_rrs;
+	if(sldns_buffer_limit(pkt) < LDNS_HEADER_SIZE) {
+		return 0;
+	}
+	if(LDNS_ARCOUNT(sldns_buffer_begin(pkt)) < 1) {
+		return 0;
+	}
+	n_rrs = LDNS_ANCOUNT(sldns_buffer_begin(pkt))
+	      + LDNS_NSCOUNT(sldns_buffer_begin(pkt))
+	      + LDNS_ARCOUNT(sldns_buffer_begin(pkt))
+	      - 1;
+
+	sldns_buffer_rewind(pkt);
+	sldns_buffer_skip(pkt, LDNS_HEADER_SIZE);
+
+	/* Skip qnames. */
+	if(!skip_pkt_query_rrs(pkt, LDNS_QDCOUNT(sldns_buffer_begin(pkt)))) {
+		return 0;
+	}
+	/* Skip all rrs. */
+	if(!skip_pkt_rrs(pkt, n_rrs)) {
+		return 0;
+	}
+	end_pos = sldns_buffer_position(pkt);
+
+	/* The tsig owner name, the key name */
+	if(sldns_buffer_remaining(pkt) < 1) {
+		return 0;
+	}
+	if(!pkt_dname_len(pkt)) {
+		return 0;
+	}
+	if(sldns_buffer_remaining(pkt) < 2+2+4+2) {
+		return 0;
+	}
+	if(sldns_buffer_read_u16(pkt) != LDNS_RR_TYPE_TSIG) {
 		return 0;
 	}
 
@@ -1983,4 +2087,377 @@ tsig_sign_shared(sldns_buffer* pkt, const uint8_t* name, const uint8_t* alg,
 	tsig_append_rr(&tsig, pkt, aftername_pos, key.algo->wireformat_name,
 		key.algo->wireformat_name_len, tsig.mac, tsig.mac_size);
 	return 0;
+}
+
+int
+tsig_sign_reply_xfr(struct tsig_data* tsig, struct sldns_buffer* pkt,
+	struct tsig_key_table* key_table, uint64_t now, int last_packet)
+{
+	size_t aftername_pos;
+	uint16_t current_query_id;
+	uint8_t timers_var_buf[64];
+	struct sldns_buffer timers_var;
+	struct tsig_key* key;
+
+	sldns_buffer_init_frm_data(&timers_var, timers_var_buf,
+		sizeof(timers_var_buf));
+
+	if(!tsig) {
+		/* For some rcodes, like FORMERR, no tsig data is returned,
+		 * and also no TSIG is needed on the reply. */
+		verbose(VERB_ALGO, "tsig_sign_reply: no TSIG on error reply");
+		return 1;
+	}
+	if(LDNS_RCODE_WIRE(sldns_buffer_begin(pkt)) == LDNS_RCODE_SERVFAIL ||
+	   LDNS_RCODE_WIRE(sldns_buffer_begin(pkt)) == LDNS_RCODE_FORMERR ||
+	   LDNS_RCODE_WIRE(sldns_buffer_begin(pkt)) == LDNS_RCODE_NOTIMPL ||
+	   (LDNS_RCODE_WIRE(sldns_buffer_begin(pkt)) == LDNS_RCODE_NOTAUTH &&
+	    tsig->error != LDNS_TSIG_ERROR_BADTIME)) {
+		uint8_t* algo_name;
+		size_t algo_name_len;
+		/* No TSIG calculation on error reply. */
+		if(tsig->error == 0)
+			return 1; /* No TSIG needed for the error. Also,
+			copying in possible formerr contents is not desired. */
+		if(tsig->algo_name) {
+			/* For errors, the tsig->algo_name is allocated. */
+			algo_name = tsig->algo_name;
+			algo_name_len = tsig->algo_name_len;
+		} else {
+			/* Robust code in case there is algo name. */
+			algo_name = (uint8_t*)"\000";
+			algo_name_len = 1;
+		}
+
+		/* The TSIG can be written straight away */
+		sldns_buffer_write(pkt, tsig->key_name, tsig->key_name_len);
+		aftername_pos = sldns_buffer_position(pkt);
+		tsig_append_rr(tsig, pkt, aftername_pos, algo_name,
+			algo_name_len, NULL, 0);
+		return 1;
+	}
+
+	if(!tsig->later_packet) {
+		/* First packet is signed as usual */
+		int ret;
+		ret = tsig_sign_reply(tsig, pkt, key_table, now);
+		tsig->later_packet = 1;
+		return ret;
+	}
+
+	if(tsig->num_updates == 0) {
+		/* Init the calc state for the new packet, or for the new
+		 * packet sequence. */
+		if(tsig->calc_state) {
+			tsig_calc_state_delete(tsig->calc_state);
+			tsig->calc_state = NULL;
+		}
+		lock_rw_rdlock(&key_table->lock);
+		key = tsig_key_table_search(key_table, tsig->key_name,
+			tsig->key_name_len);
+		if(!key) {
+			/* The tsig key has disappeared from the key table. */
+			lock_rw_unlock(&key_table->lock);
+			verbose(VERB_ALGO, "tsig_sign_reply_xfr: key not in table");
+			return 0;
+		}
+
+		tsig->calc_state = tsig_calc_state_init(key);
+		lock_rw_unlock(&key_table->lock);
+		if(!tsig->calc_state) {
+			verbose(VERB_ALGO, "tsig_sign_reply_xfr: out of memory");
+			return 0;
+		}
+
+		/* Update with the prior mac. */
+		if(tsig->mac_size != 0 && tsig->mac) {
+			uint8_t prior_buf[1024];
+			struct sldns_buffer prior;
+			sldns_buffer_init_frm_data(&prior, prior_buf,
+				sizeof(prior_buf));
+			if(sldns_buffer_remaining(&prior) <
+				2 /* mac_size */ + tsig->mac_size) {
+				verbose(VERB_ALGO, "tsig_sign_reply_xfr: prior buffer too small");
+				return 0;
+			}
+			sldns_buffer_write_u16(&prior, tsig->mac_size);
+			sldns_buffer_write(&prior, tsig->mac, tsig->mac_size);
+			if(!tsig_calc_state_update(tsig->calc_state, &prior)) {
+				verbose(VERB_ALGO, "tsig_sign_reply_xfr: failed to update tsig crypto");
+				return 0;
+			}
+		}
+	}
+
+	if(tsig->every_nth != 1 && tsig->num_updates+1 < tsig->every_nth &&
+		!last_packet) {
+		/* Update with the packet contents. */
+		current_query_id = sldns_buffer_read_u16_at(pkt, 0);
+		sldns_buffer_write_u16_at(pkt, 0, tsig->original_query_id);
+		if(!tsig_calc_state_update(tsig->calc_state, pkt)) {
+			sldns_buffer_write_u16_at(pkt, 0, current_query_id);
+			verbose(VERB_ALGO, "tsig_sign_reply_xfr: failed to update tsig crypto");
+			return 0;
+		}
+		sldns_buffer_write_u16_at(pkt, 0, current_query_id);
+		tsig->num_updates++;
+		return 1;
+	}
+
+	/* Update with the packet contents. */
+	current_query_id = sldns_buffer_read_u16_at(pkt, 0);
+	sldns_buffer_write_u16_at(pkt, 0, tsig->original_query_id);
+	if(!tsig_calc_state_update(tsig->calc_state, pkt)) {
+		sldns_buffer_write_u16_at(pkt, 0, current_query_id);
+		verbose(VERB_ALGO, "tsig_sign_reply_xfr: failed to update tsig crypto");
+		return 0;
+	}
+	sldns_buffer_write_u16_at(pkt, 0, current_query_id);
+
+	/* Update with the timers part of the variables. */
+	tsig->time_signed = now;
+	sldns_buffer_write_u48(&timers_var, tsig->time_signed);
+	sldns_buffer_write_u16(&timers_var, tsig->fudge);
+	if(!tsig_calc_state_update(tsig->calc_state, &timers_var)) {
+		verbose(VERB_ALGO, "tsig_sign_reply_xfr: failed to update tsig crypto");
+		return 0;
+	}
+
+	/* Finalize the calculation. */
+	if(!tsig_calc_state_final(tsig->calc_state, tsig)) {
+		verbose(VERB_ALGO, "tsig_sign_reply_xfr: failed to make final tsig crypto");
+		return 0;
+	}
+
+	/* Append TSIG record. */
+	if(sldns_buffer_remaining(pkt) < tsig_reserved_space(tsig)) {
+		/* Not enough space in buffer for packet and TSIG. */
+		verbose(VERB_ALGO, "tsig_sign_reply: not enough buffer space");
+		return 0;
+	}
+	sldns_buffer_write_u16_at(pkt, 0, current_query_id);
+	sldns_buffer_write(pkt, tsig->key_name, tsig->key_name_len);
+	aftername_pos = sldns_buffer_position(pkt);
+
+	/* Get the key for the algorithm name. */
+	lock_rw_rdlock(&key_table->lock);
+	key = tsig_key_table_search(key_table, tsig->key_name,
+		tsig->key_name_len);
+	if(!key) {
+		/* The tsig key has disappeared from the key table. */
+		lock_rw_unlock(&key_table->lock);
+		verbose(VERB_ALGO, "tsig_sign_reply_xfr: key not in table");
+		return 0;
+	}
+	tsig_append_rr(tsig, pkt, aftername_pos, key->algo->wireformat_name,
+		key->algo->wireformat_name_len, tsig->mac, tsig->mac_size);
+	lock_rw_unlock(&key_table->lock);
+	tsig->num_updates = 0;
+	return 1;
+}
+
+int
+tsig_verify_reply_xfr(struct tsig_data* tsig, struct sldns_buffer* pkt,
+	struct tsig_record* rr, uint64_t now)
+{
+	uint8_t timers_var_buf[64];
+	struct sldns_buffer timers_var;
+	uint16_t current_query_id;
+
+	sldns_buffer_init_frm_data(&timers_var, timers_var_buf,
+		sizeof(timers_var_buf));
+
+	/* packet with original query ID and ARCOUNT without TSIG. */
+	current_query_id = sldns_buffer_read_u16_at(pkt, 0);
+	sldns_buffer_write_u16_at(pkt, 0, rr->original_query_id);
+	LDNS_ARCOUNT_SET( sldns_buffer_begin(pkt)
+			, LDNS_ARCOUNT(sldns_buffer_begin(pkt)) - 1);
+	sldns_buffer_set_position(pkt, rr->tsig_pos);
+
+	/* Update with packet */
+	if(!tsig_calc_state_update(tsig->calc_state, pkt)) {
+		sldns_buffer_write_u16_at(pkt, 0, current_query_id);
+		verbose(VERB_ALGO, "tsig_verify_reply_xfr: failed to update tsig crypto");
+		return 0;
+	}
+
+	/* Update with the timers part of the variables. */
+	sldns_buffer_write_u48(&timers_var, rr->signed_time);
+	sldns_buffer_write_u16(&timers_var, rr->fudge_time);
+	if(!tsig_calc_state_update(tsig->calc_state, &timers_var)) {
+		sldns_buffer_write_u16_at(pkt, 0, current_query_id);
+		verbose(VERB_ALGO, "tsig_verify_reply_xfr: failed to update tsig crypto");
+		return 0;
+	}
+
+	/* Finalize the calculation. */
+	if(!tsig_calc_state_final(tsig->calc_state, tsig)) {
+		sldns_buffer_write_u16_at(pkt, 0, current_query_id);
+		verbose(VERB_ALGO, "tsig_verify_reply_xfr: failed to make final tsig crypto");
+		return 0;
+	}
+
+	if(CRYPTO_memcmp(rr->mac_data, tsig->mac, tsig->mac_size) != 0) {
+		/* TSIG has wrong digest. */
+		sldns_buffer_write_u16_at(pkt, 0, current_query_id);
+		if(verbosity >= VERB_ALGO) {
+			char keynm[256];
+			dname_str(tsig->key_name, keynm);
+			verbose(VERB_ALGO, "tsig_verify_reply_xfr: TSIG %s has wrong digest",
+				keynm);
+		}
+		return 0;
+	}
+	/* The TSIG digest has verified */
+	sldns_buffer_write_u16_at(pkt, 0, current_query_id);
+
+	/* Check the TSIG timestamp. */
+	/* Time is checked after the MAC is verified */
+	if( (now > rr->signed_time && now - rr->signed_time > rr->fudge_time) ||
+	    (now < rr->signed_time && rr->signed_time - now > rr->fudge_time)) {
+		/* TSIG has wrong timestamp. */
+		if(verbosity >= VERB_ALGO) {
+			char keynm[256];
+			dname_str(tsig->key_name, keynm);
+			verbose(VERB_ALGO, "tsig_verify_reply_xfr: TSIG %s has wrong timestamp, now=%llu packet time=%llu fudge time=%d",
+				keynm, (unsigned long long)now,
+				(unsigned long long)rr->signed_time,
+				(int)rr->fudge_time);
+			if(rr->other_size == 6)
+				verbose(VERB_ALGO, "tsig_verify_reply_xfr: other time is reported at %llu",
+					(unsigned long long)rr->other_time);
+		}
+		return 0;
+	}
+
+	return 1;
+}
+
+int
+tsig_parse_verify_reply_xfr(struct tsig_data* tsig, struct sldns_buffer* pkt,
+	struct tsig_key_table* key_table, uint64_t now, int last_packet)
+{
+	struct tsig_key* key;
+	struct tsig_record rr;
+	int ret;
+
+	if(!tsig->later_packet) {
+		/* First packet verifies like normal. */
+		int ret;
+		ret = tsig_parse_verify_reply(tsig, pkt, key_table, now);
+		tsig->later_packet = 1;
+		return ret;
+	}
+
+	/* Init if needed. */
+	if(tsig->num_updates == 0) {
+		/* Init the calc state for the new packet, or for the new
+		 * packet sequence. */
+		struct tsig_key* key;
+		if(tsig->calc_state) {
+			tsig_calc_state_delete(tsig->calc_state);
+			tsig->calc_state = NULL;
+		}
+		lock_rw_rdlock(&key_table->lock);
+		key = tsig_key_table_search(key_table, tsig->key_name,
+			tsig->key_name_len);
+		if(!key) {
+			/* The tsig key has disappeared from the key table. */
+			lock_rw_unlock(&key_table->lock);
+			verbose(VERB_ALGO, "tsig_parse_verify_reply_xfr: key not in table");
+			return 0;
+		}
+
+		tsig->calc_state = tsig_calc_state_init(key);
+		lock_rw_unlock(&key_table->lock);
+		if(!tsig->calc_state) {
+			verbose(VERB_ALGO, "tsig_parse_verify_reply_xfr: out of memory");
+			return 0;
+		}
+
+		/* Update with the prior mac. */
+		if(tsig->mac_size != 0 && tsig->mac) {
+			uint8_t prior_buf[1024];
+			struct sldns_buffer prior;
+			sldns_buffer_init_frm_data(&prior, prior_buf,
+				sizeof(prior_buf));
+			if(sldns_buffer_remaining(&prior) <
+				2 /* mac_size */ + tsig->mac_size) {
+				verbose(VERB_ALGO, "tsig_parse_verify_reply_xfr: prior buffer too small");
+				return 0;
+			}
+			sldns_buffer_write_u16(&prior, tsig->mac_size);
+			sldns_buffer_write(&prior, tsig->mac, tsig->mac_size);
+			if(!tsig_calc_state_update(tsig->calc_state, &prior)) {
+				verbose(VERB_ALGO, "tsig_parse_verify_reply_xfr: failed to update tsig crypto");
+				return 0;
+			}
+		}
+	}
+
+	/* If there is no TSIG, that is okay, for every_nth. Update
+	 * the counters. */
+	/* The ARCOUNT is 0 or we are at end of packet without TSIG. */
+	if(LDNS_ARCOUNT(sldns_buffer_begin(pkt)) < 1 ||
+		sldns_buffer_remaining(pkt) < 1) {
+		uint16_t current_query_id;
+		tsig->num_updates++;
+		if(last_packet) {
+			verbose(VERB_ALGO, "tsig_parse_verify_reply_xfr: last packet missing TSIG.");
+			return 0;
+		}
+		if(tsig->num_updates > TSIG_MAX_UNSIGNED) {
+			verbose(VERB_ALGO, "tsig_parse_verify_reply_xfr: too many packets without TSIG.");
+			return 0;
+		}
+		/* Update with the packet contents. */
+		current_query_id = sldns_buffer_read_u16_at(pkt, 0);
+		sldns_buffer_write_u16_at(pkt, 0, tsig->original_query_id);
+		if(!tsig_calc_state_update(tsig->calc_state, pkt)) {
+			sldns_buffer_write_u16_at(pkt, 0, current_query_id);
+			verbose(VERB_ALGO, "tsig_parse_verify_reply_xfr: failed to update tsig crypto");
+			return 0;
+		}
+		sldns_buffer_write_u16_at(pkt, 0, current_query_id);
+		return 1;
+	}
+
+	/* Parse the TSIG RR from the query. */
+	ret = tsig_parse(pkt, &rr);
+	if(ret != 0)
+		return 0;
+
+	/* Check it is the same key, same algo, same digest_size */
+	if(dname_pkt_compare(pkt, tsig->key_name, rr.key_name) != 0) {
+		verbose(VERB_ALGO, "tsig_parse_verify_reply_xfr: key name wrong");
+		return 0;
+	}
+
+	lock_rw_rdlock(&key_table->lock);
+	key = tsig_key_table_search(key_table, tsig->key_name,
+		tsig->key_name_len);
+	if(!key) {
+		/* The tsig key has disappeared from the key table. */
+		lock_rw_unlock(&key_table->lock);
+		verbose(VERB_ALGO, "tsig_parse_verify_reply_xfr: key not in table");
+		return 0;
+	}
+
+	if(query_dname_compare(key->algo->wireformat_name,
+		rr.algorithm_name) != 0) {
+		lock_rw_unlock(&key_table->lock);
+		verbose(VERB_ALGO, "tsig_parse_verify_reply_xfr: algorithm wrong");
+		return 0;
+	}
+	if(tsig->mac_size != rr.mac_size) {
+		lock_rw_unlock(&key_table->lock);
+		verbose(VERB_ALGO, "tsig_parse_verify_reply_xfr: mac size wrong");
+		return 0;
+	}
+	lock_rw_unlock(&key_table->lock);
+	tsig->num_updates = 0;
+
+	/* Verify the TSIG. */
+	ret = tsig_verify_reply_xfr(tsig, pkt, &rr, now);
+	return ret;
 }

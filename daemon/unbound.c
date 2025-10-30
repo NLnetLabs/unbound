@@ -463,23 +463,21 @@ detach(void)
 #endif /* HAVE_DAEMON */
 }
 
+#ifdef HAVE_SSL
 /* setup a listening ssl context, fatal_exit() on any failure */
 static void
 setup_listen_sslctx(void** ctx, int is_dot, int is_doh, struct config_file* cfg)
 {
-#ifdef HAVE_SSL
 	if(!(*ctx = listen_sslctx_create(
 		cfg->ssl_service_key, cfg->ssl_service_pem, NULL,
 		cfg->tls_ciphers, cfg->tls_ciphersuites,
 		(cfg->tls_session_ticket_keys.first &&
 		cfg->tls_session_ticket_keys.first->str[0] != 0),
-		is_dot, is_doh))) {
+		is_dot, is_doh, cfg->tls_use_system_policy_versions))) {
 		fatal_exit("could not set up listen SSL_CTX");
 	}
-#else /* HAVE_SSL */
-	(void)ctx;(void)is_dot;(void)is_doh;(void)cfg;
-#endif /* HAVE_SSL */
 }
+#endif /* HAVE_SSL */
 
 /* setups the needed ssl contexts, fatal_exit() on any failure */
 static void

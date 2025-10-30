@@ -193,6 +193,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_CACHEDB_REDISCONNECTTIMEOUT VAR_CACHEDB_REDISREPLICACONNECTTIMEOUT
 %token VAR_UDP_UPSTREAM_WITHOUT_DOWNSTREAM VAR_FOR_UPSTREAM
 %token VAR_AUTH_ZONE VAR_ZONEFILE VAR_MASTER VAR_URL VAR_FOR_DOWNSTREAM
+%token VAR_MASTER_TSIG VAR_ALLOW_NOTIFY_TSIG
 %token VAR_FALLBACK_ENABLED VAR_TLS_ADDITIONAL_PORT VAR_LOW_RTT VAR_LOW_RTT_PERMIL
 %token VAR_FAST_SERVER_PERMIL VAR_FAST_SERVER_NUM
 %token VAR_ALLOW_NOTIFY VAR_TLS_WIN_CERT VAR_TCP_CONNECTION_LIMIT
@@ -202,6 +203,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_DISCARD_TIMEOUT VAR_WAIT_LIMIT VAR_WAIT_LIMIT_COOKIE
 %token VAR_WAIT_LIMIT_NETBLOCK VAR_WAIT_LIMIT_COOKIE_NETBLOCK
 %token VAR_STREAM_WAIT_SIZE VAR_TLS_CIPHERS VAR_TLS_CIPHERSUITES VAR_TLS_USE_SNI
+%token VAR_TLS_USE_SYSTEM_POLICY_VERSIONS
 %token VAR_IPSET VAR_IPSET_NAME_V4 VAR_IPSET_NAME_V6
 %token VAR_TLS_SESSION_TICKET_KEYS VAR_RPZ VAR_TAGS VAR_RPZ_ACTION_OVERRIDE
 %token VAR_RPZ_CNAME_OVERRIDE VAR_RPZ_LOG VAR_RPZ_LOG_NAME
@@ -351,6 +353,7 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_tls_ciphersuites | server_tls_session_ticket_keys |
 	server_answer_cookie | server_cookie_secret | server_ip_ratelimit_cookie |
 	server_tls_use_sni | server_edns_client_string |
+	server_tls_use_system_policy_versions |
 	server_edns_client_string_opcode | server_nsid |
 	server_zonemd_permissive_mode | server_max_reuse_tcp_queries |
 	server_tcp_reuse_timeout | server_tcp_auth_query_timeout |
@@ -467,9 +470,10 @@ authstart: VAR_AUTH_ZONE
 	;
 contents_auth: contents_auth content_auth
 	| ;
-content_auth: auth_name | auth_zonefile | auth_master | auth_url |
-	auth_for_downstream | auth_for_upstream | auth_fallback_enabled |
-	auth_allow_notify | auth_zonemd_check | auth_zonemd_reject_absence
+content_auth: auth_name | auth_zonefile | auth_master | auth_master_tsig |
+	auth_url | auth_for_downstream | auth_for_upstream |
+	auth_fallback_enabled | auth_allow_notify | auth_allow_notify_tsig |
+	auth_zonemd_check | auth_zonemd_reject_absence
 	;
 
 rpz_tag: VAR_TAGS STRING_ARG
@@ -564,9 +568,10 @@ rpzstart: VAR_RPZ
 	;
 contents_rpz: contents_rpz content_rpz
 	| ;
-content_rpz: auth_name | auth_zonefile | rpz_tag | auth_master | auth_url |
-	   auth_allow_notify | rpz_action_override | rpz_cname_override |
-	   rpz_log | rpz_log_name | rpz_signal_nxdomain_ra | auth_for_downstream
+content_rpz: auth_name | auth_zonefile | rpz_tag | auth_master |
+	auth_master_tsig | auth_url | auth_allow_notify |
+	auth_allow_notify_tsig | rpz_action_override | rpz_cname_override |
+	rpz_log | rpz_log_name | rpz_signal_nxdomain_ra | auth_for_downstream
 	;
 server_num_threads: VAR_NUM_THREADS STRING_ARG
 	{
@@ -979,7 +984,7 @@ server_tcp_mss: VAR_TCP_MSS STRING_ARG
 	{
 		OUTYY(("P(server_tcp_mss:%s)\n", $2));
 		if(atoi($2) == 0 && strcmp($2, "0") != 0)
-				yyerror("number expected");
+			yyerror("number expected");
 		else cfg_parser->cfg->tcp_mss = atoi($2);
 		free($2);
 	}
@@ -1179,6 +1184,15 @@ server_tls_use_sni: VAR_TLS_USE_SNI STRING_ARG
 		free($2);
 	}
 	;
+server_tls_use_system_policy_versions: VAR_TLS_USE_SYSTEM_POLICY_VERSIONS STRING_ARG
+	{
+		OUTYY(("P(server_tls_use_system_policy_versions:%s)\n", $2));
+		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
+			yyerror("expected yes or no.");
+		else cfg_parser->cfg->tls_use_system_policy_versions = (strcmp($2, "yes")==0);
+		free($2);
+	}
+	;
 server_https_port: VAR_HTTPS_PORT STRING_ARG
 	{
 		OUTYY(("P(server_https_port:%s)\n", $2));
@@ -1193,11 +1207,13 @@ server_http_endpoint: VAR_HTTP_ENDPOINT STRING_ARG
 		free(cfg_parser->cfg->http_endpoint);
 		if($2 && $2[0] != '/') {
 			cfg_parser->cfg->http_endpoint = malloc(strlen($2)+2);
-			if(!cfg_parser->cfg->http_endpoint)
+			if(cfg_parser->cfg->http_endpoint) {
+				cfg_parser->cfg->http_endpoint[0] = '/';
+				memmove(cfg_parser->cfg->http_endpoint+1, $2,
+					strlen($2)+1);
+			} else {
 				yyerror("out of memory");
-			cfg_parser->cfg->http_endpoint[0] = '/';
-			memmove(cfg_parser->cfg->http_endpoint+1, $2,
-				strlen($2)+1);
+			}
 			free($2);
 		} else {
 			cfg_parser->cfg->http_endpoint = $2;
@@ -3274,6 +3290,14 @@ auth_master: VAR_MASTER STRING_ARG
 			yyerror("out of memory");
 	}
 	;
+auth_master_tsig: VAR_MASTER_TSIG STRING_ARG STRING_ARG
+	{
+		OUTYY(("P(master-tsig:%s)\n", $2));
+		if(!cfg_str2list_insert(&cfg_parser->cfg->auths->masters_tsig,
+			$2, $3))
+			yyerror("out of memory");
+	}
+	;
 auth_url: VAR_URL STRING_ARG
 	{
 		OUTYY(("P(url:%s)\n", $2));
@@ -3286,6 +3310,14 @@ auth_allow_notify: VAR_ALLOW_NOTIFY STRING_ARG
 		OUTYY(("P(allow-notify:%s)\n", $2));
 		if(!cfg_strlist_insert(&cfg_parser->cfg->auths->allow_notify,
 			$2))
+			yyerror("out of memory");
+	}
+	;
+auth_allow_notify_tsig: VAR_ALLOW_NOTIFY_TSIG STRING_ARG STRING_ARG
+	{
+		OUTYY(("P(allow-notify-tsig:%s)\n", $2));
+		if(!cfg_str2list_insert(
+			&cfg_parser->cfg->auths->allow_notify_tsig, $2, $3))
 			yyerror("out of memory");
 	}
 	;

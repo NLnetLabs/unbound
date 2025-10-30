@@ -149,6 +149,8 @@ struct config_file {
 	char* tls_ciphersuites;
 	/** if SNI is to be used */
 	int tls_use_sni;
+	/** if all TLS versions can be used; based on system policy (if any) */
+	int tls_use_system_policy_versions;
 
 	/** port on which to provide DNS over HTTPS service */
 	int https_port;
@@ -856,6 +858,10 @@ struct config_auth {
 	struct config_strlist* urls;
 	/** list of allow-notify */
 	struct config_strlist* allow_notify;
+	/** list of masters with tsig key */
+	struct config_str2list* masters_tsig;
+	/** list of allow-notify with tsig key */
+	struct config_str2list* allow_notify_tsig;
 	/** zonefile (or NULL) */
 	char* zonefile;
 	/** provide downstream answers */
