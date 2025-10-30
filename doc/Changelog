@@ -1,3 +1,52 @@
+27 October 2025: Yorgos
+	- Merge #1331 from Jitka Plesníková: Replace deprecated $function by
+	  new $action, for SWIG.
+	- Fix #1165, document the possible circular dependency when using
+	  host names instead of IP addresses for name servers in stub/forward
+	  zones and log a warning when spotted in the configuration.
+
+24 October 2025: Yorgos
+	- unbound.conf man page updates to include a preview of the section
+	  clauses and some reformatting around the use of "clause", "option"
+	  and "attributes". Based on Havard Eidnes' suggestions on the
+	  mailing list.
+	- Fix unused attribute warning in redis.c when threads are not
+	  supported.
+	- For #1364, use OPENSSL_VERSION_TEXT instead of OPENSSL_VERSION_NUMBER
+	  for part of the configure script. OPENSSL_VERSION_TEXT is more
+	  consistent across versions.
+
+22 October 2025: Yorgos
+	- Tag for 1.24.1 release.
+	  The repository continues with version 1.24.2.
+
+15 October 2025: Wouter
+	- Fix to drop UDP for discard-timeout, but not stream connections.
+	- Fix to reply with SERVFAIL when the wait-limit is exceeded.
+	- Add extended dns error code for invalid query type to definition
+	  list.
+	- Fix unbound.conf man page entry for root-hints to say it can
+	  be used without strongly recommending it.
+	- Remove iPhone armv7s, and iPhoneSimulator i386 from ios ci.
+	  The lib system does not provide symbols for it on the new macos
+	  runner.
+	- Fix to exclude libssp for windows compiles.
+
+10 October 2025: Wouter
+	- Fix #1358 Enabling FIPS in OpenSSL causes unit test to fail.
+
+3 October 2025: Yorgos
+	- Note 'respip' and 'dns64' module order in the unbound.conf
+	  man page.
+	- Note clearly that 'wait-limit: 0' disables all wait limits.
+	- 'wait-limit-cookie: 0' can now disable cookie validated wait
+	  limits.
+
+2 October 2025: Wouter
+	- Fix that https is set up as enabled when the port is listed in
+	  interface-automatic-ports. Also for the set up of quic it is
+	  enabled when listed there.
+
 30 September 2025: Wouter
 	- Fix for #1344: Fix that respip and dns64 can be enabled at the
 	  same time, the client info is copied for attach_sub and add_sub

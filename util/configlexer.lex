@@ -612,6 +612,7 @@ proxy-protocol-port{COLON}	{ YDVAR(1, VAR_PROXY_PROTOCOL_PORT) }
 iter-scrub-ns{COLON}		{ YDVAR(1, VAR_ITER_SCRUB_NS) }
 iter-scrub-cname{COLON}		{ YDVAR(1, VAR_ITER_SCRUB_CNAME) }
 max-global-quota{COLON}		{ YDVAR(1, VAR_MAX_GLOBAL_QUOTA) }
+iter-scrub-promiscuous{COLON}	{ YDVAR(1, VAR_ITER_SCRUB_PROMISCUOUS) }
 tsig-key{COLON}			{ YDVAR(0, VAR_TSIG_KEY) }
 algorithm{COLON}		{ YDVAR(1, VAR_ALGORITHM) }
 secret{COLON}			{ YDVAR(1, VAR_SECRET) }

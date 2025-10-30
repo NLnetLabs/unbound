@@ -12,6 +12,7 @@ jobs:
   build:
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         include:
           - name: GCC on Linux
@@ -48,15 +49,6 @@ jobs:
             os: ubuntu-latest
             config: 'CFLAGS="-DNDEBUG -g2 -O3 -fsanitize=address" --disable-flto --disable-static'
             make_test: "yes"
-          - name: Apple iPhone on iOS, armv7
-            os: macos-latest
-            AUTOTOOLS_HOST: armv7-apple-ios
-            OPENSSL_HOST: ios-cross
-            IOS_SDK: iPhoneOS
-            IOS_CPU: armv7s
-            test_ios: "yes"
-            config: "no"
-            make: "no"
           - name: Apple iPhone on iOS, arm64
             os: macos-latest
             AUTOTOOLS_HOST: aarch64-apple-ios
@@ -81,15 +73,6 @@ jobs:
             OPENSSL_HOST: ios-cross
             IOS_SDK: WatchOS
             IOS_CPU: armv7k
-            test_ios: "yes"
-            config: "no"
-            make: "no"
-          - name: iPhoneSimulator on OS X, i386
-            os: macos-latest
-            AUTOTOOLS_HOST: i386-apple-ios
-            OPENSSL_HOST: iphoneos-cross
-            IOS_SDK: iPhoneSimulator
-            IOS_CPU: i386
             test_ios: "yes"
             config: "no"
             make: "no"

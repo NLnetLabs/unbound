@@ -700,7 +700,5 @@ cleanup
 storehash unbound-$version.tar.gz
 echo "create unbound-$version.tar.gz.asc with:"
 echo "  gpg --armor --detach-sign --digest-algo SHA256 unbound-$version.tar.gz"
-echo "  gpg --armor --detach-sign --digest-algo SHA256 unbound-$version.zip"
-echo "  gpg --armor --detach-sign --digest-algo SHA256 unbound_setup_$version.exe"
 
 info "Unbound distribution created successfully."

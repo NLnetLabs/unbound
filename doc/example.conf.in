@@ -196,6 +196,10 @@ server:
 	# Limit on upstream queries for an incoming query and its recursion.
 	# max-global-quota: 200
 
+	# Should the scrubber remove promiscuous NS from positive answers,
+	# protects against poison attempts.
+	# iter-scrub-promiscuous: yes
+
 	# msec for waiting for an unknown server to reply.  Increase if you
 	# are behind a slow satellite link, to eg. 1128.
 	# unknown-server-time-limit: 376
@@ -922,6 +926,22 @@ server:
 	# add a netblock specific override to a localzone, with zone type
 	# local-zone-override: "example.com" 192.0.2.0/24 refuse
 
+	# Action to apply when the IP address in an AAAA or A RR in the answer
+	# section of a response matches the specified IP netblock.
+	# Requires use of the respip module.
+	# response-ip: 192.0.2.0/24 redirect
+
+	# Redirect as specified by the "resource record string" when the IP
+	# address in an AAAA or A RR in the answer section of a response
+	# matches the specified IP netblock.
+	# Requires use of the respip module.
+	# response-ip-data: 192.0.2.0/24 "example. A 192.0.2.1"
+
+	# Apply tag(s) when the IP address in an AAAA or A RR in the answer
+	# section of a response matches the specified IP netblock.
+	# Requires use of the respip module.
+	# response-ip-tag: 192.0.2.0/24 "tag1 tag2"
+
 	# service clients over TLS (on the TCP sockets) with plain DNS inside
 	# the TLS stream, and over HTTPS using HTTP/2 as specified in RFC8484.
 	# Give the certificate to use and private key.
@@ -1267,10 +1287,11 @@ remote-control:
 #	zonefile: "example.org.zone"
 
 # Views
-# Create named views. Name must be unique. Map views to requests using
-# the access-control-view option. Views can contain zero or more local-zone
-# and local-data options. Options from matching views will override global
-# options. Global options will be used if no matching view is found.
+# Create named views. Name must be unique.
+# Map views to requests using the access-control-view/interface-view options.
+# Views can contain zero or more local-zone and local-data options.
+# Options from matching views will override global options.
+# Global options will be used if no matching view is found.
 # With view-first yes, it will try to answer using the global local-zone and
 # local-data elements if there is no view specific match.
 # view:
@@ -1278,6 +1299,8 @@ remote-control:
 #	local-zone: "example.com" redirect
 #	local-data: "example.com A 192.0.2.3"
 #	local-data-ptr: "192.0.2.3 www.example.com"
+#	response-ip: 192.0.2.0/24 redirect
+#	response-ip-data: 192.0.2.0/24 "example. A 192.0.2.1"
 #	view-first: no
 # view:
 #	name: "anotherview"
