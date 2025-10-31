@@ -260,7 +260,7 @@ tsig_key_table_search(struct tsig_key_table* key_table, uint8_t* name,
 }
 
 struct tsig_key*
-tsig_key_table_search_fromstr(struct tsig_key_table* key_table, char* name)
+tsig_key_table_search_fromstr(struct tsig_key_table* key_table, const char* name)
 {
 	uint8_t buf[LDNS_MAX_DOMAINLEN+1];
 	size_t len = sizeof(buf);

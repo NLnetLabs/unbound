@@ -238,7 +238,7 @@ struct tsig_key* tsig_key_table_search(struct tsig_key_table* key_table,
  * key name as a domain name. The item is locked by the key_table lock.
  */
 struct tsig_key* tsig_key_table_search_fromstr(
-	struct tsig_key_table* key_table, char* name);
+	struct tsig_key_table* key_table, const char* name);
 
 /**
  * Get memory usage of tsig key table.
