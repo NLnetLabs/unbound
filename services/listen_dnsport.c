@@ -1302,21 +1302,37 @@ doc_oscore_save_seq_num(uint64_t sender_seq_num, void *param) {
 static int
 doc_setup_dtls(
 	coap_context_t* coap_context,
-	const uint8_t* key,
-	unsigned key_len,
-	const char* hint) {
-	if (key && hint) {
+	const uint8_t* psk,
+	unsigned psk_len,
+	const char* psk_hint,
+	const char* pki_service_key,
+	const char* pki_service_pem,
+	const char* pki_service_verifypem) {
+	if (psk && psk_hint) {
 		/* setup dtls */
 		coap_dtls_spsk_t dtls_psk;
 		memset (&dtls_psk, 0, sizeof (dtls_psk));
 
 		dtls_psk.version				= COAP_DTLS_SPSK_SETUP_VERSION;
-		dtls_psk.psk_info.hint.s		= (const uint8_t*)hint;
-		dtls_psk.psk_info.hint.length	= hint ? strlen(hint) : 0;
-		dtls_psk.psk_info.key.s			= key;
-		dtls_psk.psk_info.key.length	= key_len;
+		dtls_psk.psk_info.hint.s		= (const uint8_t*)psk_hint;
+		dtls_psk.psk_info.hint.length	= psk_hint ? strlen(psk_hint) : 0;
+		dtls_psk.psk_info.key.s			= psk;
+		dtls_psk.psk_info.key.length	= psk_len;
 
 		coap_context_set_psk2(coap_context, &dtls_psk);
+	}
+	if (pki_service_key && pki_service_pem) {
+		coap_dtls_pki_t dtls_pki;
+		memset (&dtls_pki, 0, sizeof (dtls_pki));
+
+		dtls_pki.version = COAP_DTLS_PKI_SETUP_VERSION;
+
+		dtls_pki.pki_key.key_type = COAP_PKI_KEY_PEM;
+		dtls_pki.pki_key.key.pem.public_cert = pki_service_pem;
+		dtls_pki.pki_key.key.pem.private_key = pki_service_key ? pki_service_key : pki_service_pem;
+		dtls_pki.pki_key.key.pem.ca_file = pki_service_verifypem;
+
+		coap_context_set_pki(coap_context, &dtls_pki);
 	}
 	return 0;
 }
@@ -1392,9 +1408,12 @@ doc_setup_oscore(
 
 static coap_context_t*
 doc_setup_server_context(
-	const uint8_t* key,
-	unsigned key_len,
-	const char* hint,
+	const uint8_t* dtls_psk,
+	unsigned dtls_psk_len,
+	const char* dtls_psk_hint,
+	const char* dtls_pki_key,
+	const char* dtls_pki_pem,
+	const char* dtls_pki_verifypem,
 	const char* oscore_conf,
 	const char* oscore_seq_file)
 {
@@ -1404,7 +1423,9 @@ doc_setup_server_context(
 	coap_context_set_block_mode(coap_context,
 			COAP_BLOCK_USE_LIBCOAP | COAP_BLOCK_SINGLE_BODY);
 
-	if (doc_setup_dtls(coap_context, key, key_len, hint) < 0) {
+	if (doc_setup_dtls(
+			coap_context, dtls_psk, dtls_psk_len, dtls_psk_hint,
+			dtls_pki_key, dtls_pki_pem, dtls_pki_verifypem) < 0) {
 		return NULL;
 	}
 	if (doc_setup_oscore(coap_context, oscore_conf, oscore_seq_file) < 0) {
@@ -2405,6 +2426,7 @@ static coap_context_t* coap_context_from_cfg(struct config_file *cfg)
 
 	coap_context = doc_setup_server_context(
 		(const uint8_t *)cfg->coaps_psk, strlen(cfg->coaps_psk), cfg->coaps_psk_id,
+		cfg->ssl_service_key, cfg->ssl_service_pem, NULL,
 		oscore_conf, oscore_seq_file);
 
 	free(oscore_conf);
