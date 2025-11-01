@@ -218,11 +218,15 @@ config_create(void)
 	cfg->ip_dscp = 0;
 	cfg->num_ifs = 0;
 	cfg->ifs = NULL;
+	cfg->num_dist = 0;
+	cfg->dist = NULL;
+	cfg->allow_response_list = NULL;
 	cfg->num_out_ifs = 0;
 	cfg->out_ifs = NULL;
 	cfg->stubs = NULL;
 	cfg->forwards = NULL;
 	cfg->auths = NULL;
+	cfg->tsig_keys = NULL;
 #ifdef CLIENT_SUBNET
 	cfg->client_subnet = NULL;
 	cfg->client_subnet_zone = NULL;
@@ -932,7 +936,7 @@ int config_set_option(struct config_file* cfg, const char* opt,
 		 * max-client-subnet-ipv4, max-client-subnet-ipv6,
 		 * min-client-subnet-ipv4, min-client-subnet-ipv6,
 		 * max-ecs-tree-size-ipv4, max-ecs-tree-size-ipv6, ipsecmod_hook,
-		 * ipsecmod_whitelist. */
+		 * ipsecmod_whitelist, tsig-key. */
 		return 0;
 	}
 	return 1;
@@ -1109,6 +1113,8 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_YNO(opt, "log-time-iso", log_time_iso)
 	else O_DEC(opt, "num-threads", num_threads)
 	else O_IFC(opt, "interface", num_ifs, ifs)
+	else O_IFC(opt, "distribute", num_dist, dist)
+	else O_LS2(opt, "allow-response", allow_response_list)
 	else O_IFC(opt, "outgoing-interface", num_out_ifs, out_ifs)
 	else O_YNO(opt, "interface-automatic", if_automatic)
 	else O_STR(opt, "interface-automatic-ports", if_automatic_ports)
@@ -1439,6 +1445,7 @@ config_get_option(struct config_file* cfg, const char* opt,
 	 * local-data-ptr - converted to local-data entries
 	 * stub-zone, name, stub-addr, stub-host, stub-prime
 	 * forward-zone, name, forward-addr, forward-host
+	 * tsig-key
 	 */
 	else return 0;
 	return 1;
@@ -1645,6 +1652,8 @@ config_delauth(struct config_auth* p)
 	config_delstrlist(p->masters);
 	config_delstrlist(p->urls);
 	config_delstrlist(p->allow_notify);
+	config_deldblstrlist(p->masters_tsig);
+	config_deldblstrlist(p->allow_notify_tsig);
 	free(p->zonefile);
 	free(p->rpz_taglist);
 	free(p->rpz_action_override);
@@ -1711,6 +1720,27 @@ config_delviews(struct config_view* p)
 }
 
 void
+config_deltsig_key(struct config_tsig_key* p)
+{
+	if(!p) return;
+	free(p->name);
+	free(p->algorithm);
+	free(p->secret);
+	free(p);
+}
+
+void
+config_deltsig_keys(struct config_tsig_key* p)
+{
+	struct config_tsig_key* np;
+	while(p) {
+		np = p->next;
+		config_deltsig_key(p);
+		p = np;
+	}
+}
+
+void
 config_del_strarray(char** array, int num)
 {
 	int i;
@@ -1759,11 +1789,14 @@ config_delete(struct config_file* cfg)
 		free(cfg->log_identity);
 	}
 	config_del_strarray(cfg->ifs, cfg->num_ifs);
+	config_del_strarray(cfg->dist, cfg->num_dist);
+	config_deldblstrlist(cfg->allow_response_list);
 	config_del_strarray(cfg->out_ifs, cfg->num_out_ifs);
 	config_delstubs(cfg->stubs);
 	config_delstubs(cfg->forwards);
 	config_delauths(cfg->auths);
 	config_delviews(cfg->views);
+	config_deltsig_keys(cfg->tsig_keys);
 	config_delstrlist(cfg->donotqueryaddrs);
 	config_delstrlist(cfg->root_hints);
 #ifdef CLIENT_SUBNET
