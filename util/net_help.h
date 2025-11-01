@@ -307,7 +307,7 @@ int sockaddr_cmp_scopeid(struct sockaddr_storage* addr1, socklen_t len1,
  * @param len: the length of addr.
  * @return: true if sockaddr is ip6.
  */
-int addr_is_ip6(struct sockaddr_storage* addr, socklen_t len);
+int addr_is_ip6(const struct sockaddr_storage* addr, socklen_t len);
 
 /**
  * Make sure the sockaddr ends in zeroes. For tree insertion and subsequent

@@ -253,7 +253,9 @@ iter_apply_cfg(struct iter_env* iter_env, struct config_file* cfg)
 	return 1;
 }
 
-/** filter out unsuitable targets
+/** filter out unsuitable targets.
+ * Applies NAT64 if needed as well by replacing the IPv4 with the synthesized
+ * IPv6 address.
  * @param iter_env: iterator environment with ipv6-support flag.
  * @param env: module environment with infra cache.
  * @param name: zone name
@@ -316,6 +318,20 @@ iter_filter_unsuitable(struct iter_env* iter_env, struct module_env* env,
 	if(!iter_env->supports_ipv4 && !iter_env->nat64.use_nat64 &&
 	   !addr_is_ip6(&a->addr, a->addrlen)) {
 		return -1; /* there is no ip4 available */
+	}
+	if(iter_env->nat64.use_nat64 && !addr_is_ip6(&a->addr, a->addrlen)) {
+		struct sockaddr_storage real_addr;
+		socklen_t real_addrlen;
+		addr_to_nat64(&a->addr, &iter_env->nat64.nat64_prefix_addr,
+			iter_env->nat64.nat64_prefix_addrlen,
+			iter_env->nat64.nat64_prefix_net,
+			&real_addr, &real_addrlen);
+		log_name_addr(VERB_QUERY, "NAT64 apply: from: ",
+			name, &a->addr, a->addrlen);
+		log_name_addr(VERB_QUERY, "NAT64 apply:   to: ",
+			name, &real_addr, real_addrlen);
+		a->addr = real_addr;
+		a->addrlen = real_addrlen;
 	}
 	/* check lameness - need zone , class info */
 	if(infra_get_lame_rtt(env->infra_cache, &a->addr, a->addrlen,

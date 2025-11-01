@@ -1,3 +1,9 @@
+1 November 2025: Yorgos
+	- Fix #1366: Infra cache does not work correctly for NAT64, by
+	  moving the NAT64 synthesis from the iterator when selecting a target
+	  address, to the delegation point itself when adding target
+	  addresses.
+
 27 October 2025: Yorgos
 	- Merge #1331 from Jitka Plesníková: Replace deprecated $function by
 	  new $action, for SWIG.
