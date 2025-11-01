@@ -839,7 +839,7 @@ server_allow_response: VAR_ALLOW_RESPONSE STRING_ARG STRING_ARG
 	{
 		OUTYY(("P(allow_response: %s %s)\n", $2, $3));
 		if(!cfg_str2list_insert(&cfg_parser->cfg->allow_response_list, $2, $3))
-			fatal_exit("out of memory adding acl");
+			fatal_exit("out of memory adding acl for responses");
 	}
 	;
 server_outgoing_interface: VAR_OUTGOING_INTERFACE STRING_ARG

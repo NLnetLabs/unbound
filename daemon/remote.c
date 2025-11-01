@@ -97,6 +97,7 @@
 #include "sldns/sbuffer.h"
 #include "util/timeval_func.h"
 #include "util/tcp_conn_limit.h"
+#include "util/allow_response_list.h"
 #include "util/edns.h"
 #include "util/tsig.h"
 #ifdef USE_CACHEDB
@@ -4646,6 +4647,8 @@ struct fast_reload_construct {
 	struct acl_list* acl_interface;
 	/** construct for tcp connection limit */
 	struct tcl_list* tcl;
+	/** construct for allow response list */
+	struct arl_list* arl;
 	/** tsig key table */
 	struct tsig_key_table* tsig_key_table;
 	/** construct for local zones */
@@ -5034,6 +5037,7 @@ fr_construct_clear(struct fast_reload_construct* ct)
 	acl_list_delete(ct->acl);
 	acl_list_delete(ct->acl_interface);
 	tcl_list_delete(ct->tcl);
+	arl_list_delete(ct->arl);
 	tsig_key_table_delete(ct->tsig_key_table);
 	edns_strings_delete(ct->edns_strings);
 	anchors_delete(ct->anchors);
@@ -5308,6 +5312,7 @@ fr_printmem(struct fast_reload_thread* fr,
 	mem += acl_list_get_mem(ct->acl);
 	mem += acl_list_get_mem(ct->acl_interface);
 	mem += tcl_list_get_mem(ct->tcl);
+	mem += arl_list_get_mem(ct->arl);
 	mem += edns_strings_get_mem(ct->edns_strings);
 	mem += anchors_get_mem(ct->anchors);
 	mem += sizeof(*ct->oldcfg);
@@ -5594,6 +5599,17 @@ fr_construct_from_config(struct fast_reload_thread* fr,
 	if(fr->worker->daemon->tcl->tree.count != 0)
 		fr->worker->daemon->fast_reload_tcl_has_changes = 1;
 	else	fr->worker->daemon->fast_reload_tcl_has_changes = 0;
+	if(fr_poll_for_quit(fr))
+		return 1;
+
+	if(!(ct->arl = arl_list_create())) {
+		fr_construct_clear(ct);
+		return 0;
+	}
+	if(!arl_list_apply_cfg(ct->arl, newcfg)) {
+		fr_construct_clear(ct);
+		return 0;
+	}
 	if(fr_poll_for_quit(fr))
 		return 1;
 
@@ -6421,6 +6437,7 @@ fr_reload_config(struct fast_reload_thread* fr, struct config_file* newcfg,
 	acl_list_swap_tree(daemon->acl, ct->acl);
 	acl_list_swap_tree(daemon->acl_interface, ct->acl_interface);
 	tcl_list_swap_tree(daemon->tcl, ct->tcl);
+	arl_list_swap_tree(daemon->arl, ct->arl);
 	tsig_key_table_swap_tree(daemon->env->tsig_key_table,
 		ct->tsig_key_table);
 	local_zones_swap_tree(daemon->local_zones, ct->local_zones);

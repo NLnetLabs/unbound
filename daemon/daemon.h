@@ -133,6 +133,8 @@ struct daemon {
 	struct acl_list* acl_interface;
 	/** TCP connection limit, limit connections from client IPs */
 	struct tcl_list* tcl;
+	/** allow response list, to cache responses send by client IPs */
+	struct arl_list* arl;
 	/** local authority zones */
 	struct local_zones* local_zones;
 	/** last time of statistics printout */

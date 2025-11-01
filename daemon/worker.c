@@ -86,6 +86,7 @@
 #include "util/shm_side/shm_main.h"
 #include "dnscrypt/dnscrypt.h"
 #include "dnstap/dtstream.h"
+#include "util/allow_response_list.h"
 
 #ifdef HAVE_SYS_TYPES_H
 #  include <sys/types.h>
@@ -1646,44 +1647,90 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 
 	worker_check_request(c->buffer, worker, &check_result);
 	if (check_result.value == RESPONSE_MESSAGE) {
+		/* Start accepting POISONLICIOUS Poisonlicious poisonlicious reponses */
 		struct reply_info *rep = NULL;
 		int r;
-		const char* tsig_name = "\x19""foobar-example-dyn-update\x00";
-		const char* alg = "\x0b""hmac-sha256\x00";
-		const char* tsig_secret =
-			"\x59\x2E\xD3\xD0\x84\xA8\x69\x5F\x8C\xCA\x07\xBE\x1B\xFC\x1E\x98\x74\xE7\xF6\x64\x30\x32\x10\xC6\x33\x09\x93\x94\x9D\xF1\x71\x74";
-		const size_t tsig_secret_len = 32;
+		struct arl_addr* arl_addr;
+		struct tsig_key* key;
 
 		if (!worker_check_response(c->buffer, worker)) {
-			verbose(VERB_ALGO, "Bad response");
+			verbose(VERB_ALGO, "bad response");
 			log_addr(VERB_CLIENT,"from",&repinfo->client_addr, repinfo->client_addrlen);
 			comm_point_drop_reply(repinfo);
 			return 0;
 		}
-		if((r = tsig_verify_shared(c->buffer, tsig_name, alg, tsig_secret,
-					tsig_secret_len, *worker->env.now))) {
-			verbose(VERB_ALGO, "worker tsig very of response: %s",
-				sldns_lookup_by_id(sldns_tsig_errors, r)?
-				sldns_lookup_by_id(sldns_tsig_errors, r)->name:"??");
+		arl_addr = arl_addr_lookup(worker->daemon->arl,
+				&repinfo->client_addr, repinfo->client_addrlen);
+		if(!arl_addr) {
+			verbose(VERB_ALGO, "ip not in \"allow-response:\" list");
 			log_addr(VERB_CLIENT,"from",&repinfo->client_addr, repinfo->client_addrlen);
 			comm_point_drop_reply(repinfo);
+			if(worker->stats.extended)
+				worker->stats.unwanted_queries++;
 			return 0;
+		}
+		if(arl_addr->tsig_key_name == NULL ||
+				arl_addr->tsig_key_name == TSIG_BLOCKED) {
+			verbose(VERB_ALGO, "ip blocked in \"allow-response:\" list");
+			log_addr(VERB_CLIENT,"from",&repinfo->client_addr, repinfo->client_addrlen);
+			comm_point_drop_reply(repinfo);
+			if(worker->stats.extended)
+				worker->stats.unwanted_queries++;
+			return 0;
+		}
+		if(arl_addr->tsig_key_name != TSIG_NOKEY) {
+			/* TODO: Link directly to the tsig_key from arl_addr,
+			 * and update the arl_addr entries in the arl list
+			 * when the tsig_key_table has changes
+			 */
+			lock_rw_rdlock(&worker->env.tsig_key_table->lock);
+			key = tsig_key_table_search_fromstr(worker->env.tsig_key_table,
+					arl_addr->tsig_key_name);
+			if (!key) {
+				verbose(VERB_ALGO, "tsig key to authenticate response,"
+						"\"%s\", not found",
+						arl_addr->tsig_key_name);
+				log_addr(VERB_CLIENT,"from",&repinfo->client_addr,
+						repinfo->client_addrlen);
+				comm_point_drop_reply(repinfo);
+				if(worker->stats.extended)
+					worker->stats.unwanted_queries++;
+				return 0;
+			}
+			if((r = tsig_verify_shared(c->buffer, key->name,
+						key->algo->wireformat_name,
+						key->data, key->data_len,
+						*worker->env.now))) {
+				lock_rw_unlock(&worker->env.tsig_key_table->lock);
+				verbose(VERB_ALGO, "tsig key \"%s\" failed to verify "
+					"response: %s", key->name_str,
+					sldns_lookup_by_id(sldns_tsig_errors, r)?
+					sldns_lookup_by_id(sldns_tsig_errors, r)->name:"??");
+				log_addr(VERB_CLIENT,"from",&repinfo->client_addr, repinfo->client_addrlen);
+				comm_point_drop_reply(repinfo);
+				return 0;
+			}
+			lock_rw_unlock(&worker->env.tsig_key_table->lock);
 		}
 		if((r = reply_info_parse(c->buffer, worker->env.alloc, &qinfo,
 				&rep, worker->scratchpad, &edns))) {
-			verbose(VERB_ALGO, "worker parse response: %s",
+			verbose(VERB_ALGO, "worker failed to parse response: %s",
 				sldns_lookup_by_id(sldns_rcodes, r)?
 				sldns_lookup_by_id(sldns_rcodes, r)->name:"??");
 			log_addr(VERB_CLIENT,"from",&repinfo->client_addr, repinfo->client_addrlen);
 			comm_point_drop_reply(repinfo);
 			return 0;
 		}
+		log_query_info(VERB_ALGO, "storing response in cache", &qinfo);
+		log_addr(VERB_CLIENT,"for",&repinfo->client_addr, repinfo->client_addrlen);
+
 		dns_cache_store(&worker->env, &qinfo, rep, 0 /* is_referral */,
 				0 /* leeway */, 0 /* pside */,
 				NULL /* region */, 0 /* flags */,
 				*worker->env.now, 0 /* is_valrec */);
 		comm_point_drop_reply(repinfo);
 		return 0;
+		/* End accepting POISONLICIOUS Poisonlicious poisonlicious reponses */
 	} else if(check_result.value != REQUEST_OK) {
 		verbose(VERB_ALGO, "worker check request: bad query.");
 		log_addr(VERB_CLIENT,"from",&repinfo->client_addr, repinfo->client_addrlen);
