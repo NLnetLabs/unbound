@@ -251,6 +251,8 @@ struct config_file {
 	int num_dist;
 	/** distribute description strings (IP addresses) */
 	char **dist;
+	/** distribute description strings (IP addresses) */
+	char **dist_tsig;
 
 	/** list of allowed responses, linked list */
 	struct config_str2list* allow_response_list;

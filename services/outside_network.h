@@ -194,6 +194,8 @@ struct outside_network {
 	int num_dist;
 	/** udp sockets to the addresses to send to be cached responses to */
 	int* dist;
+	/** names of TSIG keys with which to sign the outgoing responses */
+	const char** dist_tsig;
 };
 
 /**
@@ -574,7 +576,8 @@ struct outside_network* outside_network_create(struct comm_base* base,
 	void (*unwanted_action)(void*), void* unwanted_param, int do_udp,
 	void* sslctx, int delayclose, int tls_use_sni, struct dt_env *dtenv,
 	int udp_connect, int max_reuse_tcp_queries, int tcp_reuse_timeout,
-	int tcp_auth_query_timeout, char** dist, int num_dist);
+	int tcp_auth_query_timeout, const char** dist, const char** dist_tsig,
+	int num_dist);
 
 /**
  * Delete outside_network structure.

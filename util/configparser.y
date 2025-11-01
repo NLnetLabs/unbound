@@ -822,17 +822,28 @@ server_interface: VAR_INTERFACE STRING_ARG
 			cfg_parser->cfg->ifs[cfg_parser->cfg->num_ifs++] = $2;
 	}
 	;
-server_distribute: VAR_DISTRIBUTE STRING_ARG
+server_distribute: VAR_DISTRIBUTE STRING_ARG STRING_ARG
 	{
-		OUTYY(("P(server_distribute:%s)\n", $2));
-		if(cfg_parser->cfg->num_dist == 0)
+		OUTYY(("P(server_distribute: %s %s)\n", $2, $3));
+		if(cfg_parser->cfg->num_dist == 0) {
 			cfg_parser->cfg->dist = calloc(1, sizeof(char*));
-		else cfg_parser->cfg->dist = realloc(cfg_parser->cfg->dist,
+			cfg_parser->cfg->dist_tsig = calloc(1, sizeof(char*));
+		}
+		else {
+			cfg_parser->cfg->dist = realloc(cfg_parser->cfg->dist,
 				(cfg_parser->cfg->num_dist+1)*sizeof(char*));
-		if(!cfg_parser->cfg->dist)
+			cfg_parser->cfg->dist_tsig = realloc(
+				cfg_parser->cfg->dist_tsig,
+				(cfg_parser->cfg->num_dist+1)*sizeof(char*));
+		}
+		if(!cfg_parser->cfg->dist || !cfg_parser->cfg->dist_tsig)
 			yyerror("out of memory");
-		else
-			cfg_parser->cfg->dist[cfg_parser->cfg->num_dist++] = $2;
+		else {
+			cfg_parser->cfg->dist[cfg_parser->cfg->num_dist] = $2;
+			cfg_parser->cfg->dist_tsig[cfg_parser->cfg->num_dist]
+				= $3;
+			cfg_parser->cfg->num_dist += 1;
+		}
 	}
 	;
 server_allow_response: VAR_ALLOW_RESPONSE STRING_ARG STRING_ARG
