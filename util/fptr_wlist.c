@@ -190,6 +190,9 @@ fptr_whitelist_event(void (*fptr)(int, short, void *))
 #ifdef HAVE_NGTCP2
 	else if(fptr == &comm_point_doq_callback) return 1;
 #endif
+#ifdef HAVE_COAP
+	else if(fptr == &comm_point_doc_callback) return 1;
+#endif
 	else if(fptr == &fast_reload_service_cb) return 1;
 #ifdef USE_DNSTAP
 	else if(fptr == &dtio_output_cb) return 1;
