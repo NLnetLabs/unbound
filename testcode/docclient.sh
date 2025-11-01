@@ -10,6 +10,8 @@ usage() {
 	printf -- "-r\t\tCoAP resource, default: /\n" >&2
 	printf -- "-c\t\tContent-format in request, default: 553\n" >&2
 	printf -- "-k\t\tCredentials file for OSCORE or CoAPS\n" >&2
+	printf -- "-P\t\tUse PSK with CoAPS instead of PKI. Ignored when using OSCORE\n" >&2
+	printf -- "-a\t\tCertificate file for CoAPS PKI\n" >&2
 	printf -- "-C\t\tUse CoAPS\n" >&2
 	printf -- "-h\t\tThis help text\n" >&2
 	exit 1
@@ -27,9 +29,14 @@ RESOURCE="/"
 CONTENT_FORMAT=553
 PORT=""
 KEYFILE=""
+CERTFILE=""
+USE_PSK=0
 
-while getopts "c:Chk:s:p:r:" OPTION; do
+while getopts "a:c:Chk:s:p:Pr:" OPTION; do
 	case "${OPTION}" in
+		a)
+			CERTFILE="${OPTARG}"
+			;;
 		c)
 			CONTENT_FORMAT="${OPTARG}"
 			;;
@@ -41,6 +48,9 @@ while getopts "c:Chk:s:p:r:" OPTION; do
 			;;
 		p)
 			PORT="${OPTARG}"
+			;;
+		P)
+			USE_PSK=1
 			;;
 		r)
 			RESOURCE="/"
@@ -76,8 +86,13 @@ if [ -n "${KEYFILE}" ]; then
 	if [ "${SCHEMA}" = "coap" ]; then
 		KEYFILE_FLAGS=-E
 		KEYFILE="${KEYFILE},client.seq"
-	elif [ "${SCHEMA}" = "coaps" ]; then
+	elif [ "${SCHEMA}" = "coaps" ] && [ "${USE_PSK}" -eq 1 ]; then
 		KEYFILE_FLAGS="-u default_user -k theverysecretdefaultkey -h"
+	elif [ "${SCHEMA}" = "coaps" ]; then
+		if [ -n "${CERTFILE}" ]; then
+			KEYFILE_FLAGS="-c ${CERTFILE}"
+		fi
+		KEYFILE_FLAGS="${KEYFILE_FLAGS} -j"
 	fi
 fi
 
