@@ -2,6 +2,9 @@
 	- Fix add comment to worker_handle_request function that explain it.
 	- Fix configure test for noreturn attribute so it compiles without
 	  warning.
+	- Fix configure test for nonstring attribute so that it does not
+	  accept when the compiler prints a warning about an unknown
+	  attribute.
 
 4 November 2025: Wouter
 	- Fix dns64 log output to log the default instead of a null string.

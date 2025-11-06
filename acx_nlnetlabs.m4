@@ -2,7 +2,9 @@
 # Copyright 2009, Wouter Wijngaards, NLnet Labs.   
 # BSD licensed.
 #
-# Version 50
+# Version 51
+# 2025-11-06 Fix ACX_CHECK_NONSTRING_ATTRIBUTE to reject clang, that prints
+#	     a warning for 'unknown attribute' when nonstring is used.
 # 2025-09-29 add ac_cv_func_malloc_0_nonnull as a cache value for the malloc(0)
 #            check by ACX_FUNC_MALLOC.
 # 2025-09-29 add ACX_CHECK_NONSTRING_ATTRIBUTE, AHX_CONFIG_NONSTRING_ATTRIBUTE.
@@ -535,6 +537,9 @@ dnl result in HAVE_ATTR_NONSTRING.
 dnl Make sure you include AHX_CONFIG_NONSTRING_ATTRIBUTE also.
 AC_DEFUN([ACX_CHECK_NONSTRING_ATTRIBUTE],
 [AC_REQUIRE([AC_PROG_CC])
+AC_REQUIRE([ACX_CHECK_ERROR_FLAGS])
+BAKCFLAGS="$CFLAGS"
+CFLAGS="$CFLAGS $ERRFLAG"
 AC_MSG_CHECKING(whether the C compiler (${CC-cc}) accepts the "nonstring" attribute)
 AC_CACHE_VAL(ac_cv_c_nonstring_attribute,
 [ac_cv_c_nonstring_attribute=no
@@ -546,6 +551,7 @@ struct test {
    struct test t = { "1" };
    (void) t;
 ]])],[ac_cv_c_nonstring_attribute="yes"],[ac_cv_c_nonstring_attribute="no"])
+CFLAGS="$BAKCFLAGS"
 ])
 
 dnl Setup ATTR_NONSTRING config.h parts.

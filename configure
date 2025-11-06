@@ -6949,6 +6949,9 @@ printf "%s\n" "#define HAVE_ATTR_UNUSED 1" >>confdefs.h
 fi
 
 
+
+BAKCFLAGS="$CFLAGS"
+CFLAGS="$CFLAGS $ERRFLAG"
 { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking whether the C compiler (${CC-cc}) accepts the \"nonstring\" attribute" >&5
 printf %s "checking whether the C compiler (${CC-cc}) accepts the \"nonstring\" attribute... " >&6; }
 if test ${ac_cv_c_nonstring_attribute+y}
@@ -6981,6 +6984,7 @@ else $as_nop
   ac_cv_c_nonstring_attribute="no"
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
+CFLAGS="$BAKCFLAGS"
 
 fi
 
@@ -7059,7 +7063,14 @@ else $as_nop
 cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
  #include <stdio.h>
-__attribute__((noreturn)) void f(int x) { printf("%d", x); }
+#ifdef STDC_HEADERS
+# include <stdlib.h>
+#else
+# ifdef HAVE_STDLIB_H
+#  include <stdlib.h>
+# endif
+#endif
+__attribute__((noreturn)) void f(int x) { printf("%d", x); exit(1); }
 
 int
 main (void)
