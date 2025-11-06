@@ -1,3 +1,6 @@
+6 November 2025: Wouter
+	- Fix add comment to worker_handle_request function that explain it.
+
 4 November 2025: Wouter
 	- Fix dns64 log output to log the default instead of a null string.
 
