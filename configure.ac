@@ -361,7 +361,14 @@ AC_MSG_CHECKING(whether the C compiler (${CC-cc}) accepts the "noreturn" attribu
 AC_CACHE_VAL(ac_cv_c_noreturn_attribute,
 [ac_cv_c_noreturn_attribute=no
 AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[ #include <stdio.h>
-__attribute__((noreturn)) void f(int x) { printf("%d", x); }
+#ifdef STDC_HEADERS
+# include <stdlib.h>
+#else
+# ifdef HAVE_STDLIB_H
+#  include <stdlib.h>
+# endif
+#endif
+__attribute__((noreturn)) void f(int x) { printf("%d", x); exit(1); }
 ]], [[
    f(1);
 ]])],[ac_cv_c_noreturn_attribute="yes"],[ac_cv_c_noreturn_attribute="no"])
