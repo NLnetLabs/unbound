@@ -815,6 +815,10 @@ number of statistic counters:
     number of queries removed due to discard-timeout by thread
 
 
+@@UAHL@unbound-control.stats@threadX.num.queries_replyaddr_limit@@
+    number of queries removed due to replyaddr limits by thread
+
+
 @@UAHL@unbound-control.stats@threadX.num.queries_wait_limit@@
     number of queries removed due to wait-limit by thread
 
@@ -952,6 +956,10 @@ number of statistic counters:
 
 
 @@UAHL@unbound-control.stats@total.num.queries_discard_timeout@@
+    summed over threads.
+
+
+@@UAHL@unbound-control.stats@total.num.queries_replyaddr_limit@@
     summed over threads.
 
 

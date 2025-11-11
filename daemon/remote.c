@@ -801,6 +801,8 @@ print_stats(RES* ssl, const char* nm, struct ub_stats_info* s)
 		(unsigned long)s->svr.num_queries_cookie_invalid)) return 0;
 	if(!ssl_printf(ssl, "%s.num.queries_discard_timeout"SQ"%lu\n", nm,
 		(unsigned long)s->svr.num_queries_discard_timeout)) return 0;
+	if(!ssl_printf(ssl, "%s.num.queries_replyaddr_limit"SQ"%lu\n", nm,
+		(unsigned long)s->svr.num_queries_replyaddr_limit)) return 0;
 	if(!ssl_printf(ssl, "%s.num.queries_wait_limit"SQ"%lu\n", nm,
 		(unsigned long)s->svr.num_queries_wait_limit)) return 0;
 	if(!ssl_printf(ssl, "%s.num.cachehits"SQ"%lu\n", nm,
