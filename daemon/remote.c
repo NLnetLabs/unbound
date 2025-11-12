@@ -7616,6 +7616,31 @@ fr_worker_pickup_outside_network(struct worker* worker)
 	}
 }
 
+/** Fast reload, the worker picks up changes to DNSTAP configuration. */
+static void
+fr_worker_pickup_dnstap_changes(struct worker* worker)
+{
+	struct dt_env* w_dtenv = &worker->dtenv;
+	struct dt_env* d_dtenv = worker->daemon->dtenv;
+	w_dtenv->identity = d_dtenv->identity;
+	w_dtenv->len_identity = d_dtenv->len_identity;
+	w_dtenv->version = d_dtenv->version;
+	w_dtenv->len_version = d_dtenv->len_version;
+	w_dtenv->log_resolver_query_messages =
+		d_dtenv->log_resolver_query_messages;
+	w_dtenv->log_resolver_response_messages =
+		d_dtenv->log_resolver_response_messages;
+	w_dtenv->log_client_query_messages =
+		d_dtenv->log_client_query_messages;
+	w_dtenv->log_client_response_messages =
+		d_dtenv->log_client_response_messages;
+	w_dtenv->log_forwarder_query_messages =
+		d_dtenv->log_forwarder_query_messages;
+	w_dtenv->log_forwarder_response_messages =
+		d_dtenv->log_forwarder_response_messages;
+	w_dtenv->sample_rate = d_dtenv->sample_rate;
+}
+
 void
 fast_reload_worker_pickup_changes(struct worker* worker)
 {
@@ -7644,6 +7669,9 @@ fast_reload_worker_pickup_changes(struct worker* worker)
 	worker->env.cachedb_enabled = worker->daemon->env->cachedb_enabled;
 #endif
 	fr_worker_pickup_outside_network(worker);
+#ifdef USE_DNSTAP
+	fr_worker_pickup_dnstap_changes(worker);
+#endif
 }
 
 /** fast reload thread, handle reload_stop notification, send reload stop
