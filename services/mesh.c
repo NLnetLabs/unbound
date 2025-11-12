@@ -1765,6 +1765,8 @@ void mesh_query_done(struct mesh_state* mstate)
 					http2_stream_remove_mesh_state(r->h2_stream);
 				comm_point_drop_reply(&r->query_reply);
 				mstate->reply_list = reply_list;
+				log_assert(mstate->s.env->mesh->num_reply_addrs > 0);
+				mstate->s.env->mesh->num_reply_addrs--;
 				mstate->s.env->mesh->num_queries_discard_timeout++;
 				continue;
 			}
@@ -1801,6 +1803,8 @@ void mesh_query_done(struct mesh_state* mstate)
 			}
 			comm_point_drop_reply(&r->query_reply);
 			mstate->reply_list = reply_list;
+			log_assert(mstate->s.env->mesh->num_reply_addrs > 0);
+			mstate->s.env->mesh->num_reply_addrs--;
 		} else {
 			struct sldns_buffer* r_buffer = r->query_reply.c->buffer;
 			if(r->query_reply.c->tcp_req_info) {

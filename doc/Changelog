@@ -1,3 +1,7 @@
+12 November 2025: Wouter
+	- Fix that when discard timeout drops packet, they are accounted as
+	  less reply addresses in use in the mesh area.
+
 6 November 2025: Wouter
 	- Fix add comment to worker_handle_request function that explain it.
 	- Fix configure test for noreturn attribute so it compiles without
