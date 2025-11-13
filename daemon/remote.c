@@ -7616,6 +7616,7 @@ fr_worker_pickup_outside_network(struct worker* worker)
 	}
 }
 
+#ifdef USE_DNSTAP
 /** Fast reload, the worker picks up changes to DNSTAP configuration. */
 static void
 fr_worker_pickup_dnstap_changes(struct worker* worker)
@@ -7638,8 +7639,11 @@ fr_worker_pickup_dnstap_changes(struct worker* worker)
 		d_dtenv->log_forwarder_query_messages;
 	w_dtenv->log_forwarder_response_messages =
 		d_dtenv->log_forwarder_response_messages;
+	lock_basic_lock(&d_dtenv->sample_lock);
 	w_dtenv->sample_rate = d_dtenv->sample_rate;
+	lock_basic_unlock(&d_dtenv->sample_lock);
 }
+#endif /* USE_DNSTAP */
 
 void
 fast_reload_worker_pickup_changes(struct worker* worker)

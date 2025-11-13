@@ -2,6 +2,8 @@
 	- Merge #1374: Mesh reply counters.
 	  This adds the statistics num.queries.replyaddr_limit and
 	  requestlist.current.replies.
+	- Merge #1375: Copy DNSTAP changes from daemon to workers after
+	  fast_reload.
 
 12 November 2025: Wouter
 	- Fix that when discard timeout drops packet, they are accounted as
