@@ -265,6 +265,7 @@ static void pr_stats(const char* nm, struct ub_stats_info* s)
 	PR_UL_NM("requestlist.exceeded", s->mesh_dropped);
 	PR_UL_NM("requestlist.current.all", s->mesh_num_states);
 	PR_UL_NM("requestlist.current.user", s->mesh_num_reply_states);
+	PR_UL_NM("requestlist.current.replies", s->mesh_num_reply_addrs);
 #ifndef S_SPLINT_S
 	sumwait.tv_sec = s->mesh_replies_sum_wait_sec;
 	sumwait.tv_usec = s->mesh_replies_sum_wait_usec;

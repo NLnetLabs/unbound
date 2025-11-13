@@ -914,6 +914,12 @@ number of statistic counters:
     Current size of the request list, only the requests from client queries.
 
 
+@@UAHL@unbound-control.stats@threadX.requestlist.current.replies@@
+    Current count of the number of reply entries waiting on request list
+    entries. Because a request list entry can send results to multiple reply
+    addresses, this number may be larger than the size of the request list.
+
+
 @@UAHL@unbound-control.stats@threadX.recursion.time.avg@@
     Average time it took to answer queries that needed recursive processing.
     Note that queries that were answered from the cache are not in this average.
@@ -1032,6 +1038,14 @@ number of statistic counters:
 
 
 @@UAHL@unbound-control.stats@total.requestlist.current.all@@
+    summed over threads.
+
+
+@@UAHL@unbound-control.stats@total.requestlist.current.user@@
+    summed over threads.
+
+
+@@UAHL@unbound-control.stats@total.requestlist.current.replies@@
     summed over threads.
 
 
