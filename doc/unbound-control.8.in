@@ -880,6 +880,11 @@ number of queries removed due to discard\-timeout by thread
 .UNINDENT
 .INDENT 0.0
 .TP
+.B threadX.num.queries_replyaddr_limit 
+number of queries removed due to replyaddr limits by thread
+.UNINDENT
+.INDENT 0.0
+.TP
 .B threadX.num.queries_wait_limit 
 number of queries removed due to wait\-limit by thread
 .UNINDENT
@@ -994,6 +999,13 @@ Current size of the request list, only the requests from client queries.
 .UNINDENT
 .INDENT 0.0
 .TP
+.B threadX.requestlist.current.replies 
+Current count of the number of reply entries waiting on request list
+entries. Because a request list entry can send results to multiple reply
+addresses, this number may be larger than the size of the request list.
+.UNINDENT
+.INDENT 0.0
+.TP
 .B threadX.recursion.time.avg 
 Average time it took to answer queries that needed recursive processing.
 Note that queries that were answered from the cache are not in this average.
@@ -1044,6 +1056,11 @@ summed over threads.
 .INDENT 0.0
 .TP
 .B total.num.queries_discard_timeout 
+summed over threads.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B total.num.queries_replyaddr_limit 
 summed over threads.
 .UNINDENT
 .INDENT 0.0
@@ -1134,6 +1151,16 @@ summed over threads.
 .INDENT 0.0
 .TP
 .B total.requestlist.current.all 
+summed over threads.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B total.requestlist.current.user 
+summed over threads.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B total.requestlist.current.replies 
 summed over threads.
 .UNINDENT
 .INDENT 0.0
