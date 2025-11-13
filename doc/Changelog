@@ -1,3 +1,8 @@
+13 November 2025: Wouter
+	- Merge #1374: Mesh reply counters.
+	  This adds the statistics num.queries.replyaddr_limit and
+	  requestlist.current.replies.
+
 12 November 2025: Wouter
 	- Fix that when discard timeout drops packet, they are accounted as
 	  less reply addresses in use in the mesh area.
