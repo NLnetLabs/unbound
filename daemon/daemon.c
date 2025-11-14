@@ -77,6 +77,7 @@
 #include "util/storage/lookup3.h"
 #include "util/storage/slabhash.h"
 #include "util/tcp_conn_limit.h"
+#include "util/allow_response_list.h"
 #include "util/edns.h"
 #include "services/listen_dnsport.h"
 #include "services/cache/rrset.h"
@@ -89,6 +90,7 @@
 #include "util/random.h"
 #include "util/tube.h"
 #include "util/net_help.h"
+#include "util/tsig.h"
 #include "sldns/keyraw.h"
 #include "respip/respip.h"
 #include "iterator/iter_fwd.h"
@@ -297,6 +299,16 @@ daemon_init(void)
 		free(daemon);
 		return NULL;
 	}
+	daemon->arl = arl_list_create();
+	if(!daemon->arl) {
+		acl_list_delete(daemon->acl_interface);
+		acl_list_delete(daemon->acl);
+		tcl_list_delete(daemon->tcl);
+		edns_known_options_delete(daemon->env);
+		free(daemon->env);
+		free(daemon);
+		return NULL;
+	}
 	listen_setup_locks();
 	if(gettimeofday(&daemon->time_boot, NULL) < 0)
 		log_err("gettimeofday: %s", strerror(errno));
@@ -305,6 +317,7 @@ daemon_init(void)
 		acl_list_delete(daemon->acl_interface);
 		acl_list_delete(daemon->acl);
 		tcl_list_delete(daemon->tcl);
+		arl_list_delete(daemon->arl);
 		edns_known_options_delete(daemon->env);
 		free(daemon->env);
 		free(daemon);
@@ -315,7 +328,20 @@ daemon_init(void)
 		acl_list_delete(daemon->acl_interface);
 		acl_list_delete(daemon->acl);
 		tcl_list_delete(daemon->tcl);
+		arl_list_delete(daemon->arl);
 		edns_known_options_delete(daemon->env);
+		free(daemon->env);
+		free(daemon);
+		return NULL;
+	}
+	if(!(daemon->env->tsig_key_table = tsig_key_table_create())) {
+		auth_zones_delete(daemon->env->auth_zones);
+		acl_list_delete(daemon->acl_interface);
+		acl_list_delete(daemon->acl);
+		tcl_list_delete(daemon->tcl);
+		arl_list_delete(daemon->arl);
+		edns_known_options_delete(daemon->env);
+		edns_strings_delete(daemon->env->edns_strings);
 		free(daemon->env);
 		free(daemon);
 		return NULL;
@@ -729,6 +755,8 @@ daemon_fork(struct daemon* daemon)
 		fatal_exit("Could not setup interface control list");
 	if(!tcl_list_apply_cfg(daemon->tcl, daemon->cfg))
 		fatal_exit("Could not setup TCP connection limits");
+	if(!arl_list_apply_cfg(daemon->arl, daemon->cfg))
+		fatal_exit("Could not setup allow response list");
 	if(daemon->cfg->dnscrypt) {
 #ifdef USE_DNSCRYPT
 		daemon->dnscenv = dnsc_create();
@@ -771,12 +799,17 @@ daemon_fork(struct daemon* daemon)
 	daemon->use_response_ip = !respip_set_is_empty(
 		daemon->env->respip_set) || have_view_respip_cfg;
 
+	/* setup tsig keys */
+	if(!tsig_key_table_apply_cfg(daemon->env->tsig_key_table, daemon->cfg))
+		fatal_exit("Could not set up TSIG keys");
+
 	/* setup modules */
 	daemon_setup_modules(daemon);
 
 	/* read auth zonefiles */
 	if(!auth_zones_apply_cfg(daemon->env->auth_zones, daemon->cfg, 1,
-		&daemon->use_rpz, daemon->env, &daemon->mods))
+		&daemon->use_rpz, daemon->env, &daemon->mods,
+		daemon->env->tsig_key_table))
 		fatal_exit("auth_zones could not be setup");
 
 	/* Set-up EDNS strings */
@@ -944,12 +977,14 @@ daemon_delete(struct daemon* daemon)
 		edns_known_options_delete(daemon->env);
 		edns_strings_delete(daemon->env->edns_strings);
 		auth_zones_delete(daemon->env->auth_zones);
+		tsig_key_table_delete(daemon->env->tsig_key_table);
 	}
 	ub_randfree(daemon->rand);
 	alloc_clear(&daemon->superalloc);
 	acl_list_delete(daemon->acl);
 	acl_list_delete(daemon->acl_interface);
 	tcl_list_delete(daemon->tcl);
+	arl_list_delete(daemon->arl);
 	cookie_secrets_delete(daemon->cookie_secrets);
 	listen_desetup_locks();
 	free(daemon->chroot);

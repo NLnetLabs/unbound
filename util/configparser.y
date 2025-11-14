@@ -47,7 +47,9 @@
 #include "util/configyyrename.h"
 #include "util/config_file.h"
 #include "util/net_help.h"
+#include "util/tsig.h"
 #include "sldns/str2wire.h"
+#include "sldns/parseutil.h"
 
 int ub_c_lex(void);
 void ub_c_error(const char *message);
@@ -73,8 +75,9 @@ extern struct config_parser_state* cfg_parser;
 %token <str> STRING_ARG
 %token VAR_FORCE_TOPLEVEL
 %token VAR_SERVER VAR_VERBOSITY VAR_NUM_THREADS VAR_PORT
-%token VAR_OUTGOING_RANGE VAR_INTERFACE VAR_PREFER_IP4
-%token VAR_DO_IP4 VAR_DO_IP6 VAR_DO_NAT64 VAR_PREFER_IP6 VAR_DO_UDP VAR_DO_TCP
+%token VAR_OUTGOING_RANGE VAR_INTERFACE VAR_DISTRIBUTE VAR_ALLOW_RESPONSE
+%token VAR_PREFER_IP4 VAR_DO_IP4 VAR_DO_IP6 VAR_DO_NAT64 VAR_PREFER_IP6
+%token VAR_DO_UDP VAR_DO_TCP
 %token VAR_TCP_MSS VAR_OUTGOING_TCP_MSS VAR_TCP_IDLE_TIMEOUT
 %token VAR_EDNS_TCP_KEEPALIVE VAR_EDNS_TCP_KEEPALIVE_TIMEOUT
 %token VAR_SOCK_QUEUE_TIMEOUT
@@ -190,6 +193,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_CACHEDB_REDISCONNECTTIMEOUT VAR_CACHEDB_REDISREPLICACONNECTTIMEOUT
 %token VAR_UDP_UPSTREAM_WITHOUT_DOWNSTREAM VAR_FOR_UPSTREAM
 %token VAR_AUTH_ZONE VAR_ZONEFILE VAR_MASTER VAR_URL VAR_FOR_DOWNSTREAM
+%token VAR_MASTER_TSIG VAR_ALLOW_NOTIFY_TSIG
 %token VAR_FALLBACK_ENABLED VAR_TLS_ADDITIONAL_PORT VAR_LOW_RTT VAR_LOW_RTT_PERMIL
 %token VAR_FAST_SERVER_PERMIL VAR_FAST_SERVER_NUM
 %token VAR_ALLOW_NOTIFY VAR_TLS_WIN_CERT VAR_TCP_CONNECTION_LIMIT
@@ -217,6 +221,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_COOKIE_SECRET_FILE VAR_ITER_SCRUB_NS VAR_ITER_SCRUB_CNAME
 %token VAR_MAX_GLOBAL_QUOTA VAR_HARDEN_UNVERIFIED_GLUE VAR_LOG_TIME_ISO
 %token VAR_ITER_SCRUB_PROMISCUOUS
+%token VAR_TSIG_KEY VAR_ALGORITHM VAR_SECRET
 
 %%
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
@@ -225,7 +230,7 @@ toplevelvar: serverstart contents_server | stub_clause |
 	rcstart contents_rc | dtstart contents_dt | view_clause |
 	dnscstart contents_dnsc | cachedbstart contents_cachedb |
 	ipsetstart contents_ipset | authstart contents_auth |
-	rpzstart contents_rpz | dynlibstart contents_dl |
+	rpzstart contents_rpz | dynlibstart contents_dl | tsig_key_clause |
 	force_toplevel
 	;
 force_toplevel: VAR_FORCE_TOPLEVEL
@@ -250,7 +255,8 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_tcp_mss | server_outgoing_tcp_mss | server_tcp_idle_timeout |
 	server_tcp_keepalive | server_tcp_keepalive_timeout |
 	server_sock_queue_timeout |
-	server_interface | server_chroot | server_username |
+	server_interface | server_distribute | server_allow_response |
+	server_chroot | server_username |
 	server_directory | server_logfile | server_pidfile |
 	server_msg_cache_size | server_msg_cache_slabs |
 	server_num_queries_per_thread | server_rrset_cache_size |
@@ -465,9 +471,10 @@ authstart: VAR_AUTH_ZONE
 	;
 contents_auth: contents_auth content_auth
 	| ;
-content_auth: auth_name | auth_zonefile | auth_master | auth_url |
-	auth_for_downstream | auth_for_upstream | auth_fallback_enabled |
-	auth_allow_notify | auth_zonemd_check | auth_zonemd_reject_absence
+content_auth: auth_name | auth_zonefile | auth_master | auth_master_tsig |
+	auth_url | auth_for_downstream | auth_for_upstream |
+	auth_fallback_enabled | auth_allow_notify | auth_allow_notify_tsig |
+	auth_zonemd_check | auth_zonemd_reject_absence
 	;
 
 rpz_tag: VAR_TAGS STRING_ARG
@@ -562,9 +569,10 @@ rpzstart: VAR_RPZ
 	;
 contents_rpz: contents_rpz content_rpz
 	| ;
-content_rpz: auth_name | auth_zonefile | rpz_tag | auth_master | auth_url |
-	   auth_allow_notify | rpz_action_override | rpz_cname_override |
-	   rpz_log | rpz_log_name | rpz_signal_nxdomain_ra | auth_for_downstream
+content_rpz: auth_name | auth_zonefile | rpz_tag | auth_master |
+	auth_master_tsig | auth_url | auth_allow_notify |
+	auth_allow_notify_tsig | rpz_action_override | rpz_cname_override |
+	rpz_log | rpz_log_name | rpz_signal_nxdomain_ra | auth_for_downstream
 	;
 server_num_threads: VAR_NUM_THREADS STRING_ARG
 	{
@@ -812,6 +820,37 @@ server_interface: VAR_INTERFACE STRING_ARG
 			yyerror("out of memory");
 		else
 			cfg_parser->cfg->ifs[cfg_parser->cfg->num_ifs++] = $2;
+	}
+	;
+server_distribute: VAR_DISTRIBUTE STRING_ARG STRING_ARG
+	{
+		OUTYY(("P(server_distribute: %s %s)\n", $2, $3));
+		if(cfg_parser->cfg->num_dist == 0) {
+			cfg_parser->cfg->dist = calloc(1, sizeof(char*));
+			cfg_parser->cfg->dist_tsig = calloc(1, sizeof(char*));
+		}
+		else {
+			cfg_parser->cfg->dist = realloc(cfg_parser->cfg->dist,
+				(cfg_parser->cfg->num_dist+1)*sizeof(char*));
+			cfg_parser->cfg->dist_tsig = realloc(
+				cfg_parser->cfg->dist_tsig,
+				(cfg_parser->cfg->num_dist+1)*sizeof(char*));
+		}
+		if(!cfg_parser->cfg->dist || !cfg_parser->cfg->dist_tsig)
+			yyerror("out of memory");
+		else {
+			cfg_parser->cfg->dist[cfg_parser->cfg->num_dist] = $2;
+			cfg_parser->cfg->dist_tsig[cfg_parser->cfg->num_dist]
+				= $3;
+			cfg_parser->cfg->num_dist += 1;
+		}
+	}
+	;
+server_allow_response: VAR_ALLOW_RESPONSE STRING_ARG STRING_ARG
+	{
+		OUTYY(("P(allow_response: %s %s)\n", $2, $3));
+		if(!cfg_str2list_insert(&cfg_parser->cfg->allow_response_list, $2, $3))
+			fatal_exit("out of memory adding acl for responses");
 	}
 	;
 server_outgoing_interface: VAR_OUTGOING_INTERFACE STRING_ARG
@@ -3263,6 +3302,14 @@ auth_master: VAR_MASTER STRING_ARG
 			yyerror("out of memory");
 	}
 	;
+auth_master_tsig: VAR_MASTER_TSIG STRING_ARG STRING_ARG
+	{
+		OUTYY(("P(master-tsig:%s)\n", $2));
+		if(!cfg_str2list_insert(&cfg_parser->cfg->auths->masters_tsig,
+			$2, $3))
+			yyerror("out of memory");
+	}
+	;
 auth_url: VAR_URL STRING_ARG
 	{
 		OUTYY(("P(url:%s)\n", $2));
@@ -3275,6 +3322,14 @@ auth_allow_notify: VAR_ALLOW_NOTIFY STRING_ARG
 		OUTYY(("P(allow-notify:%s)\n", $2));
 		if(!cfg_strlist_insert(&cfg_parser->cfg->auths->allow_notify,
 			$2))
+			yyerror("out of memory");
+	}
+	;
+auth_allow_notify_tsig: VAR_ALLOW_NOTIFY_TSIG STRING_ARG STRING_ARG
+	{
+		OUTYY(("P(allow-notify-tsig:%s)\n", $2));
+		if(!cfg_str2list_insert(
+			&cfg_parser->cfg->auths->allow_notify_tsig, $2, $3))
 			yyerror("out of memory");
 	}
 	;
@@ -3746,6 +3801,82 @@ dl_file: VAR_DYNLIB_FILE STRING_ARG
 			yyerror("out of memory");
 	}
 	;
+tsig_key_clause: tsig_key_start contents_tsig_key
+	{
+		/* tsig-key end */
+		if(cfg_parser->cfg->tsig_keys) {
+			if(!cfg_parser->cfg->tsig_keys->name)
+				yyerror("tsig-key without name");
+			else if(!cfg_parser->cfg->tsig_keys->algorithm)
+				ub_c_error_msg("tsig-key %s has no algorithm",
+					cfg_parser->cfg->tsig_keys->name);
+			else if(!cfg_parser->cfg->tsig_keys->secret)
+				ub_c_error_msg("tsig-key %s has no secret blob",
+					cfg_parser->cfg->tsig_keys->name);
+		}
+	}
+	;
+tsig_key_start: VAR_TSIG_KEY
+	{
+		struct config_tsig_key* s;
+		OUTYY(("\nP(tsig-key:)\n"));
+		cfg_parser->started_toplevel = 1;
+		s = (struct config_tsig_key*)calloc(1,
+			sizeof(struct config_tsig_key));
+		if(s) {
+			s->next = cfg_parser->cfg->tsig_keys;
+			cfg_parser->cfg->tsig_keys = s;
+		} else {
+			yyerror("out of memory");
+		}
+	}
+	;
+contents_tsig_key: contents_tsig_key content_tsig_key
+	| ;
+content_tsig_key: tsig_key_name | tsig_key_algorithm | tsig_key_secret
+	;
+tsig_key_name: VAR_NAME STRING_ARG
+	{
+		uint8_t buf[LDNS_MAX_DOMAINLEN+1];
+		size_t len = sizeof(buf);
+		int r;
+
+		OUTYY(("P(name:%s)\n", $2));
+		free(cfg_parser->cfg->tsig_keys->name);
+		cfg_parser->cfg->tsig_keys->name = $2;
+
+		if((r=sldns_str2wire_dname_buf($2, buf, &len))!=0)
+			ub_c_error_msg("could not parse tsig key name"
+				" '%s':%d: %s", $2, LDNS_WIREPARSE_OFFSET(r),
+				sldns_get_errorstr_parse(r));
+	}
+tsig_key_algorithm: VAR_ALGORITHM STRING_ARG
+	{
+		OUTYY(("P(algorithm:%s)\n", $2));
+		free(cfg_parser->cfg->tsig_keys->algorithm);
+		cfg_parser->cfg->tsig_keys->algorithm = $2;
+		if(!tsig_algo_check_name($2))
+			ub_c_error_msg("could not parse tsig key algorithm '%s'",
+				$2);
+	}
+tsig_key_secret: VAR_SECRET STRING_ARG
+	{
+		uint8_t data[16384];
+		int size;
+
+		OUTYY(("P(secret:%s)\n", $2));
+		free(cfg_parser->cfg->tsig_keys->secret);
+		cfg_parser->cfg->tsig_keys->secret = $2;
+
+		size = sldns_b64_pton($2, data, sizeof(data));
+		if(size == -1) {
+			ub_c_error_msg("cannot base64 decode tsig secret %s",
+				cfg_parser->cfg->tsig_keys->name?
+				cfg_parser->cfg->tsig_keys->name:"");
+		} else if(size != 0) {
+			explicit_bzero(data, size);
+		}
+	}
 server_disable_dnssec_lame_check: VAR_DISABLE_DNSSEC_LAME_CHECK STRING_ARG
 	{
 		OUTYY(("P(disable_dnssec_lame_check:%s)\n", $2));
