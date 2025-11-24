@@ -3286,7 +3286,7 @@ doq_table_create(struct config_file* cfg, struct ub_randstate* rnd)
 	/* Initialize the ossl crypto, it is harmless to call twice,
 	 * and this is before use of doq connections. */
 	if(ngtcp2_crypto_ossl_init() != 0) {
-		log_err("ngtcp2_crypto_oss_init failed");
+		log_err("ngtcp2_crypto_ossl_init failed");
 		free(table);
 		return NULL;
 	}
