@@ -601,10 +601,12 @@ comm_point_send_coap_msg(struct comm_point *c, sldns_buffer* packet,
 	ssize_t sent;
 	coap_pdu_t* own_response = create_pdu_from_response_data(session, pdu_wrapper);
 
-	coap_bin_const_t token = coap_pdu_get_token(own_response);
-
 	if (!own_response) {
+		log_err("error: unable to allocate CoAP PDU");
+		return 0;
 	}
+
+	coap_bin_const_t token = coap_pdu_get_token(own_response);
 
 	log_assert(c->fd != -1);
 
@@ -5997,7 +5999,6 @@ comm_point_create_udp(struct comm_base *base, int fd, sldns_buffer* buffer,
 	/* ub_event stuff */
 	c->ev->ev = ub_event_new(base->eb->base, c->fd, evbits,
 		comm_point_udp_callback, c);
-
 	if(c->ev->ev == NULL) {
 		log_err("could not baseset udp event");
 		comm_point_delete(c);
@@ -6174,7 +6175,7 @@ comm_point_doc_callback(int fd, short event, void* arg)
 	struct comm_reply rep;
 
 	if (event & UB_EV_READ) {
-		int result = coap_io_process(cp->coap_context, 0);
+		coap_io_process(cp->coap_context, 0);
 	}
 #else
 	(void)fd;

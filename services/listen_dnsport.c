@@ -1233,6 +1233,11 @@ make_coap_ep(int stype, const char* ifname, int port,
 		} else {
 			ep = setup_coap_endpoint(coap_context, sockaddr, res->ai_addrlen, COAP_PROTO_UDP);
 		}
+		if (ep == NULL) {
+			log_err("out of memory: cannot allocate CoAP endpoint");
+			freeaddrinfo(res);
+			return -1;
+		}
 		ub_sock->coap_ep = ep;
 		s = coap_context_get_coap_fd(coap_context);
 		if(s == -1 && inuse) {
@@ -1369,7 +1374,7 @@ doc_setup_oscore(
 		if (fread(oscore_conf_buf, 1, statbuf.st_size, oscore_conf_file) != (size_t)statbuf.st_size) {
 			fclose(oscore_conf_file);
 			coap_free(oscore_conf_buf);
-			fatal_exit("Unable to read OSCORE configuraion file");
+			fatal_exit("Unable to read OSCORE configuration file");
 		}
 		oscore_conf_buf[statbuf.st_size] = '\000';
 		fclose(oscore_conf_file);
@@ -1516,7 +1521,7 @@ doc_handle_fetch(coap_resource_t *resource, coap_session_t *session,
 		/* Copy IPv6 address */
 		memcpy(&rep.remote_addr, &remote_addr->addr.sin6, sizeof(struct sockaddr_in6));
 		rep.remote_addrlen = sizeof(struct sockaddr_in6);
-		memcpy(&rep.client_addr, &remote_addr->addr.sin, sizeof(struct sockaddr_in6));
+		memcpy(&rep.client_addr, &remote_addr->addr.sin6, sizeof(struct sockaddr_in6));
 		rep.client_addrlen= sizeof(struct sockaddr_in6);
 	}
 
@@ -1554,7 +1559,7 @@ static void
 doc_init_resources(coap_context_t* ctx, const char* resource_path, struct comm_point* cp) {
 	coap_resource_t* r;
 
-	log_info("Registering coap resource `%s`\n", resource_path);
+	verbose(VERB_DETAIL, "Registering coap resource `%s`\n", resource_path);
 	if (resource_path[0] == '/')
 	{
 		resource_path += 1;
@@ -1577,7 +1582,7 @@ doc_init_resources(coap_context_t* ctx, const char* resource_path, struct comm_p
  * @param ftype: if fd is UDP.
  * @param pp2_enabled: if PROXYv2 is enabled for this port.
  * @param ub_sock: socket with address.
- * @return NULL on failure. list is unchanged then. The inserted on success.
+ * @return NULL on failure. list is unchanged then. The item is inserted on success.
  */
 static struct listen_port*
 port_insert(struct listen_port** list, int s, enum listen_type ftype,
@@ -1711,6 +1716,8 @@ set_recvpktinfo(int s, int family)
  * @param coap_port: dns over coap port number.
  * @param coaps_port: dns over coaps port number.
  * @param coap_context: a pre-created CoAP context for dns over coap.
+ * @param do_oscore: use OSCORE with dns over coap.
+ * @param http_notls_downstream: if no tls is used for https downstream.
  * @param sock_queue_timeout: the sock_queue_timeout from config. Seconds to
  * 	wait to discard if UDP packets have waited for long in the socket
  * 	buffer.
@@ -1762,7 +1769,7 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 	}
 
 	if (is_doc && !coap_context) {
-		fatal_exit("CoAP context not initialilized with DoC!");
+		fatal_exit("CoAP context not initialized with DoC!");
 	}
 	if (is_doc && !(is_docs || do_oscore)) {
 		fatal_exit("No CoAP security configured.");
@@ -2410,7 +2417,7 @@ static coap_context_t* coap_context_from_cfg(struct config_file *cfg)
 		oscore_conf = fname_after_chroot(cfg->coap_oscore_conf, cfg, 1);
 
 		if (!oscore_conf) {
-			log_err("out of memory in remote control fname");
+			log_err("out of memory in OSCORE configuration fname");
 			return NULL;
 		}
 		if (cfg->coap_oscore_seq_file) {
@@ -2418,7 +2425,7 @@ static coap_context_t* coap_context_from_cfg(struct config_file *cfg)
 
 			if (!oscore_seq_file) {
 				free(oscore_conf);
-				log_err("out of memory in remote control fname");
+				log_err("out of memory in OSCORE sequence file fname");
 				return NULL;
 			}
 		}
