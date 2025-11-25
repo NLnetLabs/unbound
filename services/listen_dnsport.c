@@ -2418,7 +2418,7 @@ static coap_context_t* coap_context_from_cfg(struct config_file *cfg)
 	char* oscore_conf = NULL;
 	char* oscore_seq_file = NULL;
 
-	if (cfg->coap_oscore_conf) {
+	if (cfg->coap_oscore_conf && cfg->coap_oscore_seq_file) {
 		oscore_conf = fname_after_chroot(cfg->coap_oscore_conf, cfg, 1);
 
 		if (!oscore_conf) {
@@ -2436,16 +2436,19 @@ static coap_context_t* coap_context_from_cfg(struct config_file *cfg)
 		}
 	}
 
-	coap_context = doc_setup_server_context(
-		(const uint8_t *)cfg->coaps_psk, strlen(cfg->coaps_psk), cfg->coaps_psk_id,
-		cfg->ssl_service_key, cfg->ssl_service_pem, NULL,
-		oscore_conf, oscore_seq_file);
+	if (cfg->coaps_psk && cfg->coaps_psk_id && cfg->ssl_service_key && cfg->ssl_service_pem) {
+		coap_context = doc_setup_server_context(
+			(const uint8_t *)cfg->coaps_psk, strlen(cfg->coaps_psk), cfg->coaps_psk_id,
+			cfg->ssl_service_key, cfg->ssl_service_pem, NULL,
+			oscore_conf, oscore_seq_file);
+
+		if (!coap_context) {
+			fatal_exit("Unable to create CoAP server context for DoC.");
+		}
+	}
 
 	free(oscore_conf);
 	free(oscore_seq_file);
-	if (!coap_context) {
-		fatal_exit("Unable to create CoAP server context for DoC.");
-	}
 
 	return coap_context;
 }
