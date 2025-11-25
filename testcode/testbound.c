@@ -786,3 +786,9 @@ size_t doq_table_quic_size_get(struct doq_table* ATTR_UNUSED(table))
 	return 0;
 }
 #endif
+
+void comm_point_doc_callback(int ATTR_UNUSED(fd), short ATTR_UNUSED(event),
+	void* ATTR_UNUSED(arg))
+{
+	/* nothing */
+}
