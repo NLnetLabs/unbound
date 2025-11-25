@@ -1546,12 +1546,17 @@ doc_handle_fetch(coap_resource_t *resource, coap_session_t *session,
 
 	fptr_ok(fptr_whitelist_comm_point(rep.c->callback));
 	if ((*rep.c->callback)(rep.c, rep.c->cb_arg, NETEVENT_NOERROR, &rep)) {
-		buffer = rep.c->buffer;
+		buffer = rep.c->buffer;  /* contains the response */
 		const uint8_t* buffer_data = sldns_buffer_begin(buffer);
-		size_t buffer_length =sldns_buffer_remaining(buffer);
-		coap_pdu_set_code(response, COAP_RESPONSE_CODE_CONTENT);
+		size_t buffer_length = sldns_buffer_remaining(buffer);
 
-		coap_add_data(response, buffer_length, (const uint8_t*)buffer_data);
+		coap_pdu_set_code(response, COAP_RESPONSE_CODE_CONTENT);
+		coap_add_data_large_response(
+			resource, session, request, response,
+			query, 553, -1, 0, buffer_length, (const uint8_t*)buffer_data, NULL, NULL);
+	}
+	else {
+		coap_pdu_set_code(response, COAP_RESPONSE_CODE_SERVICE_UNAVAILABLE);
 	}
 }
 
