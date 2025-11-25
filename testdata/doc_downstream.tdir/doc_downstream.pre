@@ -8,7 +8,7 @@ PRE="../.."
 . ../common.sh
 if grep "define HAVE_COAP 1" $PRE/config.h; then echo test enabled; else skip_test "test skipped"; fi
 
-get_random_port 2
+get_random_port 3
 UNBOUND_PORT=$RND_PORT
 UNBOUND_SECURE_PORT=$((UNBOUND_PORT + 1))
 FWD_PORT=$(($RND_PORT + 2))
