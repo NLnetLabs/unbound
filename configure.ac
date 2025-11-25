@@ -2500,6 +2500,10 @@ char *unbound_stat_strdup_log(const char *s, const char* file, int line,
 #define UNBOUND_DNS_OVER_HTTPS_PORT 443
 /** default port for DNS over QUIC traffic. */
 #define UNBOUND_DNS_OVER_QUIC_PORT 853
+/** default port for DNS over COAP over UDP traffic. */
+#define UNBOUND_DNS_OVER_COAP_PORT 5683
+/** default port for DNS over COAP over DTLS over UDP traffic. */
+#define UNBOUND_DNS_OVER_COAPS_PORT 5684
 /** default port for unbound control traffic, registered port with IANA,
     ub-dns-control  8953/tcp    unbound dns nameserver control */
 #define UNBOUND_CONTROL_PORT 8953
