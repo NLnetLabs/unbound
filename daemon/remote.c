@@ -7623,6 +7623,12 @@ fr_worker_pickup_dnstap_changes(struct worker* worker)
 {
 	struct dt_env* w_dtenv = &worker->dtenv;
 	struct dt_env* d_dtenv = worker->daemon->dtenv;
+	log_assert(d_dtenv != NULL || !worker->daemon->cfg->dnstap);
+	if(d_dtenv == NULL) {
+		/* There is no environment when DNSTAP was not enabled
+		 * in the configuration. */
+		return;
+	}
 	w_dtenv->identity = d_dtenv->identity;
 	w_dtenv->len_identity = d_dtenv->len_identity;
 	w_dtenv->version = d_dtenv->version;

@@ -1,3 +1,6 @@
+28 November 2025: Yorgos
+	- For #1375, there is no DNSTAP environment if it wasn't configured.
+
 26 November 2025: Yorgos
 	- Tag for 1.24.2 release.
 	  The repository continues with version 1.24.3.
