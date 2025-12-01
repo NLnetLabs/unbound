@@ -1,3 +1,6 @@
+1 December 2025: Wouter
+	- Fix to add EDNS CO flag to testbound and debug message log.
+
 28 November 2025: Yorgos
 	- For #1375, there is no DNSTAP environment if it wasn't configured.
 

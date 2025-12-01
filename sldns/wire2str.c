@@ -2486,6 +2486,8 @@ int sldns_wire2str_edns_scan(uint8_t** data, size_t* data_len, char** str,
 	w += sldns_str_print(str, str_len, " flags:");
 	if((edns_bits & LDNS_EDNS_MASK_DO_BIT))
 		w += sldns_str_print(str, str_len, " do");
+	if((edns_bits & LDNS_EDNS_MASK_CO_BIT))
+		w += sldns_str_print(str, str_len, " co");
 	/* the extended rcode is the value set, shifted four bits,
 	 * and or'd with the original rcode */
 	if(ext_rcode) {
