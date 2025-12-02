@@ -1,5 +1,8 @@
 # #-- docclient.test --#
 # source the master var file when it's there
+# For the most part, these tests are directly copied from ../doh_downstream.tdir.
+# Some comments are not accurate, as they were inaccurate in doh_downstream as well and are
+# annotated as such
 [ -f ../.tpkg.var.master ] && source ../.tpkg.var.master
 # use .tpkg.var.test for in test variable passing
 [ -f .tpkg.var.test ] && source .tpkg.var.test
@@ -84,6 +87,8 @@ else
 fi
 
 # out of order requests over CoAPS (PSK), the example.com elements take 2 seconds to wait.
+# (inaccuracy from doh_downstream: Only the "www.example.com" element takes 2 second,
+# "www2.element.com" is not set to wait)
 echo ""
 echo "> query www1.example.net. www.example.com. www2.example.net. www2.example.com. www3.example.net."
 $PRE/testcode/docclient.sh -C -P -k doc_downstream.dtls_client_creds -s 127.0.0.1 -p $UNBOUND_SECURE_PORT www1.example.net. A IN www.example.com. A IN www2.example.net A IN www2.example.com. A IN www3.example.net A IN >outfile 2>&1
@@ -155,6 +160,8 @@ fi
 
 # out of order requests over CoAPS (PSK), the example.com elements take 2 seconds to wait.
 # www.example.com present twice, answered twice.
+# (inaccuracy from doh_downstream: The "www.example.com" element is now in cache due to the
+# previous lookup above. It will be answered from cache.)
 echo ""
 echo "> query www1.example.net. www.example.com. www2.example.net. www.example.com. www3.example.net."
 $PRE/testcode/docclient.sh -C -P -k doc_downstream.dtls_client_creds -s 127.0.0.1 -p $UNBOUND_SECURE_PORT www1.example.net. A IN www.example.com. A IN www2.example.net A IN www.example.com. A IN www3.example.net A IN >outfile 2>&1
