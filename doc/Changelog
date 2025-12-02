@@ -1,3 +1,7 @@
+2 December 2025: Wouter
+	- Fix to remove http2 stream mesh state when mesh new request is
+	  dropping the new request.
+
 1 December 2025: Wouter
 	- Fix to add EDNS CO flag to testbound and debug message log.
 	- Fix header comment about EDE reference in validator/val_sigcrypt.h.

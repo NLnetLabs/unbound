@@ -463,6 +463,8 @@ void mesh_new_client(struct mesh_area* mesh, struct query_info* qinfo,
 		if(!mesh_make_new_space(mesh, rep->c->buffer)) {
 			verbose(VERB_ALGO, "Too many queries. dropping "
 				"incoming query.");
+			if(rep->c->use_h2)
+				http2_stream_remove_mesh_state(rep->c->h2_stream);
 			comm_point_drop_reply(rep);
 			mesh->stats_dropped++;
 			return;
@@ -474,6 +476,8 @@ void mesh_new_client(struct mesh_area* mesh, struct query_info* qinfo,
 		if(mesh->num_reply_addrs > mesh->max_reply_states*16) {
 			verbose(VERB_ALGO, "Too many requests queued. "
 				"dropping incoming query.");
+			if(rep->c->use_h2)
+				http2_stream_remove_mesh_state(rep->c->h2_stream);
 			comm_point_drop_reply(rep);
 			mesh->num_queries_replyaddr_limit++;
 			return;
