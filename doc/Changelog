@@ -1,3 +1,11 @@
+3 December 2025: Wouter
+	- Fix http2 drop handling to clear the postpone_drop state so that
+	  other streams on the http2 session are not affected by a drop,
+	  and can clean up properly if also dropped. Fix http2 send reply
+	  so that when there is a send failure is does not recurse into
+	  the mesh functions and also does not drop the connection due to
+	  the condition of one stream.
+
 2 December 2025: Wouter
 	- Fix to remove http2 stream mesh state when mesh new request is
 	  dropping the new request.

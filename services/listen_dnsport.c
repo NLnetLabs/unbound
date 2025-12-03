@@ -2884,6 +2884,7 @@ submit_http_error:
 	sldns_buffer_flip(h2_stream->qbuffer);
 	h2_session->postpone_drop = 1;
 	query_read_done = http2_query_read_done(h2_session, h2_stream);
+	h2_session->postpone_drop = 0;
 	if(query_read_done < 0)
 		return NGHTTP2_ERR_CALLBACK_FAILURE;
 	else if(!query_read_done) {
@@ -2893,11 +2894,9 @@ submit_http_error:
 			 * failure will result in reclaiming (and closing)
 			 * of comm point. */
 			verbose(VERB_QUERY, "http2 query dropped in worker cb");
-			h2_session->postpone_drop = 0;
 			return NGHTTP2_ERR_CALLBACK_FAILURE;
 		}
 		/* nothing to submit right now, query added to mesh. */
-		h2_session->postpone_drop = 0;
 		return 0;
 	}
 	if(!http2_submit_dns_response(h2_session)) {
