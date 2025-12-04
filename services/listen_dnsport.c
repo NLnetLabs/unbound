@@ -108,6 +108,14 @@
 #include <linux/net_tstamp.h>
 #endif
 
+#ifdef HAVE_COAP
+#include <coap3/coap.h>
+#include <stdio.h>
+#include <sys/stat.h>
+#else
+typedef void coap_context_t;
+#endif	/* HAVE_COAP */
+
 /** number of queued TCP connections for listen() */
 #define TCP_BACKLOG 256
 
@@ -1041,19 +1049,12 @@ err:
 #endif
 }
 
-
-/**
- * Create socket from getaddrinfo results
- */
-static int
-make_sock(int stype, const char* ifname, int port,
-	struct addrinfo *hints, int v6only, int* noip6, size_t rcv, size_t snd,
-	int* reuseport, int transparent, int tcp_mss, int nodelay, int freebind,
-	int use_systemd, int dscp, struct unbound_socket* ub_sock,
-	const char* additional)
+static struct addrinfo*
+addrinfo_from_ifname_port(int stype, const char* ifname, int port,
+	struct addrinfo *hints, int *noip6)
 {
-	struct addrinfo *res = NULL;
-	int r, s, inuse, noproto;
+	struct addrinfo* res = NULL;
+	int r;
 	char portbuf[32];
 	snprintf(portbuf, sizeof(portbuf), "%d", port);
 	hints->ai_socktype = stype;
@@ -1062,7 +1063,7 @@ make_sock(int stype, const char* ifname, int port,
 #ifdef USE_WINSOCK
 		if(r == EAI_NONAME && hints->ai_family == AF_INET6){
 			*noip6 = 1; /* 'Host not found' for IP6 on winXP */
-			return -1;
+			return NULL;
 		}
 #endif
 		log_err("node %s:%s getaddrinfo: %s %s",
@@ -1073,6 +1074,46 @@ make_sock(int stype, const char* ifname, int port,
 			""
 #endif
 		);
+		return NULL;
+	}
+	if(!res->ai_addr) {
+		log_err("getaddrinfo returned no address");
+		freeaddrinfo(res);
+		return NULL;
+	}
+	return res;
+}
+
+static int
+init_sock(struct unbound_socket* ub_sock, struct addrinfo *ai, int sock_fd)
+{
+
+	ub_sock->addr = memdup(ai->ai_addr, ai->ai_addrlen);
+	if(!ub_sock->addr) {
+		return -1;
+	}
+	ub_sock->addrlen = ai->ai_addrlen;
+
+	ub_sock->s = sock_fd;
+	ub_sock->fam = ai->ai_family;
+	ub_sock->acl = NULL;
+	return 0;
+}
+
+/**
+ * Create socket from getaddrinfo results
+ */
+static int
+make_sock(int stype, const char* ifname, int port,
+	struct addrinfo *hints, int v6only, int* noip6, size_t rcv, size_t snd,
+	int* reuseport, int transparent, int tcp_mss, int nodelay, int freebind,
+	int use_systemd, int dscp, struct unbound_socket* ub_sock,
+	const char *additional)
+{
+	struct addrinfo* res = addrinfo_from_ifname_port(stype, ifname, port, hints, noip6);
+	int s, inuse, noproto;
+
+	if (res == NULL) {
 		return -1;
 	}
 	if(stype == SOCK_DGRAM) {
@@ -1095,15 +1136,7 @@ make_sock(int stype, const char* ifname, int port,
 		}
 	}
 
-	if(!res->ai_addr) {
-		log_err("getaddrinfo returned no address");
-		freeaddrinfo(res);
-		sock_close(s);
-		return -1;
-	}
-	ub_sock->addr = memdup(res->ai_addr, res->ai_addrlen);
-	ub_sock->addrlen = res->ai_addrlen;
-	if(!ub_sock->addr) {
+	if(init_sock(ub_sock, res, s) == -1) {
 		log_err("out of memory: allocate listening address");
 		freeaddrinfo(res);
 		sock_close(s);
@@ -1111,11 +1144,20 @@ make_sock(int stype, const char* ifname, int port,
 	}
 	freeaddrinfo(res);
 
-	ub_sock->s = s;
-	ub_sock->fam = hints->ai_family;
-	ub_sock->acl = NULL;
-
 	return s;
+}
+
+static int
+port_from_ifname(const char* ifname, const char* port_str, char *newif, size_t newif_size)
+{
+	int port;
+	port = atoi(port_str);
+	if(port < 0 || 0 == port || port > 65535) {
+		log_err("invalid portnumber in interface: %s", ifname);
+		return -1;
+	}
+	(void)strlcpy(newif, ifname, newif_size);
+	return port;
 }
 
 /** make socket and first see if ifname contains port override info */
@@ -1136,14 +1178,10 @@ make_sock_port(int stype, const char* ifname, int port,
 			*noip6 = 0;
 			return -1;
 		}
-		port = atoi(s+1);
-		if(port < 0 || 0 == port || port > 65535) {
-			log_err("invalid portnumber in interface: %s", ifname);
+		if((port = port_from_ifname(ifname, s+1, newif, s-ifname+1)) < 0) {
 			*noip6 = 0;
 			return -1;
 		}
-		(void)strlcpy(newif, ifname, sizeof(newif));
-		newif[s-ifname] = 0;
 		return make_sock(stype, newif, port, hints, v6only, noip6, rcv,
 			snd, reuseport, transparent, tcp_mss, nodelay, freebind,
 			use_systemd, dscp, ub_sock, additional);
@@ -1153,6 +1191,395 @@ make_sock_port(int stype, const char* ifname, int port,
 		dscp, ub_sock, additional);
 }
 
+#ifdef HAVE_COAP
+/**
+ * Create endpoint and initialize values
+ */
+static coap_endpoint_t*
+setup_coap_endpoint(coap_context_t* coap_context,
+					struct sockaddr* sockaddr, socklen_t sockaddr_len,
+					coap_proto_t protocol_type) {
+	coap_endpoint_t* ep;
+	coap_address_t listen_addr;
+
+	coap_address_init(&listen_addr);
+	memcpy(&listen_addr.addr.sa, sockaddr, sizeof(listen_addr.addr.sa));
+	listen_addr.size = sockaddr_len;
+
+	ep = coap_new_endpoint(coap_context, &listen_addr, protocol_type);
+	return ep;
+}
+
+/**
+ * Create CoAP endpoint from getaddrinfo results
+ */
+static int
+make_coap_ep(int stype, const char* ifname, int port,
+	struct addrinfo *hints, int* noip6, struct unbound_socket* ub_sock,
+	coap_context_t* coap_context, int is_docs)
+{
+	struct addrinfo* res = addrinfo_from_ifname_port(stype, ifname, port, hints, noip6);
+	int s, inuse, noproto;
+
+	if (res == NULL) {
+		return -1;
+	}
+	if(stype == SOCK_DGRAM) {
+		struct sockaddr* sockaddr = (struct sockaddr*)res->ai_addr;
+		coap_endpoint_t* ep;
+
+		if(is_docs) {
+			ep = setup_coap_endpoint(coap_context, sockaddr, res->ai_addrlen, COAP_PROTO_DTLS);
+		} else {
+			ep = setup_coap_endpoint(coap_context, sockaddr, res->ai_addrlen, COAP_PROTO_UDP);
+		}
+		if (ep == NULL) {
+			log_err("out of memory: cannot allocate CoAP endpoint");
+			freeaddrinfo(res);
+			return -1;
+		}
+		ub_sock->coap_ep = ep;
+		s = coap_context_get_coap_fd(coap_context);
+		if(s == -1 && inuse) {
+			log_err("bind: address already in use");
+		} else if(s == -1 && noproto && hints->ai_family == AF_INET6){
+			*noip6 = 1;
+		}
+	} else {
+		log_err("CoAP over TCP not yet supported");
+		freeaddrinfo(res);
+		sock_close(s);
+		return -1;
+	}
+
+	if(init_sock(ub_sock, res, s) == -1) {
+		log_err("out of memory: allocate listening address");
+		freeaddrinfo(res);
+		sock_close(s);
+		return -1;
+	}
+	freeaddrinfo(res);
+
+	return s;
+}
+
+/** make coap endpoint and first see if ifname contains port override info */
+static int
+make_coap_ep_port(int stype, const char* ifname, int port,
+	struct addrinfo *hints, int* noip6, struct unbound_socket* ub_sock,
+	coap_context_t* coap_context, int is_docs)
+{
+	char* s = strchr(ifname, '@');
+	if(s) {
+		/* override port with ifspec@port */
+		int port;
+		char newif[128];
+		if((size_t)(s-ifname) >= sizeof(newif)) {
+			log_err("ifname too long: %s", ifname);
+			*noip6 = 0;
+			return -1;
+		}
+		if((port = port_from_ifname(ifname, s+1, newif, s-ifname+1)) < 0) {
+			*noip6 = 0;
+			return -1;
+		}
+		return make_coap_ep(stype, newif, port, hints, noip6, ub_sock, coap_context, is_docs);
+	}
+	return make_coap_ep(stype, ifname, port, hints, noip6, ub_sock, coap_context, is_docs);
+}
+
+static uint8_t oscore_config[] =
+	"master_secret,hex,\"0102030405060708090a0b0c0d0e0f10\"\n"
+	"sender_id,ascii,\"server\"\n"
+	"recipient_id,ascii,\"client\"\n";
+
+static int
+doc_oscore_save_seq_num(uint64_t sender_seq_num, void *param) {
+	FILE* oscore_seq_num_fp = param;
+	if (oscore_seq_num_fp) {
+		rewind(oscore_seq_num_fp);
+		fprintf(oscore_seq_num_fp, "%lu\n", sender_seq_num);
+		fflush(oscore_seq_num_fp);
+	}
+	return 1;
+}
+
+static int
+doc_setup_dtls(
+	coap_context_t* coap_context,
+	const uint8_t* psk,
+	unsigned psk_len,
+	const char* psk_hint,
+	const char* pki_service_key,
+	const char* pki_service_pem,
+	const char* pki_service_verifypem) {
+	if (psk && psk_hint) {
+		/* setup dtls */
+		coap_dtls_spsk_t dtls_psk;
+		memset (&dtls_psk, 0, sizeof (dtls_psk));
+
+		dtls_psk.version				= COAP_DTLS_SPSK_SETUP_VERSION;
+		dtls_psk.psk_info.hint.s		= (const uint8_t*)psk_hint;
+		dtls_psk.psk_info.hint.length	= psk_hint ? strlen(psk_hint) : 0;
+		dtls_psk.psk_info.key.s			= psk;
+		dtls_psk.psk_info.key.length	= psk_len;
+
+		coap_context_set_psk2(coap_context, &dtls_psk);
+	}
+	if (pki_service_key && pki_service_pem) {
+		coap_dtls_pki_t dtls_pki;
+		memset (&dtls_pki, 0, sizeof (dtls_pki));
+
+		dtls_pki.version = COAP_DTLS_PKI_SETUP_VERSION;
+
+		dtls_pki.pki_key.key_type = COAP_PKI_KEY_PEM;
+		dtls_pki.pki_key.key.pem.public_cert = pki_service_pem;
+		dtls_pki.pki_key.key.pem.private_key = pki_service_key ? pki_service_key : pki_service_pem;
+		dtls_pki.pki_key.key.pem.ca_file = pki_service_verifypem;
+
+		coap_context_set_pki(coap_context, &dtls_pki);
+	}
+	return 0;
+}
+
+static int
+doc_setup_oscore(
+	coap_context_t* coap_context,
+	const char* oscore_conf,
+	const char* oscore_seq_file) {
+	if (oscore_conf) {
+		coap_str_const_t oscore_conf_str;
+		struct stat statbuf;
+		/* setup oscore */
+		FILE* oscore_conf_file;
+		FILE* oscore_seq_num_fp = NULL;
+		uint8_t* oscore_conf_buf;
+		size_t oscore_conf_len = 0;
+		uint64_t start_seq_num = 0;
+
+		oscore_conf_file = fopen(oscore_conf, "r");
+		if (!oscore_conf_file) {
+			fatal_exit("Unable to open OSCORE configuration file.\n");
+		}
+		if (fstat(fileno(oscore_conf_file), &statbuf) == -1) {
+			fclose(oscore_conf_file);
+			fatal_exit("Unable to stat OSCORE configuration file.\n");
+		}
+		oscore_conf_len = statbuf.st_size + 1;
+		oscore_conf_buf = coap_malloc(oscore_conf_len);
+		if (!oscore_conf_buf) {
+			fclose(oscore_conf_file);
+			fatal_exit("Unable to allocate OSCORE configuration buffer.\n");
+		}
+		if (fread(oscore_conf_buf, 1, statbuf.st_size, oscore_conf_file) != (size_t)statbuf.st_size) {
+			fclose(oscore_conf_file);
+			coap_free(oscore_conf_buf);
+			fatal_exit("Unable to read OSCORE configuration file");
+		}
+		oscore_conf_buf[statbuf.st_size] = '\000';
+		fclose(oscore_conf_file);
+		oscore_conf_str.s = oscore_conf_buf;
+		oscore_conf_str.length = oscore_conf_len;
+		if (oscore_seq_file) {
+			oscore_seq_num_fp = fopen(oscore_seq_file, "r+");
+			if (oscore_seq_num_fp == NULL) {
+				oscore_seq_num_fp = fopen(oscore_seq_file, "w+");
+				if (oscore_seq_num_fp == NULL) {
+					fatal_exit("Unable to create or open OSCORE sequence number file.\n");
+				}
+			}
+			errno = 0;
+			if (fscanf(oscore_seq_num_fp, "%lu", &start_seq_num) == EOF) {
+				if (errno != 0) {
+					fatal_exit("Failed to read OSCORE sequence number, %s", strerror(errno));
+				}
+			}
+		}
+
+		coap_oscore_conf_t* coap_oscore_conf = coap_new_oscore_conf(
+			oscore_conf_str,
+			doc_oscore_save_seq_num,
+			oscore_seq_num_fp,
+			start_seq_num);
+		coap_free(oscore_conf_buf);
+		if (!coap_oscore_conf) {
+			coap_free_context(coap_context);
+			fatal_exit("Unable to create OSCORE configuration.");
+		}
+		coap_context_oscore_server(coap_context, coap_oscore_conf);
+	}
+	return 0;
+}
+
+static coap_context_t*
+doc_setup_server_context(
+	const uint8_t* dtls_psk,
+	unsigned dtls_psk_len,
+	const char* dtls_psk_hint,
+	const char* dtls_pki_key,
+	const char* dtls_pki_pem,
+	const char* dtls_pki_verifypem,
+	const char* oscore_conf,
+	const char* oscore_seq_file)
+{
+	coap_address_t listen_addr;
+	coap_context_t* coap_context = coap_new_context(NULL);
+
+	coap_context_set_block_mode(coap_context,
+			COAP_BLOCK_USE_LIBCOAP | COAP_BLOCK_SINGLE_BODY);
+
+	if (doc_setup_dtls(
+			coap_context, dtls_psk, dtls_psk_len, dtls_psk_hint,
+			dtls_pki_key, dtls_pki_pem, dtls_pki_verifypem) < 0) {
+		return NULL;
+	}
+	if (doc_setup_oscore(coap_context, oscore_conf, oscore_seq_file) < 0) {
+		return NULL;
+	}
+
+	return coap_context;
+}
+
+coap_bin_const_t* doc_copy_coap_bin_const_t(const coap_bin_const_t* original) {
+	if (original == NULL || original->s == NULL || original->length == 0) {
+		/* No valid data to copy */
+		return NULL;
+	}
+
+	coap_bin_const_t* copy = (coap_bin_const_t*)malloc(sizeof(coap_bin_const_t));
+	if (copy == NULL) {
+		return NULL;
+	}
+
+	uint8_t* s = (uint8_t*)malloc(original->length);
+	if (s == NULL) {
+		free(copy);
+		return NULL;
+	}
+
+	memcpy(s, original->s, original->length);
+	copy->s = s;
+	copy->length = original->length;
+
+	return copy;
+}
+
+static void
+doc_extract_pdu_info(const coap_pdu_t *pdu, struct coap_pdu_response_data *data) {
+	if (!pdu || !data) return;
+
+	data->type = coap_pdu_get_type(pdu);
+	data->code = coap_pdu_get_code(pdu);
+
+	data->mid = coap_pdu_get_mid(pdu);
+
+	coap_bin_const_t original_token = coap_pdu_get_token(pdu);
+	coap_bin_const_t* token = doc_copy_coap_bin_const_t(&original_token);
+
+	data->token = token;
+
+	coap_opt_iterator_t opt_iter;
+	coap_option_iterator_init((coap_pdu_t*)pdu, &opt_iter, COAP_OPT_ALL);
+	coap_opt_t* option;
+	while ((option = coap_option_next(&opt_iter))) {
+		coap_insert_optlist(&data->options, coap_new_optlist(opt_iter.number, coap_opt_length(option), coap_opt_value(option)));
+	}
+}
+
+static void
+doc_handle_fetch(coap_resource_t *resource, coap_session_t *session,
+		const coap_pdu_t *request, const coap_string_t *query,
+		coap_pdu_t *response) {
+
+	struct comm_point* cp = coap_resource_get_userdata(resource);
+
+	size_t size;
+	const uint8_t* data;
+	struct comm_reply rep;
+	struct coap_pdu_response_data* pdu_wrapper = (struct coap_pdu_response_data*)malloc(sizeof(struct coap_pdu_response_data));
+	rep.c = (struct comm_point*)cp;
+	rep.session = session;
+	rep.response = response;
+
+	struct sldns_buffer* buffer;
+
+	doc_extract_pdu_info(response, pdu_wrapper);
+
+	rep.pdu_wrapper = pdu_wrapper;
+
+	/* Get remote address for the CoAP session */
+	const coap_address_t* remote_addr = coap_session_get_addr_remote(session);
+
+	/* Ensure that remote IPv4 or IPv6 addresses are set */
+	if (remote_addr->addr.sa.sa_family == AF_INET) {
+		/* Copy IPv4 address */
+		memcpy(&rep.remote_addr, &remote_addr->addr.sin, sizeof(struct sockaddr_in));
+		rep.remote_addrlen = sizeof(struct sockaddr_in);
+		memcpy(&rep.client_addr, &remote_addr->addr.sin, sizeof(struct sockaddr_in));
+		rep.client_addrlen= sizeof(struct sockaddr_in);
+	} else if (remote_addr->addr.sa.sa_family == AF_INET6) {
+		/* Copy IPv6 address */
+		memcpy(&rep.remote_addr, &remote_addr->addr.sin6, sizeof(struct sockaddr_in6));
+		rep.remote_addrlen = sizeof(struct sockaddr_in6);
+		memcpy(&rep.client_addr, &remote_addr->addr.sin6, sizeof(struct sockaddr_in6));
+		rep.client_addrlen= sizeof(struct sockaddr_in6);
+	}
+
+	if (!coap_get_data(request, &size, &data)) {
+		/* TODO error handling? */
+	}
+
+	/* Ensure that the buffer of the comm_point is large enough */
+	if (sldns_buffer_capacity(rep.c->buffer) < size) {
+		/* TODO expand buffer if necessary */
+	}
+
+	sldns_buffer_clear(rep.c->buffer);
+
+	rep.remote_addrlen = (socklen_t)sizeof(rep.remote_addr);
+
+	sldns_buffer_write(rep.c->buffer, data, size);
+	sldns_buffer_flip(rep.c->buffer);
+
+	rep.srctype = 0;
+	rep.is_proxied = 0;
+
+	fptr_ok(fptr_whitelist_comm_point(rep.c->callback));
+	if ((*rep.c->callback)(rep.c, rep.c->cb_arg, NETEVENT_NOERROR, &rep)) {
+		buffer = rep.c->buffer;  /* contains the response */
+		const uint8_t* buffer_data = sldns_buffer_begin(buffer);
+		size_t buffer_length = sldns_buffer_remaining(buffer);
+
+		coap_pdu_set_code(response, COAP_RESPONSE_CODE_CONTENT);
+		coap_add_data_large_response(
+			resource, session, request, response,
+			query, 553, -1, 0, buffer_length, (const uint8_t*)buffer_data, NULL, NULL);
+	}
+	else {
+		coap_pdu_set_code(response, COAP_RESPONSE_CODE_SERVICE_UNAVAILABLE);
+	}
+}
+
+static void
+doc_init_resources(coap_context_t* ctx, const char* resource_path, struct comm_point* cp) {
+	coap_resource_t* r;
+
+	verbose(VERB_DETAIL, "Registering coap resource `%s`\n", resource_path);
+	if (resource_path[0] == '/')
+	{
+		resource_path += 1;
+	}
+	r = coap_resource_init(coap_make_str_const(""),
+			COAP_RESOURCE_FLAGS_NOTIFY_CON);
+
+	coap_resource_set_userdata(r, cp);
+
+	coap_register_handler(r, COAP_REQUEST_FETCH, doc_handle_fetch);
+
+	coap_add_resource(ctx, r);
+}
+#endif  /* HAVE_COAP */
+
 /**
  * Add port to open ports list.
  * @param list: list head. changed.
@@ -1160,23 +1587,26 @@ make_sock_port(int stype, const char* ifname, int port,
  * @param ftype: if fd is UDP.
  * @param pp2_enabled: if PROXYv2 is enabled for this port.
  * @param ub_sock: socket with address.
- * @return false on failure. list in unchanged then.
+ * @return NULL on failure. list is unchanged then. The item is inserted on success.
  */
-static int
+static struct listen_port*
 port_insert(struct listen_port** list, int s, enum listen_type ftype,
 	int pp2_enabled, struct unbound_socket* ub_sock)
 {
 	struct listen_port* item = (struct listen_port*)malloc(
 		sizeof(struct listen_port));
 	if(!item)
-		return 0;
+		return NULL;
 	item->next = *list;
 	item->fd = s;
 	item->ftype = ftype;
 	item->pp2_enabled = pp2_enabled;
 	item->socket = ub_sock;
+#ifdef HAVE_COAP
+	item->coap_context = NULL;
+#endif  /* HAVE_COAP */
 	*list = item;
-	return 1;
+	return item;
 }
 
 /** set fd to receive software timestamps */
@@ -1288,6 +1718,10 @@ set_recvpktinfo(int s, int family)
  * @param dnscrypt_port: dnscrypt service port number
  * @param dscp: DSCP to use.
  * @param quic_port: dns over quic port number.
+ * @param coap_port: dns over coap port number.
+ * @param coaps_port: dns over coaps port number.
+ * @param coap_context: a pre-created CoAP context for dns over coap.
+ * @param do_oscore: use OSCORE with dns over coap.
  * @param http_notls_downstream: if no tls is used for https downstream.
  * @param sock_queue_timeout: the sock_queue_timeout from config. Seconds to
  * 	wait to discard if UDP packets have waited for long in the socket
@@ -1302,7 +1736,9 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 	struct config_strlist* proxy_protocol_port,
 	int* reuseport, int transparent, int tcp_mss, int freebind,
 	int http2_nodelay, int use_systemd, int dnscrypt_port, int dscp,
-	int quic_port, int http_notls_downstream, int sock_queue_timeout)
+	int quic_port, int coap_port, int coaps_port,
+	coap_context_t *coap_context, int do_oscore,
+	int http_notls_downstream, int sock_queue_timeout)
 {
 	int s, noip6=0;
 	int is_ssl = if_is_ssl(ifname, port, ssl_port, tls_additional_port);
@@ -1310,6 +1746,8 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 	int is_dnscrypt = if_is_dnscrypt(ifname, port, dnscrypt_port);
 	int is_pp2 = if_is_pp2(ifname, port, proxy_protocol_port);
 	int is_doq = if_is_quic(ifname, port, quic_port);
+	int is_doc = if_is_coap(ifname, port, coap_port);
+	int is_docs = if_is_coaps(ifname, port, coaps_port);
 	/* Always set TCP_NODELAY on TLS connection as it speeds up the TLS
 	 * handshake. DoH had already such option so we respect it.
 	 * Otherwise the server waits before sending more handshake data for
@@ -1335,11 +1773,19 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 		}
 	}
 
+	if (is_doc && !coap_context) {
+		fatal_exit("CoAP context not initialized with DoC!");
+	}
+	if (is_doc && !(is_docs || do_oscore)) {
+		fatal_exit("No CoAP security configured.");
+	}
+
 	/* Check if both UDP and TCP ports should be open.
 	 * In the case of encrypted channels, probably an unencrypted channel
 	 * at the same port is not desired. */
 	if((is_ssl || is_https) && !is_doq) do_udp = do_auto = 0;
-	if((is_doq) && !(is_https || is_ssl)) do_tcp = 0;
+	if((is_doc || is_docs) && !is_doq) do_auto = 0;
+	if((is_doq || is_doc || is_docs) && !(is_https || is_ssl)) do_tcp = 0;
 
 	if(do_auto) {
 		ub_sock = calloc(1, sizeof(struct unbound_socket));
@@ -1376,10 +1822,13 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 			return 0;
 		}
 	} else if(do_udp) {
+		struct listen_port* listen_port;
 		enum listen_type udp_port_type;
 		ub_sock = calloc(1, sizeof(struct unbound_socket));
+
 		if(!ub_sock)
 			return 0;
+
 		if(is_dnscrypt) {
 			udp_port_type = listen_type_udp_dnscrypt;
 			add = "dnscrypt";
@@ -1399,19 +1848,62 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 			udp_port_type = listen_type_udp;
 			add = NULL;
 		}
-		/* regular udp socket */
-		if((s = make_sock_port(SOCK_DGRAM, ifname, port, hints, 1,
-			&noip6, rcv, snd, reuseport, transparent,
-			tcp_mss, nodelay, freebind, use_systemd, dscp, ub_sock,
-			add)) == -1) {
-			free(ub_sock->addr);
-			free(ub_sock);
-			if(noip6) {
-				log_warn("IPv6 protocol not available");
-				return 1;
+#ifdef HAVE_COAP
+		if (is_doc) {
+			udp_port_type = listen_type_doc;
+
+			/* coap endpoint */
+			if((s = make_coap_ep_port(SOCK_DGRAM, ifname, port, hints,
+				&noip6, ub_sock, coap_context, 0)) == -1) {
+				free(ub_sock->addr);
+				if (ub_sock->coap_ep) {
+					coap_free_endpoint(ub_sock->coap_ep);
+				}
+				free(ub_sock);
+				if(noip6) {
+					log_warn("IPv6 protocol not available");
+					return 1;
+				}
+				return 0;
 			}
-			return 0;
 		}
+		else if (is_docs) {
+			udp_port_type = listen_type_doc;
+			udp_port_type = listen_type_docs;
+
+			/* coap endpoint */
+			if((s = make_coap_ep_port(SOCK_DGRAM, ifname, port, hints,
+				&noip6, ub_sock, coap_context, is_docs)) == -1) {
+				free(ub_sock->addr);
+				if (ub_sock->coap_ep) {
+					coap_free_endpoint(ub_sock->coap_ep);
+				}
+				free(ub_sock);
+				if(noip6) {
+					log_warn("IPv6 protocol not available");
+					return 1;
+				}
+				return 0;
+			}
+		}
+		else {
+#endif /* HAVE_COAP */
+			/* regular udp socket */
+			if((s = make_sock_port(SOCK_DGRAM, ifname, port, hints, 1,
+				&noip6, rcv, snd, reuseport, transparent,
+				tcp_mss, nodelay, freebind, use_systemd, dscp, ub_sock,
+				add)) == -1) {
+				free(ub_sock->addr);
+				free(ub_sock);
+				if(noip6) {
+					log_warn("IPv6 protocol not available");
+					return 1;
+				}
+				return 0;
+			}
+#ifdef HAVE_COAP
+		}
+#endif
 		if(udp_port_type == listen_type_doq) {
 			if(!set_recvpktinfo(s, hints->ai_family)) {
 				sock_close(s);
@@ -1430,12 +1922,22 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 					udp_port_type = listen_type_udpancil;
 			}
 		}
-		if(!port_insert(list, s, udp_port_type, is_pp2, ub_sock)) {
+		if(!(listen_port = port_insert(list, s, udp_port_type, is_pp2, ub_sock))) {
 			sock_close(s);
 			free(ub_sock->addr);
+#ifdef HAVE_COAP
+			if (ub_sock->coap_ep) {
+				coap_free_endpoint(ub_sock->coap_ep);
+			}
+#endif
 			free(ub_sock);
 			return 0;
 		}
+#ifdef HAVE_COAP
+		if (is_doc || is_docs) {
+			listen_port->coap_context = coap_context;
+		}
+#endif
 	}
 	if(do_tcp) {
 		enum listen_type port_type;
@@ -1535,7 +2037,9 @@ struct listen_dnsport*
 listen_create(struct comm_base* base, struct listen_port* ports,
 	size_t bufsize, int tcp_accept_count, int tcp_idle_timeout,
 	int harden_large_queries, uint32_t http_max_streams,
-	char* http_endpoint, int http_notls, struct tcl_list* tcp_conn_limit,
+	char* http_endpoint, int http_notls,
+	char* coap_endpoint,
+	struct tcl_list* tcp_conn_limit,
 	void* dot_sslctx, void* doh_sslctx, void* quic_sslctx,
 	struct dt_env* dtenv,
 	struct doq_table* doq_table,
@@ -1564,6 +2068,15 @@ listen_create(struct comm_base* base, struct listen_port* ports,
 			cp = comm_point_create_udp(base, ports->fd,
 				front->udp_buff, ports->pp2_enabled, cb,
 				cb_arg, ports->socket);
+#ifdef HAVE_COAP
+		} else if(ports->ftype == listen_type_doc ||
+				  ports->ftype == listen_type_docs) {
+			cp = comm_point_create_doc(base, ports->fd,
+				front->udp_buff, ports->pp2_enabled, cb,
+				cb_arg, ports->socket);
+			cp->coap_context = ports->coap_context;
+			doc_init_resources(cp->coap_context, coap_endpoint, cp);
+#endif	/* HAVE_COAP */
 		} else if(ports->ftype == listen_type_doq) {
 #ifndef HAVE_NGTCP2
 			log_warn("Unbound is not compiled with "
@@ -1897,10 +2410,55 @@ int resolve_interface_names(char** ifs, int num_ifs,
 #endif /* HAVE_GETIFADDRS */
 }
 
+#ifdef HAVE_COAP
+static coap_context_t* coap_context_from_cfg(struct config_file *cfg)
+{
+	coap_context_t* coap_context = NULL;
+
+	char* oscore_conf = NULL;
+	char* oscore_seq_file = NULL;
+
+	if (cfg->coap_oscore_conf && cfg->coap_oscore_seq_file) {
+		oscore_conf = fname_after_chroot(cfg->coap_oscore_conf, cfg, 1);
+
+		if (!oscore_conf) {
+			log_err("out of memory in OSCORE configuration fname");
+			return NULL;
+		}
+		if (cfg->coap_oscore_seq_file) {
+			oscore_seq_file = fname_after_chroot(cfg->coap_oscore_seq_file, cfg, 1);
+
+			if (!oscore_seq_file) {
+				free(oscore_conf);
+				log_err("out of memory in OSCORE sequence file fname");
+				return NULL;
+			}
+		}
+	}
+
+	if (cfg->coaps_psk && cfg->coaps_psk_id && cfg->ssl_service_key && cfg->ssl_service_pem) {
+		coap_context = doc_setup_server_context(
+			(const uint8_t *)cfg->coaps_psk, strlen(cfg->coaps_psk), cfg->coaps_psk_id,
+			cfg->ssl_service_key, cfg->ssl_service_pem, NULL,
+			oscore_conf, oscore_seq_file);
+
+		if (!coap_context) {
+			fatal_exit("Unable to create CoAP server context for DoC.");
+		}
+	}
+
+	free(oscore_conf);
+	free(oscore_seq_file);
+
+	return coap_context;
+}
+#endif
+
 struct listen_port*
 listening_ports_open(struct config_file* cfg, char** ifs, int num_ifs,
 	int* reuseport)
 {
+	coap_context_t* coap_context = NULL;
 	struct listen_port* list = NULL;
 	struct addrinfo hints;
 	int i, do_ip4, do_ip6;
@@ -1909,6 +2467,7 @@ listening_ports_open(struct config_file* cfg, char** ifs, int num_ifs,
 	do_ip6 = cfg->do_ip6;
 	do_tcp = cfg->do_tcp;
 	do_auto = cfg->if_automatic && cfg->do_udp;
+	int do_oscore = 0;
 	if(cfg->incoming_num_tcp == 0)
 		do_tcp = 0;
 
@@ -1921,6 +2480,12 @@ listening_ports_open(struct config_file* cfg, char** ifs, int num_ifs,
 	hints.ai_family = AF_UNSPEC;
 #ifndef INET6
 	do_ip6 = 0;
+#endif
+#ifdef HAVE_COAP
+	coap_context = coap_context_from_cfg(cfg);
+	if (coap_context) {
+		do_oscore = (cfg->coap_oscore_conf != NULL);
+	}
 #endif
 	if(!do_ip4 && !do_ip6) {
 		return NULL;
@@ -1963,7 +2528,9 @@ listening_ports_open(struct config_file* cfg, char** ifs, int num_ifs,
 						cfg->tcp_mss, cfg->ip_freebind,
 						cfg->http_nodelay, cfg->use_systemd,
 						cfg->dnscrypt_port, cfg->ip_dscp,
-						cfg->quic_port, cfg->http_notls_downstream,
+						cfg->quic_port, cfg->coap_port, cfg->coaps_port,
+						coap_context, do_oscore,
+						cfg->http_notls_downstream,
 						cfg->sock_queue_timeout)) {
 						listening_ports_free(list);
 						return NULL;
@@ -1982,7 +2549,9 @@ listening_ports_open(struct config_file* cfg, char** ifs, int num_ifs,
 						cfg->tcp_mss, cfg->ip_freebind,
 						cfg->http_nodelay, cfg->use_systemd,
 						cfg->dnscrypt_port, cfg->ip_dscp,
-						cfg->quic_port, cfg->http_notls_downstream,
+						cfg->quic_port, cfg->coap_port, cfg->coaps_port,
+						coap_context, do_oscore,
+						cfg->http_notls_downstream,
 						cfg->sock_queue_timeout)) {
 						listening_ports_free(list);
 						return NULL;
@@ -2003,7 +2572,9 @@ listening_ports_open(struct config_file* cfg, char** ifs, int num_ifs,
 				cfg->tcp_mss, cfg->ip_freebind,
 				cfg->http_nodelay, cfg->use_systemd,
 				cfg->dnscrypt_port, cfg->ip_dscp,
-				cfg->quic_port, cfg->http_notls_downstream,
+				cfg->quic_port, cfg->coap_port, cfg->coaps_port,
+				coap_context, do_oscore,
+				cfg->http_notls_downstream,
 				cfg->sock_queue_timeout)) {
 				listening_ports_free(list);
 				return NULL;
@@ -2021,7 +2592,9 @@ listening_ports_open(struct config_file* cfg, char** ifs, int num_ifs,
 				cfg->tcp_mss, cfg->ip_freebind,
 				cfg->http_nodelay, cfg->use_systemd,
 				cfg->dnscrypt_port, cfg->ip_dscp,
-				cfg->quic_port, cfg->http_notls_downstream,
+				cfg->quic_port, cfg->coap_port, cfg->coaps_port,
+				coap_context, do_oscore,
+				cfg->http_notls_downstream,
 				cfg->sock_queue_timeout)) {
 				listening_ports_free(list);
 				return NULL;
@@ -2041,7 +2614,9 @@ listening_ports_open(struct config_file* cfg, char** ifs, int num_ifs,
 				cfg->tcp_mss, cfg->ip_freebind,
 				cfg->http_nodelay, cfg->use_systemd,
 				cfg->dnscrypt_port, cfg->ip_dscp,
-				cfg->quic_port, cfg->http_notls_downstream,
+				cfg->quic_port, cfg->coap_port, cfg->coaps_port,
+				coap_context, do_oscore,
+				cfg->http_notls_downstream,
 				cfg->sock_queue_timeout)) {
 				listening_ports_free(list);
 				return NULL;
@@ -2059,7 +2634,9 @@ listening_ports_open(struct config_file* cfg, char** ifs, int num_ifs,
 				cfg->tcp_mss, cfg->ip_freebind,
 				cfg->http_nodelay, cfg->use_systemd,
 				cfg->dnscrypt_port, cfg->ip_dscp,
-				cfg->quic_port, cfg->http_notls_downstream,
+				cfg->quic_port, cfg->coap_port, cfg->coaps_port,
+				coap_context, do_oscore,
+				cfg->http_notls_downstream,
 				cfg->sock_queue_timeout)) {
 				listening_ports_free(list);
 				return NULL;
@@ -2080,6 +2657,11 @@ void listening_ports_free(struct listen_port* list)
 		}
 		/* rc_ports don't have ub_socket */
 		if(list->socket) {
+#ifdef HAVE_COAP
+			if (list->socket->coap_ep) {
+				coap_free_endpoint(list->socket->coap_ep);
+			}
+#endif
 			free(list->socket->addr);
 			free(list->socket);
 		}
