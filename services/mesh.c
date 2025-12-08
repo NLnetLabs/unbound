@@ -231,6 +231,7 @@ mesh_create(struct module_stack* stack, struct module_env* env)
 	mesh->ans_expired = 0;
 	mesh->ans_cachedb = 0;
 	mesh->num_queries_discard_timeout = 0;
+	mesh->num_queries_replyaddr_limit = 0;
 	mesh->num_queries_wait_limit = 0;
 	mesh->num_dns_error_reports = 0;
 	mesh->max_reply_states = env->cfg->num_queries_per_thread;
@@ -462,6 +463,8 @@ void mesh_new_client(struct mesh_area* mesh, struct query_info* qinfo,
 		if(!mesh_make_new_space(mesh, rep->c->buffer)) {
 			verbose(VERB_ALGO, "Too many queries. dropping "
 				"incoming query.");
+			if(rep->c->use_h2)
+				http2_stream_remove_mesh_state(rep->c->h2_stream);
 			comm_point_drop_reply(rep);
 			mesh->stats_dropped++;
 			return;
@@ -473,8 +476,10 @@ void mesh_new_client(struct mesh_area* mesh, struct query_info* qinfo,
 		if(mesh->num_reply_addrs > mesh->max_reply_states*16) {
 			verbose(VERB_ALGO, "Too many requests queued. "
 				"dropping incoming query.");
+			if(rep->c->use_h2)
+				http2_stream_remove_mesh_state(rep->c->h2_stream);
 			comm_point_drop_reply(rep);
-			mesh->stats_dropped++;
+			mesh->num_queries_replyaddr_limit++;
 			return;
 		}
 	}
@@ -1765,6 +1770,8 @@ void mesh_query_done(struct mesh_state* mstate)
 					http2_stream_remove_mesh_state(r->h2_stream);
 				comm_point_drop_reply(&r->query_reply);
 				mstate->reply_list = reply_list;
+				log_assert(mstate->s.env->mesh->num_reply_addrs > 0);
+				mstate->s.env->mesh->num_reply_addrs--;
 				mstate->s.env->mesh->num_queries_discard_timeout++;
 				continue;
 			}
@@ -1801,6 +1808,8 @@ void mesh_query_done(struct mesh_state* mstate)
 			}
 			comm_point_drop_reply(&r->query_reply);
 			mstate->reply_list = reply_list;
+			log_assert(mstate->s.env->mesh->num_reply_addrs > 0);
+			mstate->s.env->mesh->num_reply_addrs--;
 		} else {
 			struct sldns_buffer* r_buffer = r->query_reply.c->buffer;
 			if(r->query_reply.c->tcp_req_info) {
@@ -2291,6 +2300,7 @@ mesh_stats_clear(struct mesh_area* mesh)
 	memset(&mesh->rpz_action[0], 0, sizeof(size_t)*UB_STATS_RPZ_ACTION_NUM);
 	mesh->ans_nodata = 0;
 	mesh->num_queries_discard_timeout = 0;
+	mesh->num_queries_replyaddr_limit = 0;
 	mesh->num_queries_wait_limit = 0;
 	mesh->num_dns_error_reports = 0;
 }

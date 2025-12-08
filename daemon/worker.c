@@ -1444,6 +1444,24 @@ check_ip_ratelimit(struct worker* worker, struct sockaddr_storage* addr,
 	return 1;
 }
 
+/*
+ * This is the callback function when a request arrives. It is passed
+ * the packet and user argument. Return true to send a reply.
+ * This is of type comm_point_callback_type. The struct comm_point contains
+ * more comments on the comm_point.callback member about the function.
+ * @param c: the comm_point where the request arrives on.
+ * @param arg: the user argument for the callback, the worker.
+ * @param error: This can be NETEVENT_NOERROR, NETEVENT_TIMEOUT,
+ *	NETEVENT_CLOSED or other comm point callback error values.
+ * @param repinfo: The reply info, use it to send a reply. If the reply
+ *	is immediate, return 1. If the reply is later on return 0 and save
+ *	the repinfo, to call comm_point_send_reply on.
+ * @return 1 to sent a reply straight away, for like cache response so that
+ *	no allocation needs to be done. And only internal preallocated buffers
+ *	are used. Return 0 and save the repinfo to reply later, for responses
+ *	that need to be looked up. Return 0 and call comm_point_drop_reply on
+ *	the repinfo to drop the response.
+ */
 int
 worker_handle_request(struct comm_point* c, void* arg, int error,
 	struct comm_reply* repinfo)

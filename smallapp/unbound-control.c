@@ -236,6 +236,8 @@ static void pr_stats(const char* nm, struct ub_stats_info* s)
 		s->svr.num_queries_cookie_invalid);
 	PR_UL_NM("num.queries_discard_timeout",
 		s->svr.num_queries_discard_timeout);
+	PR_UL_NM("num.queries_replyaddr_limit",
+		s->svr.num_queries_replyaddr_limit);
 	PR_UL_NM("num.queries_wait_limit", s->svr.num_queries_wait_limit);
 	PR_UL_NM("num.cachehits",
 		s->svr.num_queries - s->svr.num_queries_missed_cache);
@@ -263,6 +265,7 @@ static void pr_stats(const char* nm, struct ub_stats_info* s)
 	PR_UL_NM("requestlist.exceeded", s->mesh_dropped);
 	PR_UL_NM("requestlist.current.all", s->mesh_num_states);
 	PR_UL_NM("requestlist.current.user", s->mesh_num_reply_states);
+	PR_UL_NM("requestlist.current.replies", s->mesh_num_reply_addrs);
 #ifndef S_SPLINT_S
 	sumwait.tv_sec = s->mesh_replies_sum_wait_sec;
 	sumwait.tv_usec = s->mesh_replies_sum_wait_usec;

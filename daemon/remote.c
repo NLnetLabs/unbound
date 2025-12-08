@@ -801,6 +801,8 @@ print_stats(RES* ssl, const char* nm, struct ub_stats_info* s)
 		(unsigned long)s->svr.num_queries_cookie_invalid)) return 0;
 	if(!ssl_printf(ssl, "%s.num.queries_discard_timeout"SQ"%lu\n", nm,
 		(unsigned long)s->svr.num_queries_discard_timeout)) return 0;
+	if(!ssl_printf(ssl, "%s.num.queries_replyaddr_limit"SQ"%lu\n", nm,
+		(unsigned long)s->svr.num_queries_replyaddr_limit)) return 0;
 	if(!ssl_printf(ssl, "%s.num.queries_wait_limit"SQ"%lu\n", nm,
 		(unsigned long)s->svr.num_queries_wait_limit)) return 0;
 	if(!ssl_printf(ssl, "%s.num.cachehits"SQ"%lu\n", nm,
@@ -845,6 +847,8 @@ print_stats(RES* ssl, const char* nm, struct ub_stats_info* s)
 		(unsigned long)s->mesh_num_states)) return 0;
 	if(!ssl_printf(ssl, "%s.requestlist.current.user"SQ"%lu\n", nm,
 		(unsigned long)s->mesh_num_reply_states)) return 0;
+	if(!ssl_printf(ssl, "%s.requestlist.current.replies"SQ"%lu\n", nm,
+		(unsigned long)s->mesh_num_reply_addrs)) return 0;
 #ifndef S_SPLINT_S
 	sumwait.tv_sec = s->mesh_replies_sum_wait_sec;
 	sumwait.tv_usec = s->mesh_replies_sum_wait_usec;
@@ -6177,6 +6181,7 @@ fr_atomic_copy_cfg(struct config_file* oldcfg, struct config_file* cfg,
 	COPY_VAR_ptr(ipset_name_v6);
 #endif
 	COPY_VAR_int(ede);
+	COPY_VAR_int(iter_scrub_promiscuous);
 }
 #endif /* ATOMIC_POINTER_LOCK_FREE && HAVE_LINK_ATOMIC_STORE */
 
@@ -7611,6 +7616,41 @@ fr_worker_pickup_outside_network(struct worker* worker)
 	}
 }
 
+#ifdef USE_DNSTAP
+/** Fast reload, the worker picks up changes to DNSTAP configuration. */
+static void
+fr_worker_pickup_dnstap_changes(struct worker* worker)
+{
+	struct dt_env* w_dtenv = &worker->dtenv;
+	struct dt_env* d_dtenv = worker->daemon->dtenv;
+	log_assert(d_dtenv != NULL || !worker->daemon->cfg->dnstap);
+	if(d_dtenv == NULL) {
+		/* There is no environment when DNSTAP was not enabled
+		 * in the configuration. */
+		return;
+	}
+	w_dtenv->identity = d_dtenv->identity;
+	w_dtenv->len_identity = d_dtenv->len_identity;
+	w_dtenv->version = d_dtenv->version;
+	w_dtenv->len_version = d_dtenv->len_version;
+	w_dtenv->log_resolver_query_messages =
+		d_dtenv->log_resolver_query_messages;
+	w_dtenv->log_resolver_response_messages =
+		d_dtenv->log_resolver_response_messages;
+	w_dtenv->log_client_query_messages =
+		d_dtenv->log_client_query_messages;
+	w_dtenv->log_client_response_messages =
+		d_dtenv->log_client_response_messages;
+	w_dtenv->log_forwarder_query_messages =
+		d_dtenv->log_forwarder_query_messages;
+	w_dtenv->log_forwarder_response_messages =
+		d_dtenv->log_forwarder_response_messages;
+	lock_basic_lock(&d_dtenv->sample_lock);
+	w_dtenv->sample_rate = d_dtenv->sample_rate;
+	lock_basic_unlock(&d_dtenv->sample_lock);
+}
+#endif /* USE_DNSTAP */
+
 void
 fast_reload_worker_pickup_changes(struct worker* worker)
 {
@@ -7639,6 +7679,9 @@ fast_reload_worker_pickup_changes(struct worker* worker)
 	worker->env.cachedb_enabled = worker->daemon->env->cachedb_enabled;
 #endif
 	fr_worker_pickup_outside_network(worker);
+#ifdef USE_DNSTAP
+	fr_worker_pickup_dnstap_changes(worker);
+#endif
 }
 
 /** fast reload thread, handle reload_stop notification, send reload stop

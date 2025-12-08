@@ -783,7 +783,7 @@ sockaddr_cmp_scopeid(struct sockaddr_storage* addr1, socklen_t len1,
 }
 
 int
-addr_is_ip6(struct sockaddr_storage* addr, socklen_t len)
+addr_is_ip6(const struct sockaddr_storage* addr, socklen_t len)
 {
 	if(len == (socklen_t)sizeof(struct sockaddr_in6) &&
 		((struct sockaddr_in6*)addr)->sin6_family == AF_INET6)

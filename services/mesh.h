@@ -141,6 +141,8 @@ struct mesh_area {
 	size_t rpz_action[UB_STATS_RPZ_ACTION_NUM];
 	/** stats, number of queries removed due to discard-timeout */
 	size_t num_queries_discard_timeout;
+	/** stats, number of queries removed due to replyaddr limit */
+	size_t num_queries_replyaddr_limit;
 	/** stats, number of queries removed due to wait-limit */
 	size_t num_queries_wait_limit;
 	/** stats, number of dns error reports generated */

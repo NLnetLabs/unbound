@@ -6728,7 +6728,6 @@ comm_point_send_reply(struct comm_reply *repinfo)
 			tcp_req_info_send_reply(repinfo->c->tcp_req_info);
 		} else if(repinfo->c->use_h2) {
 			if(!http2_submit_dns_response(repinfo->c->h2_session)) {
-				comm_point_drop_reply(repinfo);
 				return;
 			}
 			repinfo->c->h2_stream = NULL;

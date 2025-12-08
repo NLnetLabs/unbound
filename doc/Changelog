@@ -1,3 +1,77 @@
+3 December 2025: Wouter
+	- Fix http2 drop handling to clear the postpone_drop state so that
+	  other streams on the http2 session are not affected by a drop,
+	  and can clean up properly if also dropped. Fix http2 send reply
+	  so that when there is a send failure is does not recurse into
+	  the mesh functions and also does not drop the connection due to
+	  the condition of one stream.
+
+2 December 2025: Wouter
+	- Fix to remove http2 stream mesh state when mesh new request is
+	  dropping the new request.
+
+1 December 2025: Wouter
+	- Fix to add EDNS CO flag to testbound and debug message log.
+	- Fix header comment about EDE reference in validator/val_sigcrypt.h.
+
+28 November 2025: Yorgos
+	- For #1375, there is no DNSTAP environment if it wasn't configured.
+
+26 November 2025: Yorgos
+	- Tag for 1.24.2 release.
+	  The repository continues with version 1.24.3.
+
+13 November 2025: Wouter
+	- Merge #1374: Mesh reply counters.
+	  This adds the statistics num.queries.replyaddr_limit and
+	  requestlist.current.replies.
+	- Merge #1375: Copy DNSTAP changes from daemon to workers after
+	  fast_reload.
+
+12 November 2025: Wouter
+	- Fix that when discard timeout drops packet, they are accounted as
+	  less reply addresses in use in the mesh area.
+	- iana portlist updated.
+
+6 November 2025: Wouter
+	- Fix add comment to worker_handle_request function that explain it.
+	- Fix configure test for noreturn attribute so it compiles without
+	  warning.
+	- Fix configure test for nonstring attribute so that it does not
+	  accept when the compiler prints a warning about an unknown
+	  attribute.
+
+4 November 2025: Wouter
+	- Fix dns64 log output to log the default instead of a null string.
+
+1 November 2025: Yorgos
+	- Fix #1366: Infra cache does not work correctly for NAT64, by
+	  moving the NAT64 synthesis from the iterator when selecting a target
+	  address, to the delegation point itself when adding target
+	  addresses.
+
+27 October 2025: Yorgos
+	- Merge #1331 from Jitka Plesníková: Replace deprecated $function by
+	  new $action, for SWIG.
+	- Fix #1165, document the possible circular dependency when using
+	  host names instead of IP addresses for name servers in stub/forward
+	  zones and log a warning when spotted in the configuration.
+
+24 October 2025: Yorgos
+	- unbound.conf man page updates to include a preview of the section
+	  clauses and some reformatting around the use of "clause", "option"
+	  and "attributes". Based on Havard Eidnes' suggestions on the
+	  mailing list.
+	- Fix unused attribute warning in redis.c when threads are not
+	  supported.
+	- For #1364, use OPENSSL_VERSION_TEXT instead of OPENSSL_VERSION_NUMBER
+	  for part of the configure script. OPENSSL_VERSION_TEXT is more
+	  consistent across versions.
+
+22 October 2025: Yorgos
+	- Tag for 1.24.1 release.
+	  The repository continues with version 1.24.2.
+
 15 October 2025: Wouter
 	- Fix to drop UDP for discard-timeout, but not stream connections.
 	- Fix to reply with SERVFAIL when the wait-limit is exceeded.

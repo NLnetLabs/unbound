@@ -2436,8 +2436,6 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 	int tf_policy;
 	struct delegpt_addr* target;
 	struct outbound_entry* outq;
-	struct sockaddr_storage real_addr;
-	socklen_t real_addrlen;
 	int auth_fallback = 0;
 	uint8_t* qout_orig = NULL;
 	size_t qout_orig_len = 0;
@@ -3060,17 +3058,6 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 			iq->dnssec_lame_query?" but lame_query anyway": "");
 	}
 
-	real_addr = target->addr;
-	real_addrlen = target->addrlen;
-
-	if(ie->nat64.use_nat64 && target->addr.ss_family == AF_INET) {
-		addr_to_nat64(&target->addr, &ie->nat64.nat64_prefix_addr,
-			ie->nat64.nat64_prefix_addrlen, ie->nat64.nat64_prefix_net,
-			&real_addr, &real_addrlen);
-		log_name_addr(VERB_QUERY, "applied NAT64:",
-			iq->dp->name, &real_addr, real_addrlen);
-	}
-
 	fptr_ok(fptr_whitelist_modenv_send_query(qstate->env->send_query));
 	outq = (*qstate->env->send_query)(&iq->qinfo_out,
 		iq->chase_flags | (iq->chase_to_rd?BIT_RD:0),
@@ -3082,7 +3069,7 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 		!qstate->blacklist&&(!iter_qname_indicates_dnssec(qstate->env,
 		&iq->qinfo_out)||target->attempts==1)?0:BIT_CD),
 		iq->dnssec_expected, iq->caps_fallback || is_caps_whitelisted(
-		ie, iq), sq_check_ratelimit, &real_addr, real_addrlen,
+		ie, iq), sq_check_ratelimit, &target->addr, target->addrlen,
 		iq->dp->name, iq->dp->namelen,
 		(iq->dp->tcp_upstream || qstate->env->cfg->tcp_upstream),
 		(iq->dp->ssl_upstream || qstate->env->cfg->ssl_upstream),
@@ -3099,7 +3086,7 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 			return error_response_cache(qstate, id, LDNS_RCODE_SERVFAIL);
 		}
 		log_addr(VERB_QUERY, "error sending query to auth server",
-			&real_addr, real_addrlen);
+			&target->addr, target->addrlen);
 		if(qstate->env->cfg->qname_minimisation)
 			iq->minimisation_state = SKIP_MINIMISE_STATE;
 		return next_state(iq, QUERYTARGETS_STATE);

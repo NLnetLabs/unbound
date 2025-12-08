@@ -16,6 +16,7 @@ server:
 	minimal-responses: no
 	ede: yes
 	ede-serve-expired: yes
+	iter-scrub-promiscuous: no
 
 stub-zone:
 	name: "."

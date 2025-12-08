@@ -12,14 +12,14 @@ sinclude(dnscrypt/dnscrypt.m4)
 # must be numbers. ac_defun because of later processing
 m4_define([VERSION_MAJOR],[1])
 m4_define([VERSION_MINOR],[24])
-m4_define([VERSION_MICRO],[1])
+m4_define([VERSION_MICRO],[3])
 AC_INIT([unbound],m4_defn([VERSION_MAJOR]).m4_defn([VERSION_MINOR]).m4_defn([VERSION_MICRO]),[unbound-bugs@nlnetlabs.nl or https://github.com/NLnetLabs/unbound/issues],[unbound])
 AC_SUBST(UNBOUND_VERSION_MAJOR, [VERSION_MAJOR])
 AC_SUBST(UNBOUND_VERSION_MINOR, [VERSION_MINOR])
 AC_SUBST(UNBOUND_VERSION_MICRO, [VERSION_MICRO])
 
 LIBUNBOUND_CURRENT=9
-LIBUNBOUND_REVISION=34
+LIBUNBOUND_REVISION=36
 LIBUNBOUND_AGE=1
 # 1.0.0 had 0:12:0
 # 1.0.1 had 0:13:0
@@ -121,6 +121,8 @@ LIBUNBOUND_AGE=1
 # 1.23.1 had 9:32:1
 # 1.24.0 had 9:33:1
 # 1.24.1 had 9:34:1
+# 1.24.2 had 9:35:1
+# 1.24.3 had 9:36:1
 
 #   Current  -- the number of the binary API that we're implementing
 #   Revision -- which iteration of the implementation of the binary
@@ -360,7 +362,14 @@ AC_MSG_CHECKING(whether the C compiler (${CC-cc}) accepts the "noreturn" attribu
 AC_CACHE_VAL(ac_cv_c_noreturn_attribute,
 [ac_cv_c_noreturn_attribute=no
 AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[ #include <stdio.h>
-__attribute__((noreturn)) void f(int x) { printf("%d", x); }
+#ifdef STDC_HEADERS
+# include <stdlib.h>
+#else
+# ifdef HAVE_STDLIB_H
+#  include <stdlib.h>
+# endif
+#endif
+__attribute__((noreturn)) void f(int x) { printf("%d", x); exit(1); }
 ]], [[
    f(1);
 ]])],[ac_cv_c_noreturn_attribute="yes"],[ac_cv_c_noreturn_attribute="no"])
@@ -1253,7 +1262,7 @@ case "$enable_ecdsa" in
 	      # see if OPENSSL 1.0.0 or later (has EVP MD and Verify independency)
 	      AC_MSG_CHECKING([if openssl supports SHA2 and ECDSA with EVP])
 	      if grep OPENSSL_VERSION_TEXT $ssldir_include/openssl/opensslv.h | grep "OpenSSL" >/dev/null; then
-		if grep OPENSSL_VERSION_NUMBER $ssldir_include/openssl/opensslv.h | grep 0x0 >/dev/null; then
+		if grep OPENSSL_VERSION_TEXT $ssldir_include/openssl/opensslv.h | grep "OpenSSL 0\." >/dev/null; then
 		  AC_MSG_RESULT([no])
 		  AC_DEFINE_UNQUOTED([USE_ECDSA_EVP_WORKAROUND], [1], [Define this to enable an EVP workaround for older openssl])
 		else
