@@ -1157,21 +1157,14 @@ az_domain_add_rr(struct auth_data* node, uint16_t rr_type, uint32_t rr_ttl,
 	return 1;
 }
 
-/** insert RR into zone, ignore duplicates */
+/** insert RR as name,rdata into zone, ignore duplicates */
 static int
-az_insert_rr(struct auth_zone* z, uint8_t* rr, size_t rr_len,
-	size_t dname_len, int* duplicate)
+az_insert_rr_as_rdata(struct auth_zone* z, uint8_t* dname, size_t dname_len,
+	uint16_t rr_type, uint16_t rr_class, uint32_t rr_ttl,
+	uint8_t* rdata, size_t rdatalen, int* duplicate,
+	uint8_t* rr, size_t rr_len)
 {
 	struct auth_data* node;
-	uint8_t* dname = rr;
-	uint16_t rr_type = sldns_wirerr_get_type(rr, rr_len, dname_len);
-	uint16_t rr_class = sldns_wirerr_get_class(rr, rr_len, dname_len);
-	uint32_t rr_ttl = sldns_wirerr_get_ttl(rr, rr_len, dname_len);
-	size_t rdatalen = ((size_t)sldns_wirerr_get_rdatalen(rr, rr_len,
-		dname_len))+2;
-	/* rdata points to rdata prefixed with uint16 rdatalength */
-	uint8_t* rdata = sldns_wirerr_get_rdatawl(rr, rr_len, dname_len);
-
 	if(rr_class != z->dclass) {
 		log_err("wrong class for RR");
 		return 0;
@@ -1192,6 +1185,24 @@ az_insert_rr(struct auth_zone* z, uint8_t* rr, size_t rr_len,
 			return 0;
 	}
 	return 1;
+}
+
+/** insert RR into zone, ignore duplicates */
+static int
+az_insert_rr(struct auth_zone* z, uint8_t* rr, size_t rr_len,
+	size_t dname_len, int* duplicate)
+{
+	uint8_t* dname = rr;
+	uint16_t rr_type = sldns_wirerr_get_type(rr, rr_len, dname_len);
+	uint16_t rr_class = sldns_wirerr_get_class(rr, rr_len, dname_len);
+	uint32_t rr_ttl = sldns_wirerr_get_ttl(rr, rr_len, dname_len);
+	size_t rdatalen = ((size_t)sldns_wirerr_get_rdatalen(rr, rr_len,
+		dname_len))+2;
+	/* rdata points to rdata prefixed with uint16 rdatalength */
+	uint8_t* rdata = sldns_wirerr_get_rdatawl(rr, rr_len, dname_len);
+
+	return az_insert_rr_as_rdata(z, dname, dname_len, rr_type, rr_class,
+		rr_ttl, rdata, rdatalen, duplicate, rr, rr_len);
 }
 
 /** Remove rr from node, ignores nonexisting RRs,
@@ -1566,6 +1577,8 @@ az_parse_file(struct auth_zone* z, FILE* in, uint8_t* rr, size_t rrbuflen,
 
 /** Structure for simdzone parse state */
 struct az_parse_state {
+	/** The zone that is processed. */
+	struct auth_zone* z;
 	/** number of errors, if 0 it was read successfully. */
 	int errors;
 };
@@ -1607,16 +1620,50 @@ az_parse_accept(zone_parser_t *parser, const zone_name_t *owner,
 	uint16_t type, uint16_t dclass, uint32_t ttl, uint16_t rdlength,
 	const uint8_t *rdata, void *user_data)
 {
+	uint8_t buf[65536], *rr = NULL;
+	size_t rr_len = 0;
 	struct az_parse_state* state = (struct az_parse_state*)user_data;
+	if(verbosity >= 7) {
+		char dname[LDNS_MAX_DOMAINLEN], t[16], c[16];
+		dname_str((uint8_t*)owner->octets, dname);
+		sldns_wire2str_type_buf(type, t, sizeof(t));
+		sldns_wire2str_class_buf(dclass, c, sizeof(c));
+		verbose(7, "zone parse record %s %s %s", dname, c, t);
+	}
 
+	/* Create rr buffer */
+	if((size_t)owner->length + 10 /* type, class, ttl, rdlength */ +
+		(size_t)rdlength > sizeof(buf)) {
+		char dname[LDNS_MAX_DOMAINLEN], t[16], c[16];
+		dname_str((uint8_t*)owner->octets, dname);
+		sldns_wire2str_type_buf(type, t, sizeof(t));
+		sldns_wire2str_class_buf(dclass, c, sizeof(c));
+		log_err("record exceeds buffer length, %s %s %s", dname, c, t);
+		return ZONE_SYNTAX_ERROR;
+	}
+	rr = buf;
+	rr_len = (size_t)owner->length + 10 /* type, class, ttl, rdlength */ +
+		(size_t)rdlength;
+	memcpy(buf, owner->octets, owner->length);
+	sldns_write_uint16(buf+(size_t)owner->length, type);
+	sldns_write_uint16(buf+(size_t)owner->length+2, dclass);
+	sldns_write_uint32(buf+(size_t)owner->length+4, ttl);
+	sldns_write_uint16(buf+(size_t)owner->length+8, rdlength);
+	memmove(buf+(size_t)owner->length+10, rdata, rdlength);
+
+	/* Duplicates can be ignored, do not insert them twice. */
+	if(!az_insert_rr_as_rdata(state->z, (uint8_t*)owner->octets,
+		owner->length, type, dclass, ttl, buf+(size_t)owner->length+8,
+		(size_t)rdlength+2, NULL, rr, rr_len)) {
+		char dname[LDNS_MAX_DOMAINLEN], t[16], c[16];
+		dname_str((uint8_t*)owner->octets, dname);
+		sldns_wire2str_type_buf(type, t, sizeof(t));
+		sldns_wire2str_class_buf(dclass, c, sizeof(c));
+		log_err("record insert allocation failed, %s %s %s",
+			dname, c, t);
+		return ZONE_OUT_OF_MEMORY;
+	}
 	(void)parser;
-	(void)owner;
-	(void)type;
-	(void)dclass;
-	(void)ttl;
-	(void)rdlength;
-	(void)rdata;
-	(void)state;
 	return 0;
 }
 
@@ -1631,9 +1678,9 @@ az_parse_include(zone_parser_t *parser, const char *file,
 {
 	struct az_parse_state* state = (struct az_parse_state*)user_data;
 	(void)parser;
-	(void)file;
-	(void)path;
 	(void)state;
+	verbose(6, "zone parse descended into include file %s (full path %s)",
+		file, path);
 	return 0;
 }
 
@@ -1663,6 +1710,7 @@ az_parse_file_simdzone(struct auth_zone* z, char* zfilename,
 	options.include.callback = &az_parse_include;
 
 	memset(&state, 0, sizeof(state));
+	state.z = z;
 	(void)cfg;
 
 	/* Parse and process all RRs.  */
@@ -1723,7 +1771,7 @@ auth_zone_read_zonefile(struct auth_zone* z, struct config_file* cfg)
 		state.origin_len = z->namelen;
 	}
 	/* parse the (toplevel) file */
-	if(0) {
+	if(1) {
 		/* Use simdzone. */
 		fclose(in); /* simdzone is going to open the file. */
 		if(!az_parse_file_simdzone(z, zfilename, cfg)) {
