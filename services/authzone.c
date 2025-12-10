@@ -703,13 +703,15 @@ az_rrset_find_rrsig(struct packed_rrset_data* d, uint8_t* rdata, size_t len,
 
 /** see if rdata is duplicate */
 static int
-rdata_duplicate(struct packed_rrset_data* d, uint8_t* rdata, size_t len)
+rdata_duplicate(struct packed_rrset_data* d, uint8_t* rdata_wol, size_t len)
 {
-	size_t i;
+	size_t i, rr_len = len+2;
+	uint16_t len16 = htons(len);
 	for(i=0; i<d->count + d->rrsig_count; i++) {
-		if(d->rr_len[i] != len)
+		if(d->rr_len[i] != rr_len)
 			continue;
-		if(memcmp(d->rr_data[i], rdata, len) == 0)
+		if(memcmp(d->rr_data[i], &len16, 2) == 0 &&
+		   memcmp(d->rr_data[i]+2, rdata_wol, len) == 0)
 			return 1;
 	}
 	return 0;
@@ -726,6 +728,19 @@ rrsig_rdata_get_type_covered(uint8_t* rdata, size_t rdatalen)
 	if(rdatalen < 4)
 		return 0;
 	return sldns_read_uint16(rdata+2);
+}
+
+/** get rrsig type covered from rdata.
+ * @param rdata_wol: rdata in wireformat, without the prefix rdlength.
+ * @param rdatalen: length of rdata buffer.
+ * @return type covered (or 0).
+ */
+static uint16_t
+rrsig_rdata_get_type_covered_wol(uint8_t* rdata_wol, size_t rdatalen)
+{
+	if(rdatalen < 2)
+		return 0;
+	return sldns_read_uint16(rdata_wol);
 }
 
 /** remove RR from existing RRset. Also sig, if it is a signature.
@@ -793,7 +808,7 @@ rrset_remove_rr(struct auth_rrset* rrset, size_t index)
 /** add RR to existing RRset. If insert_sig is true, add to rrsigs. 
  * This reallocates the packed rrset for a new one */
 static int
-rrset_add_rr(struct auth_rrset* rrset, uint32_t rr_ttl, uint8_t* rdata,
+rrset_add_rr(struct auth_rrset* rrset, uint32_t rr_ttl, uint8_t* rdata_wol,
 	size_t rdatalen, int insert_sig)
 {
 	struct packed_rrset_data* d, *old = rrset->data;
@@ -801,7 +816,7 @@ rrset_add_rr(struct auth_rrset* rrset, uint32_t rr_ttl, uint8_t* rdata,
 
 	d = (struct packed_rrset_data*)calloc(1, packed_rrset_sizeof(old)
 		+ sizeof(size_t) + sizeof(uint8_t*) + sizeof(time_t)
-		+ rdatalen);
+		+ 2 /* rdlen */ + rdatalen);
 	if(!d) {
 		log_err("out of memory");
 		return 0;
@@ -824,8 +839,8 @@ rrset_add_rr(struct auth_rrset* rrset, uint32_t rr_ttl, uint8_t* rdata,
 		memmove(d->rr_len+d->count, old->rr_len+old->count,
 			old->rrsig_count*sizeof(size_t));
 	if(!insert_sig)
-		d->rr_len[d->count-1] = rdatalen;
-	else	d->rr_len[total-1] = rdatalen;
+		d->rr_len[d->count-1] = rdatalen + 2;
+	else	d->rr_len[total-1] = rdatalen + 2;
 	packed_rrset_ptr_fixup(d);
 	if((time_t)rr_ttl < d->ttl)
 		d->ttl = rr_ttl;
@@ -850,10 +865,12 @@ rrset_add_rr(struct auth_rrset* rrset, uint32_t rr_ttl, uint8_t* rdata,
 	/* insert new value */
 	if(!insert_sig) {
 		d->rr_ttl[d->count-1] = rr_ttl;
-		memmove(d->rr_data[d->count-1], rdata, rdatalen);
+		sldns_write_uint16(d->rr_data[d->count-1], rdatalen);
+		memmove(d->rr_data[d->count-1]+2, rdata_wol, rdatalen);
 	} else {
 		d->rr_ttl[total-1] = rr_ttl;
-		memmove(d->rr_data[total-1], rdata, rdatalen);
+		sldns_write_uint16(d->rr_data[total-1], rdatalen);
+		memmove(d->rr_data[total-1]+2, rdata_wol, rdatalen);
 	}
 
 	rrset->data = d;
@@ -861,10 +878,11 @@ rrset_add_rr(struct auth_rrset* rrset, uint32_t rr_ttl, uint8_t* rdata,
 	return 1;
 }
 
-/** Create new rrset for node with packed rrset with one RR element */
+/** Create new rrset for node with packed rrset with one RR element.
+ * rdata_wol is the rdata without prefixed rdlength. */
 static struct auth_rrset*
 rrset_create(struct auth_data* node, uint16_t rr_type, uint32_t rr_ttl,
-	uint8_t* rdata, size_t rdatalen)
+	uint8_t* rdata_wol, size_t rdatalen)
 {
 	struct auth_rrset* rrset = (struct auth_rrset*)calloc(1,
 		sizeof(*rrset));
@@ -879,7 +897,7 @@ rrset_create(struct auth_data* node, uint16_t rr_type, uint32_t rr_ttl,
 	/* the rrset data structure, with one RR */
 	d = (struct packed_rrset_data*)calloc(1,
 		sizeof(struct packed_rrset_data) + sizeof(size_t) +
-		sizeof(uint8_t*) + sizeof(time_t) + rdatalen);
+		sizeof(uint8_t*) + sizeof(time_t) + 2 /* rdlen*/ + rdatalen);
 	if(!d) {
 		free(rrset);
 		log_err("out of memory");
@@ -894,9 +912,10 @@ rrset_create(struct auth_data* node, uint16_t rr_type, uint32_t rr_ttl,
 	d->rr_data[0] = (uint8_t*)&(d->rr_ttl[1]);
 
 	/* insert the RR */
-	d->rr_len[0] = rdatalen;
+	d->rr_len[0] = rdatalen + 2;
 	d->rr_ttl[0] = rr_ttl;
-	memmove(d->rr_data[0], rdata, rdatalen);
+	sldns_write_uint16(d->rr_data[0], rdatalen);
+	memmove(d->rr_data[0]+2, rdata_wol, rdatalen);
 	d->count++;
 
 	/* insert rrset into linked list for domain */
@@ -1080,14 +1099,14 @@ rrsigs_copy_from_rrset_to_rrsigset(struct auth_rrset* rrset,
 	 * duplicates are ignored */
 	for(i=rrset->data->count;
 		i<rrset->data->count+rrset->data->rrsig_count; i++) {
-		uint8_t* rdata = rrset->data->rr_data[i];
-		size_t rdatalen = rrset->data->rr_len[i];
+		uint8_t* rdata_wol = rrset->data->rr_data[i]+2;
+		size_t rdatalen = rrset->data->rr_len[i]-2;
 		time_t rr_ttl  = rrset->data->rr_ttl[i];
 
-		if(rdata_duplicate(rrsigset->data, rdata, rdatalen)) {
+		if(rdata_duplicate(rrsigset->data, rdata_wol, rdatalen)) {
 			continue;
 		}
-		if(!rrset_add_rr(rrsigset, rr_ttl, rdata, rdatalen, 0))
+		if(!rrset_add_rr(rrsigset, rr_ttl, rdata_wol, rdatalen, 0))
 			return 0;
 	}
 	return 1;
@@ -1097,32 +1116,35 @@ rrsigs_copy_from_rrset_to_rrsigset(struct auth_rrset* rrset,
  * rdata points to buffer with rdatalen octets, starts with 2bytelength. */
 static int
 az_domain_add_rr(struct auth_data* node, uint16_t rr_type, uint32_t rr_ttl,
-	uint8_t* rdata, size_t rdatalen, int* duplicate)
+	uint8_t* rdata_wol, size_t rdatalen, int* duplicate)
 {
 	struct auth_rrset* rrset;
 	/* packed rrsets have their rrsigs along with them, sort them out */
 	if(rr_type == LDNS_RR_TYPE_RRSIG) {
-		uint16_t ctype = rrsig_rdata_get_type_covered(rdata, rdatalen);
+		uint16_t ctype = rrsig_rdata_get_type_covered_wol(rdata_wol,
+			rdatalen);
 		if((rrset=az_domain_rrset(node, ctype))!= NULL) {
 			/* a node of the correct type exists, add the RRSIG
 			 * to the rrset of the covered data type */
-			if(rdata_duplicate(rrset->data, rdata, rdatalen)) {
+			if(rdata_duplicate(rrset->data, rdata_wol, rdatalen)) {
 				if(duplicate) *duplicate = 1;
 				return 1;
 			}
-			if(!rrset_add_rr(rrset, rr_ttl, rdata, rdatalen, 1))
+			if(!rrset_add_rr(rrset, rr_ttl, rdata_wol, rdatalen,
+				1))
 				return 0;
 		} else if((rrset=az_domain_rrset(node, rr_type))!= NULL) {
 			/* add RRSIG to rrset of type RRSIG */
-			if(rdata_duplicate(rrset->data, rdata, rdatalen)) {
+			if(rdata_duplicate(rrset->data, rdata_wol, rdatalen)) {
 				if(duplicate) *duplicate = 1;
 				return 1;
 			}
-			if(!rrset_add_rr(rrset, rr_ttl, rdata, rdatalen, 0))
+			if(!rrset_add_rr(rrset, rr_ttl, rdata_wol, rdatalen,
+				0))
 				return 0;
 		} else {
 			/* create rrset of type RRSIG */
-			if(!rrset_create(node, rr_type, rr_ttl, rdata,
+			if(!rrset_create(node, rr_type, rr_ttl, rdata_wol,
 				rdatalen))
 				return 0;
 		}
@@ -1130,17 +1152,18 @@ az_domain_add_rr(struct auth_data* node, uint16_t rr_type, uint32_t rr_ttl,
 		/* normal RR type */
 		if((rrset=az_domain_rrset(node, rr_type))!= NULL) {
 			/* add data to existing node with data type */
-			if(rdata_duplicate(rrset->data, rdata, rdatalen)) {
+			if(rdata_duplicate(rrset->data, rdata_wol, rdatalen)) {
 				if(duplicate) *duplicate = 1;
 				return 1;
 			}
-			if(!rrset_add_rr(rrset, rr_ttl, rdata, rdatalen, 0))
+			if(!rrset_add_rr(rrset, rr_ttl, rdata_wol, rdatalen,
+				0))
 				return 0;
 		} else {
 			struct auth_rrset* rrsig;
 			/* create new node with data type */
-			if(!(rrset=rrset_create(node, rr_type, rr_ttl, rdata,
-				rdatalen)))
+			if(!(rrset=rrset_create(node, rr_type, rr_ttl,
+				rdata_wol, rdatalen)))
 				return 0;
 
 			/* see if node of type RRSIG has signatures that
@@ -1157,11 +1180,13 @@ az_domain_add_rr(struct auth_data* node, uint16_t rr_type, uint32_t rr_ttl,
 	return 1;
 }
 
-/** insert RR as name,rdata into zone, ignore duplicates */
+/** insert RR as name,rdata into zone, ignore duplicates.
+ * The rdata_wol is the rdata without the prefix rdlength, because simdzone
+ * returns that as the parsed rdata byte string. */
 static int
 az_insert_rr_as_rdata(struct auth_zone* z, uint8_t* dname, size_t dname_len,
 	uint16_t rr_type, uint16_t rr_class, uint32_t rr_ttl,
-	uint8_t* rdata, size_t rdatalen, int* duplicate,
+	uint8_t* rdata_wol, size_t rdatalen, int* duplicate,
 	uint8_t* rr, size_t rr_len)
 {
 	struct auth_data* node;
@@ -1173,15 +1198,40 @@ az_insert_rr_as_rdata(struct auth_zone* z, uint8_t* dname, size_t dname_len,
 		log_err("cannot create domain");
 		return 0;
 	}
-	if(!az_domain_add_rr(node, rr_type, rr_ttl, rdata, rdatalen,
+	if(!az_domain_add_rr(node, rr_type, rr_ttl, rdata_wol, rdatalen,
 		duplicate)) {
 		log_err("cannot add RR to domain");
 		return 0;
 	}
 	if(z->rpz) {
+		uint8_t* rdata_wl;
+		uint8_t buf[65536];
+		if(rr == NULL) {
+			/* spool it into buffer. */
+			if(dname_len + 10 /* type, class, ttl, rdlength */ +
+				rdatalen > sizeof(buf)) {
+				char dstr[LDNS_MAX_DOMAINLEN], t[16], c[16];
+				dname_str(dname, dstr);
+				sldns_wire2str_type_buf(rr_type, t, sizeof(t));
+				sldns_wire2str_class_buf(rr_class, c, sizeof(c));
+				log_err("record exceeds buffer length, %s %s %s", dstr, c, t);
+				return ZONE_SYNTAX_ERROR;
+			}
+			rr = buf;
+			rr_len = dname_len
+				+ 10 /* type, class, ttl, rdlength */ +
+				rdatalen;
+			memcpy(buf, dname, dname_len);
+			sldns_write_uint16(buf+dname_len, rr_type);
+			sldns_write_uint16(buf+dname_len+2, rr_class);
+			sldns_write_uint32(buf+dname_len+4, rr_ttl);
+			sldns_write_uint16(buf+dname_len+8, rdatalen);
+			memmove(buf+dname_len+10, rdata_wol, rdatalen);
+		}
+		rdata_wl = sldns_wirerr_get_rdatawl(rr, rr_len, dname_len);
 		if(!(rpz_insert_rr(z->rpz, z->name, z->namelen, dname,
-			dname_len, rr_type, rr_class, rr_ttl, rdata, rdatalen,
-			rr, rr_len)))
+			dname_len, rr_type, rr_class, rr_ttl, rdata_wl,
+			rdatalen+2, rr, rr_len)))
 			return 0;
 	}
 	return 1;
@@ -1197,12 +1247,12 @@ az_insert_rr(struct auth_zone* z, uint8_t* rr, size_t rr_len,
 	uint16_t rr_class = sldns_wirerr_get_class(rr, rr_len, dname_len);
 	uint32_t rr_ttl = sldns_wirerr_get_ttl(rr, rr_len, dname_len);
 	size_t rdatalen = ((size_t)sldns_wirerr_get_rdatalen(rr, rr_len,
-		dname_len))+2;
-	/* rdata points to rdata prefixed with uint16 rdatalength */
-	uint8_t* rdata = sldns_wirerr_get_rdatawl(rr, rr_len, dname_len);
+		dname_len));
+	/* rdata points to rdata without prefix rdlength. */
+	uint8_t* rdata_wol = sldns_wirerr_get_rdata(rr, rr_len, dname_len);
 
 	return az_insert_rr_as_rdata(z, dname, dname_len, rr_type, rr_class,
-		rr_ttl, rdata, rdatalen, duplicate, rr, rr_len);
+		rr_ttl, rdata_wol, rdatalen, duplicate, rr, rr_len);
 }
 
 /** Remove rr from node, ignores nonexisting RRs,
@@ -1620,8 +1670,6 @@ az_parse_accept(zone_parser_t *parser, const zone_name_t *owner,
 	uint16_t type, uint16_t dclass, uint32_t ttl, uint16_t rdlength,
 	const uint8_t *rdata, void *user_data)
 {
-	uint8_t buf[65536], *rr = NULL;
-	size_t rr_len = 0;
 	struct az_parse_state* state = (struct az_parse_state*)user_data;
 	if(verbosity >= 7) {
 		char dname[LDNS_MAX_DOMAINLEN], t[16], c[16];
@@ -1631,30 +1679,10 @@ az_parse_accept(zone_parser_t *parser, const zone_name_t *owner,
 		verbose(7, "zone parse record %s %s %s", dname, c, t);
 	}
 
-	/* Create rr buffer */
-	if((size_t)owner->length + 10 /* type, class, ttl, rdlength */ +
-		(size_t)rdlength > sizeof(buf)) {
-		char dname[LDNS_MAX_DOMAINLEN], t[16], c[16];
-		dname_str((uint8_t*)owner->octets, dname);
-		sldns_wire2str_type_buf(type, t, sizeof(t));
-		sldns_wire2str_class_buf(dclass, c, sizeof(c));
-		log_err("record exceeds buffer length, %s %s %s", dname, c, t);
-		return ZONE_SYNTAX_ERROR;
-	}
-	rr = buf;
-	rr_len = (size_t)owner->length + 10 /* type, class, ttl, rdlength */ +
-		(size_t)rdlength;
-	memcpy(buf, owner->octets, owner->length);
-	sldns_write_uint16(buf+(size_t)owner->length, type);
-	sldns_write_uint16(buf+(size_t)owner->length+2, dclass);
-	sldns_write_uint32(buf+(size_t)owner->length+4, ttl);
-	sldns_write_uint16(buf+(size_t)owner->length+8, rdlength);
-	memmove(buf+(size_t)owner->length+10, rdata, rdlength);
-
 	/* Duplicates can be ignored, do not insert them twice. */
 	if(!az_insert_rr_as_rdata(state->z, (uint8_t*)owner->octets,
-		owner->length, type, dclass, ttl, buf+(size_t)owner->length+8,
-		(size_t)rdlength+2, NULL, rr, rr_len)) {
+		owner->length, type, dclass, ttl, (uint8_t*)rdata, rdlength,
+		NULL, NULL, 0)) {
 		char dname[LDNS_MAX_DOMAINLEN], t[16], c[16];
 		dname_str((uint8_t*)owner->octets, dname);
 		sldns_wire2str_type_buf(type, t, sizeof(t));
