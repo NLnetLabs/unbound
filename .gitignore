@@ -3,11 +3,15 @@
 /.libs/
 /.source
 /Makefile
+/aclocal.m4
 /autom4te.cache/
+/config.guess
 /config.h
 /config.h.in~
 /config.log
 /config.status
+/config.sub
+/configure
 /configure~
 /dnstap/dnstap_config.h
 /dnscrypt/dnscrypt_config.h
@@ -25,6 +29,7 @@
 /doc/unbound.conf.5
 /libtool
 /libunbound.la
+/ltmain.sh
 /_unbound.la
 /smallapp/unbound-control-setup.sh
 /unbound
