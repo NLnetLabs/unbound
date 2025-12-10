@@ -74,6 +74,9 @@
 #include "validator/val_utils.h"
 #include "zone.h"
 #include <ctype.h>
+#ifdef HAVE_SYS_STAT_H
+#include <sys/stat.h>
+#endif
 
 /** bytes to use for NSEC3 hash buffer. 20 for sha1 */
 #define N3HASHBUFLEN 32
@@ -1750,13 +1753,23 @@ az_parse_file_simdzone(struct auth_zone* z, char* zfilename,
 	return 1;
 }
 
+/** See if the file can be accessed, or if it does not exist. Look at errno. */
+static int
+file_exists(char* filename)
+{
+	struct stat buf;
+	if(stat(filename, &buf) < 0) {
+		return 0;
+	}
+	return 1;
+}
+
 int
 auth_zone_read_zonefile(struct auth_zone* z, struct config_file* cfg)
 {
 	uint8_t rr[LDNS_RR_BUF_SIZE];
 	struct sldns_file_parse_state state;
 	char* zfilename;
-	FILE* in;
 	if(!z || !z->zonefile || z->zonefile[0]==0)
 		return 1; /* no file, or "", nothing to read */
 	
@@ -1769,8 +1782,7 @@ auth_zone_read_zonefile(struct auth_zone* z, struct config_file* cfg)
 		dname_str(z->name, nm);
 		verbose(VERB_ALGO, "read zonefile %s for %s", zfilename, nm);
 	}
-	in = fopen(zfilename, "r");
-	if(!in) {
+	if(!file_exists(zfilename)) {
 		char* n = sldns_wire2str_dname(z->name, z->namelen);
 		if(z->zone_is_slave && errno == ENOENT) {
 			/* we fetch the zone contents later, no file yet */
@@ -1803,7 +1815,6 @@ auth_zone_read_zonefile(struct auth_zone* z, struct config_file* cfg)
 	/* parse the (toplevel) file */
 	if(1) {
 		/* Use simdzone. */
-		fclose(in); /* simdzone is going to open the file. */
 		if(!az_parse_file_simdzone(z, zfilename, cfg)) {
 			char* n = sldns_wire2str_dname(z->name, z->namelen);
 			log_err("error parsing zonefile %s for %s",
@@ -1812,6 +1823,16 @@ auth_zone_read_zonefile(struct auth_zone* z, struct config_file* cfg)
 			return 0;
 		}
 	} else {
+		/* Read with sldns_str2wire functions. */
+		FILE* in;
+		in = fopen(zfilename, "r");
+		if(!in) {
+			char* n = sldns_wire2str_dname(z->name, z->namelen);
+			log_err("cannot open zonefile %s for %s: %s",
+				zfilename, n?n:"error", strerror(errno));
+			free(n);
+			return 0;
+		}
 		if(!az_parse_file(z, in, rr, sizeof(rr), &state, zfilename, 0, cfg)) {
 			char* n = sldns_wire2str_dname(z->name, z->namelen);
 			log_err("error parsing zonefile %s for %s",
