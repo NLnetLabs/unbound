@@ -1629,6 +1629,8 @@ az_parse_file(struct auth_zone* z, FILE* in, uint8_t* rr, size_t rrbuflen,
 struct az_parse_state {
 	/** The zone that is processed. */
 	struct auth_zone* z;
+	/** The config */
+	struct config_file* cfg;
 	/** number of errors, if 0 it was read successfully. */
 	int errors;
 };
@@ -1739,7 +1741,7 @@ az_parse_file_simdzone(struct auth_zone* z, char* zfilename,
 
 	memset(&state, 0, sizeof(state));
 	state.z = z;
-	(void)cfg;
+	state.cfg = cfg;
 
 	/* Parse and process all RRs.  */
 	if (zone_parse(&parser, &options, &buffers, zfilename, &state) != 0) {
