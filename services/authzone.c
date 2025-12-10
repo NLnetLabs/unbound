@@ -705,10 +705,10 @@ az_rrset_find_rrsig(struct packed_rrset_data* d, uint8_t* rdata, size_t len,
 static int
 rdata_duplicate(struct packed_rrset_data* d, uint8_t* rdata_wol, size_t len)
 {
-	size_t i, rr_len = len+2;
+	size_t i, rdatawl_len = len+2;
 	uint16_t len16 = htons(len);
 	for(i=0; i<d->count + d->rrsig_count; i++) {
-		if(d->rr_len[i] != rr_len)
+		if(d->rr_len[i] != rdatawl_len)
 			continue;
 		if(memcmp(d->rr_data[i], &len16, 2) == 0 &&
 		   memcmp(d->rr_data[i]+2, rdata_wol, len) == 0)
@@ -1215,7 +1215,7 @@ az_insert_rr_as_rdata(struct auth_zone* z, uint8_t* dname, size_t dname_len,
 				sldns_wire2str_type_buf(rr_type, t, sizeof(t));
 				sldns_wire2str_class_buf(rr_class, c, sizeof(c));
 				log_err("record exceeds buffer length, %s %s %s", dstr, c, t);
-				return ZONE_SYNTAX_ERROR;
+				return 0;
 			}
 			rr = buf;
 			rr_len = dname_len
