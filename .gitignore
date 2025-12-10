@@ -27,6 +27,7 @@
 /doc/unbound-host.1
 /doc/unbound.8
 /doc/unbound.conf.5
+/install-sh
 /libtool
 /libunbound.la
 /ltmain.sh
