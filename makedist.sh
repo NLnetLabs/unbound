@@ -448,6 +448,9 @@ if [ "$DOWIN" = "yes" ]; then
     	rm -r autom4te* || echo "ignored"
 	rm -f config.h.in~ || echo "ignore absence of config.h.in~ file."
 	rm -f configure~ || echo "ignore absence of configure~ file."
+	rm -r simdzone/autom4te* || echo "ignored"
+	rm -f simdzone/config.h.in~ || echo "ignore absence of simdzone/config.h.in~ file."
+	rm -f simdzone/configure~ || echo "ignore absence of simdzone/configure~ file."
     fi
 
     if test "`uname`" = "Linux"; then 
@@ -638,6 +641,9 @@ autoreconf -fi || error_cleanup "Autoconf failed."
 rm -r autom4te* || error_cleanup "Failed to remove autoconf cache directory."
 rm -f config.h.in~ || echo "ignore absence of config.h.in~ file."
 rm -f configure~ || echo "ignore absence of configure~ file."
+rm -r simdzone/autom4te* || echo "ignored"
+rm -f simdzone/config.h.in~ || echo "ignore absence of simdzone/config.h.in~ file."
+rm -f simdzone/configure~ || echo "ignore absence of simdzone/configure~ file."
 
 info "Building lexer and parser."
 echo "#include \"config.h\"" > util/configlexer.c || error_cleanup "Failed to create configlexer"
@@ -684,6 +690,9 @@ if [ "$RECONFIGURE" = "yes" ]; then
     rm -r autom4te* || error_cleanup "Failed to remove autoconf cache directory."
     rm -f config.h.in~ || echo "ignore absence of config.h.in~ file."
     rm -f configure~ || echo "ignore absence of configure~ file."
+    rm -r simdzone/autom4te* || echo "ignored"
+    rm -f simdzone/config.h.in~ || echo "ignore absence of simdzone/config.h.in~ file."
+    rm -f simdzone/configure~ || echo "ignore absence of simdzone/configure~ file."
 fi
 
 replace_all doc/README
