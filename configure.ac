@@ -182,13 +182,6 @@ AC_REQUIRE_AUX_FILE([install-sh])
 if test ! -f install-sh; then
     AC_MSG_WARN([./install-sh is missing, use `libtoolize -ci` or `autoreconf -fi` to add it])
 fi
-# Check if simdzone is there
-if test ! -d simdzone; then
-    AC_MSG_WARN([simdzone module seems missing, use `git submodule update --init` to add it, when on a source repository compile.])
-fi
-if test ! -f simdzone/configure; then
-    AC_MSG_WARN([simdzone/configure seems missing, use `autoreconf -fi` to add it.])
-fi
 
 #
 # Determine configuration file
