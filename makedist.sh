@@ -142,7 +142,7 @@ check_git_repo () {
 create_temp_dir () {
     # Creating temp directory
     info "Creating temporary working directory"
-    temp_dir=`mktemp -d unbound-dist-XXXXXX`
+    temp_dir=`mktemp -t -d unbound-dist-XXXXXX`
     info "Directory '$temp_dir' created."
     cd $temp_dir
 }
@@ -709,7 +709,7 @@ info "Renaming Unbound directory to unbound-$version."
 cd ..
 mv unbound unbound-$version || error_cleanup "Failed to rename unbound directory."
 
-tarfile="../unbound-$version.tar.gz"
+tarfile="$cwd/unbound-$version.tar.gz"
 
 if [ -f $tarfile ]; then
     (question "The file $tarfile already exists.  Overwrite?" \
@@ -717,7 +717,7 @@ if [ -f $tarfile ]; then
 fi
 
 info "Creating tar unbound-$version.tar.gz"
-tar czf ../unbound-$version.tar.gz unbound-$version || error_cleanup "Failed to create tar file."
+tar czf $tarfile unbound-$version || error_cleanup "Failed to create tar file."
 
 cleanup
 
