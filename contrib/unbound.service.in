@@ -83,7 +83,7 @@ SystemCallFilter=~@clock @cpu-emulation @debug @keyring @module mount @obsolete 
 RestrictNamespaces=yes
 LockPersonality=yes
 RestrictSUIDSGID=yes
-ReadWritePaths=@UNBOUND_RUN_DIR@ @UNBOUND_CHROOT_DIR@
+ReadWritePaths=@UNBOUND_READWRITE_PATHS@
 
 # Below rules are needed when chroot is enabled (usually it's enabled by default).
 # If chroot is disabled like chroot: "" then they may be safely removed.

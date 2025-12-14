@@ -4677,6 +4677,15 @@ printf "%s\n" "#define CHROOT_DIR \"$hdr_chroot\"" >>confdefs.h
 
 
 
+if test "$UNBOUND_CHROOT_DIR" = "$UNBOUND_RUN_DIR"
+then :
+  UNBOUND_READWRITE_PATHS="$UNBOUND_RUN_DIR"
+else
+  UNBOUND_READWRITE_PATHS="$UNBOUND_RUN_DIR $UNBOUND_CHROOT_DIR"
+fi
+
+
+
 # Check whether --with-share-dir was given.
 if test ${with_share_dir+y}
 then :
