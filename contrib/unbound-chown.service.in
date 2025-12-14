@@ -61,6 +61,7 @@ WantedBy=multi-user.target
 
 [Service]
 ExecStart=/bin/chown -R unbound:unbound @UNBOUND_RUN_DIR@
+ExecStart=/bin/chown -R unbound:unbound @UNBOUND_CHROOT_DIR@
 ExecStart=/bin/chown unbound:unbound @UNBOUND_ROOTKEY_FILE@
 NotifyAccess=main
 Type=oneshot
@@ -85,4 +86,4 @@ SystemCallArchitectures=native
 RestrictNamespaces=yes
 LockPersonality=yes
 RestrictSUIDSGID=yes
-ReadWritePaths=@UNBOUND_RUN_DIR@ @UNBOUND_ROOTKEY_FILE@
+ReadWritePaths=@UNBOUND_RUN_DIR@ @UNBOUND_CHROOT_DIR@ @UNBOUND_ROOTKEY_FILE@
