@@ -3587,6 +3587,9 @@ The :ref:`local-zone: nodefault<unbound.conf.local-zone.type.nodefault>` (or
     If enabled, a query is attempted without this stub section if it fails.
     The data could not be retrieved and would have caused SERVFAIL because the
     servers are unreachable, instead it is tried without this stub section.
+    This can lead to using less specific configured forward/stub/auth zones if
+    any, or end up to otherwise normal recursive resolution for that particular
+    query.
 
     Default: no
 
@@ -3699,9 +3702,11 @@ cache).
 
 
 @@UAHL@unbound.conf.forward@forward-first@@: *<yes or no>*
-    If a forwarded query is met with a SERVFAIL error, and this option is
-    enabled, Unbound will fall back to normal recursive resolution for this
-    query as if no query forwarding had been specified.
+    If a forwarded query is met with a SERVFAIL error and this option is
+    enabled Unbound will fall back to less specific resolution.
+    This can lead to using less specific configured forward/stub/auth zones if
+    any, or end up to otherwise normal recursive resolution for that particular
+    query.
 
     Default: no
 
