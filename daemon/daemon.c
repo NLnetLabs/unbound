@@ -558,9 +558,11 @@ daemon_create_workers(struct daemon* daemon)
 	verbose(VERB_ALGO, "total of %d outgoing ports available", numport);
 
 #ifdef HAVE_NGTCP2
-	daemon->doq_table = doq_table_create(daemon->cfg, daemon->rand);
-	if(!daemon->doq_table)
-		fatal_exit("could not create doq_table: out of memory");
+	if (cfg_has_quic(daemon->cfg)) {
+		daemon->doq_table = doq_table_create(daemon->cfg, daemon->rand);
+		if(!daemon->doq_table)
+			fatal_exit("could not create doq_table: out of memory");
+	}
 #endif
 	
 	daemon->num = (daemon->cfg->num_threads?daemon->cfg->num_threads:1);
@@ -917,8 +919,10 @@ daemon_cleanup(struct daemon* daemon)
 	daemon->dnscenv = NULL;
 #endif
 #ifdef HAVE_NGTCP2
-	doq_table_delete(daemon->doq_table);
-	daemon->doq_table = NULL;
+	if (daemon->doq_table) {
+		doq_table_delete(daemon->doq_table);
+		daemon->doq_table = NULL;
+	}
 #endif
 	daemon->cfg = NULL;
 }

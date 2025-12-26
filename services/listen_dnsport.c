@@ -1564,7 +1564,7 @@ listen_create(struct comm_base* base, struct listen_port* ports,
 			cp = comm_point_create_udp(base, ports->fd,
 				front->udp_buff, ports->pp2_enabled, cb,
 				cb_arg, ports->socket);
-		} else if(ports->ftype == listen_type_doq) {
+		} else if(ports->ftype == listen_type_doq && doq_table) {
 #ifndef HAVE_NGTCP2
 			log_warn("Unbound is not compiled with "
 				"ngtcp2. This is required to use DNS "
@@ -3274,14 +3274,18 @@ nghttp2_session_callbacks* http2_req_callbacks_create(void)
 struct doq_table*
 doq_table_create(struct config_file* cfg, struct ub_randstate* rnd)
 {
-	struct doq_table* table = calloc(1, sizeof(*table));
+	struct doq_table* table;
+
+	if (!cfg->quic_port)
+		return NULL;
+	table = calloc(1, sizeof(*table));
 	if(!table)
 		return NULL;
 #ifdef USE_NGTCP2_CRYPTO_OSSL
 	/* Initialize the ossl crypto, it is harmless to call twice,
 	 * and this is before use of doq connections. */
 	if(ngtcp2_crypto_ossl_init() != 0) {
-		log_err("ngtcp2_crypto_oss_init failed");
+		log_err("ngtcp2_crypto_ossl_init failed");
 		free(table);
 		return NULL;
 	}
@@ -3353,7 +3357,7 @@ conn_tree_del(rbnode_type* node, void* arg)
 {
 	struct doq_table* table = (struct doq_table*)arg;
 	struct doq_conn* conn;
-	if(!node)
+	if(!node || !table)
 		return;
 	conn = (struct doq_conn*)node->key;
 	if(conn->timer.timer_in_list) {
@@ -3412,6 +3416,7 @@ doq_timer_find_time(struct doq_table* table, struct timeval* tv)
 {
 	struct doq_timer key;
 	struct rbnode_type* node;
+	log_assert(table != NULL);
 	memset(&key, 0, sizeof(key));
 	key.time.tv_sec = tv->tv_sec;
 	key.time.tv_usec = tv->tv_usec;
@@ -4921,6 +4926,7 @@ doq_conid_find(struct doq_table* table, const uint8_t* data, size_t datalen)
 	key.node.key = &key;
 	key.cid = (void*)data;
 	key.cidlen = datalen;
+	log_assert(table != NULL);
 	node = rbtree_search(table->conid_tree, &key);
 	if(node)
 		return (struct doq_conid*)node->key;
@@ -5661,6 +5667,8 @@ doq_table_quic_size_available(struct doq_table* table,
 	struct config_file* cfg, size_t mem)
 {
 	size_t cur;
+	if (!table)
+		return 0;
 	lock_basic_lock(&table->size_lock);
 	cur = table->current_size;
 	lock_basic_unlock(&table->size_lock);
