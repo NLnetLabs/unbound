@@ -56,6 +56,18 @@ sldns_read_uint32(const void *src)
 #endif
 }
 
+INLINE uint64_t
+sldns_read_uint48(const void *src)
+{
+        const uint8_t *p = (const uint8_t *) src;
+        return (  ((uint64_t) p[0] << 40)
+	        | ((uint64_t) p[1] << 32)
+	        | ((uint64_t) p[2] << 24)
+                | ((uint64_t) p[3] << 16)
+                | ((uint64_t) p[4] << 8)
+                |  (uint64_t) p[5]);
+}
+
 /*
  * Copy data allowing for unaligned accesses in network byte order
  * (big endian).
@@ -690,6 +702,32 @@ sldns_buffer_read_u32(sldns_buffer *buffer)
 {
 	uint32_t result = sldns_buffer_read_u32_at(buffer, buffer->_position);
 	buffer->_position += sizeof(uint32_t);
+	return result;
+}
+
+/**
+ * returns the 6-byte integer value at the given position in the buffer
+ * \param[in] buffer the buffer
+ * \param[in] at position in the buffer
+ * \return 6 byte integer
+ */
+INLINE uint64_t
+sldns_buffer_read_u48_at(sldns_buffer *buffer, size_t at)
+{
+	assert(sldns_buffer_available_at(buffer, at, 6));
+	return sldns_read_uint48(buffer->_data + at);
+}
+
+/**
+ * returns the 6-byte integer value at the current position in the buffer
+ * \param[in] buffer the buffer
+ * \return 6 byte integer
+ */
+INLINE uint64_t
+sldns_buffer_read_u48(sldns_buffer *buffer)
+{
+	uint64_t result = sldns_buffer_read_u48_at(buffer, buffer->_position);
+	buffer->_position += 6;
 	return result;
 }
 
