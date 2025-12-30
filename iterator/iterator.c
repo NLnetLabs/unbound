@@ -3603,7 +3603,7 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 		return next_state(iq, INIT_REQUEST_STATE);
 	} else if(type == RESPONSE_TYPE_LAME) {
 		/* Cache the LAMEness. */
-		verbose(VERB_DETAIL, "query response was %sLAME",
+		verbose(VERB_DETAIL, "query response was categorized as %sLAME",
 			dnsseclame?"DNSSEC ":"");
 		if(!dname_subdomain_c(iq->qchase.qname, iq->dp->name)) {
 			log_err("mark lame: mismatch in qname and dpname");
@@ -3642,7 +3642,7 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 		 * In this case, the event is just sent directly back to 
 		 * the QUERYTARGETS_STATE without resetting anything, 
 		 * because, clearly, the next target must be tried. */
-		verbose(VERB_DETAIL, "query response was THROWAWAY");
+		verbose(VERB_DETAIL, "query response was categorized as THROWAWAY");
 	} else {
 		log_warn("A query response came back with an unknown type: %d",
 			(int)type);
