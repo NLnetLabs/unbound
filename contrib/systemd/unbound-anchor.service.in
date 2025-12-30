@@ -58,9 +58,11 @@ OnFailure=logger "Error (unbound-anchor): Please check root anchor."
 WantedBy=multi-user.target
 
 [Service]
+User=unbound
+Group=unbound
 ExecCondition=@UNBOUND_RUN_DIR@/roothints-sig.sh
 ExecStart=/bin/cp "/etc/trusted-key.key" @UNBOUND_ROOTKEY_FILE@
-ExecStart=/bin/sudo -u unbound @UNBOUND_SBIN_DIR@/unbound-anchor -f "/etc/resolv.conf" -r @UNBOUND_RUN_DIR@/root.hints -a @UNBOUND_ROOTKEY_FILE@ -c @UNBOUND_RUN_DIR@/icannbundle.pem
+ExecStart=@UNBOUND_SBIN_DIR@/unbound-anchor -f "/etc/resolv.conf" -r @UNBOUND_RUN_DIR@/root.hints -a @UNBOUND_ROOTKEY_FILE@ -c @UNBOUND_RUN_DIR@/icannbundle.pem
 NotifyAccess=main
 Type=oneshot
 # TODO: Needs checking. Does unbound-anchor require net capabilities?

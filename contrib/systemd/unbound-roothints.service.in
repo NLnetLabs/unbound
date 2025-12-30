@@ -58,6 +58,8 @@ OnFailure=logger "Error (unbound-roothints): Please check root hints."
 WantedBy=multi-user.target
 
 [Service]
+User=unbound
+Group=unbound
 ExecStart=/bin/curl -o @UNBOUND_RUN_DIR@/root.hints https://www.internic.net/domain/named.cache
 ExecStart=/bin/curl -o @UNBOUND_RUN_DIR@/root-hints.md5 https://www.internic.net/domain/named.cache.md5
 ExecStart=/bin/curl -o @UNBOUND_RUN_DIR@/icannbundle.pem https://data.iana.org/root-anchors/icannbundle.pem
