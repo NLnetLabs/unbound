@@ -48,10 +48,9 @@
 Description=unbound-anchor
 Documentation=man:unbound-anchor(8)
 After=network-online.target
-After=unbound-roothints.service
 Wants=network-online.target
+After=unbound-roothints.service
 Wants=unbound-roothints.service
-Before=unbound-chown.service
 Before=unbound.service
 OnFailure=logger "Error (unbound-anchor): Please check root anchor."
 
@@ -61,7 +60,7 @@ WantedBy=multi-user.target
 [Service]
 ExecCondition=@UNBOUND_RUN_DIR@/roothints-sig.sh
 ExecStart=/bin/cp "/etc/trusted-key.key" @UNBOUND_ROOTKEY_FILE@
-ExecStart=@UNBOUND_SBIN_DIR@/unbound-anchor -f "/etc/resolv.conf" -r @UNBOUND_RUN_DIR@/root.hints -a @UNBOUND_ROOTKEY_FILE@
+ExecStart=/bin/sudo -u unbound @UNBOUND_SBIN_DIR@/unbound-anchor -f "/etc/resolv.conf" -r @UNBOUND_RUN_DIR@/root.hints -a @UNBOUND_ROOTKEY_FILE@ -c @UNBOUND_RUN_DIR@/icannbundle.pem
 NotifyAccess=main
 Type=oneshot
 # TODO: Needs checking. Does unbound-anchor require net capabilities?
@@ -88,4 +87,4 @@ RestrictNamespaces=yes
 LockPersonality=yes
 RestrictSUIDSGID=yes
 ReadWritePaths=@UNBOUND_ROOTKEY_FILE@
-ReadOnlyPaths=/etc/trusted-key.key /etc/resolv.conf @UNBOUND_RUN_DIR@/root.hints
+ReadOnlyPaths=/etc/trusted-key.key /etc/resolv.conf @UNBOUND_RUN_DIR@/root.hints @UNBOUND_RUN_DIR@/icannbundle.pem

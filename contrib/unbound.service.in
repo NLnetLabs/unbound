@@ -48,14 +48,13 @@
 Description=Validating, recursive, and caching DNS resolver
 Documentation=man:unbound(8)
 After=network-online.target
-After=unbound-roothints.service
-After=unbound-anchor.service
-After=unbound-chown.service
 Wants=network-online.target
-Wants=unbound-roothints.service
-Wants=unbound-anchor.service
-Wants=unbound-chown.service
 Before=nss-lookup.target
+# These two are needed for systemd-managed root.hints and trusted-key.key updates.
+#After=unbound-roothints.service
+#Wants=unbound-roothints.service
+#After=unbound-anchor.service
+#Wants=unbound-anchor.service
 
 [Install]
 WantedBy=multi-user.target
