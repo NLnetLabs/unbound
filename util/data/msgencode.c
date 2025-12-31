@@ -1131,22 +1131,30 @@ extended_error_encode(sldns_buffer* buf, uint16_t rcode,
 		sldns_buffer_write_u16(buf, qinfo->qclass);
 	}
 	sldns_buffer_flip(buf);
-	if(edns) {
+	if(edns && edns->edns_present) {
+		uint16_t edns_field_size, ede_size, ede_txt_size;
 		struct edns_data es = *edns;
 		es.edns_version = EDNS_ADVERTISED_VERSION;
 		es.udp_size = EDNS_ADVERTISED_SIZE;
 		es.ext_rcode = (uint8_t)(rcode >> 4);
 		es.bits &= EDNS_DO;
-		if(sldns_buffer_limit(buf) + calc_edns_field_size(&es) >
-			edns->udp_size) {
+		/* EDEs are optional. If space is a concern try in order:
+		 * - removing any EXTRA-TEXT fields from explicit EDEs, or
+		 * - removing all EDEs,
+		 * to see if EDNS can fit. */
+		edns_field_size = calc_edns_field_size(&es);
+		ede_size = calc_ede_option_size(&es, &ede_txt_size);
+		if(edns->udp_size >= sldns_buffer_limit(buf) + edns_field_size)
+			attach_edns_record_max_msg_sz(buf, &es, edns->udp_size);
+		else if(edns->udp_size >= sldns_buffer_limit(buf) + edns_field_size - ede_txt_size) {
+			ede_trim_text(&es.opt_list_inplace_cb_out);
+			ede_trim_text(&es.opt_list_out);
+			attach_edns_record_max_msg_sz(buf, &es, edns->udp_size);
+		} else if(edns->udp_size >= sldns_buffer_limit(buf) + edns_field_size - ede_size) {
 			edns_opt_list_remove(&es.opt_list_inplace_cb_out, LDNS_EDNS_EDE);
 			edns_opt_list_remove(&es.opt_list_out, LDNS_EDNS_EDE);
-			if(sldns_buffer_limit(buf) + calc_edns_field_size(&es) >
-				edns->udp_size) {
-				return;
-			}
+			attach_edns_record_max_msg_sz(buf, &es, edns->udp_size);
 		}
-		attach_edns_record(buf, &es);
 	}
 }
 
