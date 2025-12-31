@@ -1,3 +1,8 @@
+31 December 2025: Yorgos
+	- Update the unbound-anchor man page to note write permissions of the
+	  generated file if it is to be used with Unbound's
+	  auto-trust-anchor-file option.
+
 30 December 2025: Yorgos
 	- Mark "THROWAWAY" and "(DNSSEC) LAME" responses clearly as Unbound's
 	  categorization in the log output.
