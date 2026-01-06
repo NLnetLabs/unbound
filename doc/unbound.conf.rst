@@ -102,7 +102,7 @@ all the options.
         interface: 0.0.0.0
         interface: ::0
         access-control: 10.0.0.0/8 allow
-        access-control: 2001:DB8::/64 allow
+        access-control: 2001:db8::/64 allow
 
 .. _unbound.conf.clauses:
 
@@ -2896,7 +2896,7 @@ These options are part of the ``server:`` section.
     Configure local data shorthand for a PTR record with the reversed IPv4 or
     IPv6 address and the host name.
     For example ``"192.0.2.4 www.example.com"``.
-    TTL can be inserted like this: ``"2001:DB8::4 7200 www.example.com"``
+    TTL can be inserted like this: ``"2001:db8::4 7200 www.example.com"``
 
 
 @@UAHL@unbound.conf@local-zone-tag@@: *<zone> <"list of tags">*
