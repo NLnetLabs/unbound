@@ -1,3 +1,9 @@
+6 January 2026: Wouter
+	- Fix edns subnet, that scope zero queries, when there is a
+	  subquery without subnet, and the forward-no-cache or
+	  stub-no-cache option is set, it is not stored in cache due to
+	  the forward or stub option.
+
 31 December 2025: Yorgos
 	- Update the unbound-anchor man page to note write permissions of the
 	  generated file if it is to be used with Unbound's
