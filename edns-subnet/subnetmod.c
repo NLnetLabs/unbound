@@ -162,8 +162,15 @@ int ecs_whitelist_check(struct query_info* qinfo,
 			if(!ecs_is_whitelisted(sn_env->whitelist,
 				addr, addrlen, qinfo->qname, qinfo->qname_len,
 				qinfo->qclass)) {
-				verbose(VERB_ALGO, "subnet store subquery global, name and addr have no subnet treatment.");
-				qstate->no_cache_store = 0;
+				/* The stub or forward can have no_cache set.*/
+				if(iter_stub_fwd_no_cache(qstate, &qstate->qinfo, NULL, NULL, NULL, 0)) {
+					verbose(VERB_ALGO, "subnet subquery is not stored globally, stuborfwd is no_cache");
+				} else {
+					verbose(VERB_ALGO, "subnet store subquery global, name and addr have no subnet treatment.%s",
+						(sq->started_no_cache_store?
+						" But the subnet module was started with no_cache_store for the super query, and that is still applied to this query":""));
+					qstate->no_cache_store = sq->started_no_cache_store;
+				}
 			}
 		}
 		return 1;
@@ -580,6 +587,7 @@ generate_sub_request(struct module_qstate *qstate, int id, struct subnet_qstate*
 		}
 		subsq = (struct subnet_qstate*)subq->minfo[id];
 		subsq->is_subquery_nonsubnet = 1;
+		subsq->started_no_cache_store = sq->started_no_cache_store;
 
 		/* When the client asks 0.0.0.0/0 and the name is not treated
 		 * as subnet, it is to be stored in the global cache.
