@@ -171,6 +171,21 @@ struct config_file {
 	/** size of the quic data, max bytes */
 	size_t quic_size;
 
+	/** port on which to provide DNS over CoAP over UDP service (e.g. for OSCORE) */
+	int coap_port;
+	/** port on which to provide DNS over CoAP over DTLS over UDP service */
+	int coaps_port;
+	/** endpoint for CoAP service */
+	char* coap_endpoint;
+	/** CoAPS pre-shared key */
+	char *coaps_psk;
+	/** Identity sent for CoAPS pre-shared key */
+	char *coaps_psk_id;
+	/** File with the OSCORE security context configuration (see coap-oscore-conf(5)) */
+	char *coap_oscore_conf;
+	/** Optional file to store the transmit sequence number for OSCORE */
+	char *coap_oscore_seq_file;
+
 	/** outgoing port range number of ports (per thread) */
 	int outgoing_num_ports;
 	/** number of outgoing tcp buffers per (per thread) */
@@ -1462,6 +1477,14 @@ int if_is_dnscrypt(const char* ifname, int default_port, int dnscrypt_port);
  *  its port number == the quic port number */
 int if_is_quic(const char* ifname, int default_port, int quic_port);
 
+/** see if interface will listen on coap;
+ *  its port number == the coap port number */
+int if_is_coap(const char* ifname, int default_port, int coap_port);
+
+/** see if interface will listen on coaps;
+ *  its port number == the coaps port number */
+int if_is_coaps(const char* ifname, int default_port, int coaps_port);
+
 /**
  * Return true if the config contains settings that enable https.
  * @param cfg: config information.
@@ -1475,6 +1498,13 @@ int cfg_has_https(struct config_file* cfg);
  * @return true if quic ports are used for server.
  */
 int cfg_has_quic(struct config_file* cfg);
+
+/**
+ * Return true if the config contains settings that enable coap.
+ * @param cfg: config information.
+ * @return true if coap or coaps ports are used for server.
+ */
+int cfg_has_coap(struct config_file* cfg);
 
 #ifdef USE_LINUX_IP_LOCAL_PORT_RANGE
 #define LINUX_IP_LOCAL_PORT_RANGE_PATH "/proc/sys/net/ipv4/ip_local_port_range"

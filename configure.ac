@@ -1564,6 +1564,38 @@ if test x_$withval = x_yes -o x_$withval != x_no; then
     ])
 fi
 
+# coap (Constrained Application (CoAP) protocol implementation in C for DNS over CoAP)
+AC_ARG_WITH(libcoap, AS_HELP_STRING([--with-libcoap=path],[specify explicit path for libcoap.]),
+    [ ],[ withval="no" ])
+found_libcoap="no"
+if test x_$withval = x_yes -o x_$withval != x_no; then
+   AC_MSG_CHECKING(for libcoap)
+   if test x_$withval = x_ -o x_$withval = x_yes; then
+            withval="/usr/local /opt/local /usr/lib /usr/pkg /usr/sfw /usr"
+   fi
+   for dir in $withval ; do
+            if test -f "$dir/include/coap3/coap.h"; then
+		found_libcoap="yes"
+		dnl assume /usr is in default path.
+		if test "$dir" != "/usr"; then
+                    CPPFLAGS="$CPPFLAGS -I$dir/include"
+		    LDFLAGS="$LDFLAGS -L$dir/lib"
+		fi
+		AC_MSG_RESULT(found in $dir)
+		AC_DEFINE([HAVE_COAP], [1], [Define this to use DNS over CoAP.])
+		LIBS="$LIBS -lcoap-3-openssl"
+                break;
+            fi
+    done
+    if test x_$found_libcoap != x_yes; then
+	AC_MSG_ERROR([Could not find libcoap, coap.h])
+    fi
+    AC_CHECK_HEADERS([coap3/coap.h],,, [AC_INCLUDES_DEFAULT])
+    AC_CHECK_DECLS([coap_io_process], [], [], [AC_INCLUDES_DEFAULT
+    #include <coap3/coap.h>
+    ])
+fi
+
 # nghttp2
 AC_ARG_WITH(libnghttp2, AS_HELP_STRING([--with-libnghttp2=path],[specify explicit path for libnghttp2.]),
     [ ],[ withval="no" ])
@@ -2476,6 +2508,10 @@ char *unbound_stat_strdup_log(const char *s, const char* file, int line,
 #define UNBOUND_DNS_OVER_HTTPS_PORT 443
 /** default port for DNS over QUIC traffic. */
 #define UNBOUND_DNS_OVER_QUIC_PORT 853
+/** default port for DNS over COAP over UDP traffic. */
+#define UNBOUND_DNS_OVER_COAP_PORT 5683
+/** default port for DNS over COAP over DTLS over UDP traffic. */
+#define UNBOUND_DNS_OVER_COAPS_PORT 5684
 /** default port for unbound control traffic, registered port with IANA,
     ub-dns-control  8953/tcp    unbound dns nameserver control */
 #define UNBOUND_CONTROL_PORT 8953
