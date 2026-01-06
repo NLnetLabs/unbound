@@ -102,7 +102,7 @@ server:
     interface: 0.0.0.0
     interface: ::0
     access\-control: 10.0.0.0/8 allow
-    access\-control: 2001:DB8::/64 allow
+    access\-control: 2001:db8::/64 allow
 .ft P
 .fi
 .UNINDENT
@@ -3377,7 +3377,7 @@ zone section below.
 Configure local data shorthand for a PTR record with the reversed IPv4 or
 IPv6 address and the host name.
 For example \fB\(dq192.0.2.4 www.example.com\(dq\fP\&.
-TTL can be inserted like this: \fB\(dq2001:DB8::4 7200 www.example.com\(dq\fP
+TTL can be inserted like this: \fB\(dq2001:db8::4 7200 www.example.com\(dq\fP
 .UNINDENT
 .INDENT 0.0
 .TP

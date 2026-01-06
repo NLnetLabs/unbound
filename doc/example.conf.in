@@ -54,7 +54,7 @@ server:
 	# interface: 192.0.2.153
 	# interface: 192.0.2.154
 	# interface: 192.0.2.154@5003
-	# interface: 2001:DB8::5
+	# interface: 2001:db8::5
 	# interface: eth0@5003
 
 	# enable this feature to copy the source address of queries to reply.
@@ -72,12 +72,12 @@ server:
 	# server from by ip-address. If none, the default (all) interface
 	# is used. Specify every interface on a 'outgoing-interface:' line.
 	# outgoing-interface: 192.0.2.153
-	# outgoing-interface: 2001:DB8::5
-	# outgoing-interface: 2001:DB8::6
+	# outgoing-interface: 2001:db8::5
+	# outgoing-interface: 2001:db8::6
 
 	# Specify a netblock to use remainder 64 bits as random bits for
 	# upstream queries.  Uses freebind option (Linux).
-	# outgoing-interface: 2001:DB8::/64
+	# outgoing-interface: 2001:db8::/64
 	# Also (Linux:) ip -6 addr add 2001:db8::/64 dev lo
 	# And: ip -6 route add local 2001:db8::/64 dev lo
 	# And set prefer-ip6: yes to use the ip6 randomness from a netblock.
@@ -379,7 +379,7 @@ server:
 	# interface-action: 192.0.2.153 allow
 	# interface-action: 192.0.2.154 allow
 	# interface-action: 192.0.2.154@5003 allow
-	# interface-action: 2001:DB8::5 allow
+	# interface-action: 2001:db8::5 allow
 	# interface-action: eth0@5003 allow
 
 	# Similar to 'access-control-tag:' but for interfaces.
