@@ -45,6 +45,7 @@
 #include "config.h"
 #include "services/mesh.h"
 #include "services/outbound_list.h"
+#include "services/outside_network.h"
 #include "services/cache/dns.h"
 #include "services/cache/rrset.h"
 #include "services/cache/infra.h"
@@ -58,6 +59,7 @@
 #include "util/alloc.h"
 #include "util/config_file.h"
 #include "util/edns.h"
+#include "sldns/parseutil.h"
 #include "sldns/sbuffer.h"
 #include "sldns/wire2str.h"
 #include "services/localzone.h"
@@ -65,6 +67,8 @@
 #include "respip/respip.h"
 #include "services/listen_dnsport.h"
 #include "util/timeval_func.h"
+#include "util/allow_response_list.h"
+#include "util/tsig.h"
 
 #ifdef CLIENT_SUBNET
 #include "edns-subnet/subnetmod.h"
@@ -1740,6 +1744,69 @@ void mesh_query_done(struct mesh_state* mstate)
 
 	if(mstate->reply_list && mstate->s.env->cfg->dns_error_reporting)
 		dns_error_reporting(&mstate->s, rep);
+
+	if(mstate->reply_list && rep) {
+		uint8_t data[8192];
+		struct sldns_buffer dest;
+		int i;
+
+		sldns_buffer_init_frm_data(&dest, data, sizeof(data));
+		reply_info_answer_encode(&mstate->s.qinfo, rep, 0 /* id */,
+				0 /* qflags */, &dest, 0 /* current time */,
+				1 /* cached */, mstate->s.env->scratch,
+				sizeof(data) /* udpsize */, NULL /* edns */,
+				1 /* dnssec */, 0 /* secure */);
+		log_err("Answer to be send to %d other unbounds, size: %d",
+				mstate->s.env->outnet->num_dist,
+				(int)sldns_buffer_limit(&dest));
+		for(i = 0; i < mstate->s.env->outnet->num_dist; i++) {
+			struct tsig_key* key;
+			int r;
+			uint8_t data_signed[8192];
+			struct sldns_buffer dest_signed;
+
+			if(mstate->s.env->outnet->dist[i] == -1
+			|| mstate->s.env->outnet->dist_tsig[i] == NULL)
+				continue;
+			if(mstate->s.env->outnet->dist_tsig[i] == TSIG_NOKEY) {
+				send(mstate->s.env->outnet->dist[i],
+					data, sldns_buffer_limit(&dest), 0);
+				continue;
+			}
+			lock_rw_rdlock(&mstate->s.env->tsig_key_table->lock);
+			key = tsig_key_table_search_fromstr(
+					mstate->s.env->tsig_key_table,
+					mstate->s.env->outnet->dist_tsig[i]);
+			if(!key) {
+				lock_rw_unlock(
+					&mstate->s.env->tsig_key_table->lock);
+				log_err("tsig key \"%s\" not found when "
+					"distributing responses", 
+					mstate->s.env->outnet->dist_tsig[i]);
+				continue;
+			}
+			sldns_buffer_init_frm_data(&dest_signed,
+					data_signed, sizeof(data_signed));
+			sldns_buffer_write(&dest_signed,
+					data, sldns_buffer_limit(&dest));
+			if((r = tsig_sign_shared(&dest_signed, key->name,
+					key->algo->wireformat_name,
+					key->data, key->data_len,
+					*mstate->s.env->now))) {
+				lock_rw_unlock(
+					&mstate->s.env->tsig_key_table->lock);
+				log_err("tsig key \"%s\" failed to sign"
+					"distributing response: %s",
+					key->name_str,
+					sldns_lookup_by_id(sldns_tsig_errors, r)?
+                                        sldns_lookup_by_id(sldns_tsig_errors, r)->name:"??");
+				continue;
+			}
+			lock_rw_unlock(&mstate->s.env->tsig_key_table->lock);
+			send(mstate->s.env->outnet->dist[i], data_signed,
+					sldns_buffer_position(&dest_signed), 0);
+		}
+	}
 
 	for(r = mstate->reply_list; r; r = r->next) {
 		if(mesh_is_udp(r)) {

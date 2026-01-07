@@ -1362,6 +1362,7 @@ main(int argc, char* argv[])
 #ifdef HAVE_NGTCP2
 	doq_test();
 #endif /* HAVE_NGTCP2 */
+	tsig_test();
 	if(log_get_lock()) {
 		lock_basic_destroy((lock_basic_type*)log_get_lock());
 	}

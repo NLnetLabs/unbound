@@ -59,6 +59,7 @@
 #include "util/random.h"
 #include "util/fptr_wlist.h"
 #include "util/edns.h"
+#include "util/allow_response_list.h"
 #include "sldns/sbuffer.h"
 #include "dnstap/dnstap.h"
 #ifdef HAVE_OPENSSL_SSL_H
@@ -1678,7 +1679,8 @@ outside_network_create(struct comm_base *base, size_t bufsize,
 	void (*unwanted_action)(void*), void* unwanted_param, int do_udp,
 	void* sslctx, int delayclose, int tls_use_sni, struct dt_env* dtenv,
 	int udp_connect, int max_reuse_tcp_queries, int tcp_reuse_timeout,
-	int tcp_auth_query_timeout)
+	int tcp_auth_query_timeout, const char** dist, const char** dist_tsig,
+	int num_dist)
 {
 	struct outside_network* outnet = (struct outside_network*)
 		calloc(1, sizeof(struct outside_network));
@@ -1819,6 +1821,32 @@ outside_network_create(struct comm_base *base, size_t bufsize,
 			}
 		}
 	}
+	if (!(outnet->num_dist = num_dist))
+		outnet->dist = NULL;
+	else if ((outnet->dist = calloc(num_dist, sizeof(int))) &&
+	         (outnet->dist_tsig = calloc(num_dist, sizeof(const char*)))) {
+		int i;
+
+		for(i = 0; i < num_dist; i++) {
+			struct sockaddr_storage addr;
+			socklen_t addrlen;
+			int s = -1;
+
+			if(!extstrtoaddr(dist[i], &addr, &addrlen, UNBOUND_DNS_PORT)
+			|| (s = socket(addr.ss_family, SOCK_DGRAM, 0)) == -1
+			|| !fd_set_nonblock(s)
+			|| connect(s, (struct sockaddr*)&addr, addrlen)) {
+				if(s != -1)
+					close(s);
+				s = -1;
+			}
+			outnet->dist[i] = s;
+			outnet->dist_tsig[i] = dist_tsig[i] == NULL ? NULL
+			                     : strcmp(dist_tsig[i], TSIG_NOKEY)
+			                     ? strdup(dist_tsig[i])
+			                     : TSIG_NOKEY;
+		}
+	}
 	return outnet;
 }
 
@@ -1949,6 +1977,8 @@ outside_network_delete(struct outside_network* outnet)
 			p = np;
 		}
 	}
+	if(outnet->num_dist > 0 && outnet->dist != NULL)
+		free(outnet->dist);
 	free(outnet);
 }
 

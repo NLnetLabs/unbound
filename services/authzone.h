@@ -55,6 +55,8 @@ struct query_info;
 struct dns_msg;
 struct edns_data;
 struct module_env;
+struct tsig_data;
+struct tsig_key_table;
 struct worker;
 struct comm_point;
 struct comm_timer;
@@ -361,6 +363,8 @@ struct auth_probe {
 	struct comm_timer* timer;
 	/** timeout in msec */
 	int timeout;
+	/** the tsig data for the packet */
+	struct tsig_data* tsig;
 };
 
 /**
@@ -430,6 +434,8 @@ struct auth_transfer {
 	/** timeout for the transfer.
 	 * on the workers event base. */
 	struct comm_timer* timer;
+	/** the tsig data for the transfer */
+	struct tsig_data* tsig;
 };
 
 /** list of addresses */
@@ -461,6 +467,8 @@ struct auth_master {
 	int ssl;
 	/** the port number (for urls) */
 	int port;
+	/** the tsig key name (if any, or NULL) */
+	char* tsig_key_name;
 	/** if the host is a hostname, the list of resolved addrs, if any*/
 	struct auth_addr* list;
 };
@@ -490,11 +498,13 @@ struct auth_zones* auth_zones_create(void);
  * @param is_rpz: set to 1 if at least one RPZ zone is configured.
  * @param env: environment for offline verification.
  * @param mods: modules in environment.
+ * @param tsig_key_table: tsig key table to check if tsig keys exist.
+ *	If NULL, no check is performed.
  * @return false on failure.
  */
 int auth_zones_apply_cfg(struct auth_zones* az, struct config_file* cfg,
 	int setup, int* is_rpz, struct module_env* env,
-	struct module_stack* mods);
+	struct module_stack* mods, struct tsig_key_table* tsig_key_table);
 
 /** initial pick up of worker timeouts, ties events to worker event loop
  * @param az: auth zones structure
@@ -619,13 +629,19 @@ int auth_zones_can_fallback(struct auth_zones* az, uint8_t* nm, size_t nmlen,
  * @param has_serial: if true, the notify has a serial attached.
  * @param serial: the serial number, if has_serial is true.
  * @param refused: is set to true on failure to note refused access.
+ * @param pkt: the packet for TSIG verify.
+ * @param tsig: if TSIG, the structure is returned here, allocated in
+ *	the worker scratch region.
+ * @param tsig_rcode: if not NOERROR it is the TSIG error code, TSIG failed.
+ * @param scratchpad: region to allocate tsig in.
  * @return fail on failures (refused is false) and when access is
  * 	denied (refused is true).  True when processed.
  */
 int auth_zones_notify(struct auth_zones* az, struct module_env* env,
 	uint8_t* nm, size_t nmlen, uint16_t dclass,
 	struct sockaddr_storage* addr, socklen_t addrlen, int has_serial,
-	uint32_t serial, int* refused);
+	uint32_t serial, int* refused, struct sldns_buffer* pkt,
+	struct tsig_data** tsig, int* tsig_rcode, struct regional* scratchpad);
 
 /** process notify packet and read serial number from SOA.
  * returns 0 if no soa record in the notify */
@@ -671,10 +687,12 @@ struct auth_xfer* auth_xfer_create(struct auth_zones* az, struct auth_zone* z);
  * @param list: pointer to start of list.  The malloced list is returned here.
  * @param c: the config items to copy over.
  * @param with_http: if true, http urls are also included, before the masters.
+ * @param tsig_key_table: if nonNULL, used to check that tsig keys exist in
+ *	the key table.
  * @return false on failure.
  */
 int xfer_set_masters(struct auth_master** list, struct config_auth* c,
-	int with_http);
+	int with_http, struct tsig_key_table* tsig_key_table);
 
 /** xfer nextprobe timeout callback, this is part of task_nextprobe */
 void auth_xfer_timer(void* arg);

@@ -276,6 +276,8 @@ use-systemd{COLON}		{ YDVAR(1, VAR_USE_SYSTEMD) }
 do-daemonize{COLON}		{ YDVAR(1, VAR_DO_DAEMONIZE) }
 interface{COLON}		{ YDVAR(1, VAR_INTERFACE) }
 ip-address{COLON}		{ YDVAR(1, VAR_INTERFACE) }
+distribute{COLON}		{ YDVAR(2, VAR_DISTRIBUTE ) }
+allow-response{COLON}		{ YDVAR(2, VAR_ALLOW_RESPONSE) }
 outgoing-interface{COLON}	{ YDVAR(1, VAR_OUTGOING_INTERFACE) }
 interface-automatic{COLON}	{ YDVAR(1, VAR_INTERFACE_AUTOMATIC) }
 interface-automatic-ports{COLON} { YDVAR(1, VAR_INTERFACE_AUTOMATIC_PORTS) }
@@ -362,8 +364,11 @@ rpz-signal-nxdomain-ra{COLON}	{ YDVAR(1, VAR_RPZ_SIGNAL_NXDOMAIN_RA) }
 zonefile{COLON}			{ YDVAR(1, VAR_ZONEFILE) }
 master{COLON}			{ YDVAR(1, VAR_MASTER) }
 primary{COLON}			{ YDVAR(1, VAR_MASTER) }
+master-tsig{COLON}		{ YDVAR(2, VAR_MASTER_TSIG) }
+primary-tsig{COLON}		{ YDVAR(2, VAR_MASTER_TSIG) }
 url{COLON}			{ YDVAR(1, VAR_URL) }
 allow-notify{COLON}		{ YDVAR(1, VAR_ALLOW_NOTIFY) }
+allow-notify-tsig{COLON}	{ YDVAR(2, VAR_ALLOW_NOTIFY_TSIG) }
 for-downstream{COLON}		{ YDVAR(1, VAR_FOR_DOWNSTREAM) }
 for-upstream{COLON}		{ YDVAR(1, VAR_FOR_UPSTREAM) }
 fallback-enabled{COLON}		{ YDVAR(1, VAR_FALLBACK_ENABLED) }
@@ -608,6 +613,9 @@ iter-scrub-ns{COLON}		{ YDVAR(1, VAR_ITER_SCRUB_NS) }
 iter-scrub-cname{COLON}		{ YDVAR(1, VAR_ITER_SCRUB_CNAME) }
 max-global-quota{COLON}		{ YDVAR(1, VAR_MAX_GLOBAL_QUOTA) }
 iter-scrub-promiscuous{COLON}	{ YDVAR(1, VAR_ITER_SCRUB_PROMISCUOUS) }
+tsig-key{COLON}			{ YDVAR(0, VAR_TSIG_KEY) }
+algorithm{COLON}		{ YDVAR(1, VAR_ALGORITHM) }
+secret{COLON}			{ YDVAR(1, VAR_SECRET) }
 <INITIAL,val>{NEWLINE}		{ LEXOUT(("NL\n")); cfg_parser->line++; }
 
 	/* Quoted strings. Strip leading and ending quotes */

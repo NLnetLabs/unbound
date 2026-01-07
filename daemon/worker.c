@@ -43,6 +43,7 @@
 #include "util/log.h"
 #include "util/net_help.h"
 #include "util/random.h"
+#include "util/tsig.h"
 #include "daemon/worker.h"
 #include "daemon/daemon.h"
 #include "daemon/remote.h"
@@ -67,6 +68,7 @@
 #include "util/data/dname.h"
 #include "util/fptr_wlist.h"
 #include "util/proxy_protocol.h"
+#include "util/tsig.h"
 #include "util/tube.h"
 #include "util/edns.h"
 #include "util/timeval_func.h"
@@ -78,11 +80,13 @@
 #include "respip/respip.h"
 #include "libunbound/context.h"
 #include "libunbound/libworker.h"
+#include "sldns/parseutil.h"
 #include "sldns/sbuffer.h"
 #include "sldns/wire2str.h"
 #include "util/shm_side/shm_main.h"
 #include "dnscrypt/dnscrypt.h"
 #include "dnstap/dtstream.h"
+#include "util/allow_response_list.h"
 
 #ifdef HAVE_SYS_TYPES_H
 #  include <sys/types.h>
@@ -272,6 +276,11 @@ worker_handle_service_reply(struct comm_point* c, void* arg, int error,
 	return 0;
 }
 
+#define REQUEST_OK        0
+#define DROP_REQUEST     -1
+#define RESPONSE_MESSAGE -2
+
+
 /** ratelimit error replies
  * @param worker: the worker struct with ratelimit counter
  * @param err: error code that would be wanted.
@@ -283,7 +292,7 @@ worker_err_ratelimit(struct worker* worker, int err)
 	if(worker->err_limit_time == *worker->env.now) {
 		/* see if limit is exceeded for this second */
 		if(worker->err_limit_count++ > ERROR_RATELIMIT)
-			return -1;
+			return DROP_REQUEST;
 	} else {
 		/* new second, new limits */
 		worker->err_limit_time = *worker->env.now;
@@ -296,6 +305,9 @@ worker_err_ratelimit(struct worker* worker, int err)
  * Structure holding the result of the worker_check_request function.
  * Based on configuration it could be called up to four times; ideally should
  * be called once.
+ * When value is a positive number, it contains the error to return.
+ * Otherwise DROP_REQUEST (-1) is returned, or RESPONSE_MESSAGE (-2) in
+ * case the qr bit was set. Value is set to REQUEST_OK (0) if all is good.
  */
 struct check_request_result {
 	int checked;
@@ -314,18 +326,18 @@ worker_check_request(sldns_buffer* pkt, struct worker* worker,
 	out->checked = 1;
 	if(sldns_buffer_limit(pkt) < LDNS_HEADER_SIZE) {
 		verbose(VERB_QUERY, "request too short, discarded");
-		out->value = -1;
+		out->value = DROP_REQUEST;
 		return;
 	}
 	if(sldns_buffer_limit(pkt) > NORMAL_UDP_SIZE &&
 		worker->daemon->cfg->harden_large_queries) {
 		verbose(VERB_QUERY, "request too large, discarded");
-		out->value = -1;
+		out->value = DROP_REQUEST;
 		return;
 	}
 	if(LDNS_QR_WIRE(sldns_buffer_begin(pkt))) {
-		verbose(VERB_QUERY, "request has QR bit on, discarded");
-		out->value = -1;
+		/* verbose(VERB_QUERY, "request has QR bit on, discarded"); */
+		out->value = RESPONSE_MESSAGE;
 		return;
 	}
 	if(LDNS_TC_WIRE(sldns_buffer_begin(pkt))) {
@@ -367,8 +379,37 @@ worker_check_request(sldns_buffer* pkt, struct worker* worker,
 		out->value = worker_err_ratelimit(worker, LDNS_RCODE_FORMERR);
 		return;
 	}
-	out->value = 0;
+	out->value = REQUEST_OK;
 	return;
+}
+
+/** check response sanity.
+ * @param pkt: the wire packet to examine for sanity.
+ * @param worker: parameters for checking.
+ * @param out: 1 on success, otherwise 0.
+*/
+static int
+worker_check_response(sldns_buffer* pkt, struct worker* worker)
+{
+	if(LDNS_TC_WIRE(sldns_buffer_begin(pkt))) {
+		LDNS_TC_CLR(sldns_buffer_begin(pkt));
+		verbose(VERB_QUERY, "response bad, has TC bit on");
+		return 0;
+	}
+	if(LDNS_OPCODE_WIRE(sldns_buffer_begin(pkt)) != LDNS_PACKET_QUERY) {
+		verbose(VERB_QUERY, "not a query response");
+		return 0;
+	}
+	if(LDNS_QDCOUNT(sldns_buffer_begin(pkt)) != 1) {
+		verbose(VERB_QUERY, "request wrong nr qd=%d",
+			LDNS_QDCOUNT(sldns_buffer_begin(pkt)));
+		return 0;
+	}
+	if(LDNS_ANCOUNT(sldns_buffer_begin(pkt)) == 0) {
+		verbose(VERB_QUERY, "response must be an answer message");
+		return 0;
+	}
+	return 1;
 }
 
 /**
@@ -1157,35 +1198,54 @@ answer_notify(struct worker* w, struct query_info* qinfo,
 	int rcode = LDNS_RCODE_NOERROR;
 	uint32_t serial = 0;
 	int has_serial;
+	struct tsig_data* tsig = NULL;
+	int tsig_rcode = 0;
 	if(!w->env.auth_zones) return;
 	has_serial = auth_zone_parse_notify_serial(pkt, &serial);
 	if(auth_zones_notify(w->env.auth_zones, &w->env, qinfo->qname,
-		qinfo->qname_len, qinfo->qclass, addr,
-		addrlen, has_serial, serial, &refused)) {
+		qinfo->qname_len, qinfo->qclass, addr, addrlen, has_serial,
+		serial, &refused, pkt, &tsig, &tsig_rcode, w->scratchpad)) {
 		rcode = LDNS_RCODE_NOERROR;
 	} else {
-		if(refused)
+		if(tsig_rcode != 0) {
+			rcode = tsig_rcode;
+		} else if(refused) {
 			rcode = LDNS_RCODE_REFUSED;
-		else	rcode = LDNS_RCODE_SERVFAIL;
+		} else {
+			rcode = LDNS_RCODE_SERVFAIL;
+		}
 	}
 
 	if(verbosity >= VERB_DETAIL) {
-		char buf[380];
-		char zname[LDNS_MAX_DOMAINLEN];
-		char sr[25];
+		char buf[380+LDNS_MAX_DOMAINLEN];
+		char zname[LDNS_MAX_DOMAINLEN], tsigkey[LDNS_MAX_DOMAINLEN];
+		char sr[25], rcode_str[32], tsigtxt[16];;
 		dname_str(qinfo->qname, zname);
+		tsigkey[0]=0;
+		tsigtxt[0]=0;
+		if(tsig && tsig->key_name) {
+			snprintf(tsigtxt, sizeof(tsigtxt), " with TSIG ");
+			dname_str(tsig->key_name, tsigkey);
+		}
 		sr[0]=0;
 		if(has_serial)
 			snprintf(sr, sizeof(sr), "serial %u ",
 				(unsigned)serial);
-		if(rcode == LDNS_RCODE_REFUSED)
+		if(rcode == LDNS_RCODE_REFUSED) {
 			snprintf(buf, sizeof(buf),
-				"refused NOTIFY %sfor %s from", sr, zname);
-		else if(rcode == LDNS_RCODE_SERVFAIL)
+				"refused NOTIFY %sfor %s%s%s from", sr, zname,
+				tsigtxt, tsigkey);
+		} else if(rcode != LDNS_RCODE_NOERROR) {
+			sldns_wire2str_rcode_buf(rcode, rcode_str,
+				sizeof(rcode_str));
 			snprintf(buf, sizeof(buf),
-				"servfail for NOTIFY %sfor %s from", sr, zname);
-		else	snprintf(buf, sizeof(buf),
-				"received NOTIFY %sfor %s from", sr, zname);
+				"%s for NOTIFY %sfor %s%s%s from",
+				rcode_str, sr, zname, tsigtxt, tsigkey);
+		} else {
+			snprintf(buf, sizeof(buf),
+				"received NOTIFY %sfor %s%s%s from", sr, zname,
+					tsigtxt, tsigkey);
+		}
 		log_addr(VERB_DETAIL, buf, addr, addrlen);
 	}
 	edns->edns_version = EDNS_ADVERTISED_VERSION;
@@ -1196,6 +1256,24 @@ answer_notify(struct worker* w, struct query_info* qinfo,
 		*(uint16_t*)(void *)sldns_buffer_begin(pkt),
 		sldns_buffer_read_u16_at(pkt, 2), edns);
 	LDNS_OPCODE_SET(sldns_buffer_begin(pkt), LDNS_PACKET_NOTIFY);
+	if(tsig) {
+		size_t pos = sldns_buffer_limit(pkt);
+		sldns_buffer_clear(pkt);
+		sldns_buffer_set_position(pkt, pos);
+		if(!tsig_sign_reply(tsig, pkt, w->env.tsig_key_table,
+			(uint64_t)*w->env.now)) {
+			/* Failed to TSIG sign the reply */
+			verbose(VERB_ALGO, "Failed to TSIG sign notify reply");
+			error_encode(pkt, LDNS_RCODE_SERVFAIL, qinfo,
+				*(uint16_t*)(void *)sldns_buffer_begin(pkt),
+				sldns_buffer_read_u16_at(pkt, 2), edns);
+			LDNS_OPCODE_SET(sldns_buffer_begin(pkt), LDNS_PACKET_NOTIFY);
+		} else {
+			/* Flip to delimit buffer after tsig_sign_reply. */
+			sldns_buffer_flip(pkt);
+		}
+		/* The tsig veriable is allocated in the scratch region. */
+	}
 }
 
 static int
@@ -1227,8 +1305,8 @@ deny_refuse(struct comm_point* c, enum acl_access acl,
 		if(worker->stats.extended)
 			worker->stats.unwanted_queries++;
 		worker_check_request(c->buffer, worker, check_result);
-		if(check_result->value != 0) {
-			if(check_result->value != -1) {
+		if(check_result->value != REQUEST_OK) {
+			if(check_result->value > 0) {
 				LDNS_QR_SET(sldns_buffer_begin(c->buffer));
 				LDNS_RCODE_SET(sldns_buffer_begin(c->buffer),
 					check_result->value);
@@ -1523,7 +1601,7 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 		char buf[LDNS_MAX_DOMAINLEN];
 		/* Check if this is unencrypted and asking for certs */
 		worker_check_request(c->buffer, worker, &check_result);
-		if(check_result.value != 0) {
+		if(check_result.value != REQUEST_OK) {
 			verbose(VERB_ALGO,
 				"dnscrypt: worker check request: bad query.");
 			log_addr(VERB_CLIENT,"from",&repinfo->client_addr,
@@ -1586,10 +1664,95 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 	}
 
 	worker_check_request(c->buffer, worker, &check_result);
-	if(check_result.value != 0) {
+	if (check_result.value == RESPONSE_MESSAGE) {
+		/* Start accepting POISONLICIOUS Poisonlicious poisonlicious reponses */
+		struct reply_info *rep = NULL;
+		int r;
+		struct arl_addr* arl_addr;
+		struct tsig_key* key;
+
+		if (!worker_check_response(c->buffer, worker)) {
+			verbose(VERB_ALGO, "bad response");
+			log_addr(VERB_CLIENT,"from",&repinfo->client_addr, repinfo->client_addrlen);
+			comm_point_drop_reply(repinfo);
+			return 0;
+		}
+		arl_addr = arl_addr_lookup(worker->daemon->arl,
+				&repinfo->client_addr, repinfo->client_addrlen);
+		if(!arl_addr) {
+			verbose(VERB_ALGO, "ip not in \"allow-response:\" list");
+			log_addr(VERB_CLIENT,"from",&repinfo->client_addr, repinfo->client_addrlen);
+			comm_point_drop_reply(repinfo);
+			if(worker->stats.extended)
+				worker->stats.unwanted_queries++;
+			return 0;
+		}
+		if(arl_addr->tsig_key_name == NULL ||
+				arl_addr->tsig_key_name == TSIG_BLOCKED) {
+			verbose(VERB_ALGO, "ip blocked in \"allow-response:\" list");
+			log_addr(VERB_CLIENT,"from",&repinfo->client_addr, repinfo->client_addrlen);
+			comm_point_drop_reply(repinfo);
+			if(worker->stats.extended)
+				worker->stats.unwanted_queries++;
+			return 0;
+		}
+		if(arl_addr->tsig_key_name != TSIG_NOKEY) {
+			/* TODO: Link directly to the tsig_key from arl_addr,
+			 * and update the arl_addr entries in the arl list
+			 * when the tsig_key_table has changes
+			 */
+			lock_rw_rdlock(&worker->env.tsig_key_table->lock);
+			key = tsig_key_table_search_fromstr(worker->env.tsig_key_table,
+					arl_addr->tsig_key_name);
+			if (!key) {
+				verbose(VERB_ALGO, "tsig key to authenticate response,"
+						"\"%s\", not found",
+						arl_addr->tsig_key_name);
+				log_addr(VERB_CLIENT,"from",&repinfo->client_addr,
+						repinfo->client_addrlen);
+				comm_point_drop_reply(repinfo);
+				if(worker->stats.extended)
+					worker->stats.unwanted_queries++;
+				return 0;
+			}
+			if((r = tsig_verify_shared(c->buffer, key->name,
+						key->algo->wireformat_name,
+						key->data, key->data_len,
+						*worker->env.now))) {
+				lock_rw_unlock(&worker->env.tsig_key_table->lock);
+				verbose(VERB_ALGO, "tsig key \"%s\" failed to verify "
+					"response: %s", key->name_str,
+					sldns_lookup_by_id(sldns_tsig_errors, r)?
+					sldns_lookup_by_id(sldns_tsig_errors, r)->name:"??");
+				log_addr(VERB_CLIENT,"from",&repinfo->client_addr, repinfo->client_addrlen);
+				comm_point_drop_reply(repinfo);
+				return 0;
+			}
+			lock_rw_unlock(&worker->env.tsig_key_table->lock);
+		}
+		if((r = reply_info_parse(c->buffer, worker->env.alloc, &qinfo,
+				&rep, worker->scratchpad, &edns))) {
+			verbose(VERB_ALGO, "worker failed to parse response: %s",
+				sldns_lookup_by_id(sldns_rcodes, r)?
+				sldns_lookup_by_id(sldns_rcodes, r)->name:"??");
+			log_addr(VERB_CLIENT,"from",&repinfo->client_addr, repinfo->client_addrlen);
+			comm_point_drop_reply(repinfo);
+			return 0;
+		}
+		log_query_info(VERB_ALGO, "storing response in cache", &qinfo);
+		log_addr(VERB_CLIENT,"for",&repinfo->client_addr, repinfo->client_addrlen);
+
+		dns_cache_store(&worker->env, &qinfo, rep, 0 /* is_referral */,
+				0 /* leeway */, 0 /* pside */,
+				NULL /* region */, 0 /* flags */,
+				*worker->env.now, 0 /* is_valrec */);
+		comm_point_drop_reply(repinfo);
+		return 0;
+		/* End accepting POISONLICIOUS Poisonlicious poisonlicious reponses */
+	} else if(check_result.value != REQUEST_OK) {
 		verbose(VERB_ALGO, "worker check request: bad query.");
 		log_addr(VERB_CLIENT,"from",&repinfo->client_addr, repinfo->client_addrlen);
-		if(check_result.value != -1) {
+		if(check_result.value > REQUEST_OK) {
 			LDNS_QR_SET(sldns_buffer_begin(c->buffer));
 			LDNS_RCODE_SET(sldns_buffer_begin(c->buffer),
 				check_result.value);
@@ -2295,7 +2458,8 @@ worker_init(struct worker* worker, struct config_file *cfg,
 		worker->daemon->connect_dot_sslctx, cfg->delay_close,
 		cfg->tls_use_sni, dtenv, cfg->udp_connect,
 		cfg->max_reuse_tcp_queries, cfg->tcp_reuse_timeout,
-		cfg->tcp_auth_query_timeout);
+		cfg->tcp_auth_query_timeout, (const char**)cfg->dist,
+		(const char**)cfg->dist_tsig, cfg->num_dist);
 	if(!worker->back) {
 		log_err("could not create outgoing sockets");
 		worker_delete(worker);
