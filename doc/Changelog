@@ -1,3 +1,6 @@
+8 January 2026: Wouter
+	- Merge #1381: Do not initialize quic_table unless it is enabled.
+
 6 January 2026: Wouter
 	- Fix edns subnet, that scope zero queries, when there is a
 	  subquery without subnet, and the forward-no-cache or
