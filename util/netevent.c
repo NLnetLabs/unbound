@@ -2723,7 +2723,7 @@ doq_server_socket_create(struct doq_table* table, struct ub_randstate* rnd,
 {
 	size_t doq_buffer_size = 4096; /* bytes buffer size, for one packet. */
 	struct doq_server_socket* doq_socket;
-	log_assert(doq_table != NULL);
+	log_assert(table != NULL);
 	doq_socket = calloc(1, sizeof(*doq_socket));
 	if(!doq_socket) {
 		return NULL;
@@ -5882,10 +5882,10 @@ comm_point_create_doq(struct comm_base *base, int fd, sldns_buffer* buffer,
 	struct config_file* cfg)
 {
 #ifdef HAVE_NGTCP2
-	log_assert(table != NULL);
 	struct comm_point* c = (struct comm_point*)calloc(1,
 		sizeof(struct comm_point));
 	short evbits;
+	log_assert(table != NULL);
 	if(!c)
 		return NULL;
 	c->ev = (struct internal_event*)calloc(1,
