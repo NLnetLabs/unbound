@@ -1632,10 +1632,12 @@ az_parse_file(struct auth_zone* z, FILE* in, uint8_t* rr, size_t rrbuflen,
 struct az_parse_state {
 	/** The zone that is processed. */
 	struct auth_zone* z;
-	/** The config */
-	struct config_file* cfg;
 	/** number of errors, if 0 it was read successfully. */
 	int errors;
+	/** for http parse, chunk iterator. */
+	struct auth_chunk* chunk;
+	/** for http parse, position in chunk. */
+	size_t chunk_pos;
 };
 
 /** Callback for simdzone parse, log an error */
@@ -1721,8 +1723,7 @@ az_parse_include(zone_parser_t *parser, const char *file,
  * Parse file with simdzone.
  */
 static int
-az_parse_file_simdzone(struct auth_zone* z, char* zfilename,
-	struct config_file* cfg)
+az_parse_file_simdzone(struct auth_zone* z, char* zfilename)
 {
 	zone_parser_t parser;
 	zone_options_t options;
@@ -1744,7 +1745,6 @@ az_parse_file_simdzone(struct auth_zone* z, char* zfilename,
 
 	memset(&state, 0, sizeof(state));
 	state.z = z;
-	state.cfg = cfg;
 
 	/* Parse and process all RRs.  */
 	if (zone_parse(&parser, &options, &buffers, zfilename, &state) != 0) {
@@ -1815,7 +1815,7 @@ auth_zone_read_zonefile(struct auth_zone* z, struct config_file* cfg)
 	/* parse the (toplevel) file */
 	if(1) {
 		/* Use simdzone. */
-		if(!az_parse_file_simdzone(z, zfilename, cfg)) {
+		if(!az_parse_file_simdzone(z, zfilename)) {
 			char* n = sldns_wire2str_dname(z->name, z->namelen);
 			log_err("error parsing zonefile %s for %s",
 				zfilename, n?n:"error");
@@ -5349,6 +5349,130 @@ parse_http_sldns(struct auth_xfer* xfr, struct auth_zone* z,
 	return 1;
 }
 
+/**
+ * Callback for simdzone parse of http, include a zone file.
+ * It is called for every $INCLUDE entry.
+ */
+static int32_t
+az_http_parse_include(zone_parser_t *parser, const char *file,
+	const char *path, void *user_data)
+{
+	struct az_parse_state* state = (struct az_parse_state*)user_data;
+	char dname[LDNS_MAX_DOMAINLEN];
+	(void)parser;
+	verbose(6, "zone parse has include file %s (full path %s)",
+		file, path);
+	dname_str(state->z->name, dname);
+	verbose(1, "zone parse for zonefile of %s has $INCLUDE %s, but $INCLUDE not followed",
+		dname, file);
+	/* Not expecting a secondary zone file with includes. */
+	return ZONE_SEMANTIC_ERROR;
+}
+
+int32_t az_http_read_data(zone_parser_t* parser, char* data, size_t len,
+	size_t* outlen, void* user_data)
+{
+	struct az_parse_state* state = (struct az_parse_state*)user_data;
+	size_t written = 0;
+	(void)parser;
+
+	if(state->chunk == NULL) {
+		/* End of the chunk list */
+		*outlen = 0;
+		return 0;
+	}
+	if(state->chunk_pos == state->chunk->len) {
+		/* The end of the chunk list is reached, with 0 data. */
+		state->chunk = NULL;
+		*outlen = 0;
+		return 0;
+	}
+	if(len == 0) {
+		*outlen = 0;
+		return 0;
+	}
+
+	/* Fill up the data buffer with the requested amount. */
+	while(written < len) {
+		/* The amount that is wanted. */
+		size_t wanted = len - written;
+		/* That amount that is in this chunk. */
+		size_t avail = state->chunk->len - state->chunk_pos;
+
+		if(wanted < avail) {
+			/* Write a piece of this chunk. */
+			memmove(data+written,
+				state->chunk->data+state->chunk_pos, wanted);
+			state->chunk_pos += wanted;
+			*outlen = len;
+			return 0;
+		}
+		/* Write the entire chunk and continue on. */
+		if(avail > 0)
+			memmove(data+written,
+				state->chunk->data+state->chunk_pos, avail);
+		written += avail;
+
+		/* move to next chunk */
+		state->chunk = state->chunk->next;
+		state->chunk_pos = 0;
+
+		/* Is this the exact amount requested. */
+		if(written == len) {
+			/* continue later. */
+			*outlen = len;
+			return 0;
+		}
+		/* Is there no more data. */
+		if(state->chunk == NULL) {
+			/* End of data. */
+			*outlen = written;
+			return 0;
+		}
+	}
+	*outlen = written;
+	return 0;
+}
+
+/** parse http zone with simdzone. */
+static int
+parse_http_simdzone(struct auth_xfer* xfr, struct auth_zone* z)
+{
+	zone_parser_t parser;
+	zone_options_t options;
+	zone_name_buffer_t name_buffer;
+	zone_rdata_buffer_t rdata_buffer;
+	zone_buffers_t buffers = { 1, &name_buffer, &rdata_buffer };
+	struct az_parse_state state;
+
+	memset(&options, 0, sizeof(options));
+	options.origin.octets = z->name;
+	options.origin.length = z->namelen;
+	options.default_ttl = 3600;
+	options.default_class = LDNS_RR_CLASS_IN;
+	options.secondary = z->zone_is_slave;
+	options.pretty_ttls = true; /* non-standard, for backwards compatibility */
+	/* The log callback for file read prints the error and can be used
+	 * here too. */
+	options.log.callback = &az_parse_log;
+	/* The parse accept callback for file inserts the RR, and can be
+	 * used here too. */
+	options.accept.callback = &az_parse_accept;
+	options.include.callback = &az_http_parse_include;
+
+	memset(&state, 0, sizeof(state));
+	state.z = z;
+	state.chunk = xfr->task_transfer->chunks_first;
+	state.chunk_pos = 0;
+
+	/* Parse and process all RRs.  */
+	if (zone_parse_from_callback(&parser, &options, &buffers,
+		az_http_read_data, &state) != 0) {
+		return 0;
+	}
+	return 1;
+}
+
 /** apply HTTP to zone in memory. z is locked. false on failure(mallocfail) */
 static int
 apply_http(struct auth_xfer* xfr, struct auth_zone* z,
@@ -5397,8 +5521,15 @@ apply_http(struct auth_xfer* xfr, struct auth_zone* z,
 	xfr->serial = 0;
 	xfr->soa_zone_acquired = 0;
 
-	if(!parse_http_sldns(xfr, z, scratch_buffer))
-		return 0;
+	if(1) {
+		/* Use simdzone for parse. */
+		if(!parse_http_simdzone(xfr, z))
+			return 0;
+	} else {
+		/* Parse with sldns. */
+		if(!parse_http_sldns(xfr, z, scratch_buffer))
+			return 0;
+	}
 	return 1;
 }
 
