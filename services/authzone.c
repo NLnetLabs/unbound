@@ -5291,14 +5291,11 @@ apply_axfr(struct auth_xfer* xfr, struct auth_zone* z,
 	return 1;
 }
 
-/** apply HTTP to zone in memory. z is locked. false on failure(mallocfail) */
+/** parse http zone with sldns. */
 static int
-apply_http(struct auth_xfer* xfr, struct auth_zone* z,
+parse_http_sldns(struct auth_xfer* xfr, struct auth_zone* z,
 	struct sldns_buffer* scratch_buffer)
 {
-	/* parse data in chunks */
-	/* parse RR's and read into memory. ignore $INCLUDE from the
-	 * downloaded file*/
 	struct sldns_file_parse_state pstate;
 	struct auth_chunk* chunk;
 	size_t chunk_pos;
@@ -5309,45 +5306,6 @@ apply_http(struct auth_xfer* xfr, struct auth_zone* z,
 		pstate.origin_len = xfr->namelen;
 		memmove(pstate.origin, xfr->name, xfr->namelen);
 	}
-
-	if(verbosity >= VERB_ALGO)
-		verbose(VERB_ALGO, "http download %s of size %d",
-		xfr->task_transfer->master->file,
-		(int)chunklist_sum(xfr->task_transfer->chunks_first));
-	if(xfr->task_transfer->chunks_first && verbosity >= VERB_ALGO) {
-		char preview[1024];
-		if(xfr->task_transfer->chunks_first->len+1 > sizeof(preview)) {
-			memmove(preview, xfr->task_transfer->chunks_first->data,
-				sizeof(preview)-1);
-			preview[sizeof(preview)-1]=0;
-		} else {
-			memmove(preview, xfr->task_transfer->chunks_first->data,
-				xfr->task_transfer->chunks_first->len);
-			preview[xfr->task_transfer->chunks_first->len]=0;
-		}
-		log_info("auth zone http downloaded content preview: %s",
-			preview);
-	}
-
-	/* perhaps a little syntax check before we try to apply the data? */
-	if(!http_zonefile_syntax_check(xfr, scratch_buffer)) {
-		log_err("http download %s/%s does not contain a zonefile, "
-			"but got '%s'", xfr->task_transfer->master->host,
-			xfr->task_transfer->master->file,
-			sldns_buffer_begin(scratch_buffer));
-		return 0;
-	}
-
-	/* clear the data tree */
-	traverse_postorder(&z->data, auth_data_del, NULL);
-	rbtree_init(&z->data, &auth_data_cmp);
-	/* clear the RPZ policies */
-	if(z->rpz)
-		rpz_clear(z->rpz);
-
-	xfr->have_zone = 0;
-	xfr->serial = 0;
-	xfr->soa_zone_acquired = 0;
 
 	chunk = xfr->task_transfer->chunks_first;
 	chunk_pos = 0;
@@ -5388,6 +5346,59 @@ apply_http(struct auth_xfer* xfr, struct auth_zone* z,
 			return 0;
 		}
 	}
+	return 1;
+}
+
+/** apply HTTP to zone in memory. z is locked. false on failure(mallocfail) */
+static int
+apply_http(struct auth_xfer* xfr, struct auth_zone* z,
+	struct sldns_buffer* scratch_buffer)
+{
+	/* parse data in chunks */
+	/* parse RR's and read into memory. ignore $INCLUDE from the
+	 * downloaded file*/
+
+	if(verbosity >= VERB_ALGO)
+		verbose(VERB_ALGO, "http download %s of size %d",
+		xfr->task_transfer->master->file,
+		(int)chunklist_sum(xfr->task_transfer->chunks_first));
+	if(xfr->task_transfer->chunks_first && verbosity >= VERB_ALGO) {
+		char preview[1024];
+		if(xfr->task_transfer->chunks_first->len+1 > sizeof(preview)) {
+			memmove(preview, xfr->task_transfer->chunks_first->data,
+				sizeof(preview)-1);
+			preview[sizeof(preview)-1]=0;
+		} else {
+			memmove(preview, xfr->task_transfer->chunks_first->data,
+				xfr->task_transfer->chunks_first->len);
+			preview[xfr->task_transfer->chunks_first->len]=0;
+		}
+		log_info("auth zone http downloaded content preview: %s",
+			preview);
+	}
+
+	/* perhaps a little syntax check before we try to apply the data? */
+	if(!http_zonefile_syntax_check(xfr, scratch_buffer)) {
+		log_err("http download %s/%s does not contain a zonefile, "
+			"but got '%s'", xfr->task_transfer->master->host,
+			xfr->task_transfer->master->file,
+			sldns_buffer_begin(scratch_buffer));
+		return 0;
+	}
+
+	/* clear the data tree */
+	traverse_postorder(&z->data, auth_data_del, NULL);
+	rbtree_init(&z->data, &auth_data_cmp);
+	/* clear the RPZ policies */
+	if(z->rpz)
+		rpz_clear(z->rpz);
+
+	xfr->have_zone = 0;
+	xfr->serial = 0;
+	xfr->soa_zone_acquired = 0;
+
+	if(!parse_http_sldns(xfr, z, scratch_buffer))
+		return 0;
 	return 1;
 }
 
