@@ -2723,6 +2723,7 @@ doq_server_socket_create(struct doq_table* table, struct ub_randstate* rnd,
 {
 	size_t doq_buffer_size = 4096; /* bytes buffer size, for one packet. */
 	struct doq_server_socket* doq_socket;
+	log_assert(table != NULL);
 	doq_socket = calloc(1, sizeof(*doq_socket));
 	if(!doq_socket) {
 		return NULL;
@@ -2804,6 +2805,7 @@ doq_lookup_repinfo(struct doq_table* table, struct comm_reply* repinfo)
 {
 	struct doq_conn* conn;
 	struct doq_conn_key key;
+	log_assert(table != NULL);
 	doq_conn_key_from_repinfo(&key, repinfo);
 	lock_rw_rdlock(&table->lock);
 	conn = doq_conn_find(table, &key.paddr.addr,
@@ -5883,6 +5885,7 @@ comm_point_create_doq(struct comm_base *base, int fd, sldns_buffer* buffer,
 	struct comm_point* c = (struct comm_point*)calloc(1,
 		sizeof(struct comm_point));
 	short evbits;
+	log_assert(table != NULL);
 	if(!c)
 		return NULL;
 	c->ev = (struct internal_event*)calloc(1,

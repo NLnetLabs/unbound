@@ -1,3 +1,31 @@
+8 January 2026: Wouter
+	- Merge #1381: Do not initialize quic_table unless it is enabled.
+
+6 January 2026: Wouter
+	- Fix edns subnet, that scope zero queries, when there is a
+	  subquery without subnet, and the forward-no-cache or
+	  stub-no-cache option is set, it is not stored in cache due to
+	  the forward or stub option.
+
+6 January 2026: Yorgos
+	- Merge #1391 from Götz Görisch: Fix documentation to adhere to
+	  RFC5952.
+
+31 December 2025: Yorgos
+	- Update the unbound-anchor man page to note write permissions of the
+	  generated file if it is to be used with Unbound's
+	  auto-trust-anchor-file option.
+	- Use the same EDE removal logic when encoding errors as when encoding
+	  replies.
+
+30 December 2025: Yorgos
+	- Mark "THROWAWAY" and "(DNSSEC) LAME" responses clearly as Unbound's
+	  categorization in the log output.
+
+24 December 2025: Yorgos
+	- More specific wording in the unbound.conf man page for stub-first
+	  and forward-first options.
+
 3 December 2025: Wouter
 	- Fix http2 drop handling to clear the postpone_drop state so that
 	  other streams on the http2 session are not affected by a drop,

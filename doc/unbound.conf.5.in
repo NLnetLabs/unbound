@@ -102,7 +102,7 @@ server:
     interface: 0.0.0.0
     interface: ::0
     access\-control: 10.0.0.0/8 allow
-    access\-control: 2001:DB8::/64 allow
+    access\-control: 2001:db8::/64 allow
 .ft P
 .fi
 .UNINDENT
@@ -3377,7 +3377,7 @@ zone section below.
 Configure local data shorthand for a PTR record with the reversed IPv4 or
 IPv6 address and the host name.
 For example \fB\(dq192.0.2.4 www.example.com\(dq\fP\&.
-TTL can be inserted like this: \fB\(dq2001:DB8::4 7200 www.example.com\(dq\fP
+TTL can be inserted like this: \fB\(dq2001:db8::4 7200 www.example.com\(dq\fP
 .UNINDENT
 .INDENT 0.0
 .TP
@@ -4135,6 +4135,9 @@ Default: no
 If enabled, a query is attempted without this stub section if it fails.
 The data could not be retrieved and would have caused SERVFAIL because the
 servers are unreachable, instead it is tried without this stub section.
+This can lead to using less specific configured forward/stub/auth zones if
+any, or end up to otherwise normal recursive resolution for that particular
+query.
 .sp
 Default: no
 .UNINDENT
@@ -4255,9 +4258,11 @@ The cert must also match a CA from the
 .INDENT 0.0
 .TP
 .B forward\-first: \fI<yes or no>\fP 
-If a forwarded query is met with a SERVFAIL error, and this option is
-enabled, Unbound will fall back to normal recursive resolution for this
-query as if no query forwarding had been specified.
+If a forwarded query is met with a SERVFAIL error and this option is
+enabled Unbound will fall back to less specific resolution.
+This can lead to using less specific configured forward/stub/auth zones if
+any, or end up to otherwise normal recursive resolution for that particular
+query.
 .sp
 Default: no
 .UNINDENT
@@ -4370,9 +4375,15 @@ does not support AXFR/IXFR for the zone, but if you used
 \fI\%url\fP to download the zonefile as a text file
 from a webserver that would work.
 .sp
-If you specify the hostname, you cannot use the domain from the zonefile,
-because it may not have that when retrieving that data, instead use a plain
-IP address to avoid a circular dependency on retrieving that IP address.
+\fBCAUTION:\fP
+.INDENT 7.0
+.INDENT 3.5
+If you specify the hostname, you cannot use the domain from the
+zonefile, because it may not have that when retrieving that data,
+instead use a plain IP address to avoid a circular dependency on
+retrieving that IP address.
+.UNINDENT
+.UNINDENT
 .UNINDENT
 .INDENT 0.0
 .TP

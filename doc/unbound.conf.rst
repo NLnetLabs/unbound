@@ -102,7 +102,7 @@ all the options.
         interface: 0.0.0.0
         interface: ::0
         access-control: 10.0.0.0/8 allow
-        access-control: 2001:DB8::/64 allow
+        access-control: 2001:db8::/64 allow
 
 .. _unbound.conf.clauses:
 
@@ -1306,6 +1306,9 @@ These options are part of the ``server:`` section.
     Only interfaces configured with that port number as @number get the QUIC
     service.
     The interface uses QUIC for the UDP traffic on that port number.
+    If the quic-port is set to 0, the server does not init quic code,
+    and quic is disabled.
+    This is similar to if quic is not in use, but then explicitly.
 
     Default: 853
 
@@ -2896,7 +2899,7 @@ These options are part of the ``server:`` section.
     Configure local data shorthand for a PTR record with the reversed IPv4 or
     IPv6 address and the host name.
     For example ``"192.0.2.4 www.example.com"``.
-    TTL can be inserted like this: ``"2001:DB8::4 7200 www.example.com"``
+    TTL can be inserted like this: ``"2001:db8::4 7200 www.example.com"``
 
 
 @@UAHL@unbound.conf@local-zone-tag@@: *<zone> <"list of tags">*
@@ -3587,6 +3590,9 @@ The :ref:`local-zone: nodefault<unbound.conf.local-zone.type.nodefault>` (or
     If enabled, a query is attempted without this stub section if it fails.
     The data could not be retrieved and would have caused SERVFAIL because the
     servers are unreachable, instead it is tried without this stub section.
+    This can lead to using less specific configured forward/stub/auth zones if
+    any, or end up to otherwise normal recursive resolution for that particular
+    query.
 
     Default: no
 
@@ -3699,9 +3705,11 @@ cache).
 
 
 @@UAHL@unbound.conf.forward@forward-first@@: *<yes or no>*
-    If a forwarded query is met with a SERVFAIL error, and this option is
-    enabled, Unbound will fall back to normal recursive resolution for this
-    query as if no query forwarding had been specified.
+    If a forwarded query is met with a SERVFAIL error and this option is
+    enabled Unbound will fall back to less specific resolution.
+    This can lead to using less specific configured forward/stub/auth zones if
+    any, or end up to otherwise normal recursive resolution for that particular
+    query.
 
     Default: no
 
