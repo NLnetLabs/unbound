@@ -897,12 +897,22 @@ number of statistic counters:
     entries.
     This happens if there is a flood of queries that recursive processing and
     the server has a hard time.
+    The counter is increased when during the flood the
+    :ref:`jostle-timeout<unbound.conf.jostle-timeout>`
+    allows a query to be removed in favor of a new incoming query.
+    The older query is then dropped to make space.
 
 
 @@UAHL@unbound-control.stats@threadX.requestlist.exceeded@@
     Queries that were dropped because the request list was full.
     This happens if a flood of queries need recursive processing, and the
     server can not keep up.
+    The counter is increased when during the flood there is no space
+    to be made with the jostle out of an older query, and the new query
+    is dropped.
+    Since no older queries are removed, see
+    :ref:`jostle-timeout<unbound.conf.jostle-timeout>` setting, there
+    is no space for the new query.
 
 
 @@UAHL@unbound-control.stats@threadX.requestlist.current.all@@

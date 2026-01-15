@@ -1,3 +1,7 @@
+15 January 2026: Wouter
+	- Fix documentation for requestlist.overwritten and
+	  requestlist.exceeded, it explains which query was dropped.
+
 8 January 2026: Wouter
 	- Merge #1381: Do not initialize quic_table unless it is enabled.
 
