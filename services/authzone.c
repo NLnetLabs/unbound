@@ -5452,6 +5452,7 @@ parse_http_simdzone(struct auth_xfer* xfr, struct auth_zone* z)
 	options.default_class = LDNS_RR_CLASS_IN;
 	options.secondary = z->zone_is_slave;
 	options.pretty_ttls = true; /* non-standard, for backwards compatibility */
+	options.no_includes = true; /* the secondary zone file transferred over https is not expected to have $INCLUDE files. */
 	/* The log callback for file read prints the error and can be used
 	 * here too. */
 	options.log.callback = &az_parse_log;
