@@ -1723,7 +1723,8 @@ az_parse_include(zone_parser_t *parser, const char *file,
  * Parse file with simdzone.
  */
 static int
-az_parse_file_simdzone(struct auth_zone* z, char* zfilename)
+az_parse_file_simdzone(struct auth_zone* z, char* zfilename,
+	struct config_file* cfg)
 {
 	zone_parser_t parser;
 	zone_options_t options;
@@ -1739,6 +1740,9 @@ az_parse_file_simdzone(struct auth_zone* z, char* zfilename)
 	options.default_class = LDNS_RR_CLASS_IN;
 	options.secondary = z->zone_is_slave;
 	options.pretty_ttls = true; /* non-standard, for backwards compatibility */
+	if(cfg->chrootdir && cfg->chrootdir[0])
+		options.chrootdir = cfg->chrootdir;
+	else	options.chrootdir = NULL;
 	options.log.callback = &az_parse_log;
 	options.accept.callback = &az_parse_accept;
 	options.include.callback = &az_parse_include;
@@ -1815,7 +1819,7 @@ auth_zone_read_zonefile(struct auth_zone* z, struct config_file* cfg)
 	/* parse the (toplevel) file */
 	if(1) {
 		/* Use simdzone. */
-		if(!az_parse_file_simdzone(z, zfilename)) {
+		if(!az_parse_file_simdzone(z, zfilename, cfg)) {
 			char* n = sldns_wire2str_dname(z->name, z->namelen);
 			log_err("error parsing zonefile %s for %s",
 				zfilename, n?n:"error");
