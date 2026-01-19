@@ -1,3 +1,6 @@
+19 January 2026: Wouter
+	- Merge #1392: Include "V" (version) option in synopsis.
+
 15 January 2026: Wouter
 	- Fix documentation for requestlist.overwritten and
 	  requestlist.exceeded, it explains which query was dropped.
