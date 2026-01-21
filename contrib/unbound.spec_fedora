@@ -22,7 +22,7 @@ Patch1: unbound-1.2-glob.patch
 
 Group: System Environment/Daemons
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
-BuildRequires: flex, openssl-devel , ldns-devel >= 1.5.0, 
+BuildRequires: flex, openssl-devel , ldns-devel >= 1.5.0,
 BuildRequires: libevent-devel expat-devel
 %if %{with_python}
 BuildRequires:  python-devel swig
@@ -73,7 +73,7 @@ Summary: Libraries used by the unbound server and client applications
 Group: Applications/System
 Requires(post): /sbin/ldconfig
 Requires(postun): /sbin/ldconfig
-Requires: openssl 
+Requires: openssl
 
 %description libs
 Contains libraries used by the unbound server and client applications
@@ -89,7 +89,7 @@ Python modules and extensions for unbound
 %endif
 
 %prep
-%setup -q 
+%setup -q
 %patch1 -p1
 
 %build
@@ -116,7 +116,7 @@ install -d 0755 %{buildroot}%{_datadir}/munin/plugins/
 install -m 0755 %{SOURCE4} %{buildroot}%{_datadir}/munin/plugins/unbound
 for plugin in unbound_munin_hits unbound_munin_queue unbound_munin_memory unbound_munin_by_type unbound_munin_by_class unbound_munin_by_opcode unbound_munin_by_rcode unbound_munin_by_flags unbound_munin_histogram; do
     ln -s unbound %{buildroot}%{_datadir}/munin/plugins/$plugin
-done 
+done
 
 # install root and DLV key
 install -m 0644 %{SOURCE5} %{SOURCE6} %{buildroot}%{_sysconfdir}/unbound/
@@ -132,7 +132,7 @@ mkdir -p %{buildroot}%{_localstatedir}/run/unbound
 %clean
 rm -rf ${RPM_BUILD_ROOT}
 
-%files 
+%files
 %defattr(-,root,root,-)
 %doc doc/README doc/CREDITS doc/LICENSE doc/FEATURES
 %attr(0755,root,root) %{_initrddir}/%{name}
@@ -182,10 +182,10 @@ exit 0
 %preun
 if [ "$1" -eq 0 ]; then
         /sbin/service %{name} stop >/dev/null 2>&1
-        /sbin/chkconfig --del %{name} 
+        /sbin/chkconfig --del %{name}
 fi
 
-%postun 
+%postun
 if [ "$1" -ge "1" ]; then
   /sbin/service %{name} condrestart >/dev/null 2>&1 || :
 fi
@@ -198,7 +198,7 @@ fi
 - Fix install location of pythonmod from sitelib to sitearch
 - Removed patches merged in by upstream
 - Removed versioned openssl dep, it differs per branch
- 
+
 * Mon Aug 08 2011 Paul Wouters <paul@xelerance.com> - 1.4.12-3
 - Added pythonmod docs and examples
 - Fix for python module load in the server (Tom Hendrikx)
@@ -249,17 +249,17 @@ fi
 - Upgraded to 1.4.5
 
 * Mon May 31 2010 Paul Wouters <paul@xelerance.com> - 1.4.4-2
-- Added accidentally omitted svn patches to cvs 
+- Added accidentally omitted svn patches to cvs
 
 * Mon May 31 2010 Paul Wouters <paul@xelerance.com> - 1.4.4-1
 - Upgraded to 1.4.4 with svn patches
 - Obsolete dnssec-conf to ensure it is de-installed
 
-* Thu Mar 11 2010 Paul Wouters <paul@xelerance.com> - 1.4.3-1
-- Update to 1.4.3 that fixes 64bit crasher
+* Tue Mar 11 2010 Paul Wouters <paul@xelerance.com> - 1.4.3-1
+- Update to 1.4.3 that fixes 64bit crash
 
 * Tue Mar 09 2010 Paul Wouters <paul@xelerance.com> - 1.4.2-1
-- Updated to 1.4.2 
+- Updated to 1.4.2
 - Updated unbound.conf with new options
 - Enabled pre-fetching DNSKEY records (DNSSEC speedup)
 - Enabled re-fetching popular records before they expire
@@ -369,7 +369,7 @@ fi
 - label control certs after generation correctly
 
 * Thu Nov 20 2008 Paul Wouters <paul@xelerance.com> - 1.1.1-1
-- Updated to unbound 1.1.1 which fixes a crasher and
+- Updated to unbound 1.1.1 which fixes a crash and
   addresses nlnetlabs bug #219
 
 * Wed Nov 19 2008 Paul Wouters <paul@xelerance.com> - 1.1.0-3
@@ -408,7 +408,7 @@ fi
   causes unbound to listen on 0.0.0.0 instead of 127.0.0.1
 
 * Sun Oct 19 2008 Paul Wouters <paul@xelerance.com> - 1.0.2-3
-- Split off unbound-libs, make build verbose 
+- Split off unbound-libs, make build verbose
 
 * Thu Oct  9 2008 Paul Wouters <paul@xelerance.com> - 1.0.2-2
 - FSB compliance, chroot fixes, initscript fixes

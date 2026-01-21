@@ -1,0 +1,4 @@
+[codespell]
+skip = ./.git,./autom4te.cache,./node_modules,./po,./testdata,./dnscrypt/testdata,./pythonmod/examples/dict_data.txt,./configure,./config.guess,./config.sub,./ltmain.sh,./aclocal.m4,./contrib/fastrpz.patch
+ignore-words-list = GOST,gost,EDE,ede,aNULL,siz,servent,SectionIn,tolen,clen,ans,shs,nd,te,crypted,hel
+ignore-regex = .*(ratatui|Affinitized|affinitized|ede|fo|onl).*

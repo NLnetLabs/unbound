@@ -4,22 +4,22 @@
  * Copyright (c) 2020, NLnet Labs. All rights reserved.
  *
  * This software is open source.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
  * are met:
- * 
+ *
  * Redistributions of source code must retain the above copyright notice,
  * this list of conditions and the following disclaimer.
- * 
+ *
  * Redistributions in binary form must reproduce the above copyright notice,
  * this list of conditions and the following disclaimer in the documentation
  * and/or other materials provided with the distribution.
- * 
+ *
  * Neither the name of the NLNET LABS nor the names of its contributors may
  * be used to endorse or promote products derived from this software without
  * specific prior written permission.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
  * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -644,7 +644,7 @@ static void log_data_frame(uint8_t* pkt, size_t len)
 	} else {
 		mtype = "nomessage";
 	}
-	
+
 	printf("%s%s%s%s%s\n", mtype, (maddr?" ":""), (maddr?maddr:""),
 		(qinf?" ":""), (qinf?qinf:""));
 	free(maddr);
@@ -1211,7 +1211,7 @@ void dtio_mainfdcallback(int fd, short ATTR_UNUSED(bits), void* arg)
 			log_info("accepted new dnstap client");
 		}
 	}
-	
+
 	data = calloc(1, sizeof(*data));
 	if(!data) fatal_exit("out of memory");
 	data->fd = s;
@@ -1344,22 +1344,22 @@ setup_and_run(struct config_strlist_head* local_list,
 static int internal_unittest()
 {
 	/* unit test tap_data_list_try_to_free_tail() */
-#define unit_tap_datas_max 5
-	struct tap_data* datas[unit_tap_datas_max];
+#define unit_tap_data_max 5
+	struct tap_data* data_items[unit_tap_data_max];
 	struct tap_data_list* list;
 	struct tap_socket* socket = calloc(1, sizeof(*socket));
 	size_t i = 0;
 	log_assert(socket);
-	log_assert(unit_tap_datas_max>2); /* needed for the test */
-	for(i=0; i<unit_tap_datas_max; i++) {
-		datas[i] = calloc(1, sizeof(struct tap_data));
-		log_assert(datas[i]);
-		log_assert(tap_data_list_insert(&socket->data_list, datas[i]));
+	log_assert(unit_tap_data_max>2); /* needed for the test */
+	for(i=0; i<unit_tap_data_max; i++) {
+		data_items[i] = calloc(1, sizeof(struct tap_data));
+		log_assert(data_items[i]);
+		log_assert(tap_data_list_insert(&socket->data_list, data_items[i]));
 	}
 	/* sanity base check */
 	list = socket->data_list;
 	for(i=0; list; i++) list = list->next;
-	log_assert(i==unit_tap_datas_max);
+	log_assert(i==unit_tap_data_max);
 
 	/* Free the last data, tail cannot be erased */
 	list = socket->data_list;
@@ -1369,22 +1369,22 @@ static int internal_unittest()
 	tap_data_list_try_to_free_tail(list);
 	list = socket->data_list;
 	for(i=0; list; i++) list = list->next;
-	log_assert(i==unit_tap_datas_max);
+	log_assert(i==unit_tap_data_max);
 
 	/* Free the third to last data, tail cannot be erased */
 	list = socket->data_list;
-	for(i=0; i<unit_tap_datas_max-3; i++) list = list->next;
+	for(i=0; i<unit_tap_data_max-3; i++) list = list->next;
 	free(list->d);
 	list->d = NULL;
 	tap_data_list_try_to_free_tail(list);
 	list = socket->data_list;
 	for(i=0; list; i++) list = list->next;
-	log_assert(i==unit_tap_datas_max);
+	log_assert(i==unit_tap_data_max);
 
 	/* Free the second to last data, try to remove tail from the third
 	 * again, tail (last 2) should be removed */
 	list = socket->data_list;
-	for(i=0; i<unit_tap_datas_max-2; i++) list = list->next;
+	for(i=0; i<unit_tap_data_max-2; i++) list = list->next;
 	free(list->d);
 	list->d = NULL;
 	list = socket->data_list;
@@ -1392,7 +1392,7 @@ static int internal_unittest()
 	tap_data_list_try_to_free_tail(list);
 	list = socket->data_list;
 	for(i=0; list; i++) list = list->next;
-	log_assert(i==unit_tap_datas_max-2);
+	log_assert(i==unit_tap_data_max-2);
 
 	/* Free all the remaining data, try to remove tail from the start,
 	 * only the start should remain */
@@ -1415,9 +1415,9 @@ static int internal_unittest()
 	socket = calloc(1, sizeof(*socket));
 	log_assert(socket);
 	for(i=0; i<2; i++) {
-		datas[i] = calloc(1, sizeof(struct tap_data));
-		log_assert(datas[i]);
-		log_assert(tap_data_list_insert(&socket->data_list, datas[i]));
+		data_items[i] = calloc(1, sizeof(struct tap_data));
+		log_assert(data_items[i]);
+		log_assert(tap_data_list_insert(&socket->data_list, data_items[i]));
 	}
 	/* sanity base check */
 	list = socket->data_list;
@@ -1454,7 +1454,7 @@ extern int optind;
 extern char* optarg;
 
 /** main program for streamtcp */
-int main(int argc, char** argv) 
+int main(int argc, char** argv)
 {
 	int c;
 	int usessl = 0;
@@ -1604,7 +1604,7 @@ void worker_handle_control_cmd(struct tube* ATTR_UNUSED(tube),
 	log_assert(0);
 }
 
-int worker_handle_request(struct comm_point* ATTR_UNUSED(c), 
+int worker_handle_request(struct comm_point* ATTR_UNUSED(c),
 	void* ATTR_UNUSED(arg), int ATTR_UNUSED(error),
         struct comm_reply* ATTR_UNUSED(repinfo))
 {
@@ -1612,7 +1612,7 @@ int worker_handle_request(struct comm_point* ATTR_UNUSED(c),
 	return 0;
 }
 
-int worker_handle_service_reply(struct comm_point* ATTR_UNUSED(c), 
+int worker_handle_service_reply(struct comm_point* ATTR_UNUSED(c),
 	void* ATTR_UNUSED(arg), int ATTR_UNUSED(error),
         struct comm_reply* ATTR_UNUSED(reply_info))
 {
@@ -1620,7 +1620,7 @@ int worker_handle_service_reply(struct comm_point* ATTR_UNUSED(c),
 	return 0;
 }
 
-int remote_accept_callback(struct comm_point* ATTR_UNUSED(c), 
+int remote_accept_callback(struct comm_point* ATTR_UNUSED(c),
 	void* ATTR_UNUSED(arg), int ATTR_UNUSED(error),
         struct comm_reply* ATTR_UNUSED(repinfo))
 {
@@ -1628,7 +1628,7 @@ int remote_accept_callback(struct comm_point* ATTR_UNUSED(c),
 	return 0;
 }
 
-int remote_control_callback(struct comm_point* ATTR_UNUSED(c), 
+int remote_control_callback(struct comm_point* ATTR_UNUSED(c),
 	void* ATTR_UNUSED(arg), int ATTR_UNUSED(error),
         struct comm_reply* ATTR_UNUSED(repinfo))
 {
@@ -1657,7 +1657,7 @@ struct outbound_entry* worker_send_query(
 
 #ifdef UB_ON_WINDOWS
 void
-worker_win_stop_cb(int ATTR_UNUSED(fd), short ATTR_UNUSED(ev), void* 
+worker_win_stop_cb(int ATTR_UNUSED(fd), short ATTR_UNUSED(ev), void*
 	ATTR_UNUSED(arg)) {
 	log_assert(0);
 }
@@ -1669,7 +1669,7 @@ wsvc_cron_cb(void* ATTR_UNUSED(arg))
 }
 #endif /* UB_ON_WINDOWS */
 
-void 
+void
 worker_alloc_cleanup(void* ATTR_UNUSED(arg))
 {
 	log_assert(0);
@@ -1689,7 +1689,7 @@ struct outbound_entry* libworker_send_query(
 	return 0;
 }
 
-int libworker_handle_service_reply(struct comm_point* ATTR_UNUSED(c), 
+int libworker_handle_service_reply(struct comm_point* ATTR_UNUSED(c),
 	void* ATTR_UNUSED(arg), int ATTR_UNUSED(error),
         struct comm_reply* ATTR_UNUSED(reply_info))
 {
@@ -1704,21 +1704,21 @@ void libworker_handle_control_cmd(struct tube* ATTR_UNUSED(tube),
         log_assert(0);
 }
 
-void libworker_fg_done_cb(void* ATTR_UNUSED(arg), int ATTR_UNUSED(rcode), 
+void libworker_fg_done_cb(void* ATTR_UNUSED(arg), int ATTR_UNUSED(rcode),
 	struct sldns_buffer* ATTR_UNUSED(buf), enum sec_status ATTR_UNUSED(s),
 	char* ATTR_UNUSED(why_bogus), int ATTR_UNUSED(was_ratelimited))
 {
 	log_assert(0);
 }
 
-void libworker_bg_done_cb(void* ATTR_UNUSED(arg), int ATTR_UNUSED(rcode), 
+void libworker_bg_done_cb(void* ATTR_UNUSED(arg), int ATTR_UNUSED(rcode),
 	struct sldns_buffer* ATTR_UNUSED(buf), enum sec_status ATTR_UNUSED(s),
 	char* ATTR_UNUSED(why_bogus), int ATTR_UNUSED(was_ratelimited))
 {
 	log_assert(0);
 }
 
-void libworker_event_done_cb(void* ATTR_UNUSED(arg), int ATTR_UNUSED(rcode), 
+void libworker_event_done_cb(void* ATTR_UNUSED(arg), int ATTR_UNUSED(rcode),
 	struct sldns_buffer* ATTR_UNUSED(buf), enum sec_status ATTR_UNUSED(s),
 	char* ATTR_UNUSED(why_bogus), int ATTR_UNUSED(was_ratelimited))
 {

@@ -570,7 +570,7 @@ struct config_file {
 	/* DNS64 prefix */
 	char* dns64_prefix;
 
-	/* Synthetize all AAAA record despite the presence of an authoritative one */
+	/* Synthesize all AAAA record despite the presence of an authoritative one */
 	int dns64_synthall;
 	/** ignore AAAAs for these domain names and use A record anyway */
 	struct config_strlist* dns64_ignore_aaaa;

@@ -8,18 +8,18 @@
  Copyright (c) 2008. All rights reserved.
 
  This software is open source.
- 
+
  Redistribution and use in source and binary forms, with or without
  modification, are permitted provided that the following conditions
  are met:
- 
+
  Redistributions of source code must retain the above copyright notice,
  this list of conditions and the following disclaimer.
- 
+
  Redistributions in binary form must reproduce the above copyright notice,
  this list of conditions and the following disclaimer in the documentation
  and/or other materials provided with the distribution.
- 
+
  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
  TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
@@ -105,7 +105,7 @@ def operate(id, event, qstate, qdata):
     if (event == MODULE_EVENT_NEW) and (qstate.qinfo.qname_str.endswith(".seznam.cz.")): #pokud mame "python validator iterator"
         print qstate.qinfo.qname_str
 
-        qstate.ext_state[id] = MODULE_FINISHED 
+        qstate.ext_state[id] = MODULE_FINISHED
 
         msg = DNSMessage(qstate.qinfo.qname_str, RR_TYPE_A, RR_CLASS_IN, PKT_QR | PKT_RA | PKT_AA) #, 300)
         #msg.authority.append("xxx.seznam.cz. 10 IN A 192.168.1.1")
@@ -119,10 +119,10 @@ def operate(id, event, qstate, qdata):
             msg.answer.append("%s 10 IN TXT path=/" % qstate.qinfo.qname_str)
 
         if not msg.set_return_msg(qstate):
-            qstate.ext_state[id] = MODULE_ERROR 
+            qstate.ext_state[id] = MODULE_ERROR
             return True
 
-        #qstate.return_msg.rep.security = 2 #pokud nebude nasledovat validator, je zapotrebi nastavit security, aby nebyl paket zahozen v mesh_send_reply
+        #qstate.return_msg.rep.security = 2 #pokud nebude nasledovat validator, je zapotrebi nastavit security, aby nebyl packet zahozen v mesh_send_reply
         printReturnMsg(qstate)
 
         #Authoritative result can't be stored in cache
@@ -136,17 +136,17 @@ def operate(id, event, qstate, qdata):
         return True
 
     if event == MODULE_EVENT_NEW:
-        qstate.ext_state[id] = MODULE_WAIT_MODULE 
+        qstate.ext_state[id] = MODULE_WAIT_MODULE
         return True
 
     if event == MODULE_EVENT_MODDONE:
         log_info("pythonmod: previous module done")
-        qstate.ext_state[id] = MODULE_FINISHED 
+        qstate.ext_state[id] = MODULE_FINISHED
         return True
-      
+
     if event == MODULE_EVENT_PASS:
         log_info("pythonmod: event_pass")
-        qstate.ext_state[id] = MODULE_WAIT_MODULE 
+        qstate.ext_state[id] = MODULE_WAIT_MODULE
         return True
 
     log_err("pythonmod: BAD event")

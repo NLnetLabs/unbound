@@ -658,7 +658,7 @@ server:
 	# or, just before the iterator).
 	# module-config: "validator iterator"
 
-	# File with trusted keys, kept uptodate using RFC5011 probes,
+	# File with trusted keys, kept up-to-date using RFC5011 probes,
 	# initial file like trust-anchor-file, then it stores metadata.
 	# Use several entries, one per domain name, to track multiple zones.
 	#
@@ -718,7 +718,7 @@ server:
 	# val-max-restart: 5
 
 	# Should additional section of secure message also be kept clean of
-	# unsecure data. Useful to shield the users of this validator from
+	# insecure data. Useful to shield the users of this validator from
 	# potential bogus data in the additional section. All unsigned data
 	# in the additional section is removed from secure messages.
 	# val-clean-additional: yes

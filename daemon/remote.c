@@ -1510,7 +1510,7 @@ do_datas_add(struct daemon_remote* rc, RES* ssl, struct worker* worker)
 			buf+cmd_len, line))
 			num++;
 	}
-	(void)ssl_printf(ssl, "added %d datas\n", num);
+	(void)ssl_printf(ssl, "added %d data items\n", num);
 }
 
 /** Remove RR data */
@@ -1562,7 +1562,7 @@ do_datas_remove(struct daemon_remote* rc, RES* ssl, struct worker* worker)
 		}
 		else	num++;
 	}
-	(void)ssl_printf(ssl, "removed %d datas\n", num);
+	(void)ssl_printf(ssl, "removed %d data items\n", num);
 }
 
 /** Add a new zone to view */
@@ -1643,6 +1643,28 @@ do_view_data_add(RES* ssl, struct worker* worker, char* arg)
 	lock_rw_unlock(&v->lock);
 }
 
+/** Remove RR data from view */
+static void
+do_view_data_remove(RES* ssl, struct worker* worker, char* arg)
+{
+	char* arg2;
+	struct view* v;
+	if(!find_arg2(ssl, arg, &arg2))
+		return;
+	v = views_find_view(worker->env.views, arg, 1 /* get write lock*/);
+	if(!v) {
+		ssl_printf(ssl,"no view with name: %s\n", arg);
+		return;
+	}
+	if(!v->local_zones) {
+		lock_rw_unlock(&v->lock);
+		send_ok(ssl);
+		return;
+	}
+	do_data_remove(ssl, v->local_zones, arg2);
+	lock_rw_unlock(&v->lock);
+}
+
 /** Add new RR data from stdin to view */
 static void
 do_view_datas_add(struct daemon_remote* rc, RES* ssl, struct worker* worker,
@@ -1682,29 +1704,7 @@ do_view_datas_add(struct daemon_remote* rc, RES* ssl, struct worker* worker,
 			num++;
 	}
 	lock_rw_unlock(&v->lock);
-	(void)ssl_printf(ssl, "added %d datas\n", num);
-}
-
-/** Remove RR data from view */
-static void
-do_view_data_remove(RES* ssl, struct worker* worker, char* arg)
-{
-	char* arg2;
-	struct view* v;
-	if(!find_arg2(ssl, arg, &arg2))
-		return;
-	v = views_find_view(worker->env.views, arg, 1 /* get write lock*/);
-	if(!v) {
-		ssl_printf(ssl,"no view with name: %s\n", arg);
-		return;
-	}
-	if(!v->local_zones) {
-		lock_rw_unlock(&v->lock);
-		send_ok(ssl);
-		return;
-	}
-	do_data_remove(ssl, v->local_zones, arg2);
-	lock_rw_unlock(&v->lock);
+	(void)ssl_printf(ssl, "added %d data items\n", num);
 }
 
 /** Remove RR data from stdin from view */
@@ -1723,7 +1723,7 @@ do_view_datas_remove(struct daemon_remote* rc, RES* ssl, struct worker* worker,
 	}
 	if(!v->local_zones){
 		lock_rw_unlock(&v->lock);
-		ssl_printf(ssl, "removed 0 datas\n");
+		ssl_printf(ssl, "removed 0 data items\n");
 		return;
 	}
 	/* put the view name in the command buf */
@@ -1747,7 +1747,7 @@ do_view_datas_remove(struct daemon_remote* rc, RES* ssl, struct worker* worker,
 		else	num++;
 	}
 	lock_rw_unlock(&v->lock);
-	(void)ssl_printf(ssl, "removed %d datas\n", num);
+	(void)ssl_printf(ssl, "removed %d data items\n", num);
 }
 
 /** information for the domain search */

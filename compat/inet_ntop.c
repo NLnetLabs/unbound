@@ -34,7 +34,7 @@
 #include <stdio.h>
 
 #ifndef IN6ADDRSZ
-#define IN6ADDRSZ   16   /* IPv6 T_AAAA */                 
+#define IN6ADDRSZ   16   /* IPv6 T_AAAA */
 #endif
 
 #ifndef INT16SZ
@@ -82,7 +82,7 @@ inet_ntop(int af, const void *src, char *dst, size_t size)
  * return:
  *	`dst' (as a const)
  * notes:
- *	(1) uses no statics
+ *	(1) uses no static variables
  *	(2) takes a u_char* not an in_addr as input
  * author:
  *	Paul Vixie, 1996.
