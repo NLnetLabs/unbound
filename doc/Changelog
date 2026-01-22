@@ -1,3 +1,7 @@
+22 January 2026: Wouter
+	- Fix that fast reload copies the iter_scrub_ns, iter_scrub_cname
+	  and max_global_quota options.
+
 21 January 2026: Wouter
 	- Merge #1388: QNX Porting support for unbound.
 
