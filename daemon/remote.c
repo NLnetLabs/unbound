@@ -6627,7 +6627,14 @@ static void* fast_reload_thread_main(void* arg)
 	struct fast_reload_thread* fast_reload_thread = (struct fast_reload_thread*)arg;
 	struct timeval time_start, time_read, time_construct, time_reload,
 		time_end;
-	log_thread_set(&fast_reload_thread->threadnum);
+
+#if defined(HAVE_GETTID) && !defined(THREADS_DISABLED)
+	fast_reload_thread->thread_tid = gettid();
+	if(fast_reload_thread->thread_tid_log)
+		log_thread_set(&fast_reload_thread->thread_tid);
+	else
+#endif
+		log_thread_set(&fast_reload_thread->threadnum);
 
 	verbose(VERB_ALGO, "start fast reload thread");
 	if(fast_reload_thread->fr_verb >= 1) {
@@ -7015,6 +7022,9 @@ fast_reload_thread_setup(struct worker* worker, int fr_verb, int fr_nopause,
 	lock_basic_init(&fr->fr_output_lock);
 	lock_protect(&fr->fr_output_lock, fr->fr_output,
 		sizeof(*fr->fr_output));
+#ifdef HAVE_GETTID
+	fr->thread_tid_log = 1; /* worker->env->cfg->log_thread_id */
+#endif
 	return 1;
 }
 

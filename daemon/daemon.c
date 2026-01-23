@@ -632,6 +632,25 @@ static void close_other_pipes(struct daemon* daemon, int thr)
 #endif /* THREADS_DISABLED */
 
 /**
+ * Function to set the thread local log ID.
+ * Either the internal thread number, or the LWP ID on Linux based on
+ * configuration.
+ */
+static void
+set_log_thread_id(struct worker* worker, struct config_file* cfg)
+{
+	(void)cfg;
+	log_assert(worker);
+#if defined(HAVE_GETTID) && !defined(THREADS_DISABLED)
+	worker->thread_tid = gettid();
+	if(1/*cfg->log_thread_id*/)
+		log_thread_set(&worker->thread_tid);
+	else
+#endif
+		log_thread_set(&worker->thread_num);
+}
+
+/**
  * Function to start one thread. 
  * @param arg: user argument.
  * @return: void* user return value could be used for thread_join results.
@@ -641,7 +660,7 @@ thread_start(void* arg)
 {
 	struct worker* worker = (struct worker*)arg;
 	int port_num = 0;
-	log_thread_set(&worker->thread_num);
+	set_log_thread_id(worker, worker->daemon->cfg);
 	ub_thread_blocksigs();
 #ifdef THREADS_DISABLED
 	/* close pipe ends used by main */
@@ -801,9 +820,13 @@ daemon_fork(struct daemon* daemon)
 		fatal_exit("RPZ requires the respip module");
 
 	/* first create all the worker structures, so we can pass
-	 * them to the newly created threads. 
+	 * them to the newly created threads.
 	 */
 	daemon_create_workers(daemon);
+	/* Set it for the first (main) worker since it does not take part in
+	 * the thread_start() procedure.
+	 */
+	set_log_thread_id(daemon->workers[0], daemon->cfg);
 
 #if defined(HAVE_EV_LOOP) || defined(HAVE_EV_DEFAULT_LOOP)
 	/* in libev the first inited base gets signals */
