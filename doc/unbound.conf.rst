@@ -1306,9 +1306,9 @@ These options are part of the ``server:`` section.
     Only interfaces configured with that port number as @number get the QUIC
     service.
     The interface uses QUIC for the UDP traffic on that port number.
-    If the quic-port is set to 0, the server does not init quic code,
-    and quic is disabled.
-    This is similar to if quic is not in use, but then explicitly.
+    If it is set to 0, the server does not init QUIC code, and QUIC is
+    disabled.
+    This is similar to if QUIC is not in use, but then explicitly.
 
     Default: 853
 
