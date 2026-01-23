@@ -1717,6 +1717,15 @@ These options are part of the ``server:`` section.
     Default: no
 
 
+@@UAHL@unbound.conf@log-thread-id@@: *<yes or no>*
+    (Only on Linux and only when threads are available)
+    Logs the system-wide Linux thread ID instead of Unbound's internal thread
+    counter.
+    Can be useful when debugging with system tools.
+
+    Default: no
+
+
 @@UAHL@unbound.conf@pidfile@@: *<filename>*
     The process id is written to the file.
     Default is :file:`"@UNBOUND_PIDFILE@"`.

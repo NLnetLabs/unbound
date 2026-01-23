@@ -367,6 +367,8 @@ struct config_file {
 	char* log_identity;
 	/** log dest addr for log_replies */
 	int log_destaddr;
+	/** log linux thread ID */
+	int log_thread_id;
 
 	/** do not report identity (id.server, hostname.bind) */
 	int hide_identity;
