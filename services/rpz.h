@@ -136,15 +136,13 @@ struct rpz {
  * @param rr_type: RR type of the RR
  * @param rr_class: RR class of the RR
  * @param rr_ttl: TTL of the RR
- * @param rdatawl: rdata of the RR, prepended with the rdata size
- * @param rdatalen: length if the RR, including the prepended rdata size
- * @param rr: the complete RR, for logging purposes
- * @param rr_len: the length of the complete RR
+ * @param rdatawol: rdata of the RR, not prepended with the rdata size
+ * @param rdatalen: length if the RR, not including the prepended rdata size
  * @return: 0 on error
  */
 int rpz_insert_rr(struct rpz* r, uint8_t* azname, size_t aznamelen, uint8_t* dname,
 	size_t dnamelen, uint16_t rr_type, uint16_t rr_class, uint32_t rr_ttl,
-	uint8_t* rdatawl, size_t rdatalen, uint8_t* rr, size_t rr_len);
+	uint8_t* rdatawol, size_t rdatalen);
 
 /**
  * Delete policy matching RR, used for IXFR.

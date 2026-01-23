@@ -1189,8 +1189,7 @@ az_domain_add_rr(struct auth_data* node, uint16_t rr_type, uint32_t rr_ttl,
 static int
 az_insert_rr_as_rdata(struct auth_zone* z, uint8_t* dname, size_t dname_len,
 	uint16_t rr_type, uint16_t rr_class, uint32_t rr_ttl,
-	uint8_t* rdata_wol, size_t rdatalen, int* duplicate,
-	uint8_t* rr, size_t rr_len)
+	uint8_t* rdata_wol, size_t rdatalen, int* duplicate)
 {
 	struct auth_data* node;
 	if(rr_class != z->dclass) {
@@ -1207,35 +1206,9 @@ az_insert_rr_as_rdata(struct auth_zone* z, uint8_t* dname, size_t dname_len,
 		return 0;
 	}
 	if(z->rpz) {
-		uint8_t* rdata_wl;
-		uint8_t buf[65536];
-		if(rr == NULL) {
-			/* spool it into buffer. */
-			log_assert(dname);
-			if(dname_len + 10 /* type, class, ttl, rdlength */ +
-				rdatalen > sizeof(buf)) {
-				char dstr[LDNS_MAX_DOMAINLEN], t[16], c[16];
-				dname_str(dname, dstr);
-				sldns_wire2str_type_buf(rr_type, t, sizeof(t));
-				sldns_wire2str_class_buf(rr_class, c, sizeof(c));
-				log_err("record exceeds buffer length, %s %s %s", dstr, c, t);
-				return 0;
-			}
-			rr = buf;
-			rr_len = dname_len
-				+ 10 /* type, class, ttl, rdlength */ +
-				rdatalen;
-			memcpy(buf, dname, dname_len);
-			sldns_write_uint16(buf+dname_len, rr_type);
-			sldns_write_uint16(buf+dname_len+2, rr_class);
-			sldns_write_uint32(buf+dname_len+4, rr_ttl);
-			sldns_write_uint16(buf+dname_len+8, rdatalen);
-			memmove(buf+dname_len+10, rdata_wol, rdatalen);
-		}
-		rdata_wl = sldns_wirerr_get_rdatawl(rr, rr_len, dname_len);
 		if(!(rpz_insert_rr(z->rpz, z->name, z->namelen, dname,
-			dname_len, rr_type, rr_class, rr_ttl, rdata_wl,
-			rdatalen+2, rr, rr_len)))
+			dname_len, rr_type, rr_class, rr_ttl, rdata_wol,
+			rdatalen)))
 			return 0;
 	}
 	return 1;
@@ -1256,7 +1229,7 @@ az_insert_rr(struct auth_zone* z, uint8_t* rr, size_t rr_len,
 	uint8_t* rdata_wol = sldns_wirerr_get_rdata(rr, rr_len, dname_len);
 
 	return az_insert_rr_as_rdata(z, dname, dname_len, rr_type, rr_class,
-		rr_ttl, rdata_wol, rdatalen, duplicate, rr, rr_len);
+		rr_ttl, rdata_wol, rdatalen, duplicate);
 }
 
 /** Remove rr from node, ignores nonexisting RRs,
@@ -1690,7 +1663,7 @@ az_parse_accept(zone_parser_t *parser, const zone_name_t *owner,
 	/* Duplicates can be ignored, do not insert them twice. */
 	if(!az_insert_rr_as_rdata(state->z, (uint8_t*)owner->octets,
 		owner->length, type, dclass, ttl, (uint8_t*)rdata, rdlength,
-		NULL, NULL, 0)) {
+		NULL)) {
 		char dname[LDNS_MAX_DOMAINLEN], t[16], c[16];
 		dname_str((uint8_t*)owner->octets, dname);
 		sldns_wire2str_type_buf(type, t, sizeof(t));

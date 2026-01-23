@@ -1076,7 +1076,7 @@ rpz_insert_response_ip_trigger(struct rpz* r, uint8_t* dname, size_t dnamelen,
 int
 rpz_insert_rr(struct rpz* r, uint8_t* azname, size_t aznamelen, uint8_t* dname,
 	size_t dnamelen, uint16_t rr_type, uint16_t rr_class, uint32_t rr_ttl,
-	uint8_t* rdatawl, size_t rdatalen, uint8_t* rr, size_t rr_len)
+	uint8_t* rdatawol, size_t rdatalen)
 {
 	size_t policydnamelen;
 	/* name is free'd in local_zone delete */
