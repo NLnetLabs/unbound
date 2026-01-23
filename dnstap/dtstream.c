@@ -449,7 +449,7 @@ int dt_io_thread_apply_cfg(struct dt_io_thread* dtio, struct config_file *cfg)
 #endif /* HAVE_SSL */
 	}
 #ifdef HAVE_GETTID
-	dtio->thread_tid_log = 1 /*cfg->log_thread_id*/;
+	dtio->thread_tid_log = cfg->log_thread_id;
 #endif
 	return 1;
 }

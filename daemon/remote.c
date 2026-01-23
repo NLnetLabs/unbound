@@ -5968,6 +5968,7 @@ fr_atomic_copy_cfg(struct config_file* oldcfg, struct config_file* cfg,
 	COPY_VAR_int(log_servfail);
 	COPY_VAR_ptr(log_identity);
 	COPY_VAR_int(log_destaddr);
+	COPY_VAR_int(log_thread_id);
 	COPY_VAR_int(hide_identity);
 	COPY_VAR_int(hide_version);
 	COPY_VAR_int(hide_trustanchor);
@@ -7023,7 +7024,7 @@ fast_reload_thread_setup(struct worker* worker, int fr_verb, int fr_nopause,
 	lock_protect(&fr->fr_output_lock, fr->fr_output,
 		sizeof(*fr->fr_output));
 #ifdef HAVE_GETTID
-	fr->thread_tid_log = 1; /* worker->env->cfg->log_thread_id */
+	fr->thread_tid_log = worker->env.cfg->log_thread_id;
 #endif
 	return 1;
 }

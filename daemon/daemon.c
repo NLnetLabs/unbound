@@ -643,7 +643,7 @@ set_log_thread_id(struct worker* worker, struct config_file* cfg)
 	log_assert(worker);
 #if defined(HAVE_GETTID) && !defined(THREADS_DISABLED)
 	worker->thread_tid = gettid();
-	if(1/*cfg->log_thread_id*/)
+	if(cfg->log_thread_id)
 		log_thread_set(&worker->thread_tid);
 	else
 #endif
