@@ -276,12 +276,11 @@ void respip_inform_print(struct respip_action_info* respip_actinfo,
  * @param addrlen: length of addr.
  * @param net: netblock to lookup.
  * @param create: create node if it does not exist when 1.
- * @param ipstr: human readable ip string, for logging.
  * @return newly created of found node, not holding lock.
  */
 struct resp_addr*
 respip_sockaddr_find_or_create(struct respip_set* set, struct sockaddr_storage* addr,
-		socklen_t addrlen, int net, int create, const char* ipstr);
+		socklen_t addrlen, int net, int create);
 
 /**
  * Add RR to resp_addr's RRset. Create RRset if not existing.
@@ -300,6 +299,22 @@ int
 respip_enter_rr(struct regional* region, struct resp_addr* raddr,
 	uint16_t rrtype, uint16_t rrclass, time_t ttl, uint8_t* rdata,
 	size_t rdata_len, const char* rrstr, const char* netblockstr);
+
+/**
+ * Add RR to resp_addr's RRset. Create RRset if not existing.
+ * @param region: region to alloc RR(set).
+ * @param raddr: resp_addr containing RRset. Must hold write lock.
+ * @param rrtype: RR type.
+ * @param rrclass: RR class.
+ * @param ttl: TTL.
+ * @param rdata: RDATA. Without prefix len.
+ * @param rdata_len: length of rdata.
+ * @param netblockstr: netblock as string, for logging
+ * @return 0 on error
+ */
+int respip_enter_rr_wol(struct regional* region, struct resp_addr* raddr,
+	uint16_t rrtype, uint16_t rrclass, time_t ttl, uint8_t* rdata,
+	size_t rdata_len, const char* netblockstr);
 
 /**
  * Delete resp_addr node from tree.

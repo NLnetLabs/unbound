@@ -102,7 +102,7 @@ respip_set_get_tree(struct respip_set* set)
 
 struct resp_addr*
 respip_sockaddr_find_or_create(struct respip_set* set, struct sockaddr_storage* addr,
-		socklen_t addrlen, int net, int create, const char* ipstr)
+		socklen_t addrlen, int net, int create)
 {
 	struct resp_addr* node;
 	log_assert(set);
@@ -119,7 +119,10 @@ respip_sockaddr_find_or_create(struct respip_set* set, struct sockaddr_storage* 
 			addrlen, net)) {
 			/* We know we didn't find it, so this should be
 			 * impossible. */
-			log_warn("unexpected: duplicate address: %s", ipstr);
+			char a[128];
+			addr_to_str(addr, addrlen, a, sizeof(a));
+			log_warn("unexpected: duplicate address: %s/%d",
+				a, net);
 		}
 	}
 	return node;
@@ -154,8 +157,7 @@ respip_find_or_create(struct respip_set* set, const char* ipstr, int create)
 		log_err("cannot parse netblock: '%s'", ipstr);
 		return NULL;
 	}
-	return respip_sockaddr_find_or_create(set, &addr, addrlen, net, create,
-		ipstr);
+	return respip_sockaddr_find_or_create(set, &addr, addrlen, net, create);
 }
 
 static int
@@ -289,6 +291,49 @@ respip_enter_rr(struct regional* region, struct resp_addr* raddr,
 	}
 	pd = raddr->data->entry.data;
 	return rrset_insert_rr(region, pd, rdata, rdata_len, ttl, rrstr);
+}
+
+int
+respip_enter_rr_wol(struct regional* region, struct resp_addr* raddr,
+	uint16_t rrtype, uint16_t rrclass, time_t ttl, uint8_t* rdata_wol,
+	size_t rdata_len, const char* netblockstr)
+{
+	struct packed_rrset_data* pd;
+	struct sockaddr* sa;
+	sa = (struct sockaddr*)&raddr->node.addr;
+	if (rrtype == LDNS_RR_TYPE_CNAME && raddr->data) {
+		char* rrstr = dname_rdata_to_str(NULL, 0, rrtype,
+			rrclass, ttl, rdata_wol, rdata_len);
+		log_err("CNAME response-ip data (%s) can not co-exist with other "
+			"response-ip data for netblock %s", rrstr, netblockstr);
+		free(rrstr);
+		return 0;
+	} else if (raddr->data &&
+		raddr->data->rk.type == htons(LDNS_RR_TYPE_CNAME)) {
+		char* rrstr = dname_rdata_to_str(NULL, 0, rrtype,
+			rrclass, ttl, rdata_wol, rdata_len);
+		log_err("response-ip data (%s) can not be added; CNAME response-ip "
+			"data already in place for netblock %s", rrstr, netblockstr);
+		free(rrstr);
+		return 0;
+	} else if((rrtype != LDNS_RR_TYPE_CNAME) &&
+		((sa->sa_family == AF_INET && rrtype != LDNS_RR_TYPE_A) ||
+		(sa->sa_family == AF_INET6 && rrtype != LDNS_RR_TYPE_AAAA))) {
+		char* rrstr = dname_rdata_to_str(NULL, 0, rrtype,
+			rrclass, ttl, rdata_wol, rdata_len);
+		log_err("response-ip data %s record type does not correspond "
+			"to netblock %s address family", rrstr, netblockstr);
+		free(rrstr);
+		return 0;
+	}
+
+	if(!raddr->data) {
+		raddr->data = new_rrset(region, rrtype, rrclass);
+		if(!raddr->data)
+			return 0;
+	}
+	pd = raddr->data->entry.data;
+	return rrset_insert_rr_wol(region, pd, rdata_wol, rdata_len, ttl);
 }
 
 static int
