@@ -1211,6 +1211,7 @@ az_insert_rr_as_rdata(struct auth_zone* z, uint8_t* dname, size_t dname_len,
 		uint8_t buf[65536];
 		if(rr == NULL) {
 			/* spool it into buffer. */
+			log_assert(dname);
 			if(dname_len + 10 /* type, class, ttl, rdlength */ +
 				rdatalen > sizeof(buf)) {
 				char dstr[LDNS_MAX_DOMAINLEN], t[16], c[16];
@@ -1771,6 +1772,7 @@ file_exists(char* filename)
 int
 auth_zone_read_zonefile(struct auth_zone* z, struct config_file* cfg)
 {
+	int use_simdzone = 1;
 	uint8_t rr[LDNS_RR_BUF_SIZE];
 	struct sldns_file_parse_state state;
 	char* zfilename;
@@ -1817,7 +1819,7 @@ auth_zone_read_zonefile(struct auth_zone* z, struct config_file* cfg)
 		state.origin_len = z->namelen;
 	}
 	/* parse the (toplevel) file */
-	if(1) {
+	if(use_simdzone) {
 		/* Use simdzone. */
 		if(!az_parse_file_simdzone(z, zfilename, cfg)) {
 			char* n = sldns_wire2str_dname(z->name, z->namelen);
@@ -5483,6 +5485,8 @@ static int
 apply_http(struct auth_xfer* xfr, struct auth_zone* z,
 	struct sldns_buffer* scratch_buffer)
 {
+	int use_simdzone = 1;
+
 	/* parse data in chunks */
 	/* parse RR's and read into memory. ignore $INCLUDE from the
 	 * downloaded file*/
@@ -5526,7 +5530,7 @@ apply_http(struct auth_xfer* xfr, struct auth_zone* z,
 	xfr->serial = 0;
 	xfr->soa_zone_acquired = 0;
 
-	if(1) {
+	if(use_simdzone) {
 		/* Use simdzone for parse. */
 		if(!parse_http_simdzone(xfr, z))
 			return 0;
