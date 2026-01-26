@@ -2203,9 +2203,6 @@ worker_init(struct worker* worker, struct config_file *cfg,
 #else
 	void* dtenv = NULL;
 #endif
-#ifdef HAVE_GETTID
-	worker->thread_tid = gettid();
-#endif
 	worker->need_to_exit = 0;
 	worker->base = comm_base_create(do_sigs);
 	if(!worker->base) {

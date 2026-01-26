@@ -216,7 +216,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_LOG_DESTADDR VAR_CACHEDB_CHECK_WHEN_SERVE_EXPIRED
 %token VAR_COOKIE_SECRET_FILE VAR_ITER_SCRUB_NS VAR_ITER_SCRUB_CNAME
 %token VAR_MAX_GLOBAL_QUOTA VAR_HARDEN_UNVERIFIED_GLUE VAR_LOG_TIME_ISO
-%token VAR_ITER_SCRUB_PROMISCUOUS
+%token VAR_ITER_SCRUB_PROMISCUOUS VAR_LOG_THREAD_ID
 
 %%
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
@@ -288,7 +288,7 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_edns_buffer_size | server_prefetch | server_prefetch_key |
 	server_so_sndbuf | server_harden_below_nxdomain | server_ignore_cd_flag |
 	server_log_queries | server_log_replies | server_tcp_upstream | server_ssl_upstream |
-	server_log_local_actions |
+	server_log_local_actions | server_log_thread_id |
 	server_ssl_service_key | server_ssl_service_pem | server_ssl_port |
 	server_https_port | server_http_endpoint | server_http_max_streams |
 	server_http_query_buffer_size | server_http_response_buffer_size |
@@ -1347,6 +1347,15 @@ server_log_destaddr: VAR_LOG_DESTADDR STRING_ARG
 		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
 			yyerror("expected yes or no.");
 		else cfg_parser->cfg->log_destaddr = (strcmp($2, "yes")==0);
+		free($2);
+	}
+	;
+server_log_thread_id: VAR_LOG_THREAD_ID STRING_ARG
+	{
+		OUTYY(("P(server_log_thread_id:%s)\n", $2));
+		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
+			yyerror("expected yes or no.");
+		else cfg_parser->cfg->log_thread_id = (strcmp($2, "yes")==0);
 		free($2);
 	}
 	;
