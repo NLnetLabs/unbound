@@ -3990,6 +3990,22 @@ auth_master_copy(struct auth_master* o)
 	return m;
 }
 
+/** append the master to the copied list. */
+static int
+auth_master_copy_and_append(struct auth_master* p, struct auth_master** list,
+	struct auth_master** last)
+{
+	struct auth_master* m = auth_master_copy(p);
+	if(!m) {
+		return 0;
+	}
+	m->next = NULL;
+	if(*last) (*last)->next = m;
+	if(!*list) *list = m;
+	*last = m;
+	return 1;
+}
+
 /** copy the master addresses from the task_probe lookups to the allow_notify
  * list of masters */
 static void
@@ -3998,17 +4014,27 @@ probe_copy_masters_for_allow_notify(struct auth_xfer* xfr)
 	struct auth_master* list = NULL, *last = NULL;
 	struct auth_master* p;
 	/* build up new list with copies */
-	for(p = xfr->task_transfer->masters; p; p=p->next) {
-		struct auth_master* m = auth_master_copy(p);
-		if(!m) {
+	/* The list in task probe has been looked up before the list in
+	 * task transfer. */
+	for(p = xfr->task_probe->masters; p; p=p->next) {
+		if(!auth_master_copy_and_append(p, &list, &last)) {
 			auth_free_masters(list);
 			/* failed because of malloc failure, use old list */
 			return;
 		}
-		m->next = NULL;
-		if(last) last->next = m;
-		if(!list) list = m;
-		last = m;
+	}
+	/* The list in task transfer also contains the http entries. */
+	for(p = xfr->task_transfer->masters; p; p=p->next) {
+		/* Copy the http entries from this lookup. The allow_notify
+		 * entries are not looked up from this list. The other
+		 * ones are already in from the probe lookups. */
+		if(!p->http)
+			continue;
+		if(!auth_master_copy_and_append(p, &list, &last)) {
+			auth_free_masters(list);
+			/* failed because of malloc failure, use old list */
+			return;
+		}
 	}
 	/* success, replace list */
 	auth_free_masters(xfr->allow_notify_list);

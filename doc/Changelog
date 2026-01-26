@@ -1,3 +1,7 @@
+26 January 2026: Wouter
+	- Fix that allow-notify entries with hostnames are copied after IPv4
+	  and IPv6 lookup.
+
 22 January 2026: Wouter
 	- Fix that fast reload copies the iter_scrub_ns, iter_scrub_cname
 	  and max_global_quota options.
