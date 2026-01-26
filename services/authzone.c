@@ -6695,6 +6695,18 @@ xfr_probe_lookup_host(struct auth_xfer* xfr, struct module_env* env)
 	return 1;
 }
 
+/** return true if there are probe (SOA UDP query) targets in the master list*/
+static int
+have_probe_targets(struct auth_master* list)
+{
+	struct auth_master* p;
+	for(p=list; p; p = p->next) {
+		if(!p->allow_notify && p->host)
+			return 1;
+	}
+	return 0;
+}
+
 /** move to sending the probe packets, next if fails. task_probe */
 static void
 xfr_probe_send_or_end(struct auth_xfer* xfr, struct module_env* env)
@@ -6734,6 +6746,16 @@ xfr_probe_send_or_end(struct auth_xfer* xfr, struct module_env* env)
 			verbose(VERB_ALGO, "auth zone %s probe: finished only_lookup", zname);
 		}
 		xfr_probe_disown(xfr);
+		if(!have_probe_targets(xfr->task_probe->masters)) {
+			/* If there are no masters to probe, go to transfer. */
+			if(xfr->task_transfer->worker == NULL) {
+				xfr_start_transfer(xfr, env, NULL);
+				return;
+			}
+			/* The transfer is already in progress. */
+			lock_basic_unlock(&xfr->lock);
+			return;
+		}
 		if(xfr->task_nextprobe->worker == NULL)
 			xfr_set_timeout(xfr, env, 0, 0);
 		lock_basic_unlock(&xfr->lock);
@@ -6890,18 +6912,6 @@ auth_xfer_timer(void* arg)
 	}
 }
 
-/** return true if there are probe (SOA UDP query) targets in the master list*/
-static int
-have_probe_targets(struct auth_master* list)
-{
-	struct auth_master* p;
-	for(p=list; p; p = p->next) {
-		if(!p->allow_notify && p->host)
-			return 1;
-	}
-	return 0;
-}
-
 /** start task_probe if possible, if no masters for probe start task_transfer
  * returns true if task has been started, and false if the task is already
  * in progress. */
@@ -6913,7 +6923,9 @@ xfr_start_probe(struct auth_xfer* xfr, struct module_env* env,
 	 * progress (due to notify)) */
 	if(xfr->task_probe->worker == NULL) {
 		if(!have_probe_targets(xfr->task_probe->masters) &&
-			!(xfr->task_probe->only_lookup &&
+			xfr->task_probe->masters != NULL)
+			xfr->task_probe->only_lookup = 1;
+		if(!(xfr->task_probe->only_lookup &&
 			xfr->task_probe->masters != NULL)) {
 			/* useless to pick up task_probe, no masters to
 			 * probe. Instead attempt to pick up task transfer */

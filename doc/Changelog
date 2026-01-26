@@ -1,6 +1,8 @@
 26 January 2026: Wouter
 	- Fix that allow-notify entries with hostnames are copied after IPv4
 	  and IPv6 lookup.
+	- Fix to not skip allow-notify hostname lookups when there are only
+	  urls.
 
 23 January 2026: Yorgos
 	- Merge #1396: Log Linux thread ID.
