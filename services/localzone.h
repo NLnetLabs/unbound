@@ -536,7 +536,7 @@ int rrset_insert_rr(struct regional* region, struct packed_rrset_data* pd,
   * Insert specified rdata into the specified resource record.
   * @param region: allocator
   * @param pd: data portion of the destination resource record
-  * @param rdata: source rdata, without prefix len.
+  * @param rdata_wol: source rdata, without prefix len.
   * @param rdata_len: source rdata length
   * @param ttl: time to live
   * @return 1 on success; 0 otherwise.
