@@ -100,7 +100,7 @@ int
 query_dname_compare(register uint8_t* d1, register uint8_t* d2)
 {
 	register uint8_t lab1, lab2;
-	register char ld1, ld2;
+	register uint8_t ld1, ld2;
 	log_assert(d1 && d2);
 	lab1 = *d1++;
 	lab2 = *d2++;
@@ -234,7 +234,7 @@ int
 dname_pkt_compare(sldns_buffer* pkt, uint8_t* d1, uint8_t* d2)
 {
 	uint8_t len1, len2;
-	register char ld1, ld2;
+	register uint8_t ld1, ld2;
 	int count1 = 0, count2 = 0;
 	log_assert(pkt && d1 && d2);
 	len1 = *d1++;
@@ -472,7 +472,7 @@ dname_count_size_labels(uint8_t* dname, size_t* size)
 static int
 memlowercmp(uint8_t* p1, uint8_t* p2, uint8_t len)
 {
-	register char lp1, lp2;
+	register uint8_t lp1, lp2;
 	while(len--) {
 		if(*p1 != *p2 && (lp1=tolower((unsigned char)*p1)) != (lp2=tolower((unsigned char)*p2))) {
 			if(lp1 < lp2)
@@ -526,7 +526,7 @@ dname_lab_cmp(uint8_t* d1, int labs1, uint8_t* d2, int labs2, int* mlabs)
 			d1 += len1;
 			d2 += len2;
 		} else {
-			register char ld1, ld2;
+			register uint8_t ld1, ld2;
 			/* memlowercmp is inlined here; or just like
 			 * if((c=memlowercmp(d1, d2, len1)) != 0) { 
 			 *	lastdiff = c;
