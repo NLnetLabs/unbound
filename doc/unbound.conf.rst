@@ -1306,9 +1306,9 @@ These options are part of the ``server:`` section.
     Only interfaces configured with that port number as @number get the QUIC
     service.
     The interface uses QUIC for the UDP traffic on that port number.
-    If the quic-port is set to 0, the server does not init quic code,
-    and quic is disabled.
-    This is similar to if quic is not in use, but then explicitly.
+    If it is set to 0, the server does not init QUIC code, and QUIC is
+    disabled.
+    This is similar to if QUIC is not in use, but then explicitly.
 
     Default: 853
 
@@ -1713,6 +1713,15 @@ These options are part of the ``server:`` section.
     Print log lines that say why queries return SERVFAIL to clients.
     This is separate from the verbosity debug logs, much smaller, and printed
     at the error level, not the info level of debug info from verbosity.
+
+    Default: no
+
+
+@@UAHL@unbound.conf@log-thread-id@@: *<yes or no>*
+    (Only on Linux and only when threads are available)
+    Logs the system-wide Linux thread ID instead of Unbound's internal thread
+    counter.
+    Can be useful when debugging with system tools.
 
     Default: no
 
