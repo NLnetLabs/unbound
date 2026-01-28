@@ -698,6 +698,34 @@ rpz_insert_local_zones_trigger(struct local_zones* lz, uint8_t* dname,
 		return;
 	}
 
+	/* For not a local-data action.
+	 * Insert the zone, then detect a duplicate, instead of find it first,
+	 * for speed of searching the tree once. */
+	if(a != RPZ_LOCAL_DATA_ACTION) {
+		int duplicate = 0;
+		lock_rw_wrlock(&lz->lock);
+		tp = rpz_action_to_localzone_type(a);
+		z = local_zones_add_zone(lz, dname, dnamelen,
+					 dnamelabs, rrclass, tp, &duplicate);
+		if(z == NULL) {
+			if(duplicate) {
+				char* rrstr = dname_rdata_to_str(dname, dnamelen, rrtype,
+					rrclass, ttl, rdata, rdata_len);
+				verbose(VERB_ALGO, "rpz: skipping duplicate record: %s", rrstr);
+				free(rrstr);
+				free(dname);
+				lock_rw_unlock(&lz->lock);
+				return;
+			}
+			log_warn("rpz: create failed, out of memory");
+			lock_rw_unlock(&lz->lock);
+			/* dname will be free'd in failed local_zone_create() */
+			return;
+		}
+		lock_rw_unlock(&lz->lock);
+		return;
+	}
+
 	lock_rw_wrlock(&lz->lock);
 	/* exact match */
 	z = local_zones_find(lz, dname, dnamelen, dnamelabs, LDNS_RR_CLASS_IN);
@@ -713,7 +741,7 @@ rpz_insert_local_zones_trigger(struct local_zones* lz, uint8_t* dname,
 	if(z == NULL) {
 		tp = rpz_action_to_localzone_type(a);
 		z = local_zones_add_zone(lz, dname, dnamelen,
-					 dnamelabs, rrclass, tp);
+					 dnamelabs, rrclass, tp, NULL);
 		if(z == NULL) {
 			log_warn("rpz: create failed");
 			lock_rw_unlock(&lz->lock);

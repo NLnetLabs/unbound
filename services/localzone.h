@@ -403,11 +403,17 @@ local_zones_find_le(struct local_zones* zones,
  * @param labs: labelcount of name.
  * @param dclass: class to add.
  * @param tp: type.
+ * @param duplicate: Allows to check if a NULL return from the function is a
+ *	memory error, or a duplicate entry. Pass NULL to have it not returned,
+ *	the name is freed on errors, and for a duplicate a log message is
+ *	printed. Pass not NULL, and when the error is a duplicate, the function
+ *	returns NULL, and the variable is set true. The name is not freed
+ *	when there is a duplicate, no error is printed by this function.
  * @return local_zone or NULL on error, caller must printout memory error.
  */
 struct local_zone* local_zones_add_zone(struct local_zones* zones, 
 	uint8_t* name, size_t len, int labs, uint16_t dclass, 
-	enum localzone_type tp);
+	enum localzone_type tp, int* duplicate);
 
 /**
  * Delete a zone. Caller must hold the zones lock.

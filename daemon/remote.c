@@ -1339,7 +1339,7 @@ perform_zone_add(RES* ssl, struct local_zones* zones, char* arg)
 		return 1;
 	}
 	if(!local_zones_add_zone(zones, nm, nmlen,
-		nmlabs, LDNS_RR_CLASS_IN, t)) {
+		nmlabs, LDNS_RR_CLASS_IN, t, NULL)) {
 		lock_rw_unlock(&zones->lock);
 		ssl_printf(ssl, "error out of memory\n");
 		return 0;

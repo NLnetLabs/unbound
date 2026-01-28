@@ -1385,7 +1385,7 @@ int ub_ctx_zone_add(struct ub_ctx* ctx, const char *zone_name,
 		return UB_NOERROR;
 	}
 	if(!local_zones_add_zone(ctx->local_zones, nm, nmlen, nmlabs, 
-		LDNS_RR_CLASS_IN, t)) {
+		LDNS_RR_CLASS_IN, t, NULL)) {
 		lock_rw_unlock(&ctx->local_zones->lock);
 		return UB_NOMEM;
 	}

@@ -2231,7 +2231,7 @@ set_kiddo_parents(struct local_zone* z, struct local_zone* match,
 
 struct local_zone* local_zones_add_zone(struct local_zones* zones,
 	uint8_t* name, size_t len, int labs, uint16_t dclass,
-	enum localzone_type tp)
+	enum localzone_type tp, int* duplicate)
 {
 	int exact;
 	/* create */
@@ -2239,6 +2239,7 @@ struct local_zone* local_zones_add_zone(struct local_zones* zones,
 	struct local_zone* z = local_zone_create(name, len, labs, tp, dclass);
 	if(!z) {
 		free(name);
+		if(duplicate) *duplicate = 0;
 		return NULL;
 	}
 	lock_rw_wrlock(&z->lock);
@@ -2252,8 +2253,14 @@ struct local_zone* local_zones_add_zone(struct local_zones* zones,
 	if(exact||!rbtree_insert(&zones->ztree, &z->node)) {
 		/* duplicate entry! */
 		lock_rw_unlock(&z->lock);
+		if(duplicate) {
+			*duplicate = 1;
+			z->name = NULL; /* Do not delete the name in
+				local_zone_delete. */
+		}
 		local_zone_delete(z);
-		log_err("internal: duplicate entry in local_zones_add_zone");
+		if(duplicate == NULL)
+			log_err("internal: duplicate entry in local_zones_add_zone");
 		return NULL;
 	}
 
@@ -2297,7 +2304,7 @@ local_zones_add_RR(struct local_zones* zones, const char* rr)
 	z = local_zones_lookup(zones, rr_name, len, labs, rr_class, rr_type);
 	if(!z) {
 		z = local_zones_add_zone(zones, rr_name, len, labs, rr_class,
-			local_zone_transparent);
+			local_zone_transparent, NULL);
 		if(!z) {
 			lock_rw_unlock(&zones->lock);
 			return 0;
