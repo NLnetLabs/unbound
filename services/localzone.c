@@ -697,7 +697,7 @@ local_zone_enter_rr_wol(struct local_zone* z, uint8_t* nm, size_t nmlen,
 			char* rrstr = dname_rdata_to_str(nm, nmlen, rrtype,
 				rrclass, ttl, rdata_wol, rdata_len);
 			log_err("local-data '%s' in redirect zone must not "
-				"coexist with %s local-data", rrstr, othertype);
+				"coexist with %s local-data", (rrstr?rrstr:"<out of memory>"), othertype);
 			free(rrstr);
 			return 0;
 		}
@@ -722,7 +722,7 @@ local_zone_enter_rr_wol(struct local_zone* z, uint8_t* nm, size_t nmlen,
 	if(rr_is_duplicate_wol(pd, rdata_wol, rdata_len)) {
 		char* rrstr = dname_rdata_to_str(nm, nmlen, rrtype,
 			rrclass, ttl, rdata_wol, rdata_len);
-		verbose(VERB_ALGO, "ignoring duplicate RR: %s", rrstr);
+		verbose(VERB_ALGO, "ignoring duplicate RR: %s", (rrstr?rrstr:"<out of memory>"));
 		free(rrstr);
 		return 1;
 	}
@@ -730,7 +730,7 @@ local_zone_enter_rr_wol(struct local_zone* z, uint8_t* nm, size_t nmlen,
 		char* rrstr = dname_rdata_to_str(nm, nmlen, rrtype,
 			rrclass, ttl, rdata_wol, rdata_len);
 		log_warn("RRset %s has more than %d records, record ignored",
-			rrstr, LOCALZONE_RRSET_COUNT_MAX);
+			(rrstr?rrstr:"<out of memory>"), LOCALZONE_RRSET_COUNT_MAX);
 		free(rrstr);
 		return 1;
 	}

@@ -305,7 +305,7 @@ respip_enter_rr_wol(struct regional* region, struct resp_addr* raddr,
 		char* rrstr = dname_rdata_to_str(NULL, 0, rrtype,
 			rrclass, ttl, rdata_wol, rdata_len);
 		log_err("CNAME response-ip data (%s) can not co-exist with other "
-			"response-ip data for netblock %s", rrstr, netblockstr);
+			"response-ip data for netblock %s", (rrstr?rrstr:"<out of memory>"), netblockstr);
 		free(rrstr);
 		return 0;
 	} else if (raddr->data &&
@@ -313,7 +313,7 @@ respip_enter_rr_wol(struct regional* region, struct resp_addr* raddr,
 		char* rrstr = dname_rdata_to_str(NULL, 0, rrtype,
 			rrclass, ttl, rdata_wol, rdata_len);
 		log_err("response-ip data (%s) can not be added; CNAME response-ip "
-			"data already in place for netblock %s", rrstr, netblockstr);
+			"data already in place for netblock %s", (rrstr?rrstr:"<out of memory>"), netblockstr);
 		free(rrstr);
 		return 0;
 	} else if((rrtype != LDNS_RR_TYPE_CNAME) &&
@@ -322,7 +322,7 @@ respip_enter_rr_wol(struct regional* region, struct resp_addr* raddr,
 		char* rrstr = dname_rdata_to_str(NULL, 0, rrtype,
 			rrclass, ttl, rdata_wol, rdata_len);
 		log_err("response-ip data %s record type does not correspond "
-			"to netblock %s address family", rrstr, netblockstr);
+			"to netblock %s address family", (rrstr?rrstr:"<out of memory>"), netblockstr);
 		free(rrstr);
 		return 0;
 	}

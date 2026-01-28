@@ -711,7 +711,7 @@ rpz_insert_local_zones_trigger(struct local_zones* lz, uint8_t* dname,
 			if(duplicate) {
 				char* rrstr = dname_rdata_to_str(dname, dnamelen, rrtype,
 					rrclass, ttl, rdata, rdata_len);
-				verbose(VERB_ALGO, "rpz: skipping duplicate record: %s", rrstr);
+				verbose(VERB_ALGO, "rpz: skipping duplicate record: %s", (rrstr?rrstr:"<out of memory>"));
 				free(rrstr);
 				free(dname);
 				lock_rw_unlock(&lz->lock);
@@ -732,7 +732,7 @@ rpz_insert_local_zones_trigger(struct local_zones* lz, uint8_t* dname,
 	if(z != NULL && a != RPZ_LOCAL_DATA_ACTION) {
 		char* rrstr = dname_rdata_to_str(dname, dnamelen, rrtype,
 			rrclass, ttl, rdata, rdata_len);
-		verbose(VERB_ALGO, "rpz: skipping duplicate record: %s", rrstr);
+		verbose(VERB_ALGO, "rpz: skipping duplicate record: %s", (rrstr?rrstr:"<out of memory>"));
 		free(rrstr);
 		free(dname);
 		lock_rw_unlock(&lz->lock);
@@ -982,7 +982,7 @@ rpz_clientip_insert_trigger_rr(struct clientip_synthesized_rrset* set, struct so
 		rrstr = dname_rdata_to_str(NULL, 0, rrtype, rrclass, ttl,
 			rdata, rdata_len);
 		log_err("rpz: unexpected: unable to insert %s: %s/%d %s",
-			"client ip address", as, net, rrstr);
+			"client ip address", as, net, (rrstr?rrstr:"<out of memory>"));
 		free(rrstr);
 		return 0;
 	}
