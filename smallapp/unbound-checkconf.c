@@ -1069,7 +1069,7 @@ int main(int argc, char* argv[])
 	log_ident_set("unbound-checkconf");
 	log_init(NULL, 0, NULL);
 #ifdef USE_WINSOCK
-	/* use registry config file in preference to compiletime location */
+	/* use registry config file in preference to compile time location */
 	if(!(cfgfile=w_lookup_reg_str("Software\\Unbound", "ConfigFile")))
 		cfgfile = CONFIGFILE;
 #endif /* USE_WINSOCK */

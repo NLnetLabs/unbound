@@ -4,22 +4,22 @@
  * Copyright (c) 2008, NLnet Labs. All rights reserved.
  *
  * This software is open source.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
  * are met:
- * 
+ *
  * Redistributions of source code must retain the above copyright notice,
  * this list of conditions and the following disclaimer.
- * 
+ *
  * Redistributions in binary form must reproduce the above copyright notice,
  * this list of conditions and the following disclaimer in the documentation
  * and/or other materials provided with the distribution.
- * 
+ *
  * Neither the name of the NLNET LABS nor the names of its contributors may
  * be used to endorse or promote products derived from this software without
  * specific prior written permission.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
  * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -85,7 +85,7 @@ int val_neg_zone_compare(const void* a, const void* b)
 
 struct val_neg_cache* val_neg_create(struct config_file* cfg, size_t maxiter)
 {
-	struct val_neg_cache* neg = (struct val_neg_cache*)calloc(1, 
+	struct val_neg_cache* neg = (struct val_neg_cache*)calloc(1,
 		sizeof(*neg));
 	if(!neg) {
 		log_err("Could not create neg cache: out of memory");
@@ -109,7 +109,7 @@ size_t val_neg_get_mem(struct val_neg_cache* neg)
 	return result;
 }
 
-/** clear datas on cache deletion */
+/** clear data on cache deletion */
 static void
 neg_clear_datas(rbnode_type* n, void* ATTR_UNUSED(arg))
 {
@@ -144,7 +144,7 @@ void neg_cache_delete(struct val_neg_cache* neg)
  * @param neg: negative cache with LRU start and end.
  * @param data: this data is fronted.
  */
-static void neg_lru_front(struct val_neg_cache* neg, 
+static void neg_lru_front(struct val_neg_cache* neg,
 	struct val_neg_data* data)
 {
 	data->prev = NULL;
@@ -160,7 +160,7 @@ static void neg_lru_front(struct val_neg_cache* neg,
  * @param neg: negative cache with LRU start and end.
  * @param data: this data is removed from the list.
  */
-static void neg_lru_remove(struct val_neg_cache* neg, 
+static void neg_lru_remove(struct val_neg_cache* neg,
 	struct val_neg_data* data)
 {
 	if(data->prev)
@@ -176,7 +176,7 @@ static void neg_lru_remove(struct val_neg_cache* neg,
  * @param neg: negative cache with LRU start and end.
  * @param data: this data is used.
  */
-static void neg_lru_touch(struct val_neg_cache* neg, 
+static void neg_lru_touch(struct val_neg_cache* neg,
 	struct val_neg_data* data)
 {
 	if(data == neg->first)
@@ -222,7 +222,7 @@ static void neg_delete_zone(struct val_neg_cache* neg, struct val_neg_zone* z)
 		p = np;
 	}
 }
-	
+
 void neg_delete_data(struct val_neg_cache* neg, struct val_neg_data* el)
 {
 	struct val_neg_zone* z;
@@ -236,7 +236,7 @@ void neg_delete_data(struct val_neg_cache* neg, struct val_neg_data* el)
 	/* remove it from the lru list */
 	neg_lru_remove(neg, el);
 	log_assert(neg->first != el && neg->last != el);
-	
+
 	/* go up the tree and reduce counts */
 	p = el;
 	while(p) {
@@ -277,7 +277,7 @@ static void neg_make_space(struct val_neg_cache* neg, size_t need)
 	}
 }
 
-struct val_neg_zone* neg_find_zone(struct val_neg_cache* neg, 
+struct val_neg_zone* neg_find_zone(struct val_neg_cache* neg,
 	uint8_t* nm, size_t len, uint16_t dclass)
 {
 	struct val_neg_zone lookfor;
@@ -301,7 +301,7 @@ struct val_neg_zone* neg_find_zone(struct val_neg_cache* neg,
  * @param labs: labels in nm
  * @return data or NULL if not found.
  */
-static struct val_neg_data* neg_find_data(struct val_neg_zone* zone, 
+static struct val_neg_data* neg_find_data(struct val_neg_zone* zone,
 	uint8_t* nm, size_t len, int labs)
 {
 	struct val_neg_data lookfor;
@@ -449,7 +449,7 @@ static struct val_neg_data* neg_closest_data_parent(
 static struct val_neg_zone* neg_setup_zone_node(
 	uint8_t* nm, size_t nm_len, int labs, uint16_t dclass)
 {
-	struct val_neg_zone* zone = 
+	struct val_neg_zone* zone =
 		(struct val_neg_zone*)calloc(1, sizeof(*zone));
 	if(!zone) {
 		return NULL;
@@ -513,7 +513,7 @@ static struct val_neg_zone* neg_zone_chain(
 		dname_remove_label(&nm, &nm_len);
 	}
 	return first;
-}	
+}
 
 void val_neg_zone_take_inuse(struct val_neg_zone* zone)
 {
@@ -670,7 +670,7 @@ static struct val_neg_data* neg_data_chain(
  * @param el: element to start walking at.
  * @param nsec: the nsec record with the end point
  */
-static void wipeout(struct val_neg_cache* neg, struct val_neg_zone* zone, 
+static void wipeout(struct val_neg_cache* neg, struct val_neg_zone* zone,
 	struct val_neg_data* el, struct ub_packed_rrset_key* nsec)
 {
 	struct packed_rrset_data* d = (struct packed_rrset_data*)nsec->
@@ -697,7 +697,7 @@ static void wipeout(struct val_neg_cache* neg, struct val_neg_zone* zone,
 	}
 
 	/* sanity check, both owner and end must be below the zone apex */
-	if(!dname_subdomain_c(el->name, zone->name) || 
+	if(!dname_subdomain_c(el->name, zone->name) ||
 		!dname_subdomain_c(end, zone->name))
 		return;
 
@@ -710,7 +710,7 @@ static void wipeout(struct val_neg_cache* neg, struct val_neg_zone* zone,
 	while(walk && walk != RBTREE_NULL) {
 		cur = (struct val_neg_data*)walk;
 		/* sanity check: must be larger than start */
-		if(dname_canon_lab_cmp(cur->name, cur->labs, 
+		if(dname_canon_lab_cmp(cur->name, cur->labs,
 			el->name, el->labs, &m) <= 0) {
 			/* r == 0 skip original record. */
 			/* r < 0  too small! */
@@ -718,7 +718,7 @@ static void wipeout(struct val_neg_cache* neg, struct val_neg_zone* zone,
 			continue;
 		}
 		/* stop at endpoint, also data at empty nonterminals must be
-		 * removed (no NSECs there) so everything between 
+		 * removed (no NSECs there) so everything between
 		 * start and end */
 		if(end && dname_canon_lab_cmp(cur->name, cur->labs,
 			end, end_labs, &m) >= 0) {
@@ -734,7 +734,7 @@ static void wipeout(struct val_neg_cache* neg, struct val_neg_zone* zone,
 		 * But it may trigger delete of other data and the
 		 * entire zone. However, if that happens, this is done
 		 * by deleting the *parents* of the element for deletion,
-		 * and maybe also the entire zone if it is empty. 
+		 * and maybe also the entire zone if it is empty.
 		 * But parents are smaller in canonical compare, thus,
 		 * if a larger element exists, then it is not a parent,
 		 * it cannot get deleted, the zone cannot get empty.
@@ -745,7 +745,7 @@ static void wipeout(struct val_neg_cache* neg, struct val_neg_zone* zone,
 	}
 }
 
-void neg_insert_data(struct val_neg_cache* neg, 
+void neg_insert_data(struct val_neg_cache* neg,
 	struct val_neg_zone* zone, struct ub_packed_rrset_key* nsec)
 {
 	struct packed_rrset_data* d;
@@ -759,8 +759,8 @@ void neg_insert_data(struct val_neg_cache* neg,
 	if( !(d->security == sec_status_secure ||
 		(d->security == sec_status_unchecked && d->rrsig_count > 0)))
 		return;
-	log_nametypeclass(VERB_ALGO, "negcache rr", 
-		nsec->rk.dname, ntohs(nsec->rk.type), 
+	log_nametypeclass(VERB_ALGO, "negcache rr",
+		nsec->rk.dname, ntohs(nsec->rk.type),
 		ntohs(nsec->rk.rrset_class));
 
 	/* find closest enclosing parent data that (still) exists */
@@ -769,7 +769,7 @@ void neg_insert_data(struct val_neg_cache* neg,
 		/* perfect match already exists */
 		log_assert(parent->count > 0);
 		el = parent;
-	} else { 
+	} else {
 		struct val_neg_data* p, *np;
 
 		/* create subtree for perfect match */
@@ -822,7 +822,7 @@ void neg_insert_data(struct val_neg_cache* neg,
 		if(nsec3_get_params(nsec, 0, &h, &it, &s, &slen) &&
 			it <= neg->nsec3_max_iter &&
 			(h != zone->nsec3_hash || it != zone->nsec3_iter ||
-			slen != zone->nsec3_saltlen || 
+			slen != zone->nsec3_saltlen ||
 			(slen != 0 && zone->nsec3_salt && s
 			  && memcmp(zone->nsec3_salt, s, slen) != 0))) {
 
@@ -894,7 +894,7 @@ void val_neg_addreply(struct val_neg_cache* neg, struct reply_info* rep)
 		rrset_class = ntohs(soa->rk.rrset_class);
 	}
 	else {
-		/* No SOA in positive (wildcard) answer. Use signer from the 
+		/* No SOA in positive (wildcard) answer. Use signer from the
 		 * validated answer RRsets' signature. */
 		if(!(dname = reply_nsec_signer(rep, &dname_len, &rrset_class)))
 			return;
@@ -902,9 +902,9 @@ void val_neg_addreply(struct val_neg_cache* neg, struct reply_info* rep)
 
 	log_nametypeclass(VERB_ALGO, "negcache insert for zone",
 		dname, LDNS_RR_TYPE_SOA, rrset_class);
-	
+
 	/* ask for enough space to store all of it */
-	need = calc_data_need(rep) + 
+	need = calc_data_need(rep) +
 		calc_zone_need(dname, dname_len);
 	lock_basic_lock(&neg->lock);
 	neg_make_space(neg, need);
@@ -925,7 +925,7 @@ void val_neg_addreply(struct val_neg_cache* neg, struct reply_info* rep)
 	for(i=rep->an_numrrsets; i< rep->an_numrrsets+rep->ns_numrrsets; i++){
 		if(ntohs(rep->rrsets[i]->rk.type) != LDNS_RR_TYPE_NSEC)
 			continue;
-		if(!dname_subdomain_c(rep->rrsets[i]->rk.dname, 
+		if(!dname_subdomain_c(rep->rrsets[i]->rk.dname,
 			zone->name)) continue;
 		/* insert NSEC into this zone's tree */
 		neg_insert_data(neg, zone, rep->rrsets[i]);
@@ -977,7 +977,7 @@ void val_neg_addreferral(struct val_neg_cache* neg, struct reply_info* rep,
 	/* no SOA in this message, find RRSIG over NSEC's signer name.
 	 * note the NSEC records are maybe not validated yet */
 	signer = reply_nsec_signer(rep, &signer_len, &dclass);
-	if(!signer) 
+	if(!signer)
 		return;
 	if(!dname_subdomain_c(signer, zone_name)) {
 		/* the signer is not in the bailiwick, throw it out */
@@ -986,7 +986,7 @@ void val_neg_addreferral(struct val_neg_cache* neg, struct reply_info* rep,
 
 	log_nametypeclass(VERB_ALGO, "negcache insert referral ",
 		signer, LDNS_RR_TYPE_NS, dclass);
-	
+
 	/* ask for enough space to store all of it */
 	need = calc_data_need(rep) + calc_zone_need(signer, signer_len);
 	lock_basic_lock(&neg->lock);
@@ -995,7 +995,7 @@ void val_neg_addreferral(struct val_neg_cache* neg, struct reply_info* rep,
 	/* find or create the zone entry */
 	zone = neg_find_zone(neg, signer, signer_len, dclass);
 	if(!zone) {
-		if(!(zone = neg_create_zone(neg, signer, signer_len, 
+		if(!(zone = neg_create_zone(neg, signer, signer_len,
 			dclass))) {
 			lock_basic_unlock(&neg->lock);
 			log_err("out of memory adding negative zone");
@@ -1009,7 +1009,7 @@ void val_neg_addreferral(struct val_neg_cache* neg, struct reply_info* rep,
 		if(ntohs(rep->rrsets[i]->rk.type) != LDNS_RR_TYPE_NSEC &&
 			ntohs(rep->rrsets[i]->rk.type) != LDNS_RR_TYPE_NSEC3)
 			continue;
-		if(!dname_subdomain_c(rep->rrsets[i]->rk.dname, 
+		if(!dname_subdomain_c(rep->rrsets[i]->rk.dname,
 			zone->name)) continue;
 		/* insert NSEC into this zone's tree */
 		neg_insert_data(neg, zone, rep->rrsets[i]);
@@ -1058,8 +1058,8 @@ static int nsec3_no_type(struct ub_packed_rrset_key* k, uint16_t t)
  */
 static struct ub_packed_rrset_key*
 grab_nsec(struct rrset_cache* rrset_cache, uint8_t* qname, size_t qname_len,
-	uint16_t qtype, uint16_t qclass, uint32_t flags, 
-	struct regional* region, int checkbit, uint16_t checktype, 
+	uint16_t qtype, uint16_t qclass, uint32_t flags,
+	struct regional* region, int checkbit, uint16_t checktype,
 	time_t now)
 {
 	struct ub_packed_rrset_key* r, *k = rrset_cache_lookup(rrset_cache,
@@ -1169,8 +1169,8 @@ neg_find_nsec3_ce(struct val_neg_zone* zone, uint8_t* qname, size_t qname_len,
 	*nclen = 0;
 	while(qlabs > 0) {
 		/* hash */
-		if(!(celen=nsec3_get_hashed(buf, qname, qname_len, 
-			zone->nsec3_hash, zone->nsec3_iter, zone->nsec3_salt, 
+		if(!(celen=nsec3_get_hashed(buf, qname, qname_len,
+			zone->nsec3_hash, zone->nsec3_iter, zone->nsec3_salt,
 			zone->nsec3_saltlen, hashce, sizeof(hashce))))
 			return NULL;
 		if(!(b32len=nsec3_hash_to_b32(hashce, celen, zone->name,
@@ -1210,7 +1210,7 @@ neg_params_ok(struct val_neg_zone* zone, struct ub_packed_rrset_key* rrset)
 /** get next closer for nsec3 proof */
 static struct ub_packed_rrset_key*
 neg_nsec3_getnc(struct val_neg_zone* zone, uint8_t* hashnc, size_t nclen,
-	struct rrset_cache* rrset_cache, struct regional* region, 
+	struct rrset_cache* rrset_cache, struct regional* region,
 	time_t now, uint8_t* b32, size_t maxb32)
 {
 	struct ub_packed_rrset_key* nc_rrset;
@@ -1231,7 +1231,7 @@ neg_nsec3_getnc(struct val_neg_zone* zone, uint8_t* hashnc, size_t nclen,
 	if(!data)
 		return NULL;
 	/* got a data element in tree, grab it */
-	nc_rrset = grab_nsec(rrset_cache, data->name, data->len, 
+	nc_rrset = grab_nsec(rrset_cache, data->name, data->len,
 		LDNS_RR_TYPE_NSEC3, zone->dclass, 0, region, 0, 0, now);
 	if(!nc_rrset)
 		return NULL;
@@ -1256,13 +1256,13 @@ neg_nsec3_proof_ds(struct val_neg_zone* zone, uint8_t* qname, size_t qname_len,
 
 	/* for NSEC3 ; determine the closest encloser for which we
 	 * can find an exact match. Remember the hashed lower name,
-	 * since that is the one we need a closest match for. 
+	 * since that is the one we need a closest match for.
 	 * If we find a match straight away, then it becomes NODATA.
 	 * Otherwise, NXDOMAIN or if OPTOUT, an insecure delegation.
 	 * Also check that parameters are the same on closest encloser
 	 * and on closest match.
 	 */
-	if(!zone->nsec3_hash) 
+	if(!zone->nsec3_hash)
 		return NULL; /* not nsec3 zone */
 
 	if(!(data=neg_find_nsec3_ce(zone, qname, qname_len, qlabs, buf,
@@ -1271,8 +1271,8 @@ neg_nsec3_proof_ds(struct val_neg_zone* zone, uint8_t* qname, size_t qname_len,
 	}
 
 	/* grab the ce rrset */
-	ce_rrset = grab_nsec(rrset_cache, data->name, data->len, 
-		LDNS_RR_TYPE_NSEC3, zone->dclass, 0, region, 1, 
+	ce_rrset = grab_nsec(rrset_cache, data->name, data->len,
+		LDNS_RR_TYPE_NSEC3, zone->dclass, 0, region, 1,
 		LDNS_RR_TYPE_DS, now);
 	if(!ce_rrset)
 		return NULL;
@@ -1286,11 +1286,11 @@ neg_nsec3_proof_ds(struct val_neg_zone* zone, uint8_t* qname, size_t qname_len,
 			nsec3_has_type(ce_rrset, 0, LDNS_RR_TYPE_DS) ||
 			!nsec3_has_type(ce_rrset, 0, LDNS_RR_TYPE_NS))
 			return NULL;
-		if(!(msg = dns_msg_create(qname, qname_len, 
-			LDNS_RR_TYPE_DS, zone->dclass, region, 1))) 
+		if(!(msg = dns_msg_create(qname, qname_len,
+			LDNS_RR_TYPE_DS, zone->dclass, region, 1)))
 			return NULL;
 		/* TTL reduced in grab_nsec */
-		if(!dns_msg_authadd(msg, region, ce_rrset, 0)) 
+		if(!dns_msg_authadd(msg, region, ce_rrset, 0))
 			return NULL;
 		return msg;
 	}
@@ -1302,9 +1302,9 @@ neg_nsec3_proof_ds(struct val_neg_zone* zone, uint8_t* qname, size_t qname_len,
 
 	/* if there is no exact match, it must be in an optout span
 	 * (an existing DS implies an NSEC3 must exist) */
-	nc_rrset = neg_nsec3_getnc(zone, hashnc, nclen, rrset_cache, 
+	nc_rrset = neg_nsec3_getnc(zone, hashnc, nclen, rrset_cache,
 		region, now, nc_b32, sizeof(nc_b32));
-	if(!nc_rrset) 
+	if(!nc_rrset)
 		return NULL;
 	if(!neg_params_ok(zone, nc_rrset))
 		return NULL;
@@ -1320,13 +1320,13 @@ neg_nsec3_proof_ds(struct val_neg_zone* zone, uint8_t* qname, size_t qname_len,
 		 * nc_rrset is optout.
 		 * No need to check wildcard for type DS */
 		/* capacity=3: ce + nc + soa(if needed) */
-		if(!(msg = dns_msg_create(qname, qname_len, 
-			LDNS_RR_TYPE_DS, zone->dclass, region, 3))) 
+		if(!(msg = dns_msg_create(qname, qname_len,
+			LDNS_RR_TYPE_DS, zone->dclass, region, 3)))
 			return NULL;
 		/* now=0 because TTL was reduced in grab_nsec */
-		if(!dns_msg_authadd(msg, region, ce_rrset, 0)) 
+		if(!dns_msg_authadd(msg, region, ce_rrset, 0))
 			return NULL;
-		if(!dns_msg_authadd(msg, region, nc_rrset, 0)) 
+		if(!dns_msg_authadd(msg, region, nc_rrset, 0))
 			return NULL;
 		return msg;
 	}
@@ -1356,10 +1356,10 @@ static int add_soa(struct rrset_cache* rrset_cache, time_t now,
 	} else {
 		/* Assumes the signer is the zone SOA to add */
 		nm = reply_nsec_signer(msg->rep, &nmlen, &dclass);
-		if(!nm) 
+		if(!nm)
 			return 0;
 	}
-	soa = rrset_cache_lookup(rrset_cache, nm, nmlen, LDNS_RR_TYPE_SOA, 
+	soa = rrset_cache_lookup(rrset_cache, nm, nmlen, LDNS_RR_TYPE_SOA,
 		dclass, PACKED_RRSET_SOA_NEG, now, 0);
 	if(!soa)
 		return 0;
@@ -1371,9 +1371,9 @@ static int add_soa(struct rrset_cache* rrset_cache, time_t now,
 	return 1;
 }
 
-struct dns_msg* 
-val_neg_getmsg(struct val_neg_cache* neg, struct query_info* qinfo, 
-	struct regional* region, struct rrset_cache* rrset_cache, 
+struct dns_msg*
+val_neg_getmsg(struct val_neg_cache* neg, struct query_info* qinfo,
+	struct regional* region, struct rrset_cache* rrset_cache,
 	sldns_buffer* buf, time_t now, int addsoa, uint8_t* topname,
 	struct config_file* cfg)
 {
@@ -1410,10 +1410,10 @@ val_neg_getmsg(struct val_neg_cache* neg, struct query_info* qinfo,
 		 * qtype ANY, in the else branch. */
 		if(qinfo->qtype == LDNS_RR_TYPE_ANY)
 			return NULL;
-		if(!(msg = dns_msg_create(qinfo->qname, qinfo->qname_len, 
-			qinfo->qtype, qinfo->qclass, region, 2))) 
+		if(!(msg = dns_msg_create(qinfo->qname, qinfo->qname_len,
+			qinfo->qtype, qinfo->qclass, region, 2)))
 			return NULL;
-		if(!dns_msg_authadd(msg, region, nsec, 0)) 
+		if(!dns_msg_authadd(msg, region, nsec, 0))
 			return NULL;
 		if(addsoa && !add_soa(rrset_cache, now, region, msg, NULL))
 			return NULL;
@@ -1423,8 +1423,8 @@ val_neg_getmsg(struct val_neg_cache* neg, struct query_info* qinfo,
 		lock_basic_unlock(&neg->lock);
 		return msg;
 	} else if(nsec && val_nsec_proves_name_error(nsec, qinfo->qname)) {
-		if(!(msg = dns_msg_create(qinfo->qname, qinfo->qname_len, 
-			qinfo->qtype, qinfo->qclass, region, 3))) 
+		if(!(msg = dns_msg_create(qinfo->qname, qinfo->qname_len,
+			qinfo->qtype, qinfo->qclass, region, 3)))
 			return NULL;
 		if(!(ce = nsec_closest_encloser(qinfo->qname, nsec)))
 			return NULL;
@@ -1526,7 +1526,7 @@ val_neg_getmsg(struct val_neg_cache* neg, struct query_info* qinfo,
 
 	/* lookup closest zone */
 	lock_basic_lock(&neg->lock);
-	zone = neg_closest_zone_parent(neg, zname, zname_len, zname_labs, 
+	zone = neg_closest_zone_parent(neg, zname, zname_len, zname_labs,
 		qinfo->qclass);
 	while(zone && !zone->in_use)
 		zone = zone->parent;
@@ -1541,7 +1541,7 @@ val_neg_getmsg(struct val_neg_cache* neg, struct query_info* qinfo,
 		return NULL;
 	}
 
-	msg = neg_nsec3_proof_ds(zone, qinfo->qname, qinfo->qname_len, 
+	msg = neg_nsec3_proof_ds(zone, qinfo->qname, qinfo->qname_len,
 		zname_labs+1, buf, rrset_cache, region, now, topname);
 	if(msg && addsoa && !add_soa(rrset_cache, now, region, msg, zone)) {
 		lock_basic_unlock(&neg->lock);
