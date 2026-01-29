@@ -1265,7 +1265,7 @@ static void localzone_parents_test(void)
 		nmlabs = dname_count_size_labels(nm, &nmlen);
 		lock_rw_wrlock(&z2->lock);
 		local_zones_add_zone(z2, nm, nmlen, nmlabs, LDNS_RR_CLASS_IN,
-			local_zone_always_nxdomain);
+			local_zone_always_nxdomain, NULL);
 		lock_rw_unlock(&z2->lock);
 	}
 	/* The trees should be the same, iterate and check the nodes */

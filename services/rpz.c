@@ -170,15 +170,14 @@ rpz_type_ignored(uint16_t rr_type)
 /**
  * Classify RPZ action for RR type/rdata
  * @param rr_type: the RR type
- * @param rdatawl: RDATA with 2 bytes length
- * @param rdatalen: the length of rdatawl (including its 2 bytes length)
+ * @param rdata: RDATA without 2 bytes length
+ * @param rdatalen: the length of rdatawl (not including its 2 bytes length)
  * @return: the RPZ action
  */
 static enum rpz_action
-rpz_rr_to_action(uint16_t rr_type, uint8_t* rdatawl, size_t rdatalen)
+rpz_rr_to_action_wol(uint16_t rr_type, uint8_t* rdata, size_t rdatalen)
 {
 	char* endptr;
-	uint8_t* rdata;
 	int rdatalabs;
 	uint8_t* tldlab = NULL;
 
@@ -202,11 +201,10 @@ rpz_rr_to_action(uint16_t rr_type, uint8_t* rdatawl, size_t rdatalen)
 
 	/* use CNAME target to determine RPZ action */
 	log_assert(rr_type == LDNS_RR_TYPE_CNAME);
-	if(rdatalen < 3)
+	if(rdatalen < 1)
 		return RPZ_INVALID_ACTION;
 
-	rdata = rdatawl + 2; /* 2 bytes of rdata length */
-	if(dname_valid(rdata, rdatalen-2) != rdatalen-2)
+	if(dname_valid(rdata, rdatalen) != rdatalen)
 		return RPZ_INVALID_ACTION;
 
 	rdatalabs = dname_count_labels(rdata);
@@ -226,12 +224,27 @@ rpz_rr_to_action(uint16_t rr_type, uint8_t* rdatawl, size_t rdatalen)
 	}
 
 	/* all other TLDs starting with "rpz-" are invalid */
-	tldlab = get_tld_label(rdata, rdatalen-2);
+	tldlab = get_tld_label(rdata, rdatalen);
 	if(tldlab && dname_lab_startswith(tldlab, "rpz-", &endptr))
 		return RPZ_INVALID_ACTION;
 
 	/* no special label found */
 	return RPZ_LOCAL_DATA_ACTION;
+}
+
+/**
+ * Classify RPZ action for RR type/rdata
+ * @param rr_type: the RR type
+ * @param rdatawl: RDATA with 2 bytes length
+ * @param rdatalen: the length of rdatawl (including its 2 bytes length)
+ * @return: the RPZ action
+ */
+static enum rpz_action
+rpz_rr_to_action(uint16_t rr_type, uint8_t* rdatawl, size_t rdatalen)
+{
+	if(rdatalen < 2)
+		return RPZ_INVALID_ACTION;
+	return rpz_rr_to_action_wol(rr_type, rdatawl+2, rdatalen-2);
 }
 
 static enum localzone_type 
@@ -658,7 +671,7 @@ strip_dname_origin(uint8_t* dname, size_t dnamelen, size_t originlen,
 static void
 rpz_insert_local_zones_trigger(struct local_zones* lz, uint8_t* dname,
 	size_t dnamelen, enum rpz_action a, uint16_t rrtype, uint16_t rrclass,
-	uint32_t ttl, uint8_t* rdata, size_t rdata_len, uint8_t* rr, size_t rr_len)
+	uint32_t ttl, uint8_t* rdata, size_t rdata_len)
 {
 	struct local_zone* z;
 	enum localzone_type tp = local_zone_always_transparent;
@@ -685,20 +698,41 @@ rpz_insert_local_zones_trigger(struct local_zones* lz, uint8_t* dname,
 		return;
 	}
 
+	/* For not a local-data action.
+	 * Insert the zone, then detect a duplicate, instead of find it first,
+	 * for speed of searching the tree once. */
+	if(a != RPZ_LOCAL_DATA_ACTION) {
+		int duplicate = 0;
+		lock_rw_wrlock(&lz->lock);
+		tp = rpz_action_to_localzone_type(a);
+		z = local_zones_add_zone(lz, dname, dnamelen,
+					 dnamelabs, rrclass, tp, &duplicate);
+		if(z == NULL) {
+			if(duplicate) {
+				char* rrstr = dname_rdata_to_str(dname, dnamelen, rrtype,
+					rrclass, ttl, rdata, rdata_len);
+				verbose(VERB_ALGO, "rpz: skipping duplicate record: %s", (rrstr?rrstr:"<out of memory>"));
+				free(rrstr);
+				free(dname);
+				lock_rw_unlock(&lz->lock);
+				return;
+			}
+			log_warn("rpz: create failed, out of memory");
+			lock_rw_unlock(&lz->lock);
+			/* dname will be free'd in failed local_zone_create() */
+			return;
+		}
+		lock_rw_unlock(&lz->lock);
+		return;
+	}
+
 	lock_rw_wrlock(&lz->lock);
 	/* exact match */
 	z = local_zones_find(lz, dname, dnamelen, dnamelabs, LDNS_RR_CLASS_IN);
 	if(z != NULL && a != RPZ_LOCAL_DATA_ACTION) {
-		char* rrstr = sldns_wire2str_rr(rr, rr_len);
-		if(rrstr == NULL) {
-			log_err("malloc error while inserting rpz nsdname trigger");
-			free(dname);
-			lock_rw_unlock(&lz->lock);
-			return;
-		}
-		if(rrstr[0])
-			rrstr[strlen(rrstr)-1]=0; /* remove newline */
-		verbose(VERB_ALGO, "rpz: skipping duplicate record: '%s'", rrstr);
+		char* rrstr = dname_rdata_to_str(dname, dnamelen, rrtype,
+			rrclass, ttl, rdata, rdata_len);
+		verbose(VERB_ALGO, "rpz: skipping duplicate record: %s", (rrstr?rrstr:"<out of memory>"));
 		free(rrstr);
 		free(dname);
 		lock_rw_unlock(&lz->lock);
@@ -707,7 +741,7 @@ rpz_insert_local_zones_trigger(struct local_zones* lz, uint8_t* dname,
 	if(z == NULL) {
 		tp = rpz_action_to_localzone_type(a);
 		z = local_zones_add_zone(lz, dname, dnamelen,
-					 dnamelabs, rrclass, tp);
+					 dnamelabs, rrclass, tp, NULL);
 		if(z == NULL) {
 			log_warn("rpz: create failed");
 			lock_rw_unlock(&lz->lock);
@@ -717,18 +751,10 @@ rpz_insert_local_zones_trigger(struct local_zones* lz, uint8_t* dname,
 		newzone = 1;
 	}
 	if(a == RPZ_LOCAL_DATA_ACTION) {
-		char* rrstr = sldns_wire2str_rr(rr, rr_len);
-		if(rrstr == NULL) {
-			log_err("malloc error while inserting rpz nsdname trigger");
-			free(dname);
-			lock_rw_unlock(&lz->lock);
-			return;
-		}
 		lock_rw_wrlock(&z->lock);
-		local_zone_enter_rr(z, dname, dnamelen, dnamelabs, rrtype,
-				    rrclass, ttl, rdata, rdata_len, rrstr);
+		local_zone_enter_rr_wol(z, dname, dnamelen, dnamelabs, rrtype,
+			rrclass, ttl, rdata, rdata_len);
 		lock_rw_unlock(&z->lock);
-		free(rrstr);
 	}
 	if(!newzone) {
 		free(dname);
@@ -748,7 +774,7 @@ rpz_log_dname(char const* msg, uint8_t* dname, size_t dname_len)
 static void
 rpz_insert_qname_trigger(struct rpz* r, uint8_t* dname, size_t dnamelen,
 	enum rpz_action a, uint16_t rrtype, uint16_t rrclass, uint32_t ttl,
-	uint8_t* rdata, size_t rdata_len, uint8_t* rr, size_t rr_len)
+	uint8_t* rdata, size_t rdata_len)
 {
 	if(a == RPZ_INVALID_ACTION) {
 		verbose(VERB_ALGO, "rpz: skipping invalid action");
@@ -757,7 +783,7 @@ rpz_insert_qname_trigger(struct rpz* r, uint8_t* dname, size_t dnamelen,
 	}
 
 	rpz_insert_local_zones_trigger(r->local_zones, dname, dnamelen, a, rrtype,
-				       rrclass, ttl, rdata, rdata_len, rr, rr_len);
+				       rrclass, ttl, rdata, rdata_len);
 }
 
 static int
@@ -799,7 +825,7 @@ rpz_strip_nsdname_suffix(uint8_t* dname, size_t maxdnamelen,
 static void
 rpz_insert_nsdname_trigger(struct rpz* r, uint8_t* dname, size_t dnamelen,
 	enum rpz_action a, uint16_t rrtype, uint16_t rrclass, uint32_t ttl,
-	uint8_t* rdata, size_t rdata_len, uint8_t* rr, size_t rr_len)
+	uint8_t* rdata, size_t rdata_len)
 {
 	uint8_t* dname_stripped = NULL;
 	size_t dnamelen_stripped = 0;
@@ -814,32 +840,22 @@ rpz_insert_nsdname_trigger(struct rpz* r, uint8_t* dname, size_t dnamelen,
 
 	/* dname_stripped is consumed or freed by the insert routine */
 	rpz_insert_local_zones_trigger(r->nsdname_zones, dname_stripped,
-		dnamelen_stripped, a, rrtype, rrclass, ttl, rdata, rdata_len,
-		rr, rr_len);
+		dnamelen_stripped, a, rrtype, rrclass, ttl, rdata, rdata_len);
 }
 
 static int
 rpz_insert_ipaddr_based_trigger(struct respip_set* set, struct sockaddr_storage* addr,
 	socklen_t addrlen, int net, enum rpz_action a, uint16_t rrtype,
-	uint16_t rrclass, uint32_t ttl, uint8_t* rdata, size_t rdata_len,
-	uint8_t* rr, size_t rr_len)
+	uint16_t rrclass, uint32_t ttl, uint8_t* rdata, size_t rdata_len)
 {
 	struct resp_addr* node;
-	char* rrstr;
 	enum respip_action respa = rpz_action_to_respip_action(a);
 
 	lock_rw_wrlock(&set->lock);
-	rrstr = sldns_wire2str_rr(rr, rr_len);
-	if(rrstr == NULL) {
-		log_err("malloc error while inserting rpz ipaddr based trigger");
-		lock_rw_unlock(&set->lock);
-		return 0;
-	}
 
-	node = respip_sockaddr_find_or_create(set, addr, addrlen, net, 1, rrstr);
+	node = respip_sockaddr_find_or_create(set, addr, addrlen, net, 1);
 	if(node == NULL) {
 		lock_rw_unlock(&set->lock);
-		free(rrstr);
 		return 0;
 	}
 
@@ -849,12 +865,11 @@ rpz_insert_ipaddr_based_trigger(struct respip_set* set, struct sockaddr_storage*
 	node->action = respa;
 
 	if(a == RPZ_LOCAL_DATA_ACTION) {
-		respip_enter_rr(set->region, node, rrtype,
-				rrclass, ttl, rdata, rdata_len, rrstr, "");
+		respip_enter_rr_wol(set->region, node, rrtype,
+				rrclass, ttl, rdata, rdata_len, "");
 	}
 
 	lock_rw_unlock(&node->lock);
-	free(rrstr);
 	return 1;
 }
 
@@ -888,17 +903,6 @@ rpz_clientip_ensure_entry(struct clientip_synthesized_rrset* set,
 	}
 
 	return node;
-}
-
-static void
-rpz_report_rrset_error(const char* msg, uint8_t* rr, size_t rr_len) {
-	char* rrstr = sldns_wire2str_rr(rr, rr_len);
-	if(rrstr == NULL) {
-		log_err("malloc error while inserting rpz clientip based record");
-		return;
-	}
-	log_err("rpz: unexpected: unable to insert %s: %s", msg, rrstr);
-	free(rrstr);
 }
 
 /* from localzone.c; difference is we don't have a dname */
@@ -958,14 +962,13 @@ rpz_clientip_enter_rr(struct regional* region, struct clientip_synthesized_rr* r
 		return 0;
 	}
 
-	return rrset_insert_rr(region, rrset->rrset->entry.data, rdata, rdata_len, ttl, "");
+	return rrset_insert_rr_wol(region, rrset->rrset->entry.data, rdata, rdata_len, ttl);
 }
 
 static int
 rpz_clientip_insert_trigger_rr(struct clientip_synthesized_rrset* set, struct sockaddr_storage* addr,
 	socklen_t addrlen, int net, enum rpz_action a, uint16_t rrtype,
-	uint16_t rrclass, uint32_t ttl, uint8_t* rdata, size_t rdata_len,
-	uint8_t* rr, size_t rr_len)
+	uint16_t rrclass, uint32_t ttl, uint8_t* rdata, size_t rdata_len)
 {
 	struct clientip_synthesized_rr* node;
 
@@ -973,8 +976,14 @@ rpz_clientip_insert_trigger_rr(struct clientip_synthesized_rrset* set, struct so
 
 	node = rpz_clientip_ensure_entry(set, addr, addrlen, net);
 	if(node == NULL) {
+		char as[64], *rrstr;
 		lock_rw_unlock(&set->lock);
-		rpz_report_rrset_error("client ip address", rr, rr_len);
+		addr_to_str(addr, addrlen, as, sizeof(as));
+		rrstr = dname_rdata_to_str(NULL, 0, rrtype, rrclass, ttl,
+			rdata, rdata_len);
+		log_err("rpz: unexpected: unable to insert %s: %s/%d %s",
+			"client ip address", as, net, (rrstr?rrstr:"<out of memory>"));
+		free(rrstr);
 		return 0;
 	}
 
@@ -1000,7 +1009,7 @@ rpz_clientip_insert_trigger_rr(struct clientip_synthesized_rrset* set, struct so
 static int
 rpz_insert_clientip_trigger(struct rpz* r, uint8_t* dname, size_t dnamelen,
 	enum rpz_action a, uint16_t rrtype, uint16_t rrclass, uint32_t ttl,
-	uint8_t* rdata, size_t rdata_len, uint8_t* rr, size_t rr_len)
+	uint8_t* rdata, size_t rdata_len)
 {
 	struct sockaddr_storage addr;
 	socklen_t addrlen;
@@ -1016,13 +1025,13 @@ rpz_insert_clientip_trigger(struct rpz* r, uint8_t* dname, size_t dnamelen,
 	}
 
 	return rpz_clientip_insert_trigger_rr(r->client_set, &addr, addrlen, net,
-			a, rrtype, rrclass, ttl, rdata, rdata_len, rr, rr_len);
+			a, rrtype, rrclass, ttl, rdata, rdata_len);
 }
 
 static int
 rpz_insert_nsip_trigger(struct rpz* r, uint8_t* dname, size_t dnamelen,
 	enum rpz_action a, uint16_t rrtype, uint16_t rrclass, uint32_t ttl,
-	uint8_t* rdata, size_t rdata_len, uint8_t* rr, size_t rr_len)
+	uint8_t* rdata, size_t rdata_len)
 {
 	struct sockaddr_storage addr;
 	socklen_t addrlen;
@@ -1038,14 +1047,14 @@ rpz_insert_nsip_trigger(struct rpz* r, uint8_t* dname, size_t dnamelen,
 	}
 
 	return rpz_clientip_insert_trigger_rr(r->ns_set, &addr, addrlen, net,
-			a, rrtype, rrclass, ttl, rdata, rdata_len, rr, rr_len);
+			a, rrtype, rrclass, ttl, rdata, rdata_len);
 }
 
 /** Insert RR into RPZ's respip_set */
 static int
 rpz_insert_response_ip_trigger(struct rpz* r, uint8_t* dname, size_t dnamelen,
 	enum rpz_action a, uint16_t rrtype, uint16_t rrclass, uint32_t ttl,
-	uint8_t* rdata, size_t rdata_len, uint8_t* rr, size_t rr_len)
+	uint8_t* rdata, size_t rdata_len)
 {
 	struct sockaddr_storage addr;
 	socklen_t addrlen;
@@ -1070,13 +1079,13 @@ rpz_insert_response_ip_trigger(struct rpz* r, uint8_t* dname, size_t dnamelen,
 	}
 
 	return rpz_insert_ipaddr_based_trigger(r->respip_set, &addr, addrlen, net,
-			a, rrtype, rrclass, ttl, rdata, rdata_len, rr, rr_len);
+			a, rrtype, rrclass, ttl, rdata, rdata_len);
 }
 
 int
 rpz_insert_rr(struct rpz* r, uint8_t* azname, size_t aznamelen, uint8_t* dname,
 	size_t dnamelen, uint16_t rr_type, uint16_t rr_class, uint32_t rr_ttl,
-	uint8_t* rdatawl, size_t rdatalen, uint8_t* rr, size_t rr_len)
+	uint8_t* rdatawol, size_t rdatalen)
 {
 	size_t policydnamelen;
 	/* name is free'd in local_zone delete */
@@ -1110,7 +1119,7 @@ rpz_insert_rr(struct rpz* r, uint8_t* azname, size_t aznamelen, uint8_t* dname,
 		return 0;
 	}
 
-	a = rpz_rr_to_action(rr_type, rdatawl, rdatalen);
+	a = rpz_rr_to_action_wol(rr_type, rdatawol, rdatalen);
 	if(!(policydnamelen = strip_dname_origin(dname, dnamelen, aznamelen,
 		policydname, (dnamelen-aznamelen)+1))) {
 		free(policydname);
@@ -1125,27 +1134,22 @@ rpz_insert_rr(struct rpz* r, uint8_t* azname, size_t aznamelen, uint8_t* dname,
 	if(t == RPZ_QNAME_TRIGGER) {
 		/* policydname will be consumed, no free */
 		rpz_insert_qname_trigger(r, policydname, policydnamelen,
-			a, rr_type, rr_class, rr_ttl, rdatawl, rdatalen, rr,
-			rr_len);
+			a, rr_type, rr_class, rr_ttl, rdatawol, rdatalen);
 	} else if(t == RPZ_RESPONSE_IP_TRIGGER) {
 		rpz_insert_response_ip_trigger(r, policydname, policydnamelen,
-			a, rr_type, rr_class, rr_ttl, rdatawl, rdatalen, rr,
-			rr_len);
+			a, rr_type, rr_class, rr_ttl, rdatawol, rdatalen);
 		free(policydname);
 	} else if(t == RPZ_CLIENT_IP_TRIGGER) {
 		rpz_insert_clientip_trigger(r, policydname, policydnamelen,
-			a, rr_type, rr_class, rr_ttl, rdatawl, rdatalen, rr,
-			rr_len);
+			a, rr_type, rr_class, rr_ttl, rdatawol, rdatalen);
 		free(policydname);
 	} else if(t == RPZ_NSIP_TRIGGER) {
 		rpz_insert_nsip_trigger(r, policydname, policydnamelen,
-			a, rr_type, rr_class, rr_ttl, rdatawl, rdatalen, rr,
-			rr_len);
+			a, rr_type, rr_class, rr_ttl, rdatawol, rdatalen);
 		free(policydname);
 	} else if(t == RPZ_NSDNAME_TRIGGER) {
 		rpz_insert_nsdname_trigger(r, policydname, policydnamelen,
-			a, rr_type, rr_class, rr_ttl, rdatawl, rdatalen, rr,
-			rr_len);
+			a, rr_type, rr_class, rr_ttl, rdatawol, rdatalen);
 		free(policydname);
 	} else {
 		free(policydname);

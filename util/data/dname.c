@@ -100,6 +100,7 @@ int
 query_dname_compare(register uint8_t* d1, register uint8_t* d2)
 {
 	register uint8_t lab1, lab2;
+	register uint8_t ld1, ld2;
 	log_assert(d1 && d2);
 	lab1 = *d1++;
 	lab2 = *d2++;
@@ -116,8 +117,8 @@ query_dname_compare(register uint8_t* d1, register uint8_t* d2)
 		while(lab1--) {
 			/* compare bytes first for speed */
 			if(*d1 != *d2 && 
-				tolower((unsigned char)*d1) != tolower((unsigned char)*d2)) {
-				if(tolower((unsigned char)*d1) < tolower((unsigned char)*d2))
+				(ld1=tolower((unsigned char)*d1)) != (ld2=tolower((unsigned char)*d2))) {
+				if(ld1 < ld2)
 					return -1;
 				return 1;
 			}
@@ -233,6 +234,7 @@ int
 dname_pkt_compare(sldns_buffer* pkt, uint8_t* d1, uint8_t* d2)
 {
 	uint8_t len1, len2;
+	register uint8_t ld1, ld2;
 	int count1 = 0, count2 = 0;
 	log_assert(pkt && d1 && d2);
 	len1 = *d1++;
@@ -269,8 +271,8 @@ dname_pkt_compare(sldns_buffer* pkt, uint8_t* d1, uint8_t* d2)
 		log_assert(len1 == len2 && len1 != 0);
 		/* compare labels */
 		while(len1--) {
-			if(tolower((unsigned char)*d1) != tolower((unsigned char)*d2)) {
-				if(tolower((unsigned char)*d1) < tolower((unsigned char)*d2))
+			if((ld1=tolower((unsigned char)*d1)) != (ld2=tolower((unsigned char)*d2))) {
+				if(ld1 < ld2)
 					return -1;
 				return 1;
 			}
@@ -470,9 +472,10 @@ dname_count_size_labels(uint8_t* dname, size_t* size)
 static int
 memlowercmp(uint8_t* p1, uint8_t* p2, uint8_t len)
 {
+	register uint8_t lp1, lp2;
 	while(len--) {
-		if(*p1 != *p2 && tolower((unsigned char)*p1) != tolower((unsigned char)*p2)) {
-			if(tolower((unsigned char)*p1) < tolower((unsigned char)*p2))
+		if(*p1 != *p2 && (lp1=tolower((unsigned char)*p1)) != (lp2=tolower((unsigned char)*p2))) {
+			if(lp1 < lp2)
 				return -1;
 			return 1;
 		}
@@ -523,15 +526,15 @@ dname_lab_cmp(uint8_t* d1, int labs1, uint8_t* d2, int labs2, int* mlabs)
 			d1 += len1;
 			d2 += len2;
 		} else {
+			register uint8_t ld1, ld2;
 			/* memlowercmp is inlined here; or just like
 			 * if((c=memlowercmp(d1, d2, len1)) != 0) { 
 			 *	lastdiff = c;
 			 *	lastmlabs = atlabel; } apart from d1++,d2++ */
 			while(len1) {
-				if(*d1 != *d2 && tolower((unsigned char)*d1) 
-					!= tolower((unsigned char)*d2)) {
-					if(tolower((unsigned char)*d1) < 
-						tolower((unsigned char)*d2)) {
+				if(*d1 != *d2 && (ld1=tolower((unsigned char)*d1))
+					!= (ld2=tolower((unsigned char)*d2))) {
+					if(ld1 < ld2) {
 						lastdiff = -1;
 						lastmlabs = atlabel;
 						d1 += len1;
