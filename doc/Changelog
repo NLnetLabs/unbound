@@ -1,3 +1,21 @@
+27 January 2026: Wouter
+	- Add test for allow-notify with a host name.
+
+26 January 2026: Wouter
+	- Fix that allow-notify entries with hostnames are copied after IPv4
+	  and IPv6 lookup.
+	- Fix to not skip allow-notify hostname lookups when there are only
+	  urls.
+
+23 January 2026: Yorgos
+	- Merge #1396: Log Linux thread ID.
+	- On Linux systems log the system-wide unique thread ID instead of
+	  Unbound's internal thread counter.
+	- Introduce the 'log-thread-id' configuration option to manage logging
+	  the system-wide Linux thread ID for easier debugging with system
+	  tools.
+	- Update generated man pages.
+
 22 January 2026: Wouter
 	- Fix that fast reload copies the iter_scrub_ns, iter_scrub_cname
 	  and max_global_quota options.

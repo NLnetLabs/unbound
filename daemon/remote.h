@@ -206,6 +206,12 @@ struct fast_reload_thread {
 	int commpair[2];
 	/** thread id, of the io thread */
 	ub_thread_type tid;
+#ifdef HAVE_GETTID
+	/** thread tid, the LWP id */
+	pid_t thread_tid;
+	/** if logging should include the LWP id */
+	int thread_tid_log;
+#endif
 	/** if the io processing has started */
 	int started;
 	/** if the thread has to quit */
