@@ -1498,6 +1498,14 @@ large outgoing port ranges.  ])
 #  include "event2/event.h"
 #endif
 	])
+	# prometheus metrics depend on libevent 2.0 and later, and is therefore
+	# only enabled when the required version is found and used
+	AC_CHECK_FUNCS([evhttp_free], [
+		AC_DEFINE_UNQUOTED([USE_METRICS], [], [Define this to expose Unbound statistics via a prometheus metrics HTTP endpoint.])
+		AC_DEFINE_UNQUOTED([UNBOUND_METRICS_PORT], [9100], [Define the default metrics HTTP endpoint port.])
+	], [
+		AC_MSG_NOTICE([disabling prometheus metrics])
+	])
         PC_LIBEVENT_DEPENDENCY="libevent"
         AC_SUBST(PC_LIBEVENT_DEPENDENCY)
 	if test -n "$BAK_LDFLAGS_SET"; then
@@ -1505,6 +1513,7 @@ large outgoing port ranges.  ])
 	fi
 else
 	AC_DEFINE(USE_MINI_EVENT, 1, [Define if you want to use internal select based events])
+	AC_MSG_NOTICE([Prometheus metrics are disabled with the builtin libevent alternative])
 fi
 
 # check for libexpat

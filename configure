@@ -22165,6 +22165,31 @@ else $as_nop
 fi
 printf "%s\n" "#define HAVE_DECL_EVSIGNAL_ASSIGN $ac_have_decl" >>confdefs.h
 
+	# prometheus metrics depend on libevent 2.0 and later, and is therefore
+	# only enabled when the required version is found and used
+
+  for ac_func in evhttp_free
+do :
+  ac_fn_c_check_func "$LINENO" "evhttp_free" "ac_cv_func_evhttp_free"
+if test "x$ac_cv_func_evhttp_free" = xyes
+then :
+  printf "%s\n" "#define HAVE_EVHTTP_FREE 1" >>confdefs.h
+
+
+printf "%s\n" "#define USE_METRICS /**/" >>confdefs.h
+
+
+printf "%s\n" "#define UNBOUND_METRICS_PORT 9100" >>confdefs.h
+
+
+else $as_nop
+
+		{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: disabling prometheus metrics" >&5
+printf "%s\n" "$as_me: disabling prometheus metrics" >&6;}
+
+fi
+
+done
         PC_LIBEVENT_DEPENDENCY="libevent"
 
 	if test -n "$BAK_LDFLAGS_SET"; then
@@ -22174,6 +22199,8 @@ else
 
 printf "%s\n" "#define USE_MINI_EVENT 1" >>confdefs.h
 
+	{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: Prometheus metrics are disabled with the builtin libevent alternative" >&5
+printf "%s\n" "$as_me: Prometheus metrics are disabled with the builtin libevent alternative" >&6;}
 fi
 
 # check for libexpat
