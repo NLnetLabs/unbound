@@ -340,6 +340,14 @@ config_create(void)
 	cfg->dnstap_bidirectional = 1;
 	cfg->dnstap_tls = 1;
 	cfg->disable_dnssec_lame_check = 0;
+#ifdef USE_METRICS
+	cfg->metrics_enable = 0;
+	cfg->metrics_ifs.first = NULL;
+	cfg->metrics_ifs.last = NULL;
+	cfg->metrics_port = UNBOUND_METRICS_PORT;
+	if(!(cfg->metrics_path = strdup("/metrics")))
+		goto error_exit;
+#endif /* USE_METRICS */
 	cfg->ip_ratelimit_cookie = 0;
 	cfg->ip_ratelimit = 0;
 	cfg->ratelimit = 0;
@@ -839,6 +847,12 @@ int config_set_option(struct config_file* cfg, const char* opt,
 	else S_YNO("dnstap-log-forwarder-response-messages:",
 		dnstap_log_forwarder_response_messages)
 #endif
+#ifdef USE_METRICS
+	else S_YNO("metrics-enable:", metrics_enable)
+	else S_STRLIST_APPEND("metrics-interface:", metrics_ifs)
+	else S_NUMBER_NONZERO("metrics-port:", metrics_port)
+	else S_STR("metrics-path:", metrics_path)
+#endif /* USE_METRICS */
 #ifdef USE_DNSCRYPT
 	else S_YNO("dnscrypt-enable:", dnscrypt)
 	else S_NUMBER_NONZERO("dnscrypt-port:", dnscrypt_port)
@@ -1332,6 +1346,12 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_YNO(opt, "dnstap-log-forwarder-response-messages",
 		dnstap_log_forwarder_response_messages)
 #endif
+#ifdef USE_METRICS
+	else O_YNO(opt, "metrics-enable", metrics_enable)
+	else O_LST(opt, "metrics-interface", metrics_ifs.first)
+	else O_DEC(opt, "metrics-port", metrics_port)
+	else O_STR(opt, "metrics-path", metrics_path)
+#endif /* USE_METRICS */
 #ifdef USE_DNSCRYPT
 	else O_YNO(opt, "dnscrypt-enable", dnscrypt)
 	else O_DEC(opt, "dnscrypt-port", dnscrypt_port)
@@ -1829,6 +1849,10 @@ config_delete(struct config_file* cfg)
 	free(cfg->dnstap_tls_client_cert_file);
 	free(cfg->dnstap_identity);
 	free(cfg->dnstap_version);
+#ifdef USE_METRICS
+	config_delstrlist(cfg->metrics_ifs.first);
+	free(cfg->metrics_path);
+#endif /* USE_METRICS */
 	config_deldblstrlist(cfg->ratelimit_for_domain);
 	config_deldblstrlist(cfg->ratelimit_below_domain);
 	config_delstrlist(cfg->python_script);

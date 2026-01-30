@@ -1,5 +1,5 @@
 /*
- * daemon/metrics.h - prometheus metrics output.
+ * daemon/metrics.h - prometheus metrics endpoint.
  *
  * Copyright (c) 2026, NLnet Labs. All rights reserved.
  *
@@ -41,5 +41,57 @@
 
 #ifndef DAEMON_METRICS_H
 #define DAEMON_METRICS_H
+struct daemon_metrics;
+struct config_file;
+struct worker;
+
+/* the metrics daemon needs little backlog */
+#define TCP_BACKLOG_METRICS 16 /* listen() tcp backlog */
+
+/**
+ * Create new metrics endpoint for the daemon.
+ * Does not open the ports, for that call the open ports routine, and
+ * later the attach routine on the worker event base.
+ * @return new state, or NULL on failure.
+ */
+struct daemon_metrics* daemon_metrics_create(void);
+
+/**
+ * Delete metrics daemon and close HTTP listeners.
+ * @param m: daemon to delete.
+ */
+void daemon_metrics_delete(struct daemon_metrics* m);
+
+/**
+ * Close metrics HTTP listener ports.
+ * Does not delete the object itself.
+ * @param m: state to close.
+ */
+void daemon_metrics_close_ports(struct daemon_metrics* m);
+
+/**
+ * Detach the metrics listener from the event base.
+ * Does not delete the object itself.
+ * @param m: state to detach.
+ */
+void daemon_metrics_detach(struct daemon_metrics* m);
+
+/**
+ * Open and create HTTP listeners for metrics daemon.
+ * @param m: metrics state that contains list of accept sockets.
+ * @param cfg: config options.
+ * @return false on failure.
+ */
+int daemon_metrics_open_ports(struct daemon_metrics* m,
+	struct config_file* cfg);
+
+/**
+ * Setup HTTP listener.
+ * @param m: state
+ * @param worker: The worker thread that hosts the endpoint.
+ *	The HTTP listener is attached to its event base.
+ * @return false on failure.
+ */
+int daemon_metrics_attach(struct daemon_metrics* m, struct worker* worker);
 
 #endif /* DAEMON_METRICS_H */

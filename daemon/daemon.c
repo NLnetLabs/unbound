@@ -69,6 +69,7 @@
 #include "daemon/daemon.h"
 #include "daemon/worker.h"
 #include "daemon/remote.h"
+#include "daemon/metrics.h"
 #include "daemon/acl_list.h"
 #include "util/log.h"
 #include "util/config_file.h"
@@ -301,10 +302,25 @@ daemon_init(void)
 	if(gettimeofday(&daemon->time_boot, NULL) < 0)
 		log_err("gettimeofday: %s", strerror(errno));
 	daemon->time_last_stat = daemon->time_boot;
+#ifdef USE_METRICS
+	if(!(daemon->metrics = daemon_metrics_create())) {
+		acl_list_delete(daemon->acl_interface);
+		acl_list_delete(daemon->acl);
+		tcl_list_delete(daemon->tcl);
+		edns_known_options_delete(daemon->env);
+		free(daemon->env);
+		free(daemon);
+		return NULL;
+	}
+	daemon->metrics_port = -1;
+#endif /* USE_METRICS */
 	if((daemon->env->auth_zones = auth_zones_create()) == 0) {
 		acl_list_delete(daemon->acl_interface);
 		acl_list_delete(daemon->acl);
 		tcl_list_delete(daemon->tcl);
+#ifdef USE_METRICS
+		daemon_metrics_delete(daemon->metrics);
+#endif
 		edns_known_options_delete(daemon->env);
 		free(daemon->env);
 		free(daemon);
@@ -315,6 +331,9 @@ daemon_init(void)
 		acl_list_delete(daemon->acl_interface);
 		acl_list_delete(daemon->acl);
 		tcl_list_delete(daemon->tcl);
+#ifdef USE_METRICS
+		daemon_metrics_delete(daemon->metrics);
+#endif
 		edns_known_options_delete(daemon->env);
 		free(daemon->env);
 		free(daemon);
@@ -440,6 +459,19 @@ daemon_open_shared_ports(struct daemon* daemon)
 			return 0;
 		daemon->rc_port = daemon->cfg->control_port;
 	}
+#ifdef USE_METRICS
+	if(!daemon->cfg->metrics_enable && daemon->metrics_port != -1) {
+		daemon_metrics_close_ports(daemon->metrics);
+		daemon->metrics_port = -1;
+	}
+	if(daemon->cfg->metrics_enable &&
+		daemon->cfg->metrics_port != daemon->metrics_port) {
+		daemon_metrics_close_ports(daemon->metrics);
+		if(!daemon_metrics_open_ports(daemon->metrics, daemon->cfg))
+			return 0;
+		daemon->metrics_port = daemon->cfg->metrics_port;
+	}
+#endif /* USE_METRICS */
 	return 1;
 }
 
@@ -918,6 +950,9 @@ daemon_cleanup(struct daemon* daemon)
 		auth_zones_cleanup(daemon->env->auth_zones);
 	/* key cache is cleared by module deinit during next daemon_fork() */
 	daemon_remote_clear(daemon->rc);
+#ifdef USE_METRICS
+	daemon_metrics_detach(daemon->metrics);
+#endif
 	if(daemon->fast_reload_thread)
 		fast_reload_thread_stop(daemon->fast_reload_thread);
 	if(daemon->fast_reload_printq_list)
@@ -960,6 +995,9 @@ daemon_delete(struct daemon* daemon)
 	modstack_call_destartup(&daemon->mods, daemon->env);
 	modstack_free(&daemon->mods);
 	daemon_remote_delete(daemon->rc);
+#ifdef USE_METRICS
+	daemon_metrics_delete(daemon->metrics);
+#endif
 	for(i = 0; i < daemon->num_ports; i++)
 		listening_ports_free(daemon->ports[i]);
 	free(daemon->ports);

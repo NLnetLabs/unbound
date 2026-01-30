@@ -22179,7 +22179,7 @@ then :
 printf "%s\n" "#define USE_METRICS /**/" >>confdefs.h
 
 
-printf "%s\n" "#define UNBOUND_METRICS_PORT 9100" >>confdefs.h
+printf "%s\n" "#define UNBOUND_METRICS_PORT 9101" >>confdefs.h
 
 
 else $as_nop

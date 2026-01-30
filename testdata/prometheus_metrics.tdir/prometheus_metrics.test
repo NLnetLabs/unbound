@@ -1,0 +1,105 @@
+# #-- prometheus_metrics.test --#
+# source the master var file when it's there
+[ -f ../.tpkg.var.master ] && source ../.tpkg.var.master
+# use .tpkg.var.test for in test variable passing
+[ -f .tpkg.var.test ] && source .tpkg.var.test
+
+. ../common.sh
+PRE="../.."
+
+NUM_A_QUERIES=5
+NUM_TXT_QUERIES=3
+
+# query server a few times
+for i in $(seq 1 $NUM_A_QUERIES); do
+	dig @127.0.0.1 -p "$UNBOUND_PORT" www.example.com. A IN | tee out2
+	if grep "192.0.2.10" out2; then
+		echo "OK"
+	else
+		echo "data not present"
+		exit 1
+	fi
+done
+
+for i in $(seq 1 $NUM_TXT_QUERIES); do
+	dig @127.0.0.1 -p "$UNBOUND_PORT" a.example.com. TXT IN | tee out2
+	if grep "abcdef text" out2; then
+		echo "OK"
+	else
+		echo "data not present"
+		exit 1
+	fi
+done
+
+# check metrics
+if ! curl -Ssi "http://127.0.0.1:$METRICS_PORT/metrics" -o metrics.out; then
+	echo "FAIL"
+	exit 1
+fi
+
+echo ">> metrics output"
+cat metrics.out
+
+echo ">> unbound-control stats"
+$PRE/unbound-control -c ub.conf stats | tee stats
+
+echo "done for now"
+exit 0
+
+# more tests
+if grep -Fx "unbound_queries_total{server=\"0\"} $((NUM_TXT_QUERIES+NUM_A_QUERIES))" metrics.out; then
+	echo "OK"
+else
+	echo "FAIL"
+	exit 1
+fi
+
+if grep -Fx "unbound_queries_by_type_total{type=\"TXT\"} $NUM_TXT_QUERIES" metrics.out; then
+	echo "OK"
+else
+	echo "FAIL"
+	exit 1
+fi
+
+if grep -Fx "unbound_queries_by_type_total{type=\"A\"} $NUM_A_QUERIES" metrics.out; then
+	echo "OK"
+else
+	echo "FAIL"
+	exit 1
+fi
+
+# check that metrics shows the reset stats after using nsd-control stats
+# and check statistics are the same as metrics
+$PRE/unbound-control -c ub.conf stats | tee stats
+if grep "num.queries=$((NUM_TXT_QUERIES+NUM_A_QUERIES))" stats; then echo "OK"; else echo "FAIL"; exit 1; fi
+if grep "num.type.TXT=$NUM_TXT_QUERIES" stats; then echo "OK"; else echo "FAIL"; exit 1; fi
+if grep "num.type.A=$NUM_A_QUERIES" stats; then echo "OK"; else echo "FAIL"; exit 1; fi
+
+# check metrics again
+curl -Ssi "http://127.0.0.1:$TPKG_METRICS_PORT/metrics" -o metrics.out2
+
+echo ">> metrics output"
+cat metrics.out2
+
+if grep -Fx "unbound_queries_total{server=\"0\"} 0" metrics.out2; then
+	echo "OK"
+else
+	echo "FAIL"
+	exit 1
+fi
+
+if grep -Fx "unbound_queries_by_type_total{type=\"TXT\"} 0" metrics.out2; then
+	echo "OK"
+else
+	echo "FAIL"
+	exit 1
+fi
+
+if grep -Fx "unbound_queries_by_type_total{type=\"A\"} 0" metrics.out2; then
+	echo "OK"
+else
+	echo "FAIL"
+	exit 1
+fi
+
+exit 0

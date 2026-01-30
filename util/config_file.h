@@ -625,6 +625,17 @@ struct config_file {
 	/** true to disable DNSSEC lameness check in iterator */
 	int disable_dnssec_lame_check;
 
+#ifdef USE_METRICS
+	/** metrics section. enable toggle. */
+	int metrics_enable;
+	/** the interfaces the metrics endpoint should listen on */
+	struct config_strlist_head metrics_ifs;
+	/** port number for the metrics endpoint */
+	int metrics_port;
+	/** HTTP path for the metrics endpoint */
+	char* metrics_path;
+#endif /* USE_METRICS */
+
 	/** ratelimit for ip addresses. 0 is off, otherwise qps (unless overridden) */
 	int ip_ratelimit;
 	/** ratelimit for ip addresses with a valid DNS Cookie. 0 is off,

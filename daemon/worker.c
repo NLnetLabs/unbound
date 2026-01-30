@@ -46,6 +46,7 @@
 #include "daemon/worker.h"
 #include "daemon/daemon.h"
 #include "daemon/remote.h"
+#include "daemon/metrics.h"
 #include "daemon/acl_list.h"
 #include "util/netevent.h"
 #include "util/config_file.h"
@@ -2249,6 +2250,12 @@ worker_init(struct worker* worker, struct config_file *cfg,
 			worker_delete(worker);
 			return 0;
 		}
+#ifdef USE_METRICS
+		if(!daemon_metrics_attach(worker->daemon->metrics, worker)) {
+			worker_delete(worker);
+			return 0;
+		}
+#endif /* USE METRICS */
 #ifdef UB_ON_WINDOWS
 		wsvc_setup_worker(worker);
 #endif /* UB_ON_WINDOWS */

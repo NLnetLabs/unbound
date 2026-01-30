@@ -4943,6 +4943,12 @@ fr_check_compat_cfg(struct fast_reload_thread* fr, struct config_file* newcfg)
 	FR_CHECK_CHANGED_CFG_STRLIST("tls-additional-port", tls_additional_port, changed_str);
 	FR_CHECK_CHANGED_CFG_STR("interface-automatic-ports", if_automatic_ports, changed_str);
 	FR_CHECK_CHANGED_CFG("udp-upstream-without-downstream", udp_upstream_without_downstream, changed_str);
+#ifdef USE_METRICS
+	FR_CHECK_CHANGED_CFG("metrics-enable", metrics_enable, changed_str);
+	FR_CHECK_CHANGED_CFG("metrics-port", metrics_port, changed_str);
+	FR_CHECK_CHANGED_CFG_STR("metrics-path", metrics_path, changed_str);
+	FR_CHECK_CHANGED_CFG_STRLIST("metrics-interface", metrics_ifs.first, changed_str);
+#endif
 
 	if(changed_str[0] != 0) {
 		/* The new config changes some items that do not work with
@@ -5257,6 +5263,10 @@ config_file_getmem(struct config_file* cfg)
 	m += getmem_str(cfg->dnstap_tls_client_cert_file);
 	m += getmem_str(cfg->dnstap_identity);
 	m += getmem_str(cfg->dnstap_version);
+#ifdef USE_METRICS
+	m += getmem_config_strlist(cfg->metrics_ifs.first);
+	m += getmem_str(cfg->metrics_path);
+#endif
 	m += getmem_config_str2list(cfg->ratelimit_for_domain);
 	m += getmem_config_str2list(cfg->ratelimit_below_domain);
 	m += getmem_config_str2list(cfg->edns_client_strings);
@@ -6104,6 +6114,13 @@ fr_atomic_copy_cfg(struct config_file* oldcfg, struct config_file* cfg,
 	COPY_VAR_int(dnstap_log_forwarder_query_messages);
 	COPY_VAR_int(dnstap_log_forwarder_response_messages);
 	COPY_VAR_int(disable_dnssec_lame_check);
+#ifdef USE_METRICS
+	COPY_VAR_int(metrics_enable);
+	COPY_VAR_ptr(metrics_ifs.first);
+	COPY_VAR_ptr(metrics_ifs.last);
+	COPY_VAR_int(metrics_port);
+	COPY_VAR_ptr(metrics_path);
+#endif
 	COPY_VAR_int(ip_ratelimit);
 	COPY_VAR_int(ip_ratelimit_cookie);
 	COPY_VAR_size_t(ip_ratelimit_slabs);
