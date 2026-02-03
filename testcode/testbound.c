@@ -664,6 +664,42 @@ void remote_get_opt_ssl(char* ATTR_UNUSED(str), void* ATTR_UNUSED(arg))
         log_assert(0);
 }
 
+/* fake metrics */
+struct daemon_metrics* daemon_metrics_create(void)
+{
+	return (struct daemon_metrics*)calloc(1, sizeof(void*));
+}
+
+void daemon_metrics_delete(struct daemon_metrics* m)
+{
+	if(!m) return;
+	free(m);
+}
+
+void daemon_metrics_close_ports(struct daemon_metrics* ATTR_UNUSED(m))
+{
+	/* nothing */
+}
+
+void daemon_metrics_detach(struct daemon_metrics* ATTR_UNUSED(m))
+{
+	/* nothing */
+}
+
+int daemon_metrics_open_ports(struct daemon_metrics* ATTR_UNUSED(m),
+	struct config_file* ATTR_UNUSED(cfg))
+{
+	/* nothing */
+	return 1;
+}
+
+int daemon_metrics_attach(struct daemon_metrics* ATTR_UNUSED(m),
+	struct worker* ATTR_UNUSED(worker))
+{
+	/* nothing */
+	return 1;
+}
+
 #ifdef UB_ON_WINDOWS
 void wsvc_command_option(const char* ATTR_UNUSED(wopt), 
 	const char* ATTR_UNUSED(cfgfile), int ATTR_UNUSED(v), 

@@ -282,6 +282,8 @@ daemon_metrics_attach(struct daemon_metrics* metrics, struct worker* worker)
 	struct metrics_acceptlist* p;
 	if(!metrics) return 1;
 	metrics->worker = worker;
+	if(!metrics->accept_list)
+		return 1;
 
 	metrics->http_server = evhttp_new(ub_libevent_get_event_base(
 		comm_base_internal(worker->base)));
