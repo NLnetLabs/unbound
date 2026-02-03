@@ -40,8 +40,9 @@ fi
 echo ">> metrics output"
 cat metrics.out
 
+echo ""
 echo ">> unbound-control stats"
-$PRE/unbound-control -c ub.conf stats | tee stats
+$PRE/unbound-control -c ub.conf stats_noreset | tee stats
 
 echo "done for now"
 exit 0

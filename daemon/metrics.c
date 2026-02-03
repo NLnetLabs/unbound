@@ -319,9 +319,12 @@ static int
 metrics_print_stats(struct evbuffer* reply, const char* nm,
 	struct ub_stats_info* s)
 {
-	(void)reply;
-	(void)nm;
-	(void)s;
+	char* prefix = "unbound_";
+	print_metric_help_and_type(reply, prefix, "hits_queries",
+		"Unbound DNS traffic and cache hits", "gauge");
+	evbuffer_add_printf(reply,
+		"%shits_queries{type=\"%s.num.queries\"} " ARG_LL "d\n",
+		prefix, nm, (long long)s->svr.num_queries);
 	return 1;
 }
 
@@ -339,12 +342,12 @@ metrics_print_thread_stats(struct evbuffer* reply, int i,
 /* metrics print of uptime stats */
 static int
 metrics_print_uptime(struct evbuffer* reply, struct worker* worker,
-	struct timeval* stattime)
+	struct timeval* stattime, struct timeval* time_last_stat)
 {
 	char* prefix = "unbound_";
 	struct timeval up, dt;
 	timeval_subtract(&up, stattime, &worker->daemon->time_boot);
-	timeval_subtract(&dt, stattime, &worker->daemon->time_last_stat);
+	timeval_subtract(&dt, stattime, time_last_stat);
 
 	print_metric_help_and_type(reply, prefix, "time_now_seconds",
 		"Time of the statistics printout, in seconds.", "untyped");
@@ -408,12 +411,11 @@ do_metrics_stats(struct evbuffer* reply, struct worker* worker, int reset)
 	struct ub_stats_info total;
 	struct ub_stats_info s;
 	int i;
-	struct timeval stattime;
-	if(gettimeofday(&stattime, NULL) < 0)
-		log_err("gettimeofday: %s", strerror(errno));
+	struct timeval stattime, time_last_stat;
 
 	memset(&total, 0, sizeof(total));
 	log_assert(daemon->num > 0);
+
 	/* gather all thread statistics in one place */
 	for(i=0; i<daemon->num; i++) {
 		server_stats_obtain(worker, daemon->workers[i], &s, reset);
@@ -423,11 +425,18 @@ do_metrics_stats(struct evbuffer* reply, struct worker* worker, int reset)
 			total = s;
 		else	server_stats_add(&total, &s);
 	}
-	/* print the thread statistics */
 	total.mesh_time_median /= (double)daemon->num;
+	if(gettimeofday(&stattime, NULL) < 0)
+		log_err("gettimeofday: %s", strerror(errno));
+	time_last_stat = worker->daemon->time_last_stat;
+	if(reset) {
+		worker->daemon->time_last_stat = stattime;
+	}
+
+	/* print the thread statistics */
 	if(!metrics_print_stats(reply, "total", &total))
 		return;
-	if(!metrics_print_uptime(reply, worker, &stattime))
+	if(!metrics_print_uptime(reply, worker, &stattime, &time_last_stat))
 		return;
 	if(daemon->cfg->stat_extended) {
 		if(!metrics_print_mem(reply, worker, daemon, &total))
@@ -437,11 +446,6 @@ do_metrics_stats(struct evbuffer* reply, struct worker* worker, int reset)
 		if(!metrics_print_ext(reply, &total,
 			daemon->cfg->stat_inhibit_zero))
 			return;
-	}
-
-	if(reset) {
-		worker->daemon->time_last_stat = stattime;
-		worker_stats_clear(worker);
 	}
 }
 
@@ -469,7 +473,8 @@ metrics_http_callback(struct evhttp_request *req, void *p)
 
 	evhttp_add_header(evhttp_request_get_output_headers(req),
 			  "Content-Type", "text/plain; version=0.0.4");
-	do_metrics_stats(reply, metrics->worker, 0);
+	do_metrics_stats(reply, metrics->worker,
+		!metrics->worker->daemon->cfg->stat_cumulative);
 	evhttp_send_reply(req, HTTP_OK, NULL, reply);
 	verbose(VERB_DETAIL, "metrics operation completed, response sent");
 	evbuffer_free(reply);
