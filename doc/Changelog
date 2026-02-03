@@ -1,3 +1,7 @@
+3 February 2026: Yorgos
+	- Eagerly remove .skip mark files in between mini_tdir.sh runs in case
+	  there has been a change on the environment.
+
 27 January 2026: Wouter
 	- Add test for allow-notify with a host name.
 
