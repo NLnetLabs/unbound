@@ -1,7 +1,8 @@
 4 February 2026: Wouter
-	- Fix local privilege escalation on Windows. Thanks to Hao Huang
-	  for the report. The OpenSSL init calls are set to not load
-	  the openssl.cnf file when compiled for Windows.
+	- Fix local privilege escalation on Windows. Thanks to Hao Huang and
+	  CrisprXiang with Fudan University for the report. The OpenSSL
+	  init calls are set to not load the openssl.cnf file when compiled
+	  for Windows.
 
 3 February 2026: Yorgos
 	- Eagerly remove .skip mark files in between mini_tdir.sh runs in case
