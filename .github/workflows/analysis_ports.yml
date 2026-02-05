@@ -175,8 +175,38 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: false
+          submodules: recursive
           persist-credentials: false
+      - name: test_windows_configure
+        if: ${{ matrix.test_windows == 'yes' }}
+        shell: bash
+        run: |
+          # The run starts with mount points for /c, /d, and
+          # C:/Program Files/Git on /
+          # C:/Program Files/Git/usr/bin on /bin
+          # C:/Users/RUNNER~1/AppData/Local/Temp on /tmp
+          echo "mount"
+          mount || echo "ignored"
+          echo "mount -o bind /c/msys64/usr /usr"
+          mount -o bind /c/msys64/usr /usr || echo "ignored"
+          # Now there is:
+          # C:/msys64 on /
+          # C:/msys64/usr/bin on /bin
+          # And those mount points should go away for the next 'run:' shell.
+          echo "mount"
+          mount || echo "ignored"
+          # probably installs to C:\msys64\usr\bin\bash.exe
+          echo "pacman -S --noconfirm autotools"
+          C:/msys64/usr/bin/pacman -S --noconfirm autotools
+          echo "rm -f aclocal.m4"
+          rm -f aclocal.m4
+          # The paths are mounted, so that /c/msys64/usr/share/autoconf-..,
+          # /c/msys64/usr/share/aclocal-.., /c/msys64/usr/share/automake-..
+          # are in /usr. Also for /usr/bin, autoreconf is from
+          # /c/msys64/usr/bin.
+          echo "autoreconf -fi"
+          #PATH="/c/msys64/usr/bin:$PATH" autoreconf -fi || echo "ignored"
+          autoreconf -fi
       - name: test_windows
         if: ${{ matrix.test_windows == 'yes' }}
         env:
@@ -189,6 +219,9 @@ jobs:
           cd ..
           export prepath=`pwd`
           echo prepath=${prepath}
+          # The mount should have the git directories.
+          echo "mount"
+          mount || echo "ignored"
           echo "choco install winflexbison3"
           choco install winflexbison3
           echo 'LEX="win_flex"'
@@ -206,7 +239,7 @@ jobs:
           #sed -e 's/use Pod::Usage//' < Configure > Configure.fix
           # ./Configure.fix no-shared no-asm -DOPENSSL_NO_CAPIENG mingw64 --prefix="$prepath/openssl"
           # pacman is used to install for msys2, with
-          # C:/msys64/usr/bin/pacman -S perl
+          # C:/msys64/usr/bin/pacman -S --noconfirm perl
           echo "C:/msys64/usr/bin/perl ./Configure no-shared no-asm -DOPENSSL_NO_CAPIENG mingw64 --prefix=\""$prepath/openssl"\" PERL=\"C:/msys64/usr/bin/perl\""
           C:/msys64/usr/bin/perl ./Configure no-shared no-asm -DOPENSSL_NO_CAPIENG mingw64 --prefix="$prepath/openssl" PERL="C:/msys64/usr/bin/perl"
           # make the libs only, build faster
@@ -295,6 +328,8 @@ jobs:
           ./contrib/android/install_expat.sh
           echo "::endgroup::"
           echo "::group::configure"
+          echo "autoreconf -fi"
+          autoreconf -fi
           echo "./configure ${CONFIG_OPTS}"
           ./configure ${CONFIG_OPTS}
           echo "::endgroup::"
@@ -314,6 +349,7 @@ jobs:
           IOS_CPU: ${{ matrix.IOS_CPU }}
         run: |
           #(already installed) ./contrib/ios/install_tools.sh
+          brew install autoconf automake libtool make
           export AUTOTOOLS_BUILD="$(./config.guess)"
           echo AUTOTOOLS_BUILD=${AUTOTOOLS_BUILD}
           export IOS_PREFIX="$HOME/$IOS_SDK-$IOS_CPU"
@@ -335,6 +371,8 @@ jobs:
           ./contrib/ios/install_expat.sh
           echo "::endgroup::"
           echo "::group::configure"
+          echo "autoreconf -fi"
+          autoreconf -fi
           echo "./configure ${CONFIG_OPTS}"
           ./configure ${CONFIG_OPTS}
           echo "::endgroup::"
@@ -360,10 +398,12 @@ jobs:
           cpu_count: 2
           run: |
             set -e -x
-            if test "$CROSS_PLATFORM_OS" = "freebsd"; then sudo pkg install -y openssl libevent expat; fi
-            if test "$CROSS_PLATFORM_OS" = "openbsd"; then sudo pkg_add libevent; fi
-            if test "$CROSS_PLATFORM_OS" = "netbsd"; then sudo pkgin -y install libevent; fi
+            if test "$CROSS_PLATFORM_OS" = "freebsd"; then sudo pkg install -y autoconf automake libtool pkgconf openssl libevent expat; fi
+            if test "$CROSS_PLATFORM_OS" = "openbsd"; then sudo pkg_add autoconf-2.71 automake-1.16.5 libtool pkgconf libevent; export AUTOCONF_VERSION="2.71"; export AUTOMAKE_VERSION="1.16"; fi
+            if test "$CROSS_PLATFORM_OS" = "netbsd"; then sudo pkgin -y install autoconf automake libtool pkgconf libevent; export LDFLAGS="-Wl,--rpath=/usr/pkg/lib"; fi
             echo "::group::configure"
+            rm -f aclocal.m4
+            autoreconf -fi
             ./configure ${{ matrix.cross_platform_config }}
             echo "::endgroup::"
             echo "::group::make"
@@ -377,10 +417,15 @@ jobs:
         run: sudo apt-get install libevent-dev
       - name: install expat
         if: ${{ matrix.install_expat == 'yes' }}
-        run: brew install expat
+        run: |
+          brew install expat
+          brew install autoconf automake libtool make
       - name: configure
         if: ${{ matrix.config != 'no' }}
-        run: ./configure ${{ matrix.config }}
+        run: |
+          if test `uname` = "Linux"; then sudo apt-get install autoconf automake libtool make; fi
+          autoreconf -fi
+          ./configure ${{ matrix.config }}
       - name: make
         if: ${{ matrix.make != 'no' }}
         run: make

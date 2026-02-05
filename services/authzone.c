@@ -72,7 +72,11 @@
 #include "validator/val_sigcrypt.h"
 #include "validator/val_anchor.h"
 #include "validator/val_utils.h"
+#include "zone.h"
 #include <ctype.h>
+#ifdef HAVE_SYS_STAT_H
+#include <sys/stat.h>
+#endif
 
 /** bytes to use for NSEC3 hash buffer. 20 for sha1 */
 #define N3HASHBUFLEN 32
@@ -702,13 +706,15 @@ az_rrset_find_rrsig(struct packed_rrset_data* d, uint8_t* rdata, size_t len,
 
 /** see if rdata is duplicate */
 static int
-rdata_duplicate(struct packed_rrset_data* d, uint8_t* rdata, size_t len)
+rdata_duplicate(struct packed_rrset_data* d, uint8_t* rdata_wol, size_t len)
 {
-	size_t i;
+	size_t i, rdatawl_len = len+2;
+	uint16_t len16 = htons(len);
 	for(i=0; i<d->count + d->rrsig_count; i++) {
-		if(d->rr_len[i] != len)
+		if(d->rr_len[i] != rdatawl_len)
 			continue;
-		if(memcmp(d->rr_data[i], rdata, len) == 0)
+		if(memcmp(d->rr_data[i], &len16, 2) == 0 &&
+		   memcmp(d->rr_data[i]+2, rdata_wol, len) == 0)
 			return 1;
 	}
 	return 0;
@@ -725,6 +731,19 @@ rrsig_rdata_get_type_covered(uint8_t* rdata, size_t rdatalen)
 	if(rdatalen < 4)
 		return 0;
 	return sldns_read_uint16(rdata+2);
+}
+
+/** get rrsig type covered from rdata.
+ * @param rdata_wol: rdata in wireformat, without the prefix rdlength.
+ * @param rdatalen: length of rdata buffer.
+ * @return type covered (or 0).
+ */
+static uint16_t
+rrsig_rdata_get_type_covered_wol(uint8_t* rdata_wol, size_t rdatalen)
+{
+	if(rdatalen < 2)
+		return 0;
+	return sldns_read_uint16(rdata_wol);
 }
 
 /** remove RR from existing RRset. Also sig, if it is a signature.
@@ -792,7 +811,7 @@ rrset_remove_rr(struct auth_rrset* rrset, size_t index)
 /** add RR to existing RRset. If insert_sig is true, add to rrsigs. 
  * This reallocates the packed rrset for a new one */
 static int
-rrset_add_rr(struct auth_rrset* rrset, uint32_t rr_ttl, uint8_t* rdata,
+rrset_add_rr(struct auth_rrset* rrset, uint32_t rr_ttl, uint8_t* rdata_wol,
 	size_t rdatalen, int insert_sig)
 {
 	struct packed_rrset_data* d, *old = rrset->data;
@@ -800,7 +819,7 @@ rrset_add_rr(struct auth_rrset* rrset, uint32_t rr_ttl, uint8_t* rdata,
 
 	d = (struct packed_rrset_data*)calloc(1, packed_rrset_sizeof(old)
 		+ sizeof(size_t) + sizeof(uint8_t*) + sizeof(time_t)
-		+ rdatalen);
+		+ 2 /* rdlen */ + rdatalen);
 	if(!d) {
 		log_err("out of memory");
 		return 0;
@@ -823,8 +842,8 @@ rrset_add_rr(struct auth_rrset* rrset, uint32_t rr_ttl, uint8_t* rdata,
 		memmove(d->rr_len+d->count, old->rr_len+old->count,
 			old->rrsig_count*sizeof(size_t));
 	if(!insert_sig)
-		d->rr_len[d->count-1] = rdatalen;
-	else	d->rr_len[total-1] = rdatalen;
+		d->rr_len[d->count-1] = rdatalen + 2;
+	else	d->rr_len[total-1] = rdatalen + 2;
 	packed_rrset_ptr_fixup(d);
 	if((time_t)rr_ttl < d->ttl)
 		d->ttl = rr_ttl;
@@ -849,10 +868,12 @@ rrset_add_rr(struct auth_rrset* rrset, uint32_t rr_ttl, uint8_t* rdata,
 	/* insert new value */
 	if(!insert_sig) {
 		d->rr_ttl[d->count-1] = rr_ttl;
-		memmove(d->rr_data[d->count-1], rdata, rdatalen);
+		sldns_write_uint16(d->rr_data[d->count-1], rdatalen);
+		memmove(d->rr_data[d->count-1]+2, rdata_wol, rdatalen);
 	} else {
 		d->rr_ttl[total-1] = rr_ttl;
-		memmove(d->rr_data[total-1], rdata, rdatalen);
+		sldns_write_uint16(d->rr_data[total-1], rdatalen);
+		memmove(d->rr_data[total-1]+2, rdata_wol, rdatalen);
 	}
 
 	rrset->data = d;
@@ -860,10 +881,11 @@ rrset_add_rr(struct auth_rrset* rrset, uint32_t rr_ttl, uint8_t* rdata,
 	return 1;
 }
 
-/** Create new rrset for node with packed rrset with one RR element */
+/** Create new rrset for node with packed rrset with one RR element.
+ * rdata_wol is the rdata without prefixed rdlength. */
 static struct auth_rrset*
 rrset_create(struct auth_data* node, uint16_t rr_type, uint32_t rr_ttl,
-	uint8_t* rdata, size_t rdatalen)
+	uint8_t* rdata_wol, size_t rdatalen)
 {
 	struct auth_rrset* rrset = (struct auth_rrset*)calloc(1,
 		sizeof(*rrset));
@@ -878,7 +900,7 @@ rrset_create(struct auth_data* node, uint16_t rr_type, uint32_t rr_ttl,
 	/* the rrset data structure, with one RR */
 	d = (struct packed_rrset_data*)calloc(1,
 		sizeof(struct packed_rrset_data) + sizeof(size_t) +
-		sizeof(uint8_t*) + sizeof(time_t) + rdatalen);
+		sizeof(uint8_t*) + sizeof(time_t) + 2 /* rdlen*/ + rdatalen);
 	if(!d) {
 		free(rrset);
 		log_err("out of memory");
@@ -893,9 +915,10 @@ rrset_create(struct auth_data* node, uint16_t rr_type, uint32_t rr_ttl,
 	d->rr_data[0] = (uint8_t*)&(d->rr_ttl[1]);
 
 	/* insert the RR */
-	d->rr_len[0] = rdatalen;
+	d->rr_len[0] = rdatalen + 2;
 	d->rr_ttl[0] = rr_ttl;
-	memmove(d->rr_data[0], rdata, rdatalen);
+	sldns_write_uint16(d->rr_data[0], rdatalen);
+	memmove(d->rr_data[0]+2, rdata_wol, rdatalen);
 	d->count++;
 
 	/* insert rrset into linked list for domain */
@@ -1079,14 +1102,14 @@ rrsigs_copy_from_rrset_to_rrsigset(struct auth_rrset* rrset,
 	 * duplicates are ignored */
 	for(i=rrset->data->count;
 		i<rrset->data->count+rrset->data->rrsig_count; i++) {
-		uint8_t* rdata = rrset->data->rr_data[i];
-		size_t rdatalen = rrset->data->rr_len[i];
+		uint8_t* rdata_wol = rrset->data->rr_data[i]+2;
+		size_t rdatalen = rrset->data->rr_len[i]-2;
 		time_t rr_ttl  = rrset->data->rr_ttl[i];
 
-		if(rdata_duplicate(rrsigset->data, rdata, rdatalen)) {
+		if(rdata_duplicate(rrsigset->data, rdata_wol, rdatalen)) {
 			continue;
 		}
-		if(!rrset_add_rr(rrsigset, rr_ttl, rdata, rdatalen, 0))
+		if(!rrset_add_rr(rrsigset, rr_ttl, rdata_wol, rdatalen, 0))
 			return 0;
 	}
 	return 1;
@@ -1096,32 +1119,35 @@ rrsigs_copy_from_rrset_to_rrsigset(struct auth_rrset* rrset,
  * rdata points to buffer with rdatalen octets, starts with 2bytelength. */
 static int
 az_domain_add_rr(struct auth_data* node, uint16_t rr_type, uint32_t rr_ttl,
-	uint8_t* rdata, size_t rdatalen, int* duplicate)
+	uint8_t* rdata_wol, size_t rdatalen, int* duplicate)
 {
 	struct auth_rrset* rrset;
 	/* packed rrsets have their rrsigs along with them, sort them out */
 	if(rr_type == LDNS_RR_TYPE_RRSIG) {
-		uint16_t ctype = rrsig_rdata_get_type_covered(rdata, rdatalen);
+		uint16_t ctype = rrsig_rdata_get_type_covered_wol(rdata_wol,
+			rdatalen);
 		if((rrset=az_domain_rrset(node, ctype))!= NULL) {
 			/* a node of the correct type exists, add the RRSIG
 			 * to the rrset of the covered data type */
-			if(rdata_duplicate(rrset->data, rdata, rdatalen)) {
+			if(rdata_duplicate(rrset->data, rdata_wol, rdatalen)) {
 				if(duplicate) *duplicate = 1;
 				return 1;
 			}
-			if(!rrset_add_rr(rrset, rr_ttl, rdata, rdatalen, 1))
+			if(!rrset_add_rr(rrset, rr_ttl, rdata_wol, rdatalen,
+				1))
 				return 0;
 		} else if((rrset=az_domain_rrset(node, rr_type))!= NULL) {
 			/* add RRSIG to rrset of type RRSIG */
-			if(rdata_duplicate(rrset->data, rdata, rdatalen)) {
+			if(rdata_duplicate(rrset->data, rdata_wol, rdatalen)) {
 				if(duplicate) *duplicate = 1;
 				return 1;
 			}
-			if(!rrset_add_rr(rrset, rr_ttl, rdata, rdatalen, 0))
+			if(!rrset_add_rr(rrset, rr_ttl, rdata_wol, rdatalen,
+				0))
 				return 0;
 		} else {
 			/* create rrset of type RRSIG */
-			if(!rrset_create(node, rr_type, rr_ttl, rdata,
+			if(!rrset_create(node, rr_type, rr_ttl, rdata_wol,
 				rdatalen))
 				return 0;
 		}
@@ -1129,17 +1155,18 @@ az_domain_add_rr(struct auth_data* node, uint16_t rr_type, uint32_t rr_ttl,
 		/* normal RR type */
 		if((rrset=az_domain_rrset(node, rr_type))!= NULL) {
 			/* add data to existing node with data type */
-			if(rdata_duplicate(rrset->data, rdata, rdatalen)) {
+			if(rdata_duplicate(rrset->data, rdata_wol, rdatalen)) {
 				if(duplicate) *duplicate = 1;
 				return 1;
 			}
-			if(!rrset_add_rr(rrset, rr_ttl, rdata, rdatalen, 0))
+			if(!rrset_add_rr(rrset, rr_ttl, rdata_wol, rdatalen,
+				0))
 				return 0;
 		} else {
 			struct auth_rrset* rrsig;
 			/* create new node with data type */
-			if(!(rrset=rrset_create(node, rr_type, rr_ttl, rdata,
-				rdatalen)))
+			if(!(rrset=rrset_create(node, rr_type, rr_ttl,
+				rdata_wol, rdatalen)))
 				return 0;
 
 			/* see if node of type RRSIG has signatures that
@@ -1156,21 +1183,16 @@ az_domain_add_rr(struct auth_data* node, uint16_t rr_type, uint32_t rr_ttl,
 	return 1;
 }
 
-/** insert RR into zone, ignore duplicates */
+/** insert RR as name,rdata into zone, ignore duplicates.
+ * The rdata_wol is the rdata without the prefix rdlength, because simdzone
+ * returns that as the parsed rdata byte string. */
 static int
-az_insert_rr(struct auth_zone* z, uint8_t* rr, size_t rr_len,
-	size_t dname_len, int* duplicate)
+az_insert_rr_as_rdata(struct auth_zone* z, uint8_t* dname, size_t dname_len,
+	uint16_t rr_type, uint16_t rr_class, uint32_t rr_ttl,
+	uint8_t* rdata_wol, size_t rdatalen, int* duplicate,
+	uint8_t* rr, size_t rr_len)
 {
 	struct auth_data* node;
-	uint8_t* dname = rr;
-	uint16_t rr_type = sldns_wirerr_get_type(rr, rr_len, dname_len);
-	uint16_t rr_class = sldns_wirerr_get_class(rr, rr_len, dname_len);
-	uint32_t rr_ttl = sldns_wirerr_get_ttl(rr, rr_len, dname_len);
-	size_t rdatalen = ((size_t)sldns_wirerr_get_rdatalen(rr, rr_len,
-		dname_len))+2;
-	/* rdata points to rdata prefixed with uint16 rdatalength */
-	uint8_t* rdata = sldns_wirerr_get_rdatawl(rr, rr_len, dname_len);
-
 	if(rr_class != z->dclass) {
 		log_err("wrong class for RR");
 		return 0;
@@ -1179,18 +1201,62 @@ az_insert_rr(struct auth_zone* z, uint8_t* rr, size_t rr_len,
 		log_err("cannot create domain");
 		return 0;
 	}
-	if(!az_domain_add_rr(node, rr_type, rr_ttl, rdata, rdatalen,
+	if(!az_domain_add_rr(node, rr_type, rr_ttl, rdata_wol, rdatalen,
 		duplicate)) {
 		log_err("cannot add RR to domain");
 		return 0;
 	}
 	if(z->rpz) {
+		uint8_t* rdata_wl;
+		uint8_t buf[65536];
+		if(rr == NULL) {
+			/* spool it into buffer. */
+			log_assert(dname);
+			if(dname_len + 10 /* type, class, ttl, rdlength */ +
+				rdatalen > sizeof(buf)) {
+				char dstr[LDNS_MAX_DOMAINLEN], t[16], c[16];
+				dname_str(dname, dstr);
+				sldns_wire2str_type_buf(rr_type, t, sizeof(t));
+				sldns_wire2str_class_buf(rr_class, c, sizeof(c));
+				log_err("record exceeds buffer length, %s %s %s", dstr, c, t);
+				return 0;
+			}
+			rr = buf;
+			rr_len = dname_len
+				+ 10 /* type, class, ttl, rdlength */ +
+				rdatalen;
+			memcpy(buf, dname, dname_len);
+			sldns_write_uint16(buf+dname_len, rr_type);
+			sldns_write_uint16(buf+dname_len+2, rr_class);
+			sldns_write_uint32(buf+dname_len+4, rr_ttl);
+			sldns_write_uint16(buf+dname_len+8, rdatalen);
+			memmove(buf+dname_len+10, rdata_wol, rdatalen);
+		}
+		rdata_wl = sldns_wirerr_get_rdatawl(rr, rr_len, dname_len);
 		if(!(rpz_insert_rr(z->rpz, z->name, z->namelen, dname,
-			dname_len, rr_type, rr_class, rr_ttl, rdata, rdatalen,
-			rr, rr_len)))
+			dname_len, rr_type, rr_class, rr_ttl, rdata_wl,
+			rdatalen+2, rr, rr_len)))
 			return 0;
 	}
 	return 1;
+}
+
+/** insert RR into zone, ignore duplicates */
+static int
+az_insert_rr(struct auth_zone* z, uint8_t* rr, size_t rr_len,
+	size_t dname_len, int* duplicate)
+{
+	uint8_t* dname = rr;
+	uint16_t rr_type = sldns_wirerr_get_type(rr, rr_len, dname_len);
+	uint16_t rr_class = sldns_wirerr_get_class(rr, rr_len, dname_len);
+	uint32_t rr_ttl = sldns_wirerr_get_ttl(rr, rr_len, dname_len);
+	size_t rdatalen = ((size_t)sldns_wirerr_get_rdatalen(rr, rr_len,
+		dname_len));
+	/* rdata points to rdata without prefix rdlength. */
+	uint8_t* rdata_wol = sldns_wirerr_get_rdata(rr, rr_len, dname_len);
+
+	return az_insert_rr_as_rdata(z, dname, dname_len, rr_type, rr_class,
+		rr_ttl, rdata_wol, rdatalen, duplicate, rr, rr_len);
 }
 
 /** Remove rr from node, ignores nonexisting RRs,
@@ -1563,13 +1629,153 @@ az_parse_file(struct auth_zone* z, FILE* in, uint8_t* rr, size_t rrbuflen,
 	return 1;
 }
 
+/** Structure for simdzone parse state */
+struct az_parse_state {
+	/** The zone that is processed. */
+	struct auth_zone* z;
+	/** number of errors, if 0 it was read successfully. */
+	int errors;
+	/** for http parse, chunk iterator. */
+	struct auth_chunk* chunk;
+	/** for http parse, position in chunk. */
+	size_t chunk_pos;
+};
+
+/** Callback for simdzone parse, log an error */
+static void
+az_parse_log(zone_parser_t *parser, uint32_t category,
+	const char *file, size_t line, const char *message, void *user_data)
+{
+	struct az_parse_state* state = (struct az_parse_state*)user_data;
+	(void)parser;
+
+	switch (category) {
+	case ZONE_INFO:
+		if (file)
+			log_info("%s:%d: %s", file, (int)line, message);
+		else
+			log_info("%s", message);
+		break;
+	case ZONE_WARNING:
+		if (file)
+			log_warn("%s:%d: %s", file, (int)line, message);
+		else
+			log_warn("%s", message);
+		break;
+	default:
+		if (file)
+			log_err("%s:%d: %s", file, (int)line, message);
+		else
+			log_err("%s", message);
+		state->errors++;
+		break;
+	}
+}
+
+/** Callback for simdzone parse, accept an RR that has been read in. */
+int32_t
+az_parse_accept(zone_parser_t *parser, const zone_name_t *owner,
+	uint16_t type, uint16_t dclass, uint32_t ttl, uint16_t rdlength,
+	const uint8_t *rdata, void *user_data)
+{
+	struct az_parse_state* state = (struct az_parse_state*)user_data;
+	if(verbosity >= 7) {
+		char dname[LDNS_MAX_DOMAINLEN], t[16], c[16];
+		dname_str((uint8_t*)owner->octets, dname);
+		sldns_wire2str_type_buf(type, t, sizeof(t));
+		sldns_wire2str_class_buf(dclass, c, sizeof(c));
+		verbose(7, "zone parse record %s %s %s", dname, c, t);
+	}
+
+	/* Duplicates can be ignored, do not insert them twice. */
+	if(!az_insert_rr_as_rdata(state->z, (uint8_t*)owner->octets,
+		owner->length, type, dclass, ttl, (uint8_t*)rdata, rdlength,
+		NULL, NULL, 0)) {
+		char dname[LDNS_MAX_DOMAINLEN], t[16], c[16];
+		dname_str((uint8_t*)owner->octets, dname);
+		sldns_wire2str_type_buf(type, t, sizeof(t));
+		sldns_wire2str_class_buf(dclass, c, sizeof(c));
+		log_err("record insert allocation failed, %s %s %s",
+			dname, c, t);
+		return ZONE_OUT_OF_MEMORY;
+	}
+	(void)parser;
+	return 0;
+}
+
+/**
+ * Callback for simdzone parse, include a zone file.
+ * It is called for every $INCLUDE entry. It could be used to save
+ * the file names, so that it can track if the files have changed, later.
+ */
+static int32_t
+az_parse_include(zone_parser_t *parser, const char *file,
+	const char *path, void *user_data)
+{
+	struct az_parse_state* state = (struct az_parse_state*)user_data;
+	(void)parser;
+	(void)state;
+	verbose(6, "zone parse descended into include file %s (full path %s)",
+		file, path);
+	return 0;
+}
+
+/**
+ * Parse file with simdzone.
+ */
+static int
+az_parse_file_simdzone(struct auth_zone* z, char* zfilename,
+	struct config_file* cfg)
+{
+	zone_parser_t parser;
+	zone_options_t options;
+	zone_name_buffer_t name_buffer;
+	zone_rdata_buffer_t rdata_buffer;
+	zone_buffers_t buffers = { 1, &name_buffer, &rdata_buffer };
+	struct az_parse_state state;
+
+	memset(&options, 0, sizeof(options));
+	options.origin.octets = z->name;
+	options.origin.length = z->namelen;
+	options.default_ttl = 3600;
+	options.default_class = LDNS_RR_CLASS_IN;
+	options.secondary = z->zone_is_slave;
+	options.pretty_ttls = true; /* non-standard, for backwards compatibility */
+	if(cfg->chrootdir && cfg->chrootdir[0])
+		options.chrootdir = cfg->chrootdir;
+	else	options.chrootdir = NULL;
+	options.log.callback = &az_parse_log;
+	options.accept.callback = &az_parse_accept;
+	options.include.callback = &az_parse_include;
+
+	memset(&state, 0, sizeof(state));
+	state.z = z;
+
+	/* Parse and process all RRs.  */
+	if (zone_parse(&parser, &options, &buffers, zfilename, &state) != 0) {
+		return 0;
+	}
+	return 1;
+}
+
+/** See if the file can be accessed, or if it does not exist. Look at errno. */
+static int
+file_exists(char* filename)
+{
+	struct stat buf;
+	if(stat(filename, &buf) < 0) {
+		return 0;
+	}
+	return 1;
+}
+
 int
 auth_zone_read_zonefile(struct auth_zone* z, struct config_file* cfg)
 {
+	int use_simdzone = 1;
 	uint8_t rr[LDNS_RR_BUF_SIZE];
 	struct sldns_file_parse_state state;
 	char* zfilename;
-	FILE* in;
 	if(!z || !z->zonefile || z->zonefile[0]==0)
 		return 1; /* no file, or "", nothing to read */
 	
@@ -1582,8 +1788,7 @@ auth_zone_read_zonefile(struct auth_zone* z, struct config_file* cfg)
 		dname_str(z->name, nm);
 		verbose(VERB_ALGO, "read zonefile %s for %s", zfilename, nm);
 	}
-	in = fopen(zfilename, "r");
-	if(!in) {
+	if(!file_exists(zfilename)) {
 		char* n = sldns_wire2str_dname(z->name, z->namelen);
 		if(z->zone_is_slave && errno == ENOENT) {
 			/* we fetch the zone contents later, no file yet */
@@ -1614,15 +1819,36 @@ auth_zone_read_zonefile(struct auth_zone* z, struct config_file* cfg)
 		state.origin_len = z->namelen;
 	}
 	/* parse the (toplevel) file */
-	if(!az_parse_file(z, in, rr, sizeof(rr), &state, zfilename, 0, cfg)) {
-		char* n = sldns_wire2str_dname(z->name, z->namelen);
-		log_err("error parsing zonefile %s for %s",
-			zfilename, n?n:"error");
-		free(n);
+	if(use_simdzone) {
+		/* Use simdzone. */
+		if(!az_parse_file_simdzone(z, zfilename, cfg)) {
+			char* n = sldns_wire2str_dname(z->name, z->namelen);
+			log_err("error parsing zonefile %s for %s",
+				zfilename, n?n:"error");
+			free(n);
+			return 0;
+		}
+	} else {
+		/* Read with sldns_str2wire functions. */
+		FILE* in;
+		in = fopen(zfilename, "r");
+		if(!in) {
+			char* n = sldns_wire2str_dname(z->name, z->namelen);
+			log_err("cannot open zonefile %s for %s: %s",
+				zfilename, n?n:"error", strerror(errno));
+			free(n);
+			return 0;
+		}
+		if(!az_parse_file(z, in, rr, sizeof(rr), &state, zfilename, 0, cfg)) {
+			char* n = sldns_wire2str_dname(z->name, z->namelen);
+			log_err("error parsing zonefile %s for %s",
+				zfilename, n?n:"error");
+			free(n);
+			fclose(in);
+			return 0;
+		}
 		fclose(in);
-		return 0;
 	}
-	fclose(in);
 
 	if(z->rpz)
 		rpz_finish_config(z->rpz);
@@ -5097,14 +5323,11 @@ apply_axfr(struct auth_xfer* xfr, struct auth_zone* z,
 	return 1;
 }
 
-/** apply HTTP to zone in memory. z is locked. false on failure(mallocfail) */
+/** parse http zone with sldns. */
 static int
-apply_http(struct auth_xfer* xfr, struct auth_zone* z,
+parse_http_sldns(struct auth_xfer* xfr, struct auth_zone* z,
 	struct sldns_buffer* scratch_buffer)
 {
-	/* parse data in chunks */
-	/* parse RR's and read into memory. ignore $INCLUDE from the
-	 * downloaded file*/
 	struct sldns_file_parse_state pstate;
 	struct auth_chunk* chunk;
 	size_t chunk_pos;
@@ -5115,6 +5338,184 @@ apply_http(struct auth_xfer* xfr, struct auth_zone* z,
 		pstate.origin_len = xfr->namelen;
 		memmove(pstate.origin, xfr->name, xfr->namelen);
 	}
+
+	chunk = xfr->task_transfer->chunks_first;
+	chunk_pos = 0;
+	pstate.lineno = 0;
+	while(chunkline_get_line_collated(&chunk, &chunk_pos, scratch_buffer)) {
+		/* process this line */
+		pstate.lineno++;
+		chunkline_newline_removal(scratch_buffer);
+		if(chunkline_is_comment_line_or_empty(scratch_buffer)) {
+			continue;
+		}
+		/* parse line and add RR */
+		if((ret=http_parse_origin(scratch_buffer, &pstate))!=0) {
+			if(ret == 2) {
+				verbose(VERB_ALGO, "error parsing ORIGIN on line [%s:%d] %s",
+					xfr->task_transfer->master->file,
+					pstate.lineno,
+					sldns_buffer_begin(scratch_buffer));
+				return 0;
+			}
+			continue; /* $ORIGIN has been handled */
+		}
+		if((ret=http_parse_ttl(scratch_buffer, &pstate))!=0) {
+			if(ret == 2) {
+				verbose(VERB_ALGO, "error parsing TTL on line [%s:%d] %s",
+					xfr->task_transfer->master->file,
+					pstate.lineno,
+					sldns_buffer_begin(scratch_buffer));
+				return 0;
+			}
+			continue; /* $TTL has been handled */
+		}
+		if(!http_parse_add_rr(xfr, z, scratch_buffer, &pstate)) {
+			verbose(VERB_ALGO, "error parsing line [%s:%d] %s",
+				xfr->task_transfer->master->file,
+				pstate.lineno,
+				sldns_buffer_begin(scratch_buffer));
+			return 0;
+		}
+	}
+	return 1;
+}
+
+/**
+ * Callback for simdzone parse of http, include a zone file.
+ * It is called for every $INCLUDE entry.
+ */
+static int32_t
+az_http_parse_include(zone_parser_t *parser, const char *file,
+	const char *path, void *user_data)
+{
+	struct az_parse_state* state = (struct az_parse_state*)user_data;
+	char dname[LDNS_MAX_DOMAINLEN];
+	(void)parser;
+	verbose(6, "zone parse has include file %s (full path %s)",
+		file, path);
+	dname_str(state->z->name, dname);
+	verbose(1, "zone parse for zonefile of %s has $INCLUDE %s, but $INCLUDE not followed",
+		dname, file);
+	/* Not expecting a secondary zone file with includes. */
+	return ZONE_SEMANTIC_ERROR;
+}
+
+int32_t az_http_read_data(zone_parser_t* parser, char* data, size_t len,
+	size_t* outlen, void* user_data)
+{
+	struct az_parse_state* state = (struct az_parse_state*)user_data;
+	size_t written = 0;
+	(void)parser;
+
+	if(state->chunk == NULL) {
+		/* End of the chunk list */
+		*outlen = 0;
+		return 0;
+	}
+	if(state->chunk_pos == state->chunk->len) {
+		/* The end of the chunk list is reached, with 0 data. */
+		state->chunk = NULL;
+		*outlen = 0;
+		return 0;
+	}
+	if(len == 0) {
+		*outlen = 0;
+		return 0;
+	}
+
+	/* Fill up the data buffer with the requested amount. */
+	while(written < len) {
+		/* The amount that is wanted. */
+		size_t wanted = len - written;
+		/* That amount that is in this chunk. */
+		size_t avail = state->chunk->len - state->chunk_pos;
+
+		if(wanted < avail) {
+			/* Write a piece of this chunk. */
+			memmove(data+written,
+				state->chunk->data+state->chunk_pos, wanted);
+			state->chunk_pos += wanted;
+			*outlen = len;
+			return 0;
+		}
+		/* Write the entire chunk and continue on. */
+		if(avail > 0)
+			memmove(data+written,
+				state->chunk->data+state->chunk_pos, avail);
+		written += avail;
+
+		/* move to next chunk */
+		state->chunk = state->chunk->next;
+		state->chunk_pos = 0;
+
+		/* Is this the exact amount requested. */
+		if(written == len) {
+			/* continue later. */
+			*outlen = len;
+			return 0;
+		}
+		/* Is there no more data. */
+		if(state->chunk == NULL) {
+			/* End of data. */
+			*outlen = written;
+			return 0;
+		}
+	}
+	*outlen = written;
+	return 0;
+}
+
+/** parse http zone with simdzone. */
+static int
+parse_http_simdzone(struct auth_xfer* xfr, struct auth_zone* z)
+{
+	zone_parser_t parser;
+	zone_options_t options;
+	zone_name_buffer_t name_buffer;
+	zone_rdata_buffer_t rdata_buffer;
+	zone_buffers_t buffers = { 1, &name_buffer, &rdata_buffer };
+	struct az_parse_state state;
+
+	memset(&options, 0, sizeof(options));
+	options.origin.octets = z->name;
+	options.origin.length = z->namelen;
+	options.default_ttl = 3600;
+	options.default_class = LDNS_RR_CLASS_IN;
+	options.secondary = z->zone_is_slave;
+	options.pretty_ttls = true; /* non-standard, for backwards compatibility */
+	options.no_includes = true; /* the secondary zone file transferred over https is not expected to have $INCLUDE files. */
+	/* The log callback for file read prints the error and can be used
+	 * here too. */
+	options.log.callback = &az_parse_log;
+	/* The parse accept callback for file inserts the RR, and can be
+	 * used here too. */
+	options.accept.callback = &az_parse_accept;
+	options.include.callback = &az_http_parse_include;
+
+	memset(&state, 0, sizeof(state));
+	state.z = z;
+	state.chunk = xfr->task_transfer->chunks_first;
+	state.chunk_pos = 0;
+
+	/* Parse and process all RRs.  */
+	if (zone_parse_from_callback(&parser, &options, &buffers,
+		az_http_read_data, &state) != 0) {
+		return 0;
+	}
+	return 1;
+}
+
+/** apply HTTP to zone in memory. z is locked. false on failure(mallocfail) */
+static int
+apply_http(struct auth_xfer* xfr, struct auth_zone* z,
+	struct sldns_buffer* scratch_buffer)
+{
+	int use_simdzone = 1;
+
+	/* parse data in chunks */
+	/* parse RR's and read into memory. ignore $INCLUDE from the
+	 * downloaded file*/
 
 	if(verbosity >= VERB_ALGO)
 		verbose(VERB_ALGO, "http download %s of size %d",
@@ -5155,44 +5556,14 @@ apply_http(struct auth_xfer* xfr, struct auth_zone* z,
 	xfr->serial = 0;
 	xfr->soa_zone_acquired = 0;
 
-	chunk = xfr->task_transfer->chunks_first;
-	chunk_pos = 0;
-	pstate.lineno = 0;
-	while(chunkline_get_line_collated(&chunk, &chunk_pos, scratch_buffer)) {
-		/* process this line */
-		pstate.lineno++;
-		chunkline_newline_removal(scratch_buffer);
-		if(chunkline_is_comment_line_or_empty(scratch_buffer)) {
-			continue;
-		}
-		/* parse line and add RR */
-		if((ret=http_parse_origin(scratch_buffer, &pstate))!=0) {
-			if(ret == 2) {
-				verbose(VERB_ALGO, "error parsing ORIGIN on line [%s:%d] %s",
-					xfr->task_transfer->master->file,
-					pstate.lineno,
-					sldns_buffer_begin(scratch_buffer));
-				return 0;
-			}
-			continue; /* $ORIGIN has been handled */
-		}
-		if((ret=http_parse_ttl(scratch_buffer, &pstate))!=0) {
-			if(ret == 2) {
-				verbose(VERB_ALGO, "error parsing TTL on line [%s:%d] %s",
-					xfr->task_transfer->master->file,
-					pstate.lineno,
-					sldns_buffer_begin(scratch_buffer));
-				return 0;
-			}
-			continue; /* $TTL has been handled */
-		}
-		if(!http_parse_add_rr(xfr, z, scratch_buffer, &pstate)) {
-			verbose(VERB_ALGO, "error parsing line [%s:%d] %s",
-				xfr->task_transfer->master->file,
-				pstate.lineno,
-				sldns_buffer_begin(scratch_buffer));
+	if(use_simdzone) {
+		/* Use simdzone for parse. */
+		if(!parse_http_simdzone(xfr, z))
 			return 0;
-		}
+	} else {
+		/* Parse with sldns. */
+		if(!parse_http_sldns(xfr, z, scratch_buffer))
+			return 0;
 	}
 	return 1;
 }

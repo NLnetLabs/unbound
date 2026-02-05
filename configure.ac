@@ -177,6 +177,12 @@ else
 	else on_mingw="no"; fi
 fi
 
+dnl install the install-sh file with libtoolize -ci, and autoreconf -fi.
+AC_REQUIRE_AUX_FILE([install-sh])
+if test ! -f install-sh; then
+    AC_MSG_WARN([./install-sh is missing, use `libtoolize -ci` or `autoreconf -fi` to add it])
+fi
+
 #
 # Determine configuration file
 # the eval is to evaluate shell expansion twice
@@ -2036,6 +2042,9 @@ dt_DNSTAP([$UNBOUND_RUN_DIR/dnstap.sock],
         AC_SUBST([ENABLE_DNSTAP], [0])
     ]
 )
+dnstap_config="dnstap/dnstap_config.h.tmp:dnstap/dnstap_config.h.in"
+dnstap_config_tmp="dnstap/dnstap_config.h.tmp"
+dnstap_config_out="dnstap/dnstap_config.h"
 
 # check for dnscrypt if requested
 dnsc_DNSCRYPT([
@@ -2490,6 +2499,34 @@ AC_SUBST(version, [VERSION_MAJOR.VERSION_MINOR.VERSION_MICRO])
 AX_BUILD_DATE_EPOCH(date, [[%b %e, %Y]])
 AC_SUBST(date)
 
-AC_CONFIG_FILES([Makefile doc/example.conf doc/libunbound.3 doc/unbound.8 doc/unbound-anchor.8 doc/unbound-checkconf.8 doc/unbound.conf.5 doc/unbound-control.8 doc/unbound-host.1 smallapp/unbound-control-setup.sh dnstap/dnstap_config.h dnscrypt/dnscrypt_config.h contrib/libunbound.pc contrib/unbound.socket contrib/unbound.service contrib/unbound_portable.service])
+AC_CONFIG_FILES([Makefile doc/example.conf doc/libunbound.3 doc/unbound.8 doc/unbound-anchor.8 doc/unbound-checkconf.8 doc/unbound.conf.5 doc/unbound-control.8 doc/unbound-host.1 smallapp/unbound-control-setup.sh $dnstap_config dnscrypt/dnscrypt_config.h contrib/libunbound.pc contrib/unbound.socket contrib/unbound.service contrib/unbound_portable.service])
 AC_CONFIG_HEADERS([config.h])
+
+# Arguments introduced specifically for simdzone.
+AC_ARG_ENABLE(westmere, AS_HELP_STRING([--disable-westmere], [Disable Westmere (SSE4.2) parser kernel]))
+AC_ARG_ENABLE(haswell, AS_HELP_STRING([--disable-haswell], [Disable Haswell (AVX2) parser kernel]))
+if test ! -f simdzone/configure.ac; then AC_MSG_ERROR([There is no "simdzone/configure.ac" file. The simdzone directory has not been fetched, perhaps get it with 'git submodule update --init'.]); fi
+if test ! -f simdzone/configure; then AC_MSG_ERROR([There is no "simdzone/configure" file. The simdzone directory has no configure script file, perhaps run 'autoreconf -fi'.]); fi
+AC_CONFIG_SUBDIRS([simdzone])
+
 AC_OUTPUT
+# Pick up the objects for simdzone.
+SIMDZONE_OBJ=`(cd simdzone; make list_objs) | sed -e 's?src?simdzone/src?g'`
+AC_SUBST(SIMDZONE_OBJ)
+sed -e 's?^SIMDZONE_OBJ=.*$?SIMDZONE_OBJ='"$SIMDZONE_OBJ"'?' < Makefile > Makefile.tmp.$$
+mv -f Makefile.tmp.$$ Makefile
+# If dnstap config has changed, overwrite it.
+if test -n "$dnstap_config"; then
+	if test ! -f "$dnstap_config_out"; then
+		mv "$dnstap_config_tmp" "$dnstap_config_out" || AC_MSG_ERROR([Could not create $dnstap_config_out])
+	else if diff "$dnstap_config_out" "$dnstap_config_tmp" >/dev/null 2>&1; then
+		if test "x$opt_dnstap" != "xno"; then
+		  AC_MSG_NOTICE([In $srcdir: $dnstap_config_out is unchanged])
+		fi
+		rm -f "$dnstap_config_tmp"
+	else
+		rm -f "$dnstap_config_out"
+		mv "$dnstap_config_tmp" "$dnstap_config_out" || AC_MSG_ERROR([Could not create $dnstap_config_out])
+	  fi
+	fi
+fi

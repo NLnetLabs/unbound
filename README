@@ -1,4 +1,5 @@
 Unbound README
+* From source repository: git submodule update --init && autoreconf -fi
 * ./configure && make && make install
 * You can use libevent if you want. libevent is useful when using 
   many (10000) outgoing ports. By default max 256 ports are opened at
