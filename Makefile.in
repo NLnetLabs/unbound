@@ -210,11 +210,11 @@ UBANCHOR_OBJ_LINK=$(UBANCHOR_OBJ) parseutil.lo \
 $(COMPAT_OBJ_WITHOUT_CTIME) $(SLDNS_ALLOCCHECK_EXTRA_OBJ) @WIN_UBANCHOR_OBJ_LINK@
 TESTBOUND_SRC=testcode/testbound.c testcode/testpkts.c \
 daemon/worker.c daemon/acl_list.c \
-daemon/daemon.c daemon/stats.c daemon/metrics.c \
+daemon/daemon.c daemon/stats.c \
 testcode/replay.c testcode/fake_event.c
 TESTBOUND_OBJ=testbound.lo replay.lo fake_event.lo
 TESTBOUND_OBJ_LINK=$(TESTBOUND_OBJ) testpkts.lo worker.lo acl_list.lo \
-daemon.lo stats.lo metrics.lo shm_main.lo $(COMMON_OBJ_WITHOUT_NETCALL) ub_event.lo $(SLDNS_OBJ) \
+daemon.lo stats.lo shm_main.lo $(COMMON_OBJ_WITHOUT_NETCALL) ub_event.lo $(SLDNS_OBJ) \
 $(COMPAT_OBJ)
 LOCKVERIFY_SRC=testcode/lock_verify.c
 LOCKVERIFY_OBJ=lock_verify.lo
