@@ -670,7 +670,14 @@ thread_start(void* arg)
 {
 	struct worker* worker = (struct worker*)arg;
 	int port_num = 0;
+	log_assert(worker->thr_id);
 	set_log_thread_id(worker, worker->daemon->cfg);
+	{
+		char name[16]; /* seems to be the safest size between
+				  different OSes */
+		snprintf(name, sizeof(name), "unbound/%u", worker->thread_num);
+		ub_thread_setname(worker->thr_id, name);
+	}
 	ub_thread_blocksigs();
 #ifdef THREADS_DISABLED
 	/* close pipe ends used by main */
