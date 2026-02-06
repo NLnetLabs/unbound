@@ -50,7 +50,7 @@ my $offset = 0;
 my $inthread=0;
 my $inpid;
 
-# We should continue looping untill we meet these conditions:
+# We should continue looping until we meet these conditions:
 # a) more total queries than the previous run (which defaults to 0) AND
 # b) parsed all $numthreads threads in the log.
 my $numqueries = $previousresult ? $previousresult->[1] : 0;
@@ -66,7 +66,7 @@ while ( scalar keys %startstats < $numthreads || scalar keys %donestats < $numth
     for my $line ( <$in> ) {
         chomp($line);
 
-        #[1208777234] unbound[6705:0] 
+        #[1208777234] unbound[6705:0]
         if ($line =~ m/^\[\d+\] unbound\[\d+:(\d+)\]/) {
             $inthread = $1;
             if ($inthread + 1 > $numthreads) {
@@ -110,12 +110,12 @@ while ( scalar keys %startstats < $numthreads || scalar keys %donestats < $numth
             next;
         }
         elsif ( $line =~ m/info:\s+(\d+)\.(\d+)\s+(\d+)\.(\d+)\s+(\d+)/ ) {
-            my ($froms, $fromus, $toms, $tous, $counter) = ($1, $2, $3, $4, $5);
+            my ($from_s, $from_us, $to_s, $to_us, $counter) = ($1, $2, $3, $4, $5);
             my $prefix = '';
-            if ($froms > 0) {
-                $allstats{$inthread}->{'s_' . int($froms)} = $counter;
+            if ($from_s > 0) {
+                $allstats{$inthread}->{'s_' . int($from_s)} = $counter;
             } else {
-                $allstats{$inthread}->{'us_' . int($fromus)} = $counter;
+                $allstats{$inthread}->{'us_' . int($from_us)} = $counter;
             }
         }
     }

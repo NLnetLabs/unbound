@@ -1,25 +1,25 @@
 /*
  * util/data/msgparse.h - parse wireformat DNS messages.
- * 
+ *
  * Copyright (c) 2007, NLnet Labs. All rights reserved.
- * 
+ *
  * This software is open source.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
  * are met:
- * 
+ *
  * Redistributions of source code must retain the above copyright notice,
  * this list of conditions and the following disclaimer.
- * 
+ *
  * Redistributions in binary form must reproduce the above copyright notice,
  * this list of conditions and the following disclaimer in the documentation
  * and/or other materials provided with the distribution.
- * 
+ *
  * Neither the name of the NLNET LABS nor the names of its contributors may
  * be used to endorse or promote products derived from this software without
  * specific prior written permission.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
  * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -102,7 +102,7 @@ extern int SERVE_ORIGINAL_TTL;
  * without numerical overflow (uin32_t) */
 #define PREFETCH_TTL_CALC(ttl) ((ttl) - (ttl)/10)
 
-/*  caclulate the TTL used for expired answers to somewhat make sense wrt the
+/*  calculate the TTL used for expired answers to somewhat make sense wrt the
  *  original TTL; don't reply with higher TTL than the original */
 #ifdef UNBOUND_DEBUG
 time_t debug_expired_reply_ttl_calc(time_t ttl, time_t ttl_add);
@@ -143,7 +143,7 @@ struct msg_parse {
 	/** count of RRsets per section. */
 	size_t an_rrsets;
 	/** count of RRsets per section. */
-	size_t ns_rrsets; 
+	size_t ns_rrsets;
 	/** count of RRsets per section. */
 	size_t ar_rrsets;
 	/** total number of rrsets found. */
@@ -163,7 +163,7 @@ struct msg_parse {
 	 * Based on name, type, class.  Same hash value as in rrset cache.
 	 */
 	struct rrset_parse* hashtable[PARSE_TABLE_SIZE];
-	
+
 	/** linked list of rrsets that have been found (in order). */
 	struct rrset_parse* rrset_first;
 	/** last element of rrset list. */
@@ -214,7 +214,7 @@ struct rrset_parse {
  * Data stored for an RR during parsing.
  */
 struct rr_parse {
-	/** 
+	/**
 	 * Pointer to the RR. Points to start of TTL value in the packet.
 	 * Rdata length and rdata follow it.
 	 * its dname, type and class are the same and stored for the rrset.
@@ -275,7 +275,7 @@ struct edns_data {
 	unsigned int cookie_valid   : 1;
 	/** if the cookie holds only the client part */
 	unsigned int cookie_client  : 1;
-};	
+};
 
 /**
  * EDNS option
@@ -307,7 +307,7 @@ size_t get_rdf_size(sldns_rdf_type rdf);
  * @param region: how to alloc results.
  * @return: 0 if OK, or rcode on error.
  */
-int parse_packet(struct sldns_buffer* pkt, struct msg_parse* msg, 
+int parse_packet(struct sldns_buffer* pkt, struct msg_parse* msg,
 	struct regional* region);
 
 /**
@@ -383,8 +383,8 @@ hashvalue_type pkt_hash_rrset(struct sldns_buffer* pkt, uint8_t* dname,
  * @param dclass: rrset class, network order.
  * @return NULL or the rrset_parse if found.
  */
-struct rrset_parse* msgparse_hashtable_lookup(struct msg_parse* msg, 
-	struct sldns_buffer* pkt, hashvalue_type h, uint32_t rrset_flags, 
+struct rrset_parse* msgparse_hashtable_lookup(struct msg_parse* msg,
+	struct sldns_buffer* pkt, hashvalue_type h, uint32_t rrset_flags,
 	uint8_t* dname, size_t dnamelen, uint16_t type, uint16_t dclass);
 
 /**
