@@ -61,6 +61,9 @@
 #include <event2/http.h>
 #include <event2/buffer.h>
 
+/** The prefix for the unbound statistics. */
+#define METRICS_PREFIX "unbound_"
+
 /**
  * list of connection accepting file descriptors
  */
@@ -316,17 +319,113 @@ print_metric_help_and_type(struct evbuffer *buf, char *prefix, char *name,
 		prefix, name, help, prefix, name, type);
 }
 
+/* print help and type for main list of metrics */
+static int
+metrics_print_types(struct evbuffer *reply)
+{
+	char* prefix = METRICS_PREFIX;
+	print_metric_help_and_type(reply, prefix, "hits_queries",
+		"Unbound DNS traffic and cache hits", "gauge");
+	print_metric_help_and_type(reply, prefix, "queue_queries",
+		"Unbound requestlist size", "gauge");
+	print_metric_help_and_type(reply, prefix, "recursion_time",
+		"Unbound recursion time, in seconds", "gauge");
+	print_metric_help_and_type(reply, prefix, "query_queue_time",
+		"Unbound query queue time, in msec", "gauge");
+	print_metric_help_and_type(reply, prefix, "socket_count",
+		"Unbound socket count", "gauge");
+	return 1;
+}
+
 /* metrics print of stat block */
 static int
 metrics_print_stats(struct evbuffer* reply, const char* nm,
 	struct ub_stats_info* s)
 {
-	char* prefix = "unbound_";
-	print_metric_help_and_type(reply, prefix, "hits_queries",
-		"Unbound DNS traffic and cache hits", "gauge");
+	char* prefix = METRICS_PREFIX;
+	struct timeval sumwait, avg;
+
+	/* print to reply buffer the stat for prefix mt
+	 * of type nm.snm and long long output svar. */
+#define INFO_STATS(mt, snm, svar) \
+	evbuffer_add_printf(reply, \
+		"%s" mt "{type=\"%s." snm "\"} " ARG_LL "d\n", \
+		prefix, nm, (long long)(svar))
+
+	INFO_STATS("hits_queries", "num.queries", s->svr.num_queries);
+	INFO_STATS("hits_queries", "num.queries_ip_ratelimited",
+		s->svr.num_queries_ip_ratelimited);
+	INFO_STATS("hits_queries", "num.queries_cookie_valid",
+		s->svr.num_queries_cookie_valid);
+	INFO_STATS("hits_queries", "num.queries_cookie_client",
+		s->svr.num_queries_cookie_client);
+	INFO_STATS("hits_queries", "num.queries_cookie_invalid",
+		s->svr.num_queries_cookie_invalid);
+	INFO_STATS("hits_queries", "num.queries_discard_timeout",
+		s->svr.num_queries_discard_timeout);
+	INFO_STATS("hits_queries", "num.queries_replyaddr_limit",
+		s->svr.num_queries_replyaddr_limit);
+	INFO_STATS("hits_queries", "num.queries_wait_limit",
+		s->svr.num_queries_wait_limit);
+	INFO_STATS("hits_queries", "num.cachehits",
+		s->svr.num_queries - s->svr.num_queries_missed_cache);
+	INFO_STATS("hits_queries", "num.cachemiss",
+		s->svr.num_queries_missed_cache);
+	INFO_STATS("hits_queries", "num.prefetch",
+		s->svr.num_queries_prefetch);
+	INFO_STATS("hits_queries", "num.queries_timed_out",
+		s->svr.num_queries_timed_out);
+	INFO_STATS("hits_queries", "num.expired", s->svr.ans_expired);
+	INFO_STATS("hits_queries", "num.recursivereplies",
+		s->mesh_replies_sent);
+#ifdef USE_DNSCRYPT
+	INFO_STATS("hits_queries", "num.dnscrypt.crypted",
+		s->svr.num_query_dnscrypt_crypted);
+	INFO_STATS("hits_queries", "num.dnscrypt.cert",
+		s->svr.num_query_dnscrypt_cert);
+	INFO_STATS("hits_queries", "num.dnscrypt.cleartext",
+		s->svr.num_query_dnscrypt_cleartext);
+	INFO_STATS("hits_queries", "num.dnscrypt.malformed",
+		s->svr.num_query_dnscrypt_crypted_malformed);
+#endif
+	INFO_STATS("hits_queries", "num.dns_error_reports",
+		s->svr.num_dns_error_reports);
+
 	evbuffer_add_printf(reply,
-		"%shits_queries{type=\"%s.num.queries\"} " ARG_LL "d\n",
-		prefix, nm, (long long)s->svr.num_queries);
+		"%squeue_queries{type=\"%s.requestlist.avg\"} %g\n",
+		prefix, nm,
+		(s->svr.num_queries_missed_cache+s->svr.num_queries_prefetch)?
+			(double)s->svr.sum_query_list_size/
+			(double)(s->svr.num_queries_missed_cache+
+			s->svr.num_queries_prefetch) : 0.0);
+	INFO_STATS("queue_queries", "requestlist.max",
+		s->svr.max_query_list_size);
+	INFO_STATS("queue_queries", "requestlist.overwritten",
+		s->mesh_jostled);
+	INFO_STATS("queue_queries", "requestlist.exceeded",
+		s->mesh_dropped);
+	INFO_STATS("queue_queries", "requestlist.current.all",
+		s->mesh_num_states);
+	INFO_STATS("queue_queries", "requestlist.current.user",
+		s->mesh_num_reply_states);
+	INFO_STATS("queue_queries", "requestlist.current.replies",
+		s->mesh_num_reply_addrs);
+
+	sumwait.tv_sec = s->mesh_replies_sum_wait_sec;
+	sumwait.tv_usec = s->mesh_replies_sum_wait_usec;
+	timeval_divide(&avg, &sumwait, s->mesh_replies_sent);
+	evbuffer_add_printf(reply,
+		"%srecursion_time{type=\"%s.recursion.time.avg\"} " ARG_LL
+		"d.%6.6d\n", prefix, nm,
+		(long long)avg.tv_sec, (int)avg.tv_usec);
+	evbuffer_add_printf(reply,
+		"%srecursion_time{type=\"%s.recursion.time.median\"} %g\n",
+		prefix, nm, s->mesh_time_median);
+
+	INFO_STATS("query_queue_time", "query.queue_time_us.max",
+		s->svr.max_query_time_us);
+
+	INFO_STATS("socket_count", "tcpusage", s->svr.tcp_accept_usage);
 	return 1;
 }
 
@@ -335,10 +434,10 @@ static int
 metrics_print_thread_stats(struct evbuffer* reply, int i,
 	struct ub_stats_info* s)
 {
-	(void)reply;
-	(void)i;
-	(void)s;
-	return 1;
+	char nm[32];
+	snprintf(nm, sizeof(nm), "thread%d", i);
+	nm[sizeof(nm)-1]=0;
+	return metrics_print_stats(reply, nm, s);
 }
 
 /* metrics print of uptime stats */
@@ -346,7 +445,7 @@ static int
 metrics_print_uptime(struct evbuffer* reply, struct worker* worker,
 	struct timeval* stattime, struct timeval* time_last_stat)
 {
-	char* prefix = "unbound_";
+	char* prefix = METRICS_PREFIX;
 	struct timeval up, dt;
 	timeval_subtract(&up, stattime, &worker->daemon->time_boot);
 	timeval_subtract(&dt, stattime, time_last_stat);
@@ -418,6 +517,9 @@ do_metrics_stats(struct evbuffer* reply, struct worker* worker, int reset)
 	memset(&total, 0, sizeof(total));
 	log_assert(daemon->num > 0);
 
+	if(!metrics_print_types(reply))
+		return;
+
 	/* gather all thread statistics in one place */
 	for(i=0; i<daemon->num; i++) {
 		server_stats_obtain(worker, daemon->workers[i], &s, reset);
@@ -435,7 +537,7 @@ do_metrics_stats(struct evbuffer* reply, struct worker* worker, int reset)
 		worker->daemon->time_last_stat = stattime;
 	}
 
-	/* print the thread statistics */
+	/* print the statistics */
 	if(!metrics_print_stats(reply, "total", &total))
 		return;
 	if(!metrics_print_uptime(reply, worker, &stattime, &time_last_stat))
