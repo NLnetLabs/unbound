@@ -1,3 +1,8 @@
+6 February 2026: Yorgos
+	- Fix #1389: [FR] replacement with ECC-GOST12 according to RFC9558.
+	  Patch contributed by Igor V. Ruzanov, available in
+	  contrib/gost12.patch.
+
 4 February 2026: Wouter
 	- Fix local privilege escalation on Windows. Thanks to Hao Huang and
 	  CrisprXiang with Fudan University for the report. The OpenSSL
