@@ -71,6 +71,9 @@
 #ifdef HAVE_PWD_H
 #include <pwd.h>
 #endif
+#ifndef USE_SYSTEM_TLS
+#define USE_SYSTEM_TLS 0
+#endif
 
 /** from cfg username, after daemonize setup performed */
 uid_t cfg_uid = (uid_t)-1;
@@ -129,7 +132,7 @@ config_create(void)
 	cfg->tls_cert_bundle = NULL;
 	cfg->tls_win_cert = 0;
 	cfg->tls_use_sni = 1;
-	cfg->tls_use_system_policy_versions = 0;
+	cfg->tls_use_system_policy_versions = USE_SYSTEM_TLS;
 	cfg->https_port = UNBOUND_DNS_OVER_HTTPS_PORT;
 	if(!(cfg->http_endpoint = strdup("/dns-query"))) goto error_exit;
 	cfg->http_max_streams = 100;
