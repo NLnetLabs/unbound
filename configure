@@ -669,6 +669,7 @@ SOURCEFILE
 SOURCEDETERMINE
 IPSET_OBJ
 IPSET_SRC
+SYSTEM_TLS_DEFAULT
 IPSECMOD_HEADER
 IPSECMOD_OBJ
 CACHEDB_OBJ
@@ -936,6 +937,7 @@ enable_dnscrypt
 with_libsodium
 enable_cachedb
 enable_ipsecmod
+enable_system_tls
 enable_ipset
 with_libmnl
 enable_explicit_port_randomisation
@@ -1641,6 +1643,8 @@ Optional Features:
                           storage
   --enable-ipsecmod       Enable ipsecmod module that facilitates
                           opportunistic IPsec
+  --enable-system-tls     Enable preference of system configured TLS socket
+                          options
   --enable-ipset          enable ipset module
   --disable-explicit-port-randomisation
                           disable explicit source port randomisation and rely
@@ -25101,6 +25105,26 @@ printf "%s\n" "#define USE_IPSECMOD 1" >>confdefs.h
 		# nothing
 		;;
 esac
+
+# check for system TLS preference if requested
+# Check whether --enable-system-tls was given.
+if test ${enable_system_tls+y}
+then :
+  enableval=$enable_system_tls;
+fi
+
+case "$enable_system_tls" in
+	yes)
+
+printf "%s\n" "#define USE_SYSTEM_TLS 1" >>confdefs.h
+
+		SYSTEM_TLS_DEFAULT="yes"
+		;;
+	no|*)
+		SYSTEM_TLS_DEFAULT="no"
+		;;
+esac
+
 
 # check for ipset if requested
 # Check whether --enable-ipset was given.

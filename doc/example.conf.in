@@ -971,8 +971,8 @@ server:
 	# Allow general-purpose version-flexible TLS server configuration that
 	# may be further restricted by the system's policy.
 	# Use only if you want to support legacy TLS client connections.
-	# Default is no and Unbound will only use the latest available TLS
-	# version.
+	# Default is a compilation choice.
+	# With 'no' Unbound will only use the latest available TLS version.
 	# Changing the value requires a reload.
 	# tls-use-system-policy-versions: no
 

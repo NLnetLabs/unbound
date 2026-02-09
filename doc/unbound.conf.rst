@@ -1178,19 +1178,22 @@ These options are part of the ``server:`` section.
 
 
 @@UAHL@unbound.conf@tls-use-system-policy-versions@@: *<yes or no>*
-    Enable or disable general-puspose version-flexible TLS server configuration
+    Enable or disable general-purpose version-flexible TLS server configuration
     when serving TLS.
     This will allow the whole list of available TLS versions provided by the
     crypto library, which may have been further restricted by the system's
     crypto policy.
 
-    By default Unbound only uses the latest available TLS version.
+    If disabled Unbound only uses the latest available TLS version.
+
+    The default depends on a compilation choice, it is set
+    at @SYSTEM_TLS_DEFAULT@ .
 
     .. caution:: Use only if you want to support legacy TLS client connections.
 
     .. note:: Changing the value requires a reload.
 
-    Default: no
+    Default: @SYSTEM_TLS_DEFAULT@
 
 
 @@UAHL@unbound.conf@pad-responses@@: *<yes or no>*
