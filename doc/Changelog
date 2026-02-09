@@ -2,6 +2,7 @@
 	- Merge #1401: Add a new build-time option for system TLS.
 	  The --enable-system-tls flag enables the
 	  tls-use-system-policy-versions setting by default.
+	- Update generated man pages.
 
 6 February 2026: Yorgos
 	- Fix #1389: [FR] replacement with ECC-GOST12 according to RFC9558.

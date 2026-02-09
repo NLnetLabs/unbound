@@ -1299,13 +1299,16 @@ Default: yes
 .INDENT 0.0
 .TP
 .B tls\-use\-system\-policy\-versions: \fI<yes or no>\fP 
-Enable or disable general\-puspose version\-flexible TLS server configuration
+Enable or disable general\-purpose version\-flexible TLS server configuration
 when serving TLS.
 This will allow the whole list of available TLS versions provided by the
 crypto library, which may have been further restricted by the system\(aqs
 crypto policy.
 .sp
-By default Unbound only uses the latest available TLS version.
+If disabled Unbound only uses the latest available TLS version.
+.sp
+The default depends on a compilation choice, it is set
+at @SYSTEM_TLS_DEFAULT@ .
 .sp
 \fBCAUTION:\fP
 .INDENT 7.0
@@ -1321,7 +1324,7 @@ Changing the value requires a reload.
 .UNINDENT
 .UNINDENT
 .sp
-Default: no
+Default: @SYSTEM_TLS_DEFAULT@
 .UNINDENT
 .INDENT 0.0
 .TP
