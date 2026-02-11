@@ -308,9 +308,30 @@ iter_filter_unsuitable(struct iter_env* iter_env, struct module_env* env,
 	if(a->bogus)
 		return -1; /* address of server is bogus */
 	if(donotq_lookup(iter_env->donotq, &a->addr, a->addrlen)) {
-		log_addr(VERB_ALGO, "skip addr on the donotquery list",
-			&a->addr, a->addrlen);
-		return -1; /* server is on the donotquery list */
+		if(iter_env->nat64.use_nat64 &&
+			addr_is_ip6(&a->addr, a->addrlen) &&
+			a->addrlen == iter_env->nat64.nat64_prefix_addrlen &&
+			addr_in_common(&a->addr, 128,
+				&iter_env->nat64.nat64_prefix_addr,
+				iter_env->nat64.nat64_prefix_net,
+				iter_env->nat64.nat64_prefix_addrlen) ==
+				iter_env->nat64.nat64_prefix_net) {
+			/* The NAT64 is enabled, and address is IPv6, it is
+			 * in the NAT64 prefix. It is allowed.
+			 * So that in an IPv6-only cluster without internet
+			 * access, that makes the NAT64 translation continue
+			 * to work. The NAT64 prefix is allowed. */
+			/* Otherwise, after a timeout, the already NAT64
+			 * translated address would be treated differently,
+			 * and that causes confusion. */
+			log_addr(VERB_ALGO, "the addr is on the donotquery "
+				"list, but allowed because it is NAT64",
+				&a->addr, a->addrlen);
+		} else {
+			log_addr(VERB_ALGO, "skip addr on the donotquery list",
+				&a->addr, a->addrlen);
+			return -1; /* server is on the donotquery list */
+		}
 	}
 	if(!iter_env->supports_ipv6 && addr_is_ip6(&a->addr, a->addrlen)) {
 		return -1; /* there is no ip6 available */

@@ -4164,6 +4164,17 @@ servers.
     Use a specific NAT64 prefix to reach IPv4-only servers.
     The prefix length must be one of /32, /40, /48, /56, /64 or /96.
 
+    The NAT64 prefix is allowed by the
+    :ref:`do-not-query-address<unbound.conf.do-not-query-address>` option,
+    so that there is a clear outcome of addresses in both; the NAT64 prefix
+    is allowed.
+    The IPv4 address could be filtered by the
+    :ref:`do-not-query-address<unbound.conf.do-not-query-address>` option,
+    if needed.
+    Allowing the NAT64 prefix is useful when using do-not-query-address
+    for a cluster of machines that is IPv6-only and uses NAT64, but does
+    not have internet access.
+
     Default: 64:ff9b::/96 (same as :ref:`dns64-prefix<unbound.conf.dns64.dns64-prefix>`)
 
 .. _unbound.conf.dnscrypt:
