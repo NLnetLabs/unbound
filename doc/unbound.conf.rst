@@ -1172,28 +1172,19 @@ These options are part of the ``server:`` section.
 @@UAHL@unbound.conf@tls-use-sni@@: *<yes or no>*
     Enable or disable sending the SNI extension on TLS connections.
 
-    .. note:: Changing the value requires a reload.
+    .. note:: Changing the value requires a restart.
 
     Default: yes
 
 
-@@UAHL@unbound.conf@tls-use-system-policy-versions@@: *<yes or no>*
-    Enable or disable general-purpose version-flexible TLS server configuration
-    when serving TLS.
-    This will allow the whole list of available TLS versions provided by the
-    crypto library, which may have been further restricted by the system's
-    crypto policy.
+@@UAHL@unbound.conf@tls-protocols@@: *"<list of protocols>"*
+    Specify the allowed TLS protocol versions to use, in no particular order.
+    Possible values are ``TLSv1.2`` and ``TLSv1.3``.
+    Enclose list of protocols in quotes (``""``) and put spaces between them.
 
-    If disabled Unbound only uses the latest available TLS version.
+    .. note:: Changing the value requires a restart.
 
-    The default depends on a compilation choice, it is set
-    at @SYSTEM_TLS_DEFAULT@ .
-
-    .. caution:: Use only if you want to support legacy TLS client connections.
-
-    .. note:: Changing the value requires a reload.
-
-    Default: @SYSTEM_TLS_DEFAULT@
+    Default: "TLSv1.2 TLSv1.3"
 
 
 @@UAHL@unbound.conf@pad-responses@@: *<yes or no>*

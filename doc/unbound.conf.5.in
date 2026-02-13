@@ -1290,7 +1290,7 @@ Enable or disable sending the SNI extension on TLS connections.
 \fBNOTE:\fP
 .INDENT 7.0
 .INDENT 3.5
-Changing the value requires a reload.
+Changing the value requires a restart.
 .UNINDENT
 .UNINDENT
 .sp
@@ -1298,33 +1298,19 @@ Default: yes
 .UNINDENT
 .INDENT 0.0
 .TP
-.B tls\-use\-system\-policy\-versions: \fI<yes or no>\fP 
-Enable or disable general\-purpose version\-flexible TLS server configuration
-when serving TLS.
-This will allow the whole list of available TLS versions provided by the
-crypto library, which may have been further restricted by the system\(aqs
-crypto policy.
-.sp
-If disabled Unbound only uses the latest available TLS version.
-.sp
-The default depends on a compilation choice, it is set
-at @SYSTEM_TLS_DEFAULT@ .
-.sp
-\fBCAUTION:\fP
-.INDENT 7.0
-.INDENT 3.5
-Use only if you want to support legacy TLS client connections.
-.UNINDENT
-.UNINDENT
+.B tls\-protocols: \fI\(dq<list of protocols>\(dq\fP 
+Specify the allowed TLS protocol versions to use, in no particular order.
+Possible values are \fBTLSv1.2\fP and \fBTLSv1.3\fP\&.
+Enclose list of protocols in quotes (\fB\(dq\(dq\fP) and put spaces between them.
 .sp
 \fBNOTE:\fP
 .INDENT 7.0
 .INDENT 3.5
-Changing the value requires a reload.
+Changing the value requires a restart.
 .UNINDENT
 .UNINDENT
 .sp
-Default: @SYSTEM_TLS_DEFAULT@
+Default: \(dqTLSv1.2 TLSv1.3\(dq
 .UNINDENT
 .INDENT 0.0
 .TP

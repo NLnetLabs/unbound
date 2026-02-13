@@ -71,9 +71,6 @@
 #ifdef HAVE_PWD_H
 #include <pwd.h>
 #endif
-#ifndef USE_SYSTEM_TLS
-#define USE_SYSTEM_TLS 0
-#endif
 
 /** from cfg username, after daemonize setup performed */
 uid_t cfg_uid = (uid_t)-1;
@@ -132,7 +129,7 @@ config_create(void)
 	cfg->tls_cert_bundle = NULL;
 	cfg->tls_win_cert = 0;
 	cfg->tls_use_sni = 1;
-	cfg->tls_use_system_policy_versions = USE_SYSTEM_TLS;
+	cfg->tls_protocols = strdup("TLSv1.2 TLSv1.3");
 	cfg->https_port = UNBOUND_DNS_OVER_HTTPS_PORT;
 	if(!(cfg->http_endpoint = strdup("/dns-query"))) goto error_exit;
 	cfg->http_max_streams = 100;
@@ -634,7 +631,11 @@ int config_set_option(struct config_file* cfg, const char* opt,
 	else S_STR("tls-ciphers:", tls_ciphers)
 	else S_STR("tls-ciphersuites:", tls_ciphersuites)
 	else S_YNO("tls-use-sni:", tls_use_sni)
-	else S_YNO("tls-use-system-policy-versions:", tls_use_system_policy_versions)
+	else if(strcmp(opt, "tls-protocols:") == 0) {
+		if(!cfg_tls_protocols_is_valid(val)) return 0;
+		free(cfg->tls_protocols);
+		return (cfg->tls_protocols = strdup(val)) != NULL;
+	}
 	else S_NUMBER_NONZERO("https-port:", https_port)
 	else S_STR("http-endpoint:", http_endpoint)
 	else S_NUMBER_NONZERO("http-max-streams:", http_max_streams)
@@ -1188,7 +1189,7 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_STR(opt, "tls-ciphers", tls_ciphers)
 	else O_STR(opt, "tls-ciphersuites", tls_ciphersuites)
 	else O_YNO(opt, "tls-use-sni", tls_use_sni)
-	else O_YNO(opt, "tls-use-system-policy-versions", tls_use_system_policy_versions)
+	else O_STR(opt, "tls-protocols", tls_protocols)
 	else O_DEC(opt, "https-port", https_port)
 	else O_STR(opt, "http-endpoint", http_endpoint)
 	else O_UNS(opt, "http-max-streams", http_max_streams)
@@ -1759,6 +1760,7 @@ config_delete(struct config_file* cfg)
 	config_delstrlist(cfg->tls_session_ticket_keys.first);
 	free(cfg->tls_ciphers);
 	free(cfg->tls_ciphersuites);
+	free(cfg->tls_protocols);
 	free(cfg->http_endpoint);
 	if(cfg->log_identity) {
 		log_ident_revert_to_default();
@@ -2983,4 +2985,52 @@ cfg_has_quic(struct config_file* cfg)
 	(void)cfg;
 	return 0;
 #endif
+}
+
+int
+cfg_tls_protocols_is_valid(const char* tls_protocols)
+{
+	const char* s = tls_protocols;
+	while(*s && isspace((unsigned char)*s)) s++;
+	while(*s && !isspace((unsigned char)*s)) {
+		if(strncmp(s, "TLSv1.2", 7) == 0 ||
+			strncmp(s, "TLSv1.3", 7) == 0) {
+			s += 7;
+			if(*s && !isspace((unsigned char)*s)) {
+				/* something is attached; fail */
+				return 0;
+			}
+			while(*s && isspace((unsigned char)*s))
+				s++;
+			continue;
+		}
+		return 0;
+	}
+	return 1;
+}
+
+void
+cfg_tls_protocols_allowed(const char* tls_protocols, int* allow12, int* allow13)
+{
+	const char* s = tls_protocols;
+	*allow12 = 0;
+	*allow13 = 0;
+	if(tls_protocols == NULL) return;
+	while(*s && isspace((unsigned char)*s)) s++;
+	while(*s && !isspace((unsigned char)*s)) {
+		if(strncmp(s, "TLSv1.2", 7) == 0) {
+			*allow12 = 1;
+			s += 7;
+		} else if(strncmp(s, "TLSv1.3", 7) == 0) {
+			*allow13 = 1;
+			s += 7;
+		} else {
+			/* Unknown word, this should never happen but skip to
+			 * be safe */
+			while(*s && !isspace((unsigned char)*s))
+				s++;
+		}
+		while(*s && isspace((unsigned char)*s))
+			s++;
+	}
 }
