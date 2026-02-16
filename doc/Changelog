@@ -3,6 +3,9 @@
 	  zones. Fixed by including the ZONEMD RRtype in the list of types to
 	  ignore for RPZ zones. Analysis and patch provided by ummeegge.
 
+16 February 2026: Wouter
+	- Fix that cachedb aggressive negative responses have the RA flag set.
+
 11 February 2026: Wouter
 	- Fix #1403: Inconsistency between do-nat64 and do-not-query-address
 	  during retries.
