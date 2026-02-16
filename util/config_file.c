@@ -129,7 +129,7 @@ config_create(void)
 	cfg->tls_cert_bundle = NULL;
 	cfg->tls_win_cert = 0;
 	cfg->tls_use_sni = 1;
-	cfg->tls_protocols = strdup("TLSv1.2 TLSv1.3");
+	if(!(cfg->tls_protocols = strdup("TLSv1.2 TLSv1.3"))) goto error_exit;
 	cfg->https_port = UNBOUND_DNS_OVER_HTTPS_PORT;
 	if(!(cfg->http_endpoint = strdup("/dns-query"))) goto error_exit;
 	cfg->http_max_streams = 100;
