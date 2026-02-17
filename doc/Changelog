@@ -1,6 +1,7 @@
 17 February 2026: Wouter
 	- Fix to remove unused conditional from cookie timestamp at
 	  worker env.
+	- For #1405: local-zone always_refuse also blocks queries of type DS.
 
 16 February 2026: Yorgos
 	- Fix #1404: Priming the root key fails after loading ipfire.org RPZ

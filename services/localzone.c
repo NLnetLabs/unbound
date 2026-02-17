@@ -650,7 +650,7 @@ lz_enter_rr_str(struct local_zones* zones, const char* rr)
 	}
 	labs = dname_count_size_labels(rr_name, &len);
 	lock_rw_rdlock(&zones->lock);
-	z = local_zones_lookup(zones, rr_name, len, labs, rr_class, rr_type);
+	z = local_zones_lookup(zones, rr_name, len, labs, rr_class, rr_type, 1);
 	if(!z) {
 		lock_rw_unlock(&zones->lock);
 		fatal_exit("internal error: no zone for rr %s", rr);
@@ -1062,14 +1062,15 @@ lz_setup_implicit(struct local_zones* zones, struct config_file* cfg)
 		labs = dname_count_size_labels(rr_name, &len);
 		lock_rw_rdlock(&zones->lock);
 		if(!local_zones_lookup(zones, rr_name, len, labs, rr_class,
-			rr_type)) {
+			rr_type, 1)) {
 			/* Check if there is a zone that this could go
 			 * under but for different class; created zones are
 			 * always for LDNS_RR_CLASS_IN. Create the zone with
 			 * a different class but the same configured
 			 * local_zone_type. */
 			struct local_zone* z = local_zones_lookup(zones,
-				rr_name, len, labs, LDNS_RR_CLASS_IN, rr_type);
+				rr_name, len, labs, LDNS_RR_CLASS_IN, rr_type,
+				1);
 			if(z) {
 				uint8_t* name = memdup(z->name, z->namelen);
 				size_t znamelen = z->namelen;
@@ -1231,28 +1232,48 @@ local_zones_apply_cfg(struct local_zones* zones, struct config_file* cfg)
 
 struct local_zone* 
 local_zones_lookup(struct local_zones* zones,
-        uint8_t* name, size_t len, int labs, uint16_t dclass, uint16_t dtype)
+        uint8_t* name, size_t len, int labs, uint16_t dclass, uint16_t dtype,
+	int foradd)
 {
 	return local_zones_tags_lookup(zones, name, len, labs,
-		dclass, dtype, NULL, 0, 1);
+		dclass, dtype, NULL, 0, 1, foradd);
 }
 
 struct local_zone* 
 local_zones_tags_lookup(struct local_zones* zones,
         uint8_t* name, size_t len, int labs, uint16_t dclass, uint16_t dtype,
-	uint8_t* taglist, size_t taglen, int ignoretags)
+	uint8_t* taglist, size_t taglen, int ignoretags, int foradd)
 {
 	rbnode_type* res = NULL;
 	struct local_zone *result;
 	struct local_zone key;
 	int m;
-	/* for type DS use a zone higher when on a zonecut */
-	if(dtype == LDNS_RR_TYPE_DS && !dname_is_root(name)) {
-		dname_remove_label(&name, &len);
-		labs--;
-	}
 	key.node.key = &key;
 	key.dclass = dclass;
+	/* for type DS use a zone higher when on a zonecut */
+	if(dtype == LDNS_RR_TYPE_DS && !dname_is_root(name)) {
+		/* If this is at a zone cut, of a local-zone, and it is
+		 * of type always_refuse. Then also refuse the type DS
+		 * for it. That could make it DNSSEC bogus, but it is
+		 * REFUSED anyway. It stops CNAME type answers in the
+		 * type DS lookup. */
+		key.name = name;
+		key.namelen = len;
+		key.namelabs = labs;
+		/* For additions and removals, use the ordinary rule,
+		 * to remove a label for type DS to locate the parent zone.
+		 * That is where the DS RR needs to be put. */
+		if(!foradd &&
+			(result=(struct local_zone*)rbtree_search(
+			&zones->ztree, &key)) != NULL &&
+			result->type == local_zone_always_refuse) {
+			/* The type DS does not go up one label. */
+			return result;
+		} else {
+			dname_remove_label(&name, &len);
+			labs--;
+		}
+	}
 	key.name = name;
 	key.namelen = len;
 	key.namelabs = labs;
@@ -1863,7 +1884,7 @@ local_zones_answer(struct local_zones* zones, struct module_env* env,
 		if(view->local_zones &&
 			(z = local_zones_lookup(view->local_zones,
 			qinfo->qname, qinfo->qname_len, labs,
-			qinfo->qclass, qinfo->qtype))) {
+			qinfo->qclass, qinfo->qtype, 0))) {
 			lock_rw_rdlock(&z->lock);
 			lzt = z->type;
 		}
@@ -1897,7 +1918,7 @@ local_zones_answer(struct local_zones* zones, struct module_env* env,
 		lock_rw_rdlock(&zones->lock);
 		if(!(z = local_zones_tags_lookup(zones, qinfo->qname,
 			qinfo->qname_len, labs, qinfo->qclass, qinfo->qtype,
-			taglist, taglen, 0))) {
+			taglist, taglen, 0, 0))) {
 			lock_rw_unlock(&zones->lock);
 			return 0;
 		}
@@ -2102,7 +2123,8 @@ local_zones_add_RR(struct local_zones* zones, const char* rr)
 	/* could first try readlock then get writelock if zone does not exist,
 	 * but we do not add enough RRs (from multiple threads) to optimize */
 	lock_rw_wrlock(&zones->lock);
-	z = local_zones_lookup(zones, rr_name, len, labs, rr_class, rr_type);
+	z = local_zones_lookup(zones, rr_name, len, labs, rr_class, rr_type,
+		1);
 	if(!z) {
 		z = local_zones_add_zone(zones, rr_name, len, labs, rr_class,
 			local_zone_transparent);
@@ -2180,7 +2202,8 @@ void local_zones_del_data(struct local_zones* zones,
 
 	/* remove DS */
 	lock_rw_rdlock(&zones->lock);
-	z = local_zones_lookup(zones, name, len, labs, dclass, LDNS_RR_TYPE_DS);
+	z = local_zones_lookup(zones, name, len, labs, dclass, LDNS_RR_TYPE_DS,
+		1);
 	if(z) {
 		lock_rw_wrlock(&z->lock);
 		d = local_zone_find_data(z, name, len, labs);
@@ -2194,7 +2217,7 @@ void local_zones_del_data(struct local_zones* zones,
 
 	/* remove other types */
 	lock_rw_rdlock(&zones->lock);
-	z = local_zones_lookup(zones, name, len, labs, dclass, 0);
+	z = local_zones_lookup(zones, name, len, labs, dclass, 0, 1);
 	if(!z) {
 		/* no such zone, we're done */
 		lock_rw_unlock(&zones->lock);

@@ -2704,6 +2704,9 @@ These options are part of the ``server:`` section.
     @@UAHL@unbound.conf.local-zone.type@always_refuse@@
         Like :ref:`refuse<unbound.conf.local-zone.type.refuse>`, but ignores
         local data and refuses the query.
+        This type also blocks queries of type DS for the zone name.
+        That can break the DNSSEC chain of trust, but it is refused anyway.
+        The block for type DS assists in more completely blocking the zone.
 
     @@UAHL@unbound.conf.local-zone.type@always_nxdomain@@
         Like :ref:`static<unbound.conf.local-zone.type.static>`, but ignores
