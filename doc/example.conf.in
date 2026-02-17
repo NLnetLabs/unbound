@@ -965,16 +965,12 @@ server:
 	# tls-ciphersuites: "TLS_AES_128_GCM_SHA256:TLS_AES_128_CCM_8_SHA256:TLS_AES_128_CCM_SHA256:TLS_AES_256_GCM_SHA384:TLS_CHACHA20_POLY1305_SHA256"
 
 	# Use the SNI extension for TLS connections.  Default is yes.
-	# Changing the value requires a reload.
+	# Changing the value requires a restart.
 	# tls-use-sni: yes
 
-	# Allow general-purpose version-flexible TLS server configuration that
-	# may be further restricted by the system's policy.
-	# Use only if you want to support legacy TLS client connections.
-	# Default is a compilation choice.
-	# With 'no' Unbound will only use the latest available TLS version.
-	# Changing the value requires a reload.
-	# tls-use-system-policy-versions: no
+	# TLS protocols.
+	# Changing the value requires a restart.
+	# tls-protocols: "TLSv1.2 TLSv1.3"
 
 	# Add the secret file for TLS Session Ticket.
 	# Secret file must be 80 bytes of random data.
