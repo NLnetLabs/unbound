@@ -306,6 +306,7 @@ shm_thread_is_first(struct shm_main_info* shm_info, int thread_num,
 		 * the total is not updated and stays the same in the
 		 * shared memory area. Once that thread performs the statistic
 		 * callback again, the total is updated again.
+		 *
 		 * The threads busy with long tasks have 0 in the array.
 		 * The array is inited for a new round. */
 		memset(shm_info->thread_volley, 0,
