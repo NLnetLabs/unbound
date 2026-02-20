@@ -228,6 +228,7 @@ void shm_main_run(struct worker *worker)
 	struct ub_stats_info *stat_total;
 	struct ub_stats_info *stat_info;
 	int offset;
+	double total_mesh_time_median;
 
 #ifndef S_SPLINT_S
 	verbose(VERB_DETAIL, "SHM run - worker [%d] - daemon [%p] - timenow(%u) - timeboot(%u)",
@@ -297,10 +298,12 @@ void shm_main_run(struct worker *worker)
 #endif
 	}
 
+	total_mesh_time_median = stat_total->mesh_time_median;
 	server_stats_add(stat_total, stat_info);
-
-	/* print the thread statistics */
-	stat_total->mesh_time_median /= (double)worker->daemon->num;
+	/* By adding the value/num per stat thread, for the median,
+	 * it is going to add up to the sum/num. */
+	stat_total->mesh_time_median = total_mesh_time_median +
+		(stat_info->mesh_time_median/(double)worker->daemon->num);
 
 #else
 	(void)worker;
