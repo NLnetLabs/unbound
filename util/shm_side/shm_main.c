@@ -287,7 +287,8 @@ shm_general_info(struct worker* worker)
 
 /** See if the thread is first. Caller has lock. */
 static int
-shm_thread_is_first(struct shm_main_info* shm_info, int thread_num)
+shm_thread_is_first(struct shm_main_info* shm_info, int thread_num,
+	struct daemon* daemon)
 {
 	/* The usual method, all thread executed last time, and there
 	 * is no statistics in progress. */
@@ -299,6 +300,16 @@ shm_thread_is_first(struct shm_main_info* shm_info, int thread_num)
 	 * so this thread must be the first of this new round without that
 	 * other thread. */
 	if(shm_info->thread_volley[thread_num] != 0) {
+		/* The new round starts and zeroes the total. The previous
+		 * partial total is discarded. That means while a thread
+		 * is performing a long task, eg. loading a large zone perhaps,
+		 * the total is not updated and stays the same in the
+		 * shared memory area. Once that thread performs the statistic
+		 * callback again, the total is updated again.
+		 * The threads busy with long tasks have 0 in the array.
+		 * The array is inited for a new round. */
+		memset(shm_info->thread_volley, 0,
+			((size_t)daemon->num) * sizeof(int));
 		return 1;
 	}
 	return 0;
@@ -342,7 +353,7 @@ void shm_main_run(struct worker *worker)
 	/* Lock the lock and see if this thread is first or last of the
 	 * stat threads. It can then zero value or sum up values. */
 	lock_basic_lock(&shm_info->lock);
-	if(shm_thread_is_first(shm_info, worker->thread_num)) {
+	if(shm_thread_is_first(shm_info, worker->thread_num, worker->daemon)) {
 		/* First thread, zero fill total. */
 		memset(&shm_info->total_in_progress, 0,
 			sizeof(struct ub_stats_info));
