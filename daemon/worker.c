@@ -2123,10 +2123,34 @@ worker_restart_timer(struct worker* worker)
 {
 	if(worker->env.cfg->stat_interval > 0) {
 		struct timeval tv;
+		if(worker->daemon->stat_time_specific) {
+			struct timeval dest, now;
+			int interval = worker->env.cfg->stat_interval;
+			int offset = worker->daemon->stat_time_offset;
+			int nows, spec;
+			if(gettimeofday(&now, NULL) < 0)
+				log_err("gettimeofday: %s", strerror(errno));
 #ifndef S_SPLINT_S
-		tv.tv_sec = worker->env.cfg->stat_interval;
-		tv.tv_usec = 0;
+			nows = (int)now.tv_sec;
+			/* The next time is on the timer interval, at the
+			 * specific offset, time value % interval = offset. */
+			spec = ((nows-offset)/interval+1)*interval+offset;
+			/* This is instead of an assertion, and should not
+			 * be needed. So assert(spec > nows), tv is going to
+			 * be positive. */
+			if(spec<=nows) spec += interval;
+			dest.tv_sec = spec;
+			dest.tv_usec = 0;
 #endif
+			/* Subtract in timeval, so the fractions of a second
+			 * are rounded to the whole specific time. */
+			timeval_subtract(&tv, &dest, &now);
+		} else {
+#ifndef S_SPLINT_S
+			tv.tv_sec = worker->env.cfg->stat_interval;
+			tv.tv_usec = 0;
+#endif
+		}
 		comm_timer_set(worker->stat_timer, &tv);
 	}
 }
