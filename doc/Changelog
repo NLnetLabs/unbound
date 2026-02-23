@@ -5,6 +5,7 @@
 23 February 2026: Yorgos
 	- Fix to disallow cache lookup/store in external cachedb when a
 	  forwarder/stub forbids it with the no-cache option.
+	- Fixed some typos reported in #1395 by rezky_nightky.
 
 17 February 2026: Wouter
 	- Fix to remove unused conditional from cookie timestamp at
