@@ -1,5 +1,6 @@
 23 February 2026: Wouter
 	- Fix to have cachedb not return expired bogus data as non-bogus.
+	- Fix to make the cachedb_val_expired.crpl succeed.
 
 17 February 2026: Wouter
 	- Fix to remove unused conditional from cookie timestamp at
