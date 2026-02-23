@@ -1,3 +1,6 @@
+23 February 2026: Wouter
+	- Fix to have cachedb not return expired bogus data as non-bogus.
+
 17 February 2026: Wouter
 	- Fix to remove unused conditional from cookie timestamp at
 	  worker env.

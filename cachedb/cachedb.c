@@ -754,8 +754,10 @@ cachedb_intcache_store(struct module_qstate* qstate, int msg_expired,
 			"(original ttl: %d)", (int)original_ttl);
 		/* The expired entry does not get checked by the validator
 		 * and we need a validation value for it. */
+		/* By setting this to unchecked, bogus data is not returned
+		 * as non-bogus. */
 		if(qstate->env->cfg->cachedb_check_when_serve_expired)
-			qstate->return_msg->rep->security = sec_status_insecure;
+			qstate->return_msg->rep->security = sec_status_unchecked;
 	}
 	(void)dns_cache_store(qstate->env, &qstate->qinfo,
 		qstate->return_msg->rep, 0, qstate->prefetch_leeway, 0,
