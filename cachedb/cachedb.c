@@ -805,8 +805,11 @@ cachedb_handle_query(struct module_qstate* qstate,
 		return;
 	}
 
-	if(qstate->blacklist || qstate->no_cache_lookup) {
-		/* cache is blacklisted or we are instructed from edns to not look */
+	if(qstate->blacklist || qstate->no_cache_lookup
+		|| iter_stub_fwd_no_cache(qstate, &qstate->qinfo, NULL, NULL,
+		NULL, 0)) {
+		/* cache is blacklisted or we are instructed from edns to not
+		 * look or a forwarder/stub forbids it */
 		/* pass request to next module */
 		qstate->ext_state[id] = module_wait_module;
 		return;
@@ -894,7 +897,9 @@ cachedb_handle_response(struct module_qstate* qstate,
 {
 	qstate->is_cachedb_answer = 0;
 	/* check if we are not enabled or instructed to not cache, and skip */
-	if(!ie->enabled || qstate->no_cache_store) {
+	if(!ie->enabled || qstate->no_cache_store
+		|| iter_stub_fwd_no_cache(qstate, &qstate->qinfo, NULL, NULL,
+		NULL, 0)) {
 		/* we are done with the query */
 		qstate->ext_state[id] = module_finished;
 		return;

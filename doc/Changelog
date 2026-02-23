@@ -2,6 +2,10 @@
 	- Fix to have cachedb not return expired bogus data as non-bogus.
 	- Fix to make the cachedb_val_expired.crpl succeed.
 
+23 February 2026: Yorgos
+	- Fix to disallow cache lookup/store in external cachedb when a
+	  forwarder/stub forbids it with the no-cache option.
+
 17 February 2026: Wouter
 	- Fix to remove unused conditional from cookie timestamp at
 	  worker env.

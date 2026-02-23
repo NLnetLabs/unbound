@@ -1548,6 +1548,11 @@ iter_stub_fwd_no_cache(struct module_qstate *qstate, struct query_info *qinf,
 	struct delegpt *dp;
 	int nolock = 1;
 
+	log_assert((retdpname && retdpnamelen
+		&& dpname_storage && dpname_storage_len > 0) ||
+		(retdpname == NULL && retdpnamelen == NULL
+		 && dpname_storage == NULL && dpname_storage_len == 0));
+
 	/* Check for stub. */
 	/* Lock both forwards and hints for atomic read. */
 	lock_rw_rdlock(&qstate->env->fwds->lock);
