@@ -1,0 +1,36 @@
+# #-- mesh_jostle_priority.pre--#
+PRE="../.."
+. ../common.sh
+
+get_random_port 3
+SERVER_PORT=$RND_PORT
+SLOW_STUB_PORT=$(($RND_PORT + 1))
+FAST_STUB_PORT=$(($RND_PORT + 2))
+echo "SERVER_PORT=$SERVER_PORT" >> .tpkg.var.test
+echo "SLOW_STUB_PORT=$SLOW_STUB_PORT" >> .tpkg.var.test
+echo "FAST_STUB_PORT=$FAST_STUB_PORT" >> .tpkg.var.test
+
+# start stub
+get_ldns_testns
+$LDNS_TESTNS -v -p $SLOW_STUB_PORT mesh_jostle_priority.testns >stub_slow.log 2>&1 &
+SLOW_STUB_PID=$!
+echo "SLOW_STUB_PID=$SLOW_STUB_PID" >> .tpkg.var.test
+
+$LDNS_TESTNS -v -p $FAST_STUB_PORT mesh_jostle_priority.testns >stub_fast.log 2>&1 &
+FAST_STUB_PID=$!
+echo "FAST_STUB_PID=$FAST_STUB_PID" >> .tpkg.var.test
+
+# make config file
+sed \
+	-e 's/@SERVER_PORT\@/'$SERVER_PORT'/' \
+	-e 's/@SLOW_STUB_PORT\@/'$SLOW_STUB_PORT'/' \
+	-e 's/@FAST_STUB_PORT\@/'$FAST_STUB_PORT'/' \
+	< mesh_jostle_priority.conf > ub.conf
+
+# start unbound in the background
+$PRE/unbound -d -c ub.conf > unbound.log 2>&1 &
+
+cat .tpkg.var.test
+wait_ldns_testns_up stub_slow.log
+wait_ldns_testns_up stub_fast.log
+wait_unbound_up unbound.log
