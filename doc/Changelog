@@ -1,3 +1,9 @@
+25 February 2026: Wouter
+	- Fix validator to set unchecked when validation recursion
+	  requests are passed. The edns subnet module checks if validation
+	  is needed for a cache response, and set the validator to protect
+	  the cache with validation for non-subnet lookups.
+
 23 February 2026: Wouter
 	- Fix to have cachedb not return expired bogus data as non-bogus.
 	- Fix to make the cachedb_val_expired.crpl succeed.
