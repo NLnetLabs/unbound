@@ -521,6 +521,16 @@ void* listen_sslctx_create(const char* key, const char* pem,
  */
 void* connect_sslctx_create(char* key, char* pem, char* verifypem, int wincert);
 
+
+/**
+ * update SSL connect context certs
+ * @param verifypem: if nonNULL used for verifylocation file.
+ * @param wincert: add system certificate store to ctx (add to verifypem ca
+ * 	certs).
+ * @return 0 on failure (logged).
+ */
+int connect_sslctx_update(void *sslctx, char* verifypem, int wincert);
+
 /**
  * accept a new fd and wrap it in a BIO in SSL
  * @param sslctx: the SSL_CTX to use (from listen_sslctx_create()).
