@@ -48,6 +48,7 @@
 #include "util/ub_event.h"
 #include "util/timeval_func.h"
 #include "services/listen_dnsport.h"
+#include "services/cache/rrset.h"
 
 /* If there is no metrics enabled, do not add the code. */
 #ifdef USE_METRICS
@@ -477,10 +478,81 @@ static int
 metrics_print_mem(struct evbuffer* reply, struct worker* worker,
 	struct daemon* daemon, struct ub_stats_info* s)
 {
-	(void)reply;
-	(void)worker;
-	(void)daemon;
-	(void)s;
+	char* prefix = METRICS_PREFIX;
+	size_t msg, rrset, val, iter, respip;
+#ifdef CLIENT_SUBNET
+	size_t subnet = 0;
+#endif /* CLIENT_SUBNET */
+#ifdef USE_IPSECMOD
+	size_t ipsecmod = 0;
+#endif /* USE_IPSECMOD */
+#ifdef USE_DNSCRYPT
+	size_t dnscrypt_shared_secret = 0;
+	size_t dnscrypt_nonce = 0;
+#endif /* USE_DNSCRYPT */
+#ifdef WITH_DYNLIBMODULE
+    size_t dynlib = 0;
+#endif /* WITH_DYNLIBMODULE */
+	msg = slabhash_get_mem(daemon->env->msg_cache);
+	rrset = slabhash_get_mem(&daemon->env->rrset_cache->table);
+	val = mod_get_mem(&worker->env, "validator");
+	iter = mod_get_mem(&worker->env, "iterator");
+	respip = mod_get_mem(&worker->env, "respip");
+#ifdef CLIENT_SUBNET
+	subnet = mod_get_mem(&worker->env, "subnetcache");
+#endif /* CLIENT_SUBNET */
+#ifdef USE_IPSECMOD
+	ipsecmod = mod_get_mem(&worker->env, "ipsecmod");
+#endif /* USE_IPSECMOD */
+#ifdef USE_DNSCRYPT
+	if(daemon->dnscenv) {
+		dnscrypt_shared_secret = slabhash_get_mem(
+			daemon->dnscenv->shared_secrets_cache);
+		dnscrypt_nonce = slabhash_get_mem(daemon->dnscenv->nonces_cache);
+	}
+#endif /* USE_DNSCRYPT */
+#ifdef WITH_DYNLIBMODULE
+    dynlib = mod_get_mem(&worker->env, "dynlib");
+#endif /* WITH_DYNLIBMODULE */
+
+	/* print to reply buffer the stat for prefix mt
+	 * of type snm and long long output svar. */
+#define INFO_LL_STATS(mt, snm, svar) \
+	evbuffer_add_printf(reply, \
+		"%s" mt "{type=\"" snm "\"} " ARG_LL "d\n", \
+		prefix, (long long)(svar))
+
+	print_metric_help_and_type(reply, prefix, "memory_bytes",
+		"Unbound memory usage, in bytes", "gauge");
+	INFO_LL_STATS("memory_bytes", "mem.cache.rrset", rrset);
+	INFO_LL_STATS("memory_bytes", "mem.cache.message", msg);
+	INFO_LL_STATS("memory_bytes", "mem.mod.iterator", iter);
+	INFO_LL_STATS("memory_bytes", "mem.mod.validator", val);
+	INFO_LL_STATS("memory_bytes", "mem.mod.respip", respip);
+#ifdef CLIENT_SUBNET
+	INFO_LL_STATS("memory_bytes", "mem.mod.subnet", subnet);
+#endif /* CLIENT_SUBNET */
+#ifdef USE_IPSECMOD
+	INFO_LL_STATS("memory_bytes", "mem.mod.ipsecmod", ipsecmod);
+#endif /* USE_IPSECMOD */
+#ifdef USE_DNSCRYPT
+	INFO_LL_STATS("memory_bytes", "mem.cache.dnscrypt_shared_secret",
+		dnscrypt_shared_secret);
+	INFO_LL_STATS("memory_bytes", "mem.cache.dnscrypt_nonce",
+		dnscrypt_nonce);
+#endif /* USE_DNSCRYPT */
+#ifdef WITH_DYNLIBMODULE
+	INFO_LL_STATS("memory_bytes", "mem.mod.dynlibmod", dynlib);
+#endif /* WITH_DYNLIBMODULE */
+	INFO_LL_STATS("memory_bytes", "mem.streamwait",
+		s->svr.mem_stream_wait);
+	INFO_LL_STATS("memory_bytes", "mem.http.query_buffer",
+		s->svr.mem_http2_query_buffer);
+	INFO_LL_STATS("memory_bytes", "mem.http.response_buffer",
+		s->svr.mem_http2_response_buffer);
+#ifdef HAVE_NGTCP2
+	INFO_LL_STATS("memory_bytes", "mem.quic", s->svr.mem_quic);
+#endif /* HAVE_NGTCP2 */
 	return 1;
 }
 
