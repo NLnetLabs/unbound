@@ -560,8 +560,30 @@ metrics_print_mem(struct evbuffer* reply, struct worker* worker,
 static int
 metrics_print_hist(struct evbuffer* reply, struct ub_stats_info* s)
 {
-	(void)reply;
-	(void)s;
+	char* prefix = METRICS_PREFIX;
+	struct timehist* hist;
+	size_t i;
+
+	print_metric_help_and_type(reply, prefix, "histogram_seconds",
+		"Unbound DNS histogram of reply time", "gauge");
+
+	hist = timehist_setup();
+	if(!hist) {
+		log_err("out of memory");
+		return 0;
+	}
+	timehist_import(hist, s->svr.hist, NUM_BUCKETS_HIST);
+	for(i=0; i<hist->num; i++) {
+		evbuffer_add_printf(reply, "%shistogram_seconds"
+			"{bucket=\"%6.6d.%6.6d.to.%6.6d.%6.6d\"} %lu\n",
+			prefix,
+			(int)hist->buckets[i].lower.tv_sec,
+			(int)hist->buckets[i].lower.tv_usec,
+			(int)hist->buckets[i].upper.tv_sec,
+			(int)hist->buckets[i].upper.tv_usec,
+			(unsigned long)hist->buckets[i].count);
+	}
+	timehist_delete(hist);
 	return 1;
 }
 
