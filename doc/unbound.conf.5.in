@@ -3013,6 +3013,39 @@ local\-data: \(dqexample.com. A 127.0.0.1\(dq
 queries for \fBwww.example.com\fP and \fBwww.foo.example.com\fP are
 redirected, so that users with web browsers cannot access sites with
 suffix example.com.
+.sp
+A \fBCNAME\fP record can also be provided via local\-data:
+.INDENT 7.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+local\-zone: \(dqexample.com.\(dq redirect
+local\-data: \(dqexample.com. CNAME www.example.org.\(dq
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+In that case, the \fBCNAME\fP is resolved and the answer
+includes resolved target records as well.
+The \fBCNAME\fP record has to be with the zone name of the local\-zone,
+and there can be one CNAME, not more.
+The \fBCNAME\fP record has to be at the zone apex of the
+\fBredirect\fP zone, then it is used for redirection.
+The resolution proceeds with upstream DNS resolution, and
+that does not include the lookup in local zones.
+So the record is not able to point in local zones, but it
+can point to upstream DNS answers.
+.sp
+\fBCNAME\fP resolution is supported only in type \fBredirect\fP
+local\-zone, and in type \fBinform_redirect\fP local\-zone.
+.sp
+As different from \fBCNAME\fP records that are used elsewhere, in
+the \fBredirect\fP type local\-zone, it is supported that in the target
+of the record a wildcard label gets expanded to the query name, with
+for example: \fBexample.com. CNAME *.foo.net.\fP gets expanded
+to \fBwww.example.com. CNAME www.example.com.foo.net.\fP\&.
 .UNINDENT
 .INDENT 7.0
 .TP
@@ -3071,6 +3104,9 @@ use IPv6 protocol and avoid any queries to IPv4.
 .B always_refuse 
 Like \fI\%refuse\fP, but ignores
 local data and refuses the query.
+This type also blocks queries of type DS for the zone name.
+That can break the DNSSEC chain of trust, but it is refused anyway.
+The block for type DS assists in more completely blocking the zone.
 .UNINDENT
 .INDENT 7.0
 .TP
@@ -4758,6 +4794,17 @@ Default: no
 .B nat64\-prefix: \fI<IPv6 prefix>\fP 
 Use a specific NAT64 prefix to reach IPv4\-only servers.
 The prefix length must be one of /32, /40, /48, /56, /64 or /96.
+.sp
+The NAT64 prefix is allowed by the
+\fI\%do\-not\-query\-address\fP option,
+so that there is a clear outcome of addresses in both; the NAT64 prefix
+is allowed.
+The IPv4 address could be filtered by the
+\fI\%do\-not\-query\-address\fP option,
+if needed.
+Allowing the NAT64 prefix is useful when using do\-not\-query\-address
+for a cluster of machines that is IPv6\-only and uses NAT64, but does
+not have internet access.
 .sp
 Default: 64:ff9b::/96 (same as \fI\%dns64\-prefix\fP)
 .UNINDENT
