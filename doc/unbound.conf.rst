@@ -2665,6 +2665,18 @@ These options are part of the ``server:`` section.
         redirected, so that users with web browsers cannot access sites with
         suffix example.com.
 
+        A ``CNAME`` record can also be provided via local-data:
+
+        .. code-block:: text
+
+            local-zone: "example.com." redirect
+            local-data: "example.com. CNAME www.example.org."
+
+        In that case, the ``CNAME`` is resolved and the answer
+        includes resolved target records as well.
+        ``CNAME`` resolution is supported only in type ``redirect``
+        local-zone.
+
     @@UAHL@unbound.conf.local-zone.type@inform@@
         The query is answered normally, same as
         :ref:`transparent<unbound.conf.local-zone.type.transparent>`.
