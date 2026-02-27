@@ -2674,8 +2674,23 @@ These options are part of the ``server:`` section.
 
         In that case, the ``CNAME`` is resolved and the answer
         includes resolved target records as well.
+        The ``CNAME`` record has to be with the zone name of the local-zone,
+        and there can be one CNAME, not more.
+        The ``CNAME`` record has to be at the zone apex of the
+        ``redirect`` zone, then it is used for redirection.
+        The resolution proceeds with upstream DNS resolution, and
+        that does not include the lookup in local zones.
+        So the record is not able to point in local zones, but it
+        can point to upstream DNS answers.
+
         ``CNAME`` resolution is supported only in type ``redirect``
-        local-zone.
+        local-zone, and in type ``inform_redirect`` local-zone.
+
+        As different from ``CNAME`` records that are used elsewhere, in
+        the ``redirect`` type local-zone, it is supported that in the target
+        of the record a wildcard label gets expanded to the query name, with
+        for example: ``example.com. CNAME *.foo.net.`` gets expanded
+        to ``www.example.com. CNAME www.example.com.foo.net.``.
 
     @@UAHL@unbound.conf.local-zone.type@inform@@
         The query is answered normally, same as

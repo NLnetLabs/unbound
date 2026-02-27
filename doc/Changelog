@@ -1,3 +1,6 @@
+27 February 2026: Wouter
+	- Merge #1409: Documentation CNAME in redirect-type local-zone.
+
 25 February 2026: Wouter
 	- Fix validator to set unchecked when validation recursion
 	  requests are passed. The edns subnet module checks if validation
