@@ -2089,6 +2089,19 @@ case "$enable_ipsecmod" in
 		;;
 esac
 
+# check for system TLS preference if requested
+AC_ARG_ENABLE(system-tls, AS_HELP_STRING([--enable-system-tls],[Enable preference of system configured TLS socket options]))
+case "$enable_system_tls" in
+	yes)
+		AC_DEFINE([USE_SYSTEM_TLS], [1], [Define to 1 to prefer TLS crypto settings from the system.])
+		SYSTEM_TLS_DEFAULT="yes"
+		;;
+	no|*)
+		SYSTEM_TLS_DEFAULT="no"
+		;;
+esac
+AC_SUBST([SYSTEM_TLS_DEFAULT])
+
 # check for ipset if requested
 AC_ARG_ENABLE(ipset, AS_HELP_STRING([--enable-ipset],[enable ipset module]))
 case "$enable_ipset" in

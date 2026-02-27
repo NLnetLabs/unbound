@@ -483,6 +483,8 @@ lookup_and_reply(struct module_qstate *qstate, int id, struct subnet_qstate *sq,
 	struct addrtree *tree;
 	struct addrnode *node;
 	uint8_t scope;
+	int must_validate = (!(qstate->query_flags&BIT_CD)
+		|| qstate->env->cfg->ignore_cd) && qstate->env->need_to_validate;
 
 	memset(&sq->ecs_client_out, 0, sizeof(sq->ecs_client_out));
 
@@ -515,7 +517,14 @@ lookup_and_reply(struct module_qstate *qstate, int id, struct subnet_qstate *sq,
 	if (!qstate->return_msg) { /* Failed allocation or expired TTL */
 		return 0;
 	}
-	
+	if(qstate->return_msg->rep->security == sec_status_unchecked
+		&& must_validate) {
+		/* The message has to be validated first. */
+		verbose(VERB_ALGO, "subnet: unchecked cache entry needs "
+			"validation");
+		return 0;
+	}
+
 	if (sq->subnet_downstream) { /* relay to interested client */
 		sq->ecs_client_out.subnet_scope_mask = scope;
 		sq->ecs_client_out.subnet_addr_fam = ecs->subnet_addr_fam;
@@ -570,7 +579,10 @@ generate_sub_request(struct module_qstate *qstate, int id, struct subnet_qstate*
 	qflags |= BIT_RD;
 	if((qstate->query_flags & BIT_CD)!=0) {
 		qflags |= BIT_CD;
-		valrec = 1;
+		/* The valrec is left off. Leave out: valrec = 1;
+		 * So that the cache is protected with DNSSEC validation.
+		 * Just like the global cache. DNSSEC validation is performed
+		 * regardless of the setting of the querier's CD flag. */
 	}
 
 	fptr_ok(fptr_whitelist_modenv_attach_sub(qstate->env->attach_sub));

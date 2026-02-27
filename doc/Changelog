@@ -1,3 +1,45 @@
+27 February 2026: Wouter
+	- Merge #1409: Documentation CNAME in redirect-type local-zone.
+	- Update generated man pages.
+
+25 February 2026: Wouter
+	- Fix validator to set unchecked when validation recursion
+	  requests are passed. The edns subnet module checks if validation
+	  is needed for a cache response, and set the validator to protect
+	  the cache with validation for non-subnet lookups.
+
+23 February 2026: Wouter
+	- Fix to have cachedb not return expired bogus data as non-bogus.
+	- Fix to make the cachedb_val_expired.crpl succeed.
+
+23 February 2026: Yorgos
+	- Fix to disallow cache lookup/store in external cachedb when a
+	  forwarder/stub forbids it with the no-cache option.
+	- Fixed some typos reported in #1395 by rezky_nightky.
+
+17 February 2026: Wouter
+	- Fix to remove unused conditional from cookie timestamp at
+	  worker env.
+	- For #1405: local-zone always_refuse also blocks queries of type DS.
+
+16 February 2026: Yorgos
+	- Fix #1404: Priming the root key fails after loading ipfire.org RPZ
+	  zones. Fixed by including the ZONEMD RRtype in the list of types to
+	  ignore for RPZ zones. Analysis and patch provided by ummeegge.
+
+16 February 2026: Wouter
+	- Fix that cachedb aggressive negative responses have the RA flag set.
+
+11 February 2026: Wouter
+	- Fix #1403: Inconsistency between do-nat64 and do-not-query-address
+	  during retries.
+
+9 February 2026: Wouter
+	- Merge #1401: Add a new build-time option for system TLS.
+	  The --enable-system-tls flag enables the
+	  tls-use-system-policy-versions setting by default.
+	- Update generated man pages.
+
 6 February 2026: Yorgos
 	- Fix #1389: [FR] replacement with ECC-GOST12 according to RFC9558.
 	  Patch contributed by Igor V. Ruzanov, available in

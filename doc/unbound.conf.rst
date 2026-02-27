@@ -1178,19 +1178,22 @@ These options are part of the ``server:`` section.
 
 
 @@UAHL@unbound.conf@tls-use-system-policy-versions@@: *<yes or no>*
-    Enable or disable general-puspose version-flexible TLS server configuration
+    Enable or disable general-purpose version-flexible TLS server configuration
     when serving TLS.
     This will allow the whole list of available TLS versions provided by the
     crypto library, which may have been further restricted by the system's
     crypto policy.
 
-    By default Unbound only uses the latest available TLS version.
+    If disabled Unbound only uses the latest available TLS version.
+
+    The default depends on a compilation choice, it is set
+    at @SYSTEM_TLS_DEFAULT@ .
 
     .. caution:: Use only if you want to support legacy TLS client connections.
 
     .. note:: Changing the value requires a reload.
 
-    Default: no
+    Default: @SYSTEM_TLS_DEFAULT@
 
 
 @@UAHL@unbound.conf@pad-responses@@: *<yes or no>*
@@ -2662,6 +2665,33 @@ These options are part of the ``server:`` section.
         redirected, so that users with web browsers cannot access sites with
         suffix example.com.
 
+        A ``CNAME`` record can also be provided via local-data:
+
+        .. code-block:: text
+
+            local-zone: "example.com." redirect
+            local-data: "example.com. CNAME www.example.org."
+
+        In that case, the ``CNAME`` is resolved and the answer
+        includes resolved target records as well.
+        The ``CNAME`` record has to be with the zone name of the local-zone,
+        and there can be one CNAME, not more.
+        The ``CNAME`` record has to be at the zone apex of the
+        ``redirect`` zone, then it is used for redirection.
+        The resolution proceeds with upstream DNS resolution, and
+        that does not include the lookup in local zones.
+        So the record is not able to point in local zones, but it
+        can point to upstream DNS answers.
+
+        ``CNAME`` resolution is supported only in type ``redirect``
+        local-zone, and in type ``inform_redirect`` local-zone.
+
+        As different from ``CNAME`` records that are used elsewhere, in
+        the ``redirect`` type local-zone, it is supported that in the target
+        of the record a wildcard label gets expanded to the query name, with
+        for example: ``example.com. CNAME *.foo.net.`` gets expanded
+        to ``www.example.com. CNAME www.example.com.foo.net.``.
+
     @@UAHL@unbound.conf.local-zone.type@inform@@
         The query is answered normally, same as
         :ref:`transparent<unbound.conf.local-zone.type.transparent>`.
@@ -2701,6 +2731,9 @@ These options are part of the ``server:`` section.
     @@UAHL@unbound.conf.local-zone.type@always_refuse@@
         Like :ref:`refuse<unbound.conf.local-zone.type.refuse>`, but ignores
         local data and refuses the query.
+        This type also blocks queries of type DS for the zone name.
+        That can break the DNSSEC chain of trust, but it is refused anyway.
+        The block for type DS assists in more completely blocking the zone.
 
     @@UAHL@unbound.conf.local-zone.type@always_nxdomain@@
         Like :ref:`static<unbound.conf.local-zone.type.static>`, but ignores
@@ -4160,6 +4193,17 @@ servers.
 @@UAHL@unbound.conf.nat64@nat64-prefix@@: *<IPv6 prefix>*
     Use a specific NAT64 prefix to reach IPv4-only servers.
     The prefix length must be one of /32, /40, /48, /56, /64 or /96.
+
+    The NAT64 prefix is allowed by the
+    :ref:`do-not-query-address<unbound.conf.do-not-query-address>` option,
+    so that there is a clear outcome of addresses in both; the NAT64 prefix
+    is allowed.
+    The IPv4 address could be filtered by the
+    :ref:`do-not-query-address<unbound.conf.do-not-query-address>` option,
+    if needed.
+    Allowing the NAT64 prefix is useful when using do-not-query-address
+    for a cluster of machines that is IPv6-only and uses NAT64, but does
+    not have internet access.
 
     Default: 64:ff9b::/96 (same as :ref:`dns64-prefix<unbound.conf.dns64.dns64-prefix>`)
 

@@ -1146,6 +1146,9 @@
 #endif
 
 
+/* Define to 1 to prefer TLS crypto settings from the system. */
+#undef USE_SYSTEM_TLS
+
 /* Define this to enable server TCP Fast Open. */
 #undef USE_TCP_FASTOPEN
 
