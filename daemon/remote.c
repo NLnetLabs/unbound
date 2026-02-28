@@ -6635,6 +6635,8 @@ static void* fast_reload_thread_main(void* arg)
 	struct fast_reload_thread* fast_reload_thread = (struct fast_reload_thread*)arg;
 	struct timeval time_start, time_read, time_construct, time_reload,
 		time_end;
+	const char name[16] = "unbound/freload"; /* seems to be the safest size
+						    between different OSes */
 
 #if defined(HAVE_GETTID) && !defined(THREADS_DISABLED)
 	fast_reload_thread->thread_tid = gettid();
@@ -6643,6 +6645,8 @@ static void* fast_reload_thread_main(void* arg)
 	else
 #endif
 		log_thread_set(&fast_reload_thread->threadnum);
+
+	ub_thread_setname(fast_reload_thread->tid, name);
 
 	verbose(VERB_ALGO, "start fast reload thread");
 	if(fast_reload_thread->fr_verb >= 1) {
