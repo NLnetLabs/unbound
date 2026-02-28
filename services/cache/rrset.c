@@ -278,6 +278,10 @@ void rrset_cache_update_wildcard(struct rrset_cache* rrset_cache,
 	(void)rrset_cache_update(rrset_cache, &ref, alloc, timenow);
 }
 
+/** Grace period in seconds for TTL=0 DNAME rrsets (RFC 2308: do not cache).
+ * Allows synthesis from cache within this window to reduce recursion load. */
+#define DNAME_TTL0_GRACE_SECONDS 1
+
 struct ub_packed_rrset_key* 
 rrset_cache_lookup(struct rrset_cache* r, uint8_t* qname, size_t qnamelen, 
 	uint16_t qtype, uint16_t qclass, uint32_t flags, time_t timenow,
@@ -300,12 +304,20 @@ rrset_cache_lookup(struct rrset_cache* r, uint8_t* qname, size_t qnamelen,
 		/* check TTL */
 		struct packed_rrset_data* data = 
 			(struct packed_rrset_data*)e->data;
+		struct ub_packed_rrset_key* k = (struct ub_packed_rrset_key*)e->key;
 		if(TTL_IS_EXPIRED(data->ttl, timenow)) {
-			lock_rw_unlock(&e->lock);
-			return NULL;
+			/* Allow TTL=0 DNAME within grace period for synthesis */
+			if(qtype == LDNS_RR_TYPE_DNAME &&
+			   (k->rk.flags & PACKED_RRSET_UPSTREAM_0TTL) &&
+			   (timenow - data->ttl_add) <= DNAME_TTL0_GRACE_SECONDS) {
+				/* within grace: allow for synthesis */
+			} else {
+				lock_rw_unlock(&e->lock);
+				return NULL;
+			}
 		}
 		/* we're done */
-		return (struct ub_packed_rrset_key*)e->key;
+		return k;
 	}
 	return NULL;
 }
