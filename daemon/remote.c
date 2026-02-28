@@ -153,7 +153,7 @@ remote_setup_ctx(struct daemon_remote* rc, struct config_file* cfg)
 		log_crypto_err("could not SSL_CTX_new");
 		return 0;
 	}
-	if(!listen_sslctx_setup(rc->ctx, cfg->tls_use_system_policy_versions)) {
+	if(!listen_sslctx_setup(rc->ctx, cfg->tls_protocols)) {
 		return 0;
 	}
 
@@ -4939,6 +4939,7 @@ fr_check_compat_cfg(struct fast_reload_thread* fr, struct config_file* newcfg)
 	FR_CHECK_CHANGED_CFG_STR("tls-service-key", ssl_service_key, changed_str);
 	FR_CHECK_CHANGED_CFG_STR("tls-service-pem", ssl_service_pem, changed_str);
 	FR_CHECK_CHANGED_CFG_STR("tls-cert-bundle", tls_cert_bundle, changed_str);
+	FR_CHECK_CHANGED_CFG_STR("tls-protocols", tls_protocols, changed_str);
 	FR_CHECK_CHANGED_CFG_STRLIST("proxy-protocol-port", proxy_protocol_port, changed_str);
 	FR_CHECK_CHANGED_CFG_STRLIST("tls-additional-port", tls_additional_port, changed_str);
 	FR_CHECK_CHANGED_CFG_STR("interface-automatic-ports", if_automatic_ports, changed_str);
@@ -5179,6 +5180,7 @@ config_file_getmem(struct config_file* cfg)
 	m += getmem_config_strlist(cfg->tls_session_ticket_keys.first);
 	m += getmem_str(cfg->tls_ciphers);
 	m += getmem_str(cfg->tls_ciphersuites);
+	m += getmem_str(cfg->tls_protocols);
 	m += getmem_str(cfg->http_endpoint);
 	m += (cfg->outgoing_avail_ports?65536*sizeof(int):0);
 	m += getmem_str(cfg->target_fetch_policy);
@@ -5873,8 +5875,8 @@ fr_atomic_copy_cfg(struct config_file* oldcfg, struct config_file* cfg,
 	COPY_VAR_ptr(tls_session_ticket_keys.last);
 	COPY_VAR_ptr(tls_ciphers);
 	COPY_VAR_ptr(tls_ciphersuites);
+	COPY_VAR_ptr(tls_protocols);
 	COPY_VAR_int(tls_use_sni);
-	COPY_VAR_int(tls_use_system_policy_versions);
 	COPY_VAR_int(https_port);
 	COPY_VAR_ptr(http_endpoint);
 	COPY_VAR_uint32_t(http_max_streams);

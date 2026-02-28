@@ -1226,10 +1226,13 @@ setup_ticket_keys_cb(void* sslctx)
 #endif /* HAVE_SSL */
 
 int
-listen_sslctx_setup(void* ctxt, int use_system_versions)
+listen_sslctx_setup(void* ctxt, const char* tls_protocols)
 {
 #ifdef HAVE_SSL
+	int allow12, allow13;
 	SSL_CTX* ctx = (SSL_CTX*)ctxt;
+	cfg_tls_protocols_allowed(tls_protocols, &allow12, &allow13);
+
 	/* no SSLv2, SSLv3 because has defects */
 #if SSL_OP_NO_SSLv2 != 0
 	if((SSL_CTX_set_options(ctx, SSL_OP_NO_SSLv2) & SSL_OP_NO_SSLv2)
@@ -1238,37 +1241,47 @@ listen_sslctx_setup(void* ctxt, int use_system_versions)
 		return 0;
 	}
 #endif
-	if(!use_system_versions) {
-		if((SSL_CTX_set_options(ctx, SSL_OP_NO_SSLv3) & SSL_OP_NO_SSLv3)
-			!= SSL_OP_NO_SSLv3){
-			log_crypto_err("could not set SSL_OP_NO_SSLv3");
-			return 0;
-		}
+	if((SSL_CTX_set_options(ctx, SSL_OP_NO_SSLv3) & SSL_OP_NO_SSLv3)
+		!= SSL_OP_NO_SSLv3){
+		log_crypto_err("could not set SSL_OP_NO_SSLv3");
+		return 0;
+	}
 #if defined(SSL_OP_NO_TLSv1) && defined(SSL_OP_NO_TLSv1_1)
-		/* if we have tls 1.1 disable 1.0 */
-		if((SSL_CTX_set_options(ctx, SSL_OP_NO_TLSv1) & SSL_OP_NO_TLSv1)
-			!= SSL_OP_NO_TLSv1){
-			log_crypto_err("could not set SSL_OP_NO_TLSv1");
-			return 0;
-		}
+	/* if we have tls 1.1 disable 1.0 */
+	if((SSL_CTX_set_options(ctx, SSL_OP_NO_TLSv1) & SSL_OP_NO_TLSv1)
+		!= SSL_OP_NO_TLSv1){
+		log_crypto_err("could not set SSL_OP_NO_TLSv1");
+		return 0;
+	}
 #endif
 #if defined(SSL_OP_NO_TLSv1_1) && defined(SSL_OP_NO_TLSv1_2)
-		/* if we have tls 1.2 disable 1.1 */
-		if((SSL_CTX_set_options(ctx, SSL_OP_NO_TLSv1_1) & SSL_OP_NO_TLSv1_1)
-			!= SSL_OP_NO_TLSv1_1){
-			log_crypto_err("could not set SSL_OP_NO_TLSv1_1");
-			return 0;
-		}
+	/* if we have tls 1.2 disable 1.1 */
+	if((SSL_CTX_set_options(ctx, SSL_OP_NO_TLSv1_1) & SSL_OP_NO_TLSv1_1)
+		!= SSL_OP_NO_TLSv1_1){
+		log_crypto_err("could not set SSL_OP_NO_TLSv1_1");
+		return 0;
+	}
 #endif
-#if defined(SSL_OP_NO_TLSv1_2) && defined(SSL_OP_NO_TLSv1_3)
-		/* if we have tls 1.3 disable 1.2 */
+#if defined(SSL_OP_NO_TLSv1_2)
+	if(!allow12) {
+		/* we are not allowed to use TLS1.2 */
 		if((SSL_CTX_set_options(ctx, SSL_OP_NO_TLSv1_2) & SSL_OP_NO_TLSv1_2)
 			!= SSL_OP_NO_TLSv1_2){
 			log_crypto_err("could not set SSL_OP_NO_TLSv1_2");
 			return 0;
 		}
-#endif
 	}
+#endif
+#if defined(SSL_OP_NO_TLSv1_3)
+	if(!allow13) {
+		/* we are not allowed to use TLS1.3 */
+		if((SSL_CTX_set_options(ctx, SSL_OP_NO_TLSv1_3) & SSL_OP_NO_TLSv1_3)
+			!= SSL_OP_NO_TLSv1_3){
+			log_crypto_err("could not set SSL_OP_NO_TLSv1_3");
+			return 0;
+		}
+	}
+#endif
 #if defined(SSL_OP_NO_RENEGOTIATION)
 	/* disable client renegotiation */
 	if((SSL_CTX_set_options(ctx, SSL_OP_NO_RENEGOTIATION) &
@@ -1307,7 +1320,7 @@ listen_sslctx_setup(void* ctxt, int use_system_versions)
 	SSL_CTX_set_security_level(ctx, 0);
 #endif
 #else
-	(void)ctxt;
+	(void)ctxt; (void)tls_protocols;
 #endif /* HAVE_SSL */
 	return 1;
 }
@@ -1343,7 +1356,7 @@ listen_sslctx_setup_2(void* ctxt)
 void* listen_sslctx_create(const char* key, const char* pem,
 	const char* verifypem, const char* tls_ciphers,
 	const char* tls_ciphersuites, int set_ticket_keys_cb,
-	int is_dot, int is_doh, int use_system_versions)
+	int is_dot, int is_doh, const char* tls_protocols)
 {
 #ifdef HAVE_SSL
 	SSL_CTX* ctx = SSL_CTX_new(SSLv23_server_method());
@@ -1361,7 +1374,7 @@ void* listen_sslctx_create(const char* key, const char* pem,
 		SSL_CTX_free(ctx);
 		return NULL;
 	}
-	if(!listen_sslctx_setup(ctx, use_system_versions)) {
+	if(!listen_sslctx_setup(ctx, tls_protocols)) {
 		SSL_CTX_free(ctx);
 		return NULL;
 	}
