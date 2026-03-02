@@ -55,6 +55,7 @@
 #include "services/cache/rrset.h"
 #include "services/cache/infra.h"
 #include "services/authzone.h"
+#include "services/localzone.h"
 #include "util/module.h"
 #include "util/netevent.h"
 #include "util/net_help.h"
@@ -1479,39 +1480,61 @@ processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
 		}
 	}
 
-	if (iter_stub_fwd_no_cache(qstate, &iq->qchase, &dpname, &dpnamelen,
-		dpname_storage, sizeof(dpname_storage))) {
-		/* Asked to not query cache. */
-		verbose(VERB_ALGO, "no-cache set, going to the network");
-		qstate->no_cache_lookup = 1;
-		qstate->no_cache_store = 1;
-		msg = NULL;
-	} else if(qstate->blacklist) {
-		/* if cache, or anything else, was blacklisted then
-		 * getting older results from cache is a bad idea, no cache */
-		verbose(VERB_ALGO, "cache blacklisted, going to the network");
-		msg = NULL;
-	} else if(!qstate->no_cache_lookup) {
-		msg = dns_cache_lookup(qstate->env, iq->qchase.qname, 
-			iq->qchase.qname_len, iq->qchase.qtype, 
-			iq->qchase.qclass, qstate->query_flags,
-			qstate->region, qstate->env->scratch, 0, dpname,
-			dpnamelen);
-		if(!msg && qstate->env->neg_cache &&
-			iter_qname_indicates_dnssec(qstate->env, &iq->qchase)) {
-			/* lookup in negative cache; may result in
-			 * NOERROR/NODATA or NXDOMAIN answers that need validation */
-			msg = val_neg_getmsg(qstate->env->neg_cache, &iq->qchase,
-				qstate->region, qstate->env->rrset_cache,
-				qstate->env->scratch_buffer, 
-				*qstate->env->now, 1/*add SOA*/, NULL, 
-				qstate->env->cfg);
+	/* local zones are not consulted during CNAME restarts;
+	 * check them here before the cache lookup */
+	if(iq->query_restart_count > 0 && qstate->env->local_zones) {
+		int is_local = 0;
+		msg = local_zones_lookup_msg(qstate->env->local_zones,
+			&iq->qchase, qstate->region, &is_local);
+		if(msg) {
+			verbose(VERB_ALGO, "local zone answer for "
+				"CNAME target");
+		} else if(is_local) {
+			verbose(VERB_ALGO, "local zone has no data "
+				"for CNAME target");
 		}
-		/* item taken from cache does not match our query name, thus
-		 * security needs to be re-examined later */
-		if(msg && query_dname_compare(qstate->qinfo.qname,
-			iq->qchase.qname) != 0)
-			msg->rep->security = sec_status_unchecked;
+	}
+
+	if(!msg) {
+		if(iter_stub_fwd_no_cache(qstate, &iq->qchase, &dpname,
+			&dpnamelen, dpname_storage,
+			sizeof(dpname_storage))) {
+			verbose(VERB_ALGO, "no-cache, going to "
+				"the network");
+			qstate->no_cache_lookup = 1;
+			qstate->no_cache_store = 1;
+		} else if(qstate->blacklist) {
+			verbose(VERB_ALGO, "blacklisted, going "
+				"to the network");
+		} else if(!qstate->no_cache_lookup) {
+			msg = dns_cache_lookup(qstate->env,
+				iq->qchase.qname,
+				iq->qchase.qname_len,
+				iq->qchase.qtype,
+				iq->qchase.qclass,
+				qstate->query_flags,
+				qstate->region,
+				qstate->env->scratch, 0,
+				dpname, dpnamelen);
+			if(!msg && qstate->env->neg_cache &&
+				iter_qname_indicates_dnssec(
+				qstate->env, &iq->qchase)) {
+				msg = val_neg_getmsg(
+					qstate->env->neg_cache,
+					&iq->qchase,
+					qstate->region,
+					qstate->env->rrset_cache,
+					qstate->env->scratch_buffer,
+					*qstate->env->now,
+					1/*add SOA*/, NULL,
+					qstate->env->cfg);
+			}
+			if(msg && query_dname_compare(
+				qstate->qinfo.qname,
+				iq->qchase.qname) != 0)
+				msg->rep->security =
+					sec_status_unchecked;
+		}
 	}
 	if(msg) {
 		/* handle positive cache response */
@@ -3528,12 +3551,48 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 		/* NOTE : set referral=1, so that rrsets get stored but not 
 		 * the partial query answer (CNAME only). */
 		/* prefetchleeway applied because this updates answer parts */
-		if(!qstate->no_cache_store)
-			iter_dns_store(qstate->env, &iq->response->qinfo,
-				iq->response->rep, 1, qstate->prefetch_leeway,
-				iq->dp&&iq->dp->has_parent_side_NS, NULL,
-				qstate->query_flags, qstate->qstarttime,
-				qstate->is_valrec);
+		if(!qstate->no_cache_store) {
+			int skip_store = 0;
+			/* skip storing rrsets that belong to a local zone
+			 * to prevent upstream TTLs from overriding
+			 * local-data */
+			if(qstate->env->local_zones) {
+				size_t ii;
+				struct reply_info* rrep = iq->response->rep;
+				for(ii=0; ii<rrep->rrset_count; ii++) {
+					int is_lz = 0;
+					struct query_info lzqi;
+					struct ub_packed_rrset_key* rs =
+						rrep->rrsets[ii];
+					memset(&lzqi, 0, sizeof(lzqi));
+					lzqi.qname = rs->rk.dname;
+					lzqi.qname_len = rs->rk.dname_len;
+					lzqi.qtype = ntohs(rs->rk.type);
+					lzqi.qclass = ntohs(
+						rs->rk.rrset_class);
+					(void)local_zones_lookup_msg(
+						qstate->env->local_zones,
+						&lzqi, qstate->region,
+						&is_lz);
+					if(is_lz) {
+						verbose(VERB_ALGO,
+							"skip cache store, "
+							"rrset in local zone");
+						skip_store = 1;
+						break;
+					}
+				}
+			}
+			if(!skip_store)
+				iter_dns_store(qstate->env,
+					&iq->response->qinfo,
+					iq->response->rep, 1,
+					qstate->prefetch_leeway,
+					iq->dp&&iq->dp->has_parent_side_NS,
+					NULL, qstate->query_flags,
+					qstate->qstarttime,
+					qstate->is_valrec);
+		}
 		/* set the current request's qname to the new value. */
 		iq->qchase.qname = sname;
 		iq->qchase.qname_len = snamelen;

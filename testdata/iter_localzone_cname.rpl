@@ -1,0 +1,298 @@
+; config options
+; Test that local zones are consulted during iterator CNAME restarts.
+; When a forwarder returns a CNAME whose target is covered by an
+; authoritative local zone (redirect, static), the local zone data
+; must be used instead of forwarding the target query upstream.
+; Also tests that upstream rrsets for local zone names are not cached.
+server:
+	target-fetch-policy: "0 0 0 0 0"
+	rrset-roundrobin: no
+
+	; localhost redirect zone with custom TTL (the production use case)
+	local-zone: "localhost." redirect
+	local-data: "localhost. 70 IN A 127.0.0.1"
+	local-data: "localhost. 70 IN AAAA ::1"
+
+	; static zone for reverse lookup
+	local-zone: "mylocal.example." static
+	local-data: "mylocal.example. IN A 10.20.30.40"
+	local-data: "mylocal.example. IN SOA ns.mylocal.example. nobody.invalid. 1 3600 1200 604800 70"
+
+	; transparent zone: should NOT intercept CNAME targets
+	local-zone: "passthru.example." transparent
+	local-data: "passthru.example. IN A 1.2.3.4"
+
+forward-zone:
+	name: "."
+	forward-addr: 10.0.10.3
+CONFIG_END
+
+SCENARIO_BEGIN Test local zone lookup during CNAME restarts with forwarders
+
+; Upstream forwarder answers
+RANGE_BEGIN 0 1000
+	ADDRESS 10.0.10.3
+
+; Query for ftphost.example.com returns CNAME -> localhost.
+; This simulates the production scenario: fqdnd queries a hostname
+; that is a CNAME pointing to localhost.
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR NOERROR
+SECTION QUESTION
+ftphost.example.com. IN A
+SECTION ANSWER
+ftphost.example.com. 3600 IN CNAME localhost.
+localhost. 86400 IN A 127.0.0.1
+SECTION AUTHORITY
+SECTION ADDITIONAL
+ENTRY_END
+
+; AAAA query for the same CNAME
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR NOERROR
+SECTION QUESTION
+ftphost.example.com. IN AAAA
+SECTION ANSWER
+ftphost.example.com. 3600 IN CNAME localhost.
+localhost. 86400 IN AAAA ::1
+SECTION AUTHORITY
+SECTION ADDITIONAL
+ENTRY_END
+
+; CNAME target in a static local zone
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR NOERROR
+SECTION QUESTION
+redir.example.com. IN A
+SECTION ANSWER
+redir.example.com. 3600 IN CNAME mylocal.example.
+mylocal.example. 86400 IN A 99.99.99.99
+SECTION AUTHORITY
+SECTION ADDITIONAL
+ENTRY_END
+
+; CNAME target in a transparent zone: upstream answer should be used
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR NOERROR
+SECTION QUESTION
+tpass.example.com. IN A
+SECTION ANSWER
+tpass.example.com. 3600 IN CNAME passthru.example.
+passthru.example. 86400 IN A 5.6.7.8
+SECTION AUTHORITY
+SECTION ADDITIONAL
+ENTRY_END
+
+; Direct query for passthru.example (used when transparent falls through)
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR NOERROR
+SECTION QUESTION
+passthru.example. IN A
+SECTION ANSWER
+passthru.example. 86400 IN A 5.6.7.8
+SECTION AUTHORITY
+SECTION ADDITIONAL
+ENTRY_END
+
+; Two-hop chain: external -> CNAME -> intermediate -> CNAME -> localhost.
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR NOERROR
+SECTION QUESTION
+chain.example.com. IN A
+SECTION ANSWER
+chain.example.com. 3600 IN CNAME hop.example.com.
+SECTION AUTHORITY
+SECTION ADDITIONAL
+ENTRY_END
+
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR NOERROR
+SECTION QUESTION
+hop.example.com. IN A
+SECTION ANSWER
+hop.example.com. 3600 IN CNAME localhost.
+localhost. 86400 IN A 127.0.0.1
+SECTION AUTHORITY
+SECTION ADDITIONAL
+ENTRY_END
+
+; Direct localhost query from upstream (should not be needed if
+; local zone intercepts, but provided as fallback for verification)
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR NOERROR
+SECTION QUESTION
+localhost. IN A
+SECTION ANSWER
+localhost. 86400 IN A 127.0.0.1
+SECTION AUTHORITY
+SECTION ADDITIONAL
+ENTRY_END
+
+RANGE_END
+
+; -----------------------------------------------------------------
+; Test 1: CNAME -> localhost (redirect zone)
+; The upstream returns localhost A with TTL 86400, but the local zone
+; has TTL 70.  The answer must use the local zone TTL.
+; -----------------------------------------------------------------
+STEP 10 QUERY
+ENTRY_BEGIN
+REPLY RD
+SECTION QUESTION
+ftphost.example.com. IN A
+ENTRY_END
+
+STEP 11 CHECK_ANSWER
+ENTRY_BEGIN
+MATCH all
+REPLY QR RD RA NOERROR
+SECTION QUESTION
+ftphost.example.com. IN A
+SECTION ANSWER
+ftphost.example.com. 3600 IN CNAME localhost.
+localhost. 70 IN A 127.0.0.1
+SECTION AUTHORITY
+SECTION ADDITIONAL
+ENTRY_END
+
+; -----------------------------------------------------------------
+; Test 2: Same with AAAA — CNAME -> localhost AAAA
+; -----------------------------------------------------------------
+STEP 20 QUERY
+ENTRY_BEGIN
+REPLY RD
+SECTION QUESTION
+ftphost.example.com. IN AAAA
+ENTRY_END
+
+STEP 21 CHECK_ANSWER
+ENTRY_BEGIN
+MATCH all
+REPLY QR RD RA NOERROR
+SECTION QUESTION
+ftphost.example.com. IN AAAA
+SECTION ANSWER
+ftphost.example.com. 3600 IN CNAME localhost.
+localhost. 70 IN AAAA ::1
+SECTION AUTHORITY
+SECTION ADDITIONAL
+ENTRY_END
+
+; -----------------------------------------------------------------
+; Test 3: CNAME -> static local zone
+; Upstream returns mylocal.example A 99.99.99.99 with TTL 86400,
+; but local zone has 10.20.30.40.  Local data must win.
+; -----------------------------------------------------------------
+STEP 30 QUERY
+ENTRY_BEGIN
+REPLY RD
+SECTION QUESTION
+redir.example.com. IN A
+ENTRY_END
+
+STEP 31 CHECK_ANSWER
+ENTRY_BEGIN
+MATCH all
+REPLY QR RD RA NOERROR
+SECTION QUESTION
+redir.example.com. IN A
+SECTION ANSWER
+redir.example.com. 3600 IN CNAME mylocal.example.
+mylocal.example. IN A 10.20.30.40
+SECTION AUTHORITY
+SECTION ADDITIONAL
+ENTRY_END
+
+; -----------------------------------------------------------------
+; Test 4: CNAME -> transparent local zone (should NOT intercept)
+; Transparent zones allow normal resolution, so the upstream answer
+; should be used, not the local-data.
+; -----------------------------------------------------------------
+STEP 40 QUERY
+ENTRY_BEGIN
+REPLY RD
+SECTION QUESTION
+tpass.example.com. IN A
+ENTRY_END
+
+STEP 41 CHECK_ANSWER
+ENTRY_BEGIN
+MATCH all
+REPLY QR RD RA NOERROR
+SECTION QUESTION
+tpass.example.com. IN A
+SECTION ANSWER
+tpass.example.com. 3600 IN CNAME passthru.example.
+passthru.example. 86400 IN A 5.6.7.8
+SECTION AUTHORITY
+SECTION ADDITIONAL
+ENTRY_END
+
+; -----------------------------------------------------------------
+; Test 5: Two-hop CNAME chain ending at localhost
+; chain.example.com -> hop.example.com -> localhost.
+; Verifies local zone intercept works after multiple restarts.
+; -----------------------------------------------------------------
+STEP 50 QUERY
+ENTRY_BEGIN
+REPLY RD
+SECTION QUESTION
+chain.example.com. IN A
+ENTRY_END
+
+STEP 51 CHECK_ANSWER
+ENTRY_BEGIN
+MATCH all
+REPLY QR RD RA NOERROR
+SECTION QUESTION
+chain.example.com. IN A
+SECTION ANSWER
+chain.example.com. 3600 IN CNAME hop.example.com.
+hop.example.com. 3600 IN CNAME localhost.
+localhost. 70 IN A 127.0.0.1
+SECTION AUTHORITY
+SECTION ADDITIONAL
+ENTRY_END
+
+; -----------------------------------------------------------------
+; Test 6: Repeat test 1 to verify cache was not contaminated.
+; If the upstream 86400 TTL leaked into the rrset cache, this would
+; return TTL ~86400 instead of 70.
+; -----------------------------------------------------------------
+STEP 60 QUERY
+ENTRY_BEGIN
+REPLY RD
+SECTION QUESTION
+ftphost.example.com. IN A
+ENTRY_END
+
+STEP 61 CHECK_ANSWER
+ENTRY_BEGIN
+MATCH all
+REPLY QR RD RA NOERROR
+SECTION QUESTION
+ftphost.example.com. IN A
+SECTION ANSWER
+ftphost.example.com. 3600 IN CNAME localhost.
+localhost. 70 IN A 127.0.0.1
+SECTION AUTHORITY
+SECTION ADDITIONAL
+ENTRY_END
+
+SCENARIO_END

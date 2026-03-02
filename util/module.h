@@ -519,6 +519,8 @@ struct module_env {
 	struct comm_timer* probe_timer;
 	/** auth zones */
 	struct auth_zones* auth_zones;
+	/** local authority zones */
+	struct local_zones* local_zones;
 	/** Mapping of forwarding zones to targets.
 	 * iterator forwarder information. */
 	struct iter_forwards* fwds;

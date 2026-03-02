@@ -51,6 +51,7 @@
 #include "util/data/msgreply.h"
 #include "util/data/msgparse.h"
 #include "util/as112.h"
+#include "services/cache/dns.h"
 
 /* maximum RRs in an RRset, to cap possible 'endless' list RRs.
  * with 16 bytes for an A record, a 64K packet has about 4000 max */
@@ -2274,4 +2275,182 @@ void local_zones_swap_tree(struct local_zones* zones, struct local_zones* data)
 	rbtree_type oldtree = zones->ztree;
 	zones->ztree = data->ztree;
 	data->ztree = oldtree;
+}
+
+/** return true if zone type provides authoritative answers */
+static int
+lz_type_is_answer(enum localzone_type t)
+{
+	switch(t) {
+	case local_zone_redirect:
+	case local_zone_static:
+	case local_zone_deny:
+	case local_zone_refuse:
+	case local_zone_inform_deny:
+	case local_zone_inform_redirect:
+	case local_zone_always_refuse:
+	case local_zone_always_nxdomain:
+	case local_zone_always_nodata:
+	case local_zone_always_deny:
+	case local_zone_always_null:
+	case local_zone_truncate:
+		return 1;
+	default:
+		return 0;
+	}
+}
+
+struct dns_msg*
+local_zones_lookup_msg(struct local_zones* zones, struct query_info* qinfo,
+	struct regional* region, int* is_local_zone)
+{
+	struct local_zone* z;
+	struct local_data key;
+	struct local_data* ld;
+	struct local_rrset* lr;
+	struct dns_msg* msg;
+	struct packed_rrset_data* d;
+	struct packed_rrset_data* newd;
+	int labs;
+	size_t i, total;
+
+	*is_local_zone = 0;
+	if(!zones) return NULL;
+
+	labs = dname_count_labels(qinfo->qname);
+
+	lock_rw_rdlock(&zones->lock);
+	z = local_zones_lookup(zones, qinfo->qname, qinfo->qname_len,
+		labs, qinfo->qclass, qinfo->qtype, 0);
+	if(!z) {
+		lock_rw_unlock(&zones->lock);
+		return NULL;
+	}
+	lock_rw_rdlock(&z->lock);
+	lock_rw_unlock(&zones->lock);
+
+	if(!lz_type_is_answer(z->type)) {
+		lock_rw_unlock(&z->lock);
+		return NULL;
+	}
+	*is_local_zone = 1;
+
+	/* redirect zones store data under the zone apex */
+	key.node.key = &key;
+	if(z->type == local_zone_redirect ||
+		z->type == local_zone_inform_redirect) {
+		key.name = z->name;
+		key.namelen = z->namelen;
+		key.namelabs = z->namelabs;
+	} else {
+		key.name = qinfo->qname;
+		key.namelen = qinfo->qname_len;
+		key.namelabs = labs;
+	}
+
+	ld = (struct local_data*)rbtree_search(&z->data, &key.node);
+	if(!ld) {
+		lock_rw_unlock(&z->lock);
+		return NULL;
+	}
+
+	lr = local_data_find_type(ld, qinfo->qtype, 1);
+	if(!lr) {
+		lock_rw_unlock(&z->lock);
+		return NULL;
+	}
+
+	d = (struct packed_rrset_data*)lr->rrset->entry.data;
+
+	msg = (struct dns_msg*)regional_alloc_zero(region, sizeof(*msg));
+	if(!msg) {
+		lock_rw_unlock(&z->lock);
+		return NULL;
+	}
+	msg->qinfo = *qinfo;
+	msg->qinfo.qname = regional_alloc_init(region, qinfo->qname,
+		qinfo->qname_len);
+	if(!msg->qinfo.qname) {
+		lock_rw_unlock(&z->lock);
+		return NULL;
+	}
+	msg->qinfo.local_alias = NULL;
+
+	/* non-packed reply_info, rrsets array allocated separately */
+	msg->rep = (struct reply_info*)regional_alloc_zero(region,
+		sizeof(struct reply_info) - sizeof(struct rrset_ref));
+	if(!msg->rep) {
+		lock_rw_unlock(&z->lock);
+		return NULL;
+	}
+	msg->rep->rrsets = (struct ub_packed_rrset_key**)
+		regional_alloc(region, sizeof(struct ub_packed_rrset_key*));
+	if(!msg->rep->rrsets) {
+		lock_rw_unlock(&z->lock);
+		return NULL;
+	}
+	msg->rep->flags = BIT_QR | BIT_AA;
+	msg->rep->qdcount = 1;
+	msg->rep->an_numrrsets = 1;
+	msg->rep->rrset_count = 1;
+	msg->rep->ttl = d->ttl;
+	msg->rep->prefetch_ttl = PREFETCH_TTL_CALC(d->ttl);
+	msg->rep->serve_expired_ttl = d->ttl + SERVE_EXPIRED_TTL;
+	msg->rep->security = sec_status_insecure;
+	msg->rep->reason_bogus = LDNS_EDE_NONE;
+
+	/* deep-copy the rrset into the caller's region */
+	msg->rep->rrsets[0] = (struct ub_packed_rrset_key*)
+		regional_alloc_zero(region, sizeof(struct ub_packed_rrset_key));
+	if(!msg->rep->rrsets[0]) {
+		lock_rw_unlock(&z->lock);
+		return NULL;
+	}
+	msg->rep->rrsets[0]->entry.key = msg->rep->rrsets[0];
+	msg->rep->rrsets[0]->rk = lr->rrset->rk;
+	/* rewrite dname for redirect zones (stored as zone apex) */
+	msg->rep->rrsets[0]->rk.dname = regional_alloc_init(region,
+		qinfo->qname, qinfo->qname_len);
+	if(!msg->rep->rrsets[0]->rk.dname) {
+		lock_rw_unlock(&z->lock);
+		return NULL;
+	}
+	msg->rep->rrsets[0]->rk.dname_len = qinfo->qname_len;
+	msg->rep->rrsets[0]->entry.hash =
+		rrset_key_hash(&msg->rep->rrsets[0]->rk);
+
+	total = d->count + d->rrsig_count;
+	newd = (struct packed_rrset_data*)regional_alloc_zero(region,
+		sizeof(struct packed_rrset_data)
+		+ total * (sizeof(size_t) + sizeof(uint8_t*)
+			   + sizeof(time_t)));
+	if(!newd) {
+		lock_rw_unlock(&z->lock);
+		return NULL;
+	}
+	newd->ttl = d->ttl;
+	newd->count = d->count;
+	newd->rrsig_count = d->rrsig_count;
+	newd->trust = rrset_trust_prim_noglue;
+	newd->security = sec_status_insecure;
+	newd->rr_len = (size_t*)((uint8_t*)newd
+		+ sizeof(struct packed_rrset_data));
+	newd->rr_data = (uint8_t**)((uint8_t*)newd->rr_len
+		+ total * sizeof(size_t));
+	newd->rr_ttl = (time_t*)((uint8_t*)newd->rr_data
+		+ total * sizeof(uint8_t*));
+	for(i = 0; i < total; i++) {
+		newd->rr_len[i] = d->rr_len[i];
+		newd->rr_ttl[i] = d->rr_ttl[i];
+		newd->rr_data[i] = regional_alloc_init(region,
+			d->rr_data[i], d->rr_len[i]);
+		if(!newd->rr_data[i]) {
+			lock_rw_unlock(&z->lock);
+			return NULL;
+		}
+	}
+	msg->rep->rrsets[0]->entry.data = newd;
+
+	lock_rw_unlock(&z->lock);
+	return msg;
 }

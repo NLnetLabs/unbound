@@ -782,6 +782,7 @@ daemon_fork(struct daemon* daemon)
 		fatal_exit("Could not create local zones: out of memory");
 	if(!local_zones_apply_cfg(daemon->local_zones, daemon->cfg))
 		fatal_exit("Could not set up local zones");
+	daemon->env->local_zones = daemon->local_zones;
 	if(!(daemon->env->fwds = forwards_create()) ||
 		!forwards_apply_cfg(daemon->env->fwds, daemon->cfg))
 		fatal_exit("Could not set forward zones");
@@ -918,6 +919,7 @@ daemon_cleanup(struct daemon* daemon)
 	daemon->env->hints = NULL;
 	local_zones_delete(daemon->local_zones);
 	daemon->local_zones = NULL;
+	daemon->env->local_zones = NULL;
 	respip_set_delete(daemon->env->respip_set);
 	daemon->env->respip_set = NULL;
 	views_delete(daemon->env->views);

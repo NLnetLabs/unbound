@@ -56,6 +56,7 @@ struct query_info;
 struct sldns_buffer;
 struct comm_reply;
 struct config_strlist;
+struct dns_msg;
 
 /**
  * Local zone type
@@ -679,4 +680,17 @@ lz_enter_zone(struct local_zones* zones, const char* name, const char* type,
  */
 void
 lz_init_parents(struct local_zones* zones);
+
+/**
+ * Look up a query in local zones and return a dns_msg if the zone
+ * provides authoritative data (redirect, static, etc.).
+ * @param zones: local zones tree.
+ * @param qinfo: query name, type, class.
+ * @param region: regional allocator for the dns_msg.
+ * @param is_local_zone: set to 1 if name is in an authoritative local zone.
+ * @return dns_msg with answer, or NULL if no match or no data.
+ */
+struct dns_msg* local_zones_lookup_msg(struct local_zones* zones,
+	struct query_info* qinfo, struct regional* region, int* is_local_zone);
+
 #endif /* SERVICES_LOCALZONE_H */
