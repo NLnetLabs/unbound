@@ -31,75 +31,82 @@ for i in $(seq 1 $NUM_TXT_QUERIES); do
 	fi
 done
 
-# check metrics
-if ! curl -Ssi "http://127.0.0.1:$METRICS_PORT/metrics" -o metrics.out; then
-	echo "FAIL"
-	exit 1
-fi
-
-echo ">> metrics output"
-cat metrics.out
-
+# stats no reset for comparison
 echo ""
 echo ">> unbound-control stats"
 $PRE/unbound-control -c ub.conf stats_noreset | tee stats
 
-echo "done for now"
-exit 0
+# check metrics
+if ! curl -Ssi "http://127.0.0.1:$METRICS_PORT/metrics" -o metrics.out; then
+	echo "FAIL curl failed"
+	exit 1
+fi
+
+echo ""
+echo ">> metrics output"
+cat metrics.out
+
+echo ""
+echo ">> checks"
 
 # more tests
-if grep -Fx "unbound_queries_total{server=\"0\"} $((NUM_TXT_QUERIES+NUM_A_QUERIES))" metrics.out; then
+if grep -Fx "unbound_hits_queries{type=\"total.num.queries\"} $((NUM_TXT_QUERIES+NUM_A_QUERIES))" metrics.out; then
 	echo "OK"
 else
-	echo "FAIL"
+	echo "FAIL total num"
 	exit 1
 fi
 
-if grep -Fx "unbound_queries_by_type_total{type=\"TXT\"} $NUM_TXT_QUERIES" metrics.out; then
+if grep -Fx "unbound_by_type_queries{type=\"TXT\"} $NUM_TXT_QUERIES" metrics.out; then
 	echo "OK"
 else
-	echo "FAIL"
+	echo "FAIL txt num"
 	exit 1
 fi
 
-if grep -Fx "unbound_queries_by_type_total{type=\"A\"} $NUM_A_QUERIES" metrics.out; then
+if grep -Fx "unbound_by_type_queries{type=\"A\"} $NUM_A_QUERIES" metrics.out; then
 	echo "OK"
 else
-	echo "FAIL"
+	echo "FAIL A num"
 	exit 1
 fi
+
+# and check statistics are the same as metrics
+if grep "total.num.queries=$((NUM_TXT_QUERIES+NUM_A_QUERIES))" stats; then echo "OK"; else echo "FAIL"; exit 1; fi
+if grep "num.query.type.TXT=$NUM_TXT_QUERIES" stats; then echo "OK"; else echo "FAIL"; exit 1; fi
+if grep "num.query.type.A=$NUM_A_QUERIES" stats; then echo "OK"; else echo "FAIL"; exit 1; fi
 
 # check that metrics shows the reset stats after using nsd-control stats
-# and check statistics are the same as metrics
-$PRE/unbound-control -c ub.conf stats | tee stats
-if grep "num.queries=$((NUM_TXT_QUERIES+NUM_A_QUERIES))" stats; then echo "OK"; else echo "FAIL"; exit 1; fi
-if grep "num.type.TXT=$NUM_TXT_QUERIES" stats; then echo "OK"; else echo "FAIL"; exit 1; fi
-if grep "num.type.A=$NUM_A_QUERIES" stats; then echo "OK"; else echo "FAIL"; exit 1; fi
-
 # check metrics again
-curl -Ssi "http://127.0.0.1:$TPKG_METRICS_PORT/metrics" -o metrics.out2
+if ! curl -Ssi "http://127.0.0.1:$METRICS_PORT/metrics" -o metrics.out2; then
+	echo "FAIL to curl again"
+	exit 1
+fi
 
+echo ""
 echo ">> metrics output"
 cat metrics.out2
+echo ""
+echo ">> checks"
 
-if grep -Fx "unbound_queries_total{server=\"0\"} 0" metrics.out2; then
+if grep -Fx "unbound_hits_queries{type=\"total.num.queries\"} 0" metrics.out2; then
 	echo "OK"
 else
-	echo "FAIL"
+	echo "FAIL total num 0"
 	exit 1
 fi
 
-if grep -Fx "unbound_queries_by_type_total{type=\"TXT\"} 0" metrics.out2; then
+if grep -Fx "unbound_by_flags_queries{flag=\"RD\"} 0" metrics.out2; then
 	echo "OK"
 else
-	echo "FAIL"
+	echo "FAIL RD num 0"
 	exit 1
 fi
 
-if grep -Fx "unbound_queries_by_type_total{type=\"A\"} 0" metrics.out2; then
+if grep -Fx "unbound_hits_queries{type=\"total.num.cachehits\"} 0" metrics.out2; then
 	echo "OK"
 else
-	echo "FAIL"
+	echo "FAIL cachehits num 0"
 	exit 1
 fi
 
