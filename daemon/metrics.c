@@ -674,7 +674,7 @@ metrics_print_ext(struct evbuffer* reply, struct ub_stats_info* s,
 
 	/* RCODE */
 	print_metric_help_and_type(reply, prefix, "by_rcode_queries",
-		"Unbound DNS queries by rcode", "gauge");
+		"Unbound DNS answers by rcode", "gauge");
 	for(i=0; i<UB_STATS_RCODE_NUM; i++) {
 		/* Always include RCODEs 0-5 */
 		if(inhibit_zero && i > LDNS_RCODE_REFUSED && s->svr.ans_rcode[i] == 0)
