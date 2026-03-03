@@ -1,3 +1,10 @@
+3 March 2026: Wouter
+	- Merge #1411: Allow synthesized DNAME TTL=0 to be served from cache
+	  within grace period. The responses are served from cache within
+	  a 1-second grace period. Reduces recursion when authoritative
+	  servers return DNAME with TTL=0 (RFC 2308). Response
+	  still returns TTL=0 to clients. Adds a test for it.
+
 27 February 2026: Wouter
 	- Merge #1409: Documentation CNAME in redirect-type local-zone.
 	- Update generated man pages.
