@@ -1,6 +1,8 @@
-27 February 2026: Wouter
-	- Merge #1409: Documentation CNAME in redirect-type local-zone.
-	- Update generated man pages.
+27 February 2026: 
+	- Allow synthesized DNAME responses with TTL=0 to be served from cache
+	  within a 1-second grace period (doc/TODO). Reduces recursion when
+	  authoritative servers return DNAME with TTL=0 (RFC 2308). Response
+	  still returns TTL=0 to clients. Test with proper TTL=0 RRSIGs TBD.
 
 25 February 2026: Wouter
 	- Fix validator to set unchecked when validation recursion
