@@ -232,8 +232,15 @@ find_closest_of_type(struct module_env* env, uint8_t* qname, size_t qnamelen,
 
 	/* snip off front part of qname until the type is found */
 	while(qnamelen > 0) {
-		if((rrset = rrset_cache_lookup(env->rrset_cache, qname, 
-			qnamelen, searchtype, qclass, 0, now, 0))) {
+		rrset = rrset_cache_lookup(env->rrset_cache, qname,
+			qnamelen, searchtype, qclass, 0, now, 0);
+		if(!rrset && searchtype == LDNS_RR_TYPE_DNAME)
+			/* If not found, for type DNAME, try 0TTL stored,
+			 * for its grace period. */
+			rrset = rrset_cache_lookup(env->rrset_cache, qname,
+				qnamelen, searchtype, qclass,
+				PACKED_RRSET_UPSTREAM_0TTL, now, 0);
+		if(rrset) {
 			uint8_t* origqname = qname;
 			size_t origqnamelen = qnamelen;
 			if(!noexpiredabove)
