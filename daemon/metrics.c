@@ -49,6 +49,9 @@
 #include "util/timeval_func.h"
 #include "services/listen_dnsport.h"
 #include "services/cache/rrset.h"
+#include "services/rpz.h"
+#include "sldns/parseutil.h"
+#include "sldns/wire2str.h"
 
 /* If there is no metrics enabled, do not add the code. */
 #ifdef USE_METRICS
@@ -491,7 +494,7 @@ metrics_print_mem(struct evbuffer* reply, struct worker* worker,
 	size_t dnscrypt_nonce = 0;
 #endif /* USE_DNSCRYPT */
 #ifdef WITH_DYNLIBMODULE
-    size_t dynlib = 0;
+	size_t dynlib = 0;
 #endif /* WITH_DYNLIBMODULE */
 	msg = slabhash_get_mem(daemon->env->msg_cache);
 	rrset = slabhash_get_mem(&daemon->env->rrset_cache->table);
@@ -512,7 +515,7 @@ metrics_print_mem(struct evbuffer* reply, struct worker* worker,
 	}
 #endif /* USE_DNSCRYPT */
 #ifdef WITH_DYNLIBMODULE
-    dynlib = mod_get_mem(&worker->env, "dynlib");
+	dynlib = mod_get_mem(&worker->env, "dynlib");
 #endif /* WITH_DYNLIBMODULE */
 
 	/* print to reply buffer the stat for prefix mt
@@ -524,25 +527,25 @@ metrics_print_mem(struct evbuffer* reply, struct worker* worker,
 
 	print_metric_help_and_type(reply, prefix, "memory_bytes",
 		"Unbound memory usage, in bytes", "gauge");
-	INFO_LL_STATS("memory_bytes", "mem.cache.rrset", rrset);
-	INFO_LL_STATS("memory_bytes", "mem.cache.message", msg);
-	INFO_LL_STATS("memory_bytes", "mem.mod.iterator", iter);
-	INFO_LL_STATS("memory_bytes", "mem.mod.validator", val);
-	INFO_LL_STATS("memory_bytes", "mem.mod.respip", respip);
+	INFO_LL_STATS("memory_bytes", "mem.cache.rrset", (long long)rrset);
+	INFO_LL_STATS("memory_bytes", "mem.cache.message", (long long)msg);
+	INFO_LL_STATS("memory_bytes", "mem.mod.iterator", (long long)iter);
+	INFO_LL_STATS("memory_bytes", "mem.mod.validator", (long long)val);
+	INFO_LL_STATS("memory_bytes", "mem.mod.respip", (long long)respip);
 #ifdef CLIENT_SUBNET
-	INFO_LL_STATS("memory_bytes", "mem.mod.subnet", subnet);
+	INFO_LL_STATS("memory_bytes", "mem.mod.subnet", (long long)subnet);
 #endif /* CLIENT_SUBNET */
 #ifdef USE_IPSECMOD
-	INFO_LL_STATS("memory_bytes", "mem.mod.ipsecmod", ipsecmod);
+	INFO_LL_STATS("memory_bytes", "mem.mod.ipsecmod", (long long)ipsecmod);
 #endif /* USE_IPSECMOD */
 #ifdef USE_DNSCRYPT
 	INFO_LL_STATS("memory_bytes", "mem.cache.dnscrypt_shared_secret",
-		dnscrypt_shared_secret);
+		(long long)dnscrypt_shared_secret);
 	INFO_LL_STATS("memory_bytes", "mem.cache.dnscrypt_nonce",
-		dnscrypt_nonce);
+		(long long)dnscrypt_nonce);
 #endif /* USE_DNSCRYPT */
 #ifdef WITH_DYNLIBMODULE
-	INFO_LL_STATS("memory_bytes", "mem.mod.dynlibmod", dynlib);
+	INFO_LL_STATS("memory_bytes", "mem.mod.dynlibmod", (long long)dynlib);
 #endif /* WITH_DYNLIBMODULE */
 	INFO_LL_STATS("memory_bytes", "mem.streamwait",
 		s->svr.mem_stream_wait);
@@ -592,9 +595,229 @@ static int
 metrics_print_ext(struct evbuffer* reply, struct ub_stats_info* s,
 	int inhibit_zero)
 {
-	(void)reply;
-	(void)s;
-	(void)inhibit_zero;
+	char* prefix = METRICS_PREFIX;
+	int i;
+	char nm[32];
+	const sldns_rr_descriptor* desc;
+	const sldns_lookup_table* lt;
+
+	/* Print stats for metric mt, where type 'sortnm' is "snm" string,
+	 * with value svar. */
+#define INFO_EXT_STATS(mt, sortnm, snm, svar) \
+	evbuffer_add_printf(reply, "%s%s{%s=\"%s\"} " ARG_LL "d\n", \
+		prefix, mt, sortnm, snm, svar);
+
+	/* TYPE */
+	print_metric_help_and_type(reply, prefix, "by_type_queries",
+		"Unbound DNS queries by type", "gauge");
+	for(i=0; i<UB_STATS_QTYPE_NUM; i++) {
+		if(inhibit_zero && s->svr.qtype[i] == 0)
+			continue;
+		desc = sldns_rr_descript((uint16_t)i);
+		if(desc && desc->_name) {
+			snprintf(nm, sizeof(nm), "%s", desc->_name);
+		} else if (i == LDNS_RR_TYPE_IXFR) {
+			snprintf(nm, sizeof(nm), "IXFR");
+		} else if (i == LDNS_RR_TYPE_AXFR) {
+			snprintf(nm, sizeof(nm), "AXFR");
+		} else if (i == LDNS_RR_TYPE_MAILA) {
+			snprintf(nm, sizeof(nm), "MAILA");
+		} else if (i == LDNS_RR_TYPE_MAILB) {
+			snprintf(nm, sizeof(nm), "MAILB");
+		} else if (i == LDNS_RR_TYPE_ANY) {
+			snprintf(nm, sizeof(nm), "ANY");
+		} else {
+			snprintf(nm, sizeof(nm), "TYPE%d", i);
+		}
+		INFO_EXT_STATS("by_type_queries", "type", nm, s->svr.qtype[i]);
+	}
+	if(!inhibit_zero || s->svr.qtype_big) {
+		INFO_EXT_STATS("by_type_queries", "type", "other",
+			s->svr.qtype_big);
+	}
+
+	/* CLASS */
+	print_metric_help_and_type(reply, prefix, "by_class_queries",
+		"Unbound DNS queries by class", "gauge");
+	for(i=0; i<UB_STATS_QCLASS_NUM; i++) {
+		if(inhibit_zero && s->svr.qclass[i] == 0)
+			continue;
+		lt = sldns_lookup_by_id(sldns_rr_classes, i);
+		if(lt && lt->name) {
+			snprintf(nm, sizeof(nm), "%s", lt->name);
+		} else {
+			snprintf(nm, sizeof(nm), "CLASS%d", i);
+		}
+		INFO_EXT_STATS("by_class_queries", "class", nm,
+			s->svr.qclass[i]);
+	}
+	if(!inhibit_zero || s->svr.qclass_big) {
+		INFO_EXT_STATS("by_class_queries", "class", "other",
+			s->svr.qclass_big);
+	}
+
+	/* OPCODE */
+	print_metric_help_and_type(reply, prefix, "by_opcode_queries",
+		"Unbound DNS queries by opcode", "gauge");
+	for(i=0; i<UB_STATS_OPCODE_NUM; i++) {
+		if(inhibit_zero && s->svr.qopcode[i] == 0)
+			continue;
+		lt = sldns_lookup_by_id(sldns_opcodes, i);
+		if(lt && lt->name) {
+			snprintf(nm, sizeof(nm), "%s", lt->name);
+		} else {
+			snprintf(nm, sizeof(nm), "OPCODE%d", i);
+		}
+		INFO_EXT_STATS("by_opcode_queries", "opcode", nm,
+			s->svr.qopcode[i]);
+	}
+
+	/* RCODE */
+	print_metric_help_and_type(reply, prefix, "by_rcode_queries",
+		"Unbound DNS queries by rcode", "gauge");
+	for(i=0; i<UB_STATS_RCODE_NUM; i++) {
+		/* Always include RCODEs 0-5 */
+		if(inhibit_zero && i > LDNS_RCODE_REFUSED && s->svr.ans_rcode[i] == 0)
+			continue;
+		lt = sldns_lookup_by_id(sldns_rcodes, i);
+		if(lt && lt->name) {
+			snprintf(nm, sizeof(nm), "%s", lt->name);
+		} else {
+			snprintf(nm, sizeof(nm), "RCODE%d", i);
+		}
+		INFO_EXT_STATS("by_rcode_queries", "rcode", nm,
+			s->svr.ans_rcode[i]);
+	}
+	if(!inhibit_zero || s->svr.ans_rcode_nodata) {
+		INFO_EXT_STATS("by_rcode_queries", "rcode", "nodata",
+			s->svr.ans_rcode_nodata);
+	}
+
+	/* FLAGS */
+	print_metric_help_and_type(reply, prefix, "by_flags_queries",
+		"Unbound DNS queries by flags", "gauge");
+	INFO_EXT_STATS("by_flags_queries", "flag", "QR", s->svr.qbit_QR);
+	INFO_EXT_STATS("by_flags_queries", "flag", "AA", s->svr.qbit_AA);
+	INFO_EXT_STATS("by_flags_queries", "flag", "TC", s->svr.qbit_TC);
+	INFO_EXT_STATS("by_flags_queries", "flag", "RD", s->svr.qbit_RD);
+	INFO_EXT_STATS("by_flags_queries", "flag", "RA", s->svr.qbit_RA);
+	INFO_EXT_STATS("by_flags_queries", "flag", "Z", s->svr.qbit_Z);
+	INFO_EXT_STATS("by_flags_queries", "flag", "AD", s->svr.qbit_AD);
+	INFO_EXT_STATS("by_flags_queries", "flag", "CD", s->svr.qbit_CD);
+	INFO_EXT_STATS("by_flags_queries", "flag", "edns.present",
+		s->svr.qEDNS);
+	INFO_EXT_STATS("by_flags_queries", "flag", "edns.DO",
+		s->svr.qEDNS_DO);
+
+	/* transport */
+	print_metric_help_and_type(reply, prefix, "by_transport_queries",
+		"Unbound DNS queries by transport", "gauge");
+	INFO_EXT_STATS("by_transport_queries", "transport", "tcp",
+		s->svr.qtcp);
+	INFO_EXT_STATS("by_transport_queries", "transport", "tcpout",
+		s->svr.qtcp_outgoing);
+	INFO_EXT_STATS("by_transport_queries", "transport", "udpout",
+		s->svr.qudp_outgoing);
+	INFO_EXT_STATS("by_transport_queries", "transport", "tls",
+		s->svr.qtls);
+	INFO_EXT_STATS("by_transport_queries", "transport", "tls.resume",
+		s->svr.qtls_resume);
+	INFO_EXT_STATS("by_transport_queries", "transport", "ipv6",
+		s->svr.qipv6);
+	INFO_EXT_STATS("by_transport_queries", "transport", "https",
+		s->svr.qhttps);
+#ifdef HAVE_NGTCP2
+	INFO_EXT_STATS("by_transport_queries", "transport", "quic",
+		s->svr.qquic);
+#endif /* HAVE_NGTCP2 */
+
+	/* iteration */
+	print_metric_help_and_type(reply, prefix, "ratelimited_queries",
+		"Unbound DNS queries ratelimited", "gauge");
+	INFO_EXT_STATS("ratelimited_queries", "type", "ratelimited",
+		s->svr.queries_ratelimited);
+
+	/* validation */
+	print_metric_help_and_type(reply, prefix, "validation_queries",
+		"Unbound DNS queries DNSSEC validated", "gauge");
+	INFO_EXT_STATS("validation_queries", "type", "secure",
+		s->svr.ans_secure);
+	INFO_EXT_STATS("validation_queries", "type", "bogus",
+		s->svr.ans_bogus);
+	INFO_EXT_STATS("validation_queries", "type", "rrset.bogus",
+		s->svr.rrset_bogus);
+	INFO_EXT_STATS("validation_queries", "type", "valops",
+		s->svr.val_ops);
+	INFO_EXT_STATS("validation_queries", "type", "aggressive.NOERROR",
+		s->svr.num_neg_cache_noerror);
+	INFO_EXT_STATS("validation_queries", "type", "aggressive.NXDOMAIN",
+		s->svr.num_neg_cache_nxdomain);
+
+	/* threat detection */
+	print_metric_help_and_type(reply, prefix, "threat_queries",
+		"Unbound DNS queries threats", "gauge");
+	INFO_EXT_STATS("threat_queries", "type", "unwanted.queries",
+		s->svr.unwanted_queries);
+	INFO_EXT_STATS("threat_queries", "type", "unwanted.replies",
+		s->svr.unwanted_replies);
+
+	/* cache counts */
+	print_metric_help_and_type(reply, prefix, "cache_items",
+		"Unbound DNS cache counts", "gauge");
+	INFO_EXT_STATS("cache_items", "count", "msg.cache",
+		s->svr.msg_cache_count);
+	INFO_EXT_STATS("cache_items", "count", "rrset.cache",
+		s->svr.rrset_cache_count);
+	INFO_EXT_STATS("cache_items", "count", "infra.cache",
+		s->svr.infra_cache_count);
+	INFO_EXT_STATS("cache_items", "count", "key.cache",
+		s->svr.key_cache_count);
+
+	/* max collisions */
+	INFO_EXT_STATS("cache_items", "count", "msg.cache.max_collisions",
+		s->svr.msg_cache_max_collisions);
+	INFO_EXT_STATS("cache_items", "count", "rrset.cache.max_collisions",
+		s->svr.rrset_cache_max_collisions);
+
+	/* applied RPZ actions */
+	print_metric_help_and_type(reply, prefix, "rpz_actions",
+		"Unbound DNS RPZ actions", "gauge");
+	for(i=0; i<UB_STATS_RPZ_ACTION_NUM; i++) {
+		if(i == RPZ_NO_OVERRIDE_ACTION)
+			continue;
+		if(inhibit_zero && s->svr.rpz_action[i] == 0)
+			continue;
+		INFO_EXT_STATS("rpz_actions", "action",
+			rpz_action_to_string(i), s->svr.rpz_action[i]);
+	}
+
+	print_metric_help_and_type(reply, prefix, "handled_queries",
+		"Unbound DNS queries by handling mechanism", "gauge");
+#ifdef USE_DNSCRYPT
+	INFO_EXT_STATS("cache_items", "count", "dnscrypt_shared_secret.cache",
+		s->svr.shared_secret_cache_count);
+	INFO_EXT_STATS("cache_items", "count", "dnscrypt_nonce.cache",
+		s->svr.nonce_cache_count);
+	INFO_EXT_STATS("handled_queries", "type",
+		"dnscrypt.shared_secret.cachemiss",
+		s->svr.num_query_dnscrypt_secret_missed_cache);
+	INFO_EXT_STATS("handled_queries", "type", "dnscrypt.replay",
+		s->svr.num_query_dnscrypt_replay);
+#endif /* USE_DNSCRYPT */
+	INFO_EXT_STATS("handled_queries", "type", "authzone.up",
+		s->svr.num_query_authzone_up);
+	INFO_EXT_STATS("handled_queries", "type", "authzone.down",
+		s->svr.num_query_authzone_down);
+#ifdef CLIENT_SUBNET
+	INFO_EXT_STATS("handled_queries", "type", "subnet",
+		s->svr.num_query_subnet);
+	INFO_EXT_STATS("handled_queries", "type", "subnet_cache",
+		s->svr.num_query_subnet_cache);
+#endif /* CLIENT_SUBNET */
+#ifdef USE_CACHEDB
+	INFO_EXT_STATS("handled_queries", "type", "cachedb",
+		s->svr.num_query_cachedb);
+#endif /* USE_CACHEDB */
 	return 1;
 }
 
