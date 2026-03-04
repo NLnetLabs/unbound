@@ -890,73 +890,39 @@ print_longnum(RES* ssl, const char* desc, size_t x)
 
 /** print mem stats */
 static int
-print_mem(RES* ssl, struct worker* worker, struct daemon* daemon,
-	struct ub_stats_info* s)
+print_mem(RES* ssl, struct worker* worker, struct ub_stats_info* s)
 {
-	size_t msg, rrset, val, iter, respip;
-#ifdef CLIENT_SUBNET
-	size_t subnet = 0;
-#endif /* CLIENT_SUBNET */
-#ifdef USE_IPSECMOD
-	size_t ipsecmod = 0;
-#endif /* USE_IPSECMOD */
-#ifdef USE_DNSCRYPT
-	size_t dnscrypt_shared_secret = 0;
-	size_t dnscrypt_nonce = 0;
-#endif /* USE_DNSCRYPT */
-#ifdef WITH_DYNLIBMODULE
-    size_t dynlib = 0;
-#endif /* WITH_DYNLIBMODULE */
-	msg = slabhash_get_mem(daemon->env->msg_cache);
-	rrset = slabhash_get_mem(&daemon->env->rrset_cache->table);
-	val = mod_get_mem(&worker->env, "validator");
-	iter = mod_get_mem(&worker->env, "iterator");
-	respip = mod_get_mem(&worker->env, "respip");
-#ifdef CLIENT_SUBNET
-	subnet = mod_get_mem(&worker->env, "subnetcache");
-#endif /* CLIENT_SUBNET */
-#ifdef USE_IPSECMOD
-	ipsecmod = mod_get_mem(&worker->env, "ipsecmod");
-#endif /* USE_IPSECMOD */
-#ifdef USE_DNSCRYPT
-	if(daemon->dnscenv) {
-		dnscrypt_shared_secret = slabhash_get_mem(
-			daemon->dnscenv->shared_secrets_cache);
-		dnscrypt_nonce = slabhash_get_mem(daemon->dnscenv->nonces_cache);
-	}
-#endif /* USE_DNSCRYPT */
-#ifdef WITH_DYNLIBMODULE
-    dynlib = mod_get_mem(&worker->env, "dynlib");
-#endif /* WITH_DYNLIBMODULE */
+	struct ub_mem_stat_info mem;
+	stats_get_mem_info(worker, &mem);
 
-	if(!print_longnum(ssl, "mem.cache.rrset"SQ, rrset))
+	if(!print_longnum(ssl, "mem.cache.rrset"SQ, (size_t)mem.rrset))
 		return 0;
-	if(!print_longnum(ssl, "mem.cache.message"SQ, msg))
+	if(!print_longnum(ssl, "mem.cache.message"SQ, (size_t)mem.msg))
 		return 0;
-	if(!print_longnum(ssl, "mem.mod.iterator"SQ, iter))
+	if(!print_longnum(ssl, "mem.mod.iterator"SQ, (size_t)mem.iter))
 		return 0;
-	if(!print_longnum(ssl, "mem.mod.validator"SQ, val))
+	if(!print_longnum(ssl, "mem.mod.validator"SQ, (size_t)mem.val))
 		return 0;
-	if(!print_longnum(ssl, "mem.mod.respip"SQ, respip))
+	if(!print_longnum(ssl, "mem.mod.respip"SQ, (size_t)mem.respip))
 		return 0;
 #ifdef CLIENT_SUBNET
-	if(!print_longnum(ssl, "mem.mod.subnet"SQ, subnet))
+	if(!print_longnum(ssl, "mem.mod.subnet"SQ, (size_t)mem.subnet))
 		return 0;
 #endif /* CLIENT_SUBNET */
 #ifdef USE_IPSECMOD
-	if(!print_longnum(ssl, "mem.mod.ipsecmod"SQ, ipsecmod))
+	if(!print_longnum(ssl, "mem.mod.ipsecmod"SQ, (size_t)mem.ipsecmod))
 		return 0;
 #endif /* USE_IPSECMOD */
 #ifdef USE_DNSCRYPT
 	if(!print_longnum(ssl, "mem.cache.dnscrypt_shared_secret"SQ,
-			dnscrypt_shared_secret))
+			(size_t)mem.dnscrypt_shared_secret))
 		return 0;
 	if(!print_longnum(ssl, "mem.cache.dnscrypt_nonce"SQ,
-			dnscrypt_nonce))
+			(size_t)mem.dnscrypt_nonce))
 		return 0;
 #endif /* USE_DNSCRYPT */
 #ifdef WITH_DYNLIBMODULE
-	if(!print_longnum(ssl, "mem.mod.dynlibmod"SQ, dynlib))
+	if(!print_longnum(ssl, "mem.mod.dynlibmod"SQ, (size_t)mem.dynlib))
 		return 0;
 #endif /* WITH_DYNLIBMODULE */
 	if(!print_longnum(ssl, "mem.streamwait"SQ,
@@ -1244,7 +1210,7 @@ do_stats(RES* ssl, struct worker* worker, int reset)
 	if(!print_uptime(ssl, worker, reset))
 		return;
 	if(daemon->cfg->stat_extended) {
-		if(!print_mem(ssl, worker, daemon, &total))
+		if(!print_mem(ssl, worker, &total))
 			return;
 		if(!print_hist(ssl, &total))
 			return;

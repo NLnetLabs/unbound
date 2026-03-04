@@ -49,6 +49,7 @@ struct comm_point;
 struct comm_reply;
 struct edns_data;
 struct sldns_buffer;
+struct ub_mem_stat_info;
 
 /* stats struct */
 #include "libunbound/unbound.h"
@@ -133,4 +134,11 @@ void server_stats_insrcode(struct ub_server_stats* stats, struct sldns_buffer* b
  */
 void server_stats_downstream_cookie(struct ub_server_stats* stats,
 	struct edns_data* edns);
+
+/** Get the memory statistics for the program.
+ * @param worker: with worker env and ptr to daemon.
+ * @param mem: filled with memory usage value statistics.
+ */
+void stats_get_mem_info(struct worker* worker, struct ub_mem_stat_info* mem);
+
 #endif /* DAEMON_STATS_H */

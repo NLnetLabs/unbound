@@ -476,47 +476,14 @@ metrics_print_uptime(struct evbuffer* reply, struct worker* worker,
 	return 1;
 }
 
-/* metrics print of mem stats */
+/** metrics print of mem stats */
 static int
 metrics_print_mem(struct evbuffer* reply, struct worker* worker,
-	struct daemon* daemon, struct ub_stats_info* s)
+	struct ub_stats_info* s)
 {
 	char* prefix = METRICS_PREFIX;
-	size_t msg, rrset, val, iter, respip;
-#ifdef CLIENT_SUBNET
-	size_t subnet = 0;
-#endif /* CLIENT_SUBNET */
-#ifdef USE_IPSECMOD
-	size_t ipsecmod = 0;
-#endif /* USE_IPSECMOD */
-#ifdef USE_DNSCRYPT
-	size_t dnscrypt_shared_secret = 0;
-	size_t dnscrypt_nonce = 0;
-#endif /* USE_DNSCRYPT */
-#ifdef WITH_DYNLIBMODULE
-	size_t dynlib = 0;
-#endif /* WITH_DYNLIBMODULE */
-	msg = slabhash_get_mem(daemon->env->msg_cache);
-	rrset = slabhash_get_mem(&daemon->env->rrset_cache->table);
-	val = mod_get_mem(&worker->env, "validator");
-	iter = mod_get_mem(&worker->env, "iterator");
-	respip = mod_get_mem(&worker->env, "respip");
-#ifdef CLIENT_SUBNET
-	subnet = mod_get_mem(&worker->env, "subnetcache");
-#endif /* CLIENT_SUBNET */
-#ifdef USE_IPSECMOD
-	ipsecmod = mod_get_mem(&worker->env, "ipsecmod");
-#endif /* USE_IPSECMOD */
-#ifdef USE_DNSCRYPT
-	if(daemon->dnscenv) {
-		dnscrypt_shared_secret = slabhash_get_mem(
-			daemon->dnscenv->shared_secrets_cache);
-		dnscrypt_nonce = slabhash_get_mem(daemon->dnscenv->nonces_cache);
-	}
-#endif /* USE_DNSCRYPT */
-#ifdef WITH_DYNLIBMODULE
-	dynlib = mod_get_mem(&worker->env, "dynlib");
-#endif /* WITH_DYNLIBMODULE */
+	struct ub_mem_stat_info mem;
+	stats_get_mem_info(worker, &mem);
 
 	/* print to reply buffer the stat for prefix mt
 	 * of type snm and long long output svar. */
@@ -527,25 +494,25 @@ metrics_print_mem(struct evbuffer* reply, struct worker* worker,
 
 	print_metric_help_and_type(reply, prefix, "memory_bytes",
 		"Unbound memory usage, in bytes", "gauge");
-	INFO_LL_STATS("memory_bytes", "mem.cache.rrset", (long long)rrset);
-	INFO_LL_STATS("memory_bytes", "mem.cache.message", (long long)msg);
-	INFO_LL_STATS("memory_bytes", "mem.mod.iterator", (long long)iter);
-	INFO_LL_STATS("memory_bytes", "mem.mod.validator", (long long)val);
-	INFO_LL_STATS("memory_bytes", "mem.mod.respip", (long long)respip);
+	INFO_LL_STATS("memory_bytes", "mem.cache.rrset", mem.rrset);
+	INFO_LL_STATS("memory_bytes", "mem.cache.message", mem.msg);
+	INFO_LL_STATS("memory_bytes", "mem.mod.iterator", mem.iter);
+	INFO_LL_STATS("memory_bytes", "mem.mod.validator", mem.val);
+	INFO_LL_STATS("memory_bytes", "mem.mod.respip", mem.respip);
 #ifdef CLIENT_SUBNET
-	INFO_LL_STATS("memory_bytes", "mem.mod.subnet", (long long)subnet);
+	INFO_LL_STATS("memory_bytes", "mem.mod.subnet", mem.subnet);
 #endif /* CLIENT_SUBNET */
 #ifdef USE_IPSECMOD
-	INFO_LL_STATS("memory_bytes", "mem.mod.ipsecmod", (long long)ipsecmod);
+	INFO_LL_STATS("memory_bytes", "mem.mod.ipsecmod", mem.ipsecmod);
 #endif /* USE_IPSECMOD */
 #ifdef USE_DNSCRYPT
 	INFO_LL_STATS("memory_bytes", "mem.cache.dnscrypt_shared_secret",
-		(long long)dnscrypt_shared_secret);
+		mem.dnscrypt_shared_secret);
 	INFO_LL_STATS("memory_bytes", "mem.cache.dnscrypt_nonce",
-		(long long)dnscrypt_nonce);
+		mem.dnscrypt_nonce);
 #endif /* USE_DNSCRYPT */
 #ifdef WITH_DYNLIBMODULE
-	INFO_LL_STATS("memory_bytes", "mem.mod.dynlibmod", (long long)dynlib);
+	INFO_LL_STATS("memory_bytes", "mem.mod.dynlibmod", mem.dynlib);
 #endif /* WITH_DYNLIBMODULE */
 	INFO_LL_STATS("memory_bytes", "mem.streamwait",
 		s->svr.mem_stream_wait);
@@ -791,6 +758,7 @@ metrics_print_ext(struct evbuffer* reply, struct ub_stats_info* s,
 			rpz_action_to_string(i), s->svr.rpz_action[i]);
 	}
 
+	/* handling mechanism */
 	print_metric_help_and_type(reply, prefix, "handled_queries",
 		"Unbound DNS queries by handling mechanism", "gauge");
 #ifdef USE_DNSCRYPT
@@ -860,7 +828,7 @@ do_metrics_stats(struct evbuffer* reply, struct worker* worker, int reset)
 	if(!metrics_print_uptime(reply, worker, &stattime, &time_last_stat))
 		return;
 	if(daemon->cfg->stat_extended) {
-		if(!metrics_print_mem(reply, worker, daemon, &total))
+		if(!metrics_print_mem(reply, worker, &total))
 			return;
 		if(!metrics_print_hist(reply, &total))
 			return;
