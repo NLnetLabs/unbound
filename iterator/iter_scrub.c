@@ -972,8 +972,10 @@ scrub_sanitize(sldns_buffer* pkt, struct msg_parse* msg,
 		}
 
 		/* remove private addresses */
-		if( (rrset->type == LDNS_RR_TYPE_A || 
-			rrset->type == LDNS_RR_TYPE_AAAA)) {
+		if(rrset->type == LDNS_RR_TYPE_A ||
+			rrset->type == LDNS_RR_TYPE_AAAA ||
+			rrset->type == LDNS_RR_TYPE_SVCB ||
+			rrset->type == LDNS_RR_TYPE_HTTPS) {
 
 			/* do not set servfail since this leads to too
 			 * many drops of other people using rfc1918 space */

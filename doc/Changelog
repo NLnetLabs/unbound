@@ -1,3 +1,11 @@
+5 March 2026: Wouter
+	- Fix for DNS Rebinding Bypass via SVCB/HTTPS Records in Unbound.
+	  Thanks to Kunta Chu, School of Software, Tsinghua University,
+	  Taofei Guo, Peking University, and Jianjun Chen, Institute for
+	  Network Sciences and Cyberspace, Tsinghua University for the
+	  report. The private-address option is fixed to also elide
+	  SVCB and HTTPS records that match the filter.
+
 4 March 2026: Yorgos
 	- For #1411: Introduce a failing case in the rpl test so that it only
 	  passes with the fix in place.

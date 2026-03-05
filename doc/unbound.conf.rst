@@ -2015,6 +2015,11 @@ These options are part of the ``server:`` section.
     turned into a network proxy, allowing remote access through the browser to
     other parts of your private network.
 
+    The option removes resource records of types A, AAAA, SVCB and HTTPS
+    that match the filter.
+    Inside the SVCB and HTTPS records, the svcparams of type ipv4hint
+    and ipv6hint are checked for matches.
+
     Some names can be allowed to contain your private addresses, by default all
     the :ref:`local-data<unbound.conf.local-data>` that you configured is
     allowed to, and you can specify additional names using
