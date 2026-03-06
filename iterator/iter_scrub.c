@@ -285,6 +285,17 @@ synth_cname_rrset(uint8_t** sname, size_t* snamelen, uint8_t* alias,
 		return NULL;
 	memmove(cn->rr_first->ttl_data, rrset->rr_first->ttl_data,
 		sizeof(uint32_t)); /* RFC6672: synth CNAME TTL == DNAME TTL */
+	/* Apply cache TTL policy so DNAME and synthesized CNAME stay equal
+	 * and respect cache-min-ttl/cache-max-ttl (same as rdata_copy path). */
+	if(!SERVE_ORIGINAL_TTL) {
+		uint32_t ttl = sldns_read_uint32(cn->rr_first->ttl_data);
+		time_t ttl_t = (time_t)ttl;
+		if(ttl_t < MIN_TTL) ttl_t = MIN_TTL;
+		if(ttl_t > MAX_TTL) ttl_t = MAX_TTL;
+		ttl = (uint32_t)ttl_t;
+		sldns_write_uint32(cn->rr_first->ttl_data, ttl);
+		sldns_write_uint32(rrset->rr_first->ttl_data, ttl);
+	}
 	sldns_write_uint16(cn->rr_first->ttl_data+4, aliaslen);
 	memmove(cn->rr_first->ttl_data+6, alias, aliaslen);
 	cn->rr_first->size = sizeof(uint16_t)+aliaslen;
@@ -502,8 +513,6 @@ scrub_normalize(sldns_buffer* pkt, struct msg_parse* msg,
 				log_err("out of memory synthesizing CNAME");
 				return 0;
 			}
-			/* FIXME: resolve the conflict between synthesized 
-			 * CNAME ttls and the cache. */
 			rrset = nx;
 			continue;
 
