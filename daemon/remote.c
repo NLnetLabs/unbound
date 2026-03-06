@@ -6186,6 +6186,15 @@ fr_atomic_copy_cfg(struct config_file* oldcfg, struct config_file* cfg,
 	COPY_VAR_int(iter_scrub_cname);
 	COPY_VAR_int(max_global_quota);
 	COPY_VAR_int(iter_scrub_promiscuous);
+
+#undef COPY_VAR_int
+#undef COPY_VAR_ptr
+#undef COPY_VAR_unsigned_int
+#undef COPY_VAR_size_t
+#undef COPY_VAR_uint8_t
+#undef COPY_VAR_uint16_t
+#undef COPY_VAR_uint32_t
+#undef COPY_VAR_int32_t
 }
 #endif /* ATOMIC_POINTER_LOCK_FREE && HAVE_LINK_ATOMIC_STORE */
 
