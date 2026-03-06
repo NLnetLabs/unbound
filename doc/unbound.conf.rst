@@ -366,6 +366,10 @@ These options are part of the ``server:`` section.
     Larger numbers need extra resources from the operating system.
     For performance a very large value is best, use libevent to make this
     possible.
+    Should be higher (preferably double) than the value of
+    :ref:`num-queries-per-thread<unbound.conf.num-queries-per-thread>` to
+    account for cases where the request list is full and avoid file descriptor
+    starvation.
 
     Default: 4096 (libevent) / 960 (minievent) / 48 (windows)
 

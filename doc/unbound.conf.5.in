@@ -382,6 +382,10 @@ Default depends on compile options.
 Larger numbers need extra resources from the operating system.
 For performance a very large value is best, use libevent to make this
 possible.
+Should be higher (preferably double) than the value of
+\fI\%num\-queries\-per\-thread\fP to
+account for cases where the request list is full and avoid file descriptor
+starvation.
 .sp
 Default: 4096 (libevent) / 960 (minievent) / 48 (windows)
 .UNINDENT

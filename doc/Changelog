@@ -1,6 +1,10 @@
 6 March 2026: Wouter
 	- Merge #1415: Add lock unlock for view in memory error handling.
 
+6 March 2026: Yorgos
+	- Document the suggestion for a higher value for 'outgoing-range';
+	  helps when the request list is full.
+
 5 March 2026: Wouter
 	- Fix for DNS Rebinding Bypass via SVCB/HTTPS Records in Unbound.
 	  Thanks to Kunta Chu, School of Software, Tsinghua University,
