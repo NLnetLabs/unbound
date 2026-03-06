@@ -56,6 +56,24 @@
  * with 16 bytes for an A record, a 64K packet has about 4000 max */
 #define LOCALZONE_RRSET_COUNT_MAX 4096
 
+static const char* default_zones_reverse_array[] = {
+	"127.in-addr.arpa.", /* reverse ip4 zone */
+	"1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.ip6.arpa.", /* reverse ip6 zone */
+	0
+};
+const char** local_zones_default_reverse = default_zones_reverse_array;
+
+static const char* default_zones_special_array[] = {
+	"test.",		/* RFC 6761 */
+	"invalid.",		/* RFC 6761 */
+	"onion.",		/* RFC 7686 */
+	"home.arpa.",		/* RFC 8375 */
+	"resolver.arpa.",	/* RFC 9462 */
+	"service.arpa.",	/* RFC 9665 */
+	0
+};
+const char** local_zones_default_special = default_zones_special_array;
+
 /** print all RRsets in local zone */
 static void
 local_zone_out(struct local_zone* z)
@@ -834,12 +852,51 @@ lz_nodefault(struct config_file* cfg, const char* name)
 
 	for(p = cfg->local_zones_nodefault; p; p = p->next) {
 		/* compare zone name, lowercase, compare without ending . */
-		if(strncasecmp(p->str, name, len) == 0 && 
+		if(strncasecmp(p->str, name, len) == 0 &&
 			(strlen(p->str) == len || (strlen(p->str)==len+1 &&
 			p->str[len] == '.')))
 			return 1;
 	}
 	return 0;
+}
+
+/** enter reverse default zone */
+static int
+add_reverse_default(struct local_zones* zones, struct config_file* cfg,
+        const char* name)
+{
+	struct local_zone* z;
+	char str[1024]; /* known long enough */
+	if(lz_exists(zones, name) || lz_nodefault(cfg, name))
+		return 1; /* do not enter default content */
+	if(!(z=lz_enter_zone(zones, name, "static", LDNS_RR_CLASS_IN)))
+		return 0;
+	snprintf(str, sizeof(str), "%s 10800 IN SOA localhost. "
+		"nobody.invalid. 1 3600 1200 604800 10800", name);
+	if(!lz_enter_rr_into_zone(z, str)) {
+		lock_rw_unlock(&z->lock);
+		return 0;
+	}
+	snprintf(str, sizeof(str), "%s 10800 IN NS localhost. ", name);
+	if(!lz_enter_rr_into_zone(z, str)) {
+		lock_rw_unlock(&z->lock);
+		return 0;
+	}
+	if(strncasecmp("127.in-addr.arpa.", name, 17) ==  0) {
+		if(!lz_enter_rr_into_zone(z,
+			"1.0.0.127.in-addr.arpa. 10800 IN PTR localhost.")) {
+			lock_rw_unlock(&z->lock);
+			return 0;
+		}
+	} else if(strncasecmp("1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.ip6.arpa.", name, 73) ==  0) {
+		snprintf(str, sizeof(str), "%s 10800 IN PTR localhost.", name);
+		if(!lz_enter_rr_into_zone(z, str)) {
+			lock_rw_unlock(&z->lock);
+			return 0;
+		}
+	}
+	lock_rw_unlock(&z->lock);
+	return 1;
 }
 
 /** enter (AS112) empty default zone */
@@ -902,72 +959,23 @@ int local_zone_enter_defaults(struct local_zones* zones, struct config_file* cfg
 		}
 		lock_rw_unlock(&z->lock);
 	}
-	/* reverse ip4 zone */
-	if(!lz_exists(zones, "127.in-addr.arpa.") &&
-		!lz_nodefault(cfg, "127.in-addr.arpa.")) {
-		if(!(z=lz_enter_zone(zones, "127.in-addr.arpa.", "static", 
-			LDNS_RR_CLASS_IN)) ||
-		   !lz_enter_rr_into_zone(z,
-			"127.in-addr.arpa. 10800 IN NS localhost.") ||
-		   !lz_enter_rr_into_zone(z,
-			"127.in-addr.arpa. 10800 IN SOA localhost. "
-			"nobody.invalid. 1 3600 1200 604800 10800") ||
-		   !lz_enter_rr_into_zone(z,
-			"1.0.0.127.in-addr.arpa. 10800 IN PTR localhost.")) {
+
+	/* ip4 and ip6 reverse */
+	for(zstr = local_zones_default_reverse; *zstr; zstr++) {
+		if(!add_reverse_default(zones, cfg, *zstr)) {
 			log_err("out of memory adding default zone");
-			if(z) { lock_rw_unlock(&z->lock); }
 			return 0;
 		}
-		lock_rw_unlock(&z->lock);
 	}
-	/* reverse ip6 zone */
-	if(!lz_exists(zones, "1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.ip6.arpa.") &&
-		!lz_nodefault(cfg, "1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.ip6.arpa.")) {
-		if(!(z=lz_enter_zone(zones, "1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.ip6.arpa.", "static", 
-			LDNS_RR_CLASS_IN)) ||
-		   !lz_enter_rr_into_zone(z,
-			"1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.ip6.arpa. 10800 IN NS localhost.") ||
-		   !lz_enter_rr_into_zone(z,
-			"1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.ip6.arpa. 10800 IN SOA localhost. "
-			"nobody.invalid. 1 3600 1200 604800 10800") ||
-		   !lz_enter_rr_into_zone(z,
-			"1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.ip6.arpa. 10800 IN PTR localhost.")) {
+
+	/* special-use zones */
+	for(zstr = local_zones_default_special; *zstr; zstr++) {
+		if(!add_empty_default(zones, cfg, *zstr)) {
 			log_err("out of memory adding default zone");
-			if(z) { lock_rw_unlock(&z->lock); }
 			return 0;
 		}
-		lock_rw_unlock(&z->lock);
 	}
-	/* home.arpa. zone (RFC 8375) */
-	if(!add_empty_default(zones, cfg, "home.arpa.")) {
-		log_err("out of memory adding default zone");
-		return 0;
-	}
-	/* resolver.arpa. zone (RFC 9462) */
-	if(!add_empty_default(zones, cfg, "resolver.arpa.")) {
-		log_err("out of memory adding default zone");
-		return 0;
-	}
-	/* service.arpa. zone (draft-ietf-dnssd-srp-25) */
-	if(!add_empty_default(zones, cfg, "service.arpa.")) {
-		log_err("out of memory adding default zone");
-		return 0;
-	}
-	/* onion. zone (RFC 7686) */
-	if(!add_empty_default(zones, cfg, "onion.")) {
-		log_err("out of memory adding default zone");
-		return 0;
-	}
-	/* test. zone (RFC 6761) */
-	if(!add_empty_default(zones, cfg, "test.")) {
-		log_err("out of memory adding default zone");
-		return 0;
-	}
-	/* invalid. zone (RFC 6761) */
-	if(!add_empty_default(zones, cfg, "invalid.")) {
-		log_err("out of memory adding default zone");
-		return 0;
-	}
+
 	/* block AS112 zones, unless asked not to */
 	if(!cfg->unblock_lan_zones) {
 		for(zstr = as112_zones; *zstr; zstr++) {

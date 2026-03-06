@@ -4,6 +4,8 @@
 6 March 2026: Yorgos
 	- Document the suggestion for a higher value for 'outgoing-range';
 	  helps when the request list is full.
+	- Warn for unused 'nodefault' local-zone configuration in
+	  unbound-checkconf (related to #1416).
 
 5 March 2026: Wouter
 	- Fix for DNS Rebinding Bypass via SVCB/HTTPS Records in Unbound.

@@ -2399,7 +2399,7 @@ server_local_zone: VAR_LOCAL_ZONE STRING_ARG STRING_ARG
 			yyerror("local-zone type: expected static, deny, "
 				"refuse, redirect, transparent, "
 				"typetransparent, inform, inform_deny, "
-				"inform_redirect, always_transparent, block_a,"
+				"inform_redirect, always_transparent, block_a, "
 				"always_refuse, always_nxdomain, "
 				"always_nodata, always_deny, always_null, "
 				"noview, nodefault or ipset");
