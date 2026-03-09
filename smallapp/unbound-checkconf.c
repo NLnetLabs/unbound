@@ -228,6 +228,7 @@ nodefaultzonescheck(struct config_file* cfg)
 			"documentation for default configured local-zones.\n",
 			d->str);
 default_continue:
+		; /* statement to jump to, for older gcc. */
 	}
 #undef COMPARE_ZONE_NAME
 }
