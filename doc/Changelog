@@ -1,5 +1,7 @@
 9 March 2026: Wouter
 	- Fix compile failure in unbound-checkconf for older gcc compiler.
+	- Merge #1418: Apply cache TTL policy to DNAME and synthesized
+	  CNAME on wire path.
 
 6 March 2026: Wouter
 	- Merge #1415: Add lock unlock for view in memory error handling.
