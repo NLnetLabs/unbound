@@ -466,8 +466,9 @@ scrub_normalize(sldns_buffer* pkt, struct msg_parse* msg,
 				pkt, msg, prev, &rrset);
 			continue;
 		}
-		if(rrset->type == LDNS_RR_TYPE_DNAME && 
-			pkt_strict_sub(pkt, sname, rrset->dname)) {
+		if(rrset->type == LDNS_RR_TYPE_DNAME &&
+			pkt_strict_sub(pkt, sname, rrset->dname) &&
+			pkt_sub(pkt, rrset->dname, zonename)) {
 			/* check if next rrset is correct CNAME. else,
 			 * synthesize a CNAME */
 			struct rrset_parse* nx = rrset->rrset_all_next;
@@ -534,7 +535,8 @@ scrub_normalize(sldns_buffer* pkt, struct msg_parse* msg,
 			if(nx && nx->section == LDNS_SECTION_ANSWER &&
 				nx->type == LDNS_RR_TYPE_DNAME &&
 				nx->rr_count == 1 &&
-				pkt_strict_sub(pkt, sname, nx->dname)) {
+				pkt_strict_sub(pkt, sname, nx->dname) &&
+				pkt_sub(pkt, nx->dname, zonename)) {
 				/* there is a DNAME after this CNAME, it 
 				 * is in the ANSWER section, and the DNAME
 				 * applies to the name we cover */

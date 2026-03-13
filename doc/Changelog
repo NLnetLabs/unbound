@@ -1,3 +1,8 @@
+13 March 2026: Yorgos
+	- Fix to ignore out-of-zone DNAME records for CNAME synthesis. Thanks
+	  to Yuxiao Wu, Yiyi Wang, Zhang Chao, Baojun Liu, and Haixin Duan from
+	  Tsinghua University.
+
 9 March 2026: Wouter
 	- Fix compile failure in unbound-checkconf for older gcc compiler.
 	- Merge #1418: Apply cache TTL policy to DNAME and synthesized
