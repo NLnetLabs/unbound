@@ -1,6 +1,7 @@
 /*
  * daemon/remote.c - remote control for the unbound daemon.
  *
+ * Copyright (c) 2024, Rubicon Communications, LLC ("Netgate"). All rights reserved.
  * Copyright (c) 2008, NLnet Labs. All rights reserved.
  *
  * This software is open source.
@@ -1513,18 +1514,95 @@ do_datas_add(struct daemon_remote* rc, RES* ssl, struct worker* worker)
 	(void)ssl_printf(ssl, "added %d datas\n", num);
 }
 
+static int
+perform_data_remove_rr(RES* ssl, struct local_zones* local_zones,
+	uint8_t* rr, size_t len, size_t dname_len, char *arg)
+{
+	uint16_t rr_class, rr_type;
+	int labs, s;
+	struct local_zone* z;
+	struct local_data* ld;
+	uint8_t *rdata;
+	size_t rdata_len, index;
+	struct packed_rrset_data* d;
+
+	rdata = sldns_wirerr_get_rdatawl(rr, len, dname_len);
+	rdata_len = ((size_t)sldns_wirerr_get_rdatalen(rr, len, dname_len))+2;
+
+	labs = dname_count_labels(rr);
+
+	rr_class = sldns_wirerr_get_class(rr, len, dname_len);
+	rr_type = sldns_wirerr_get_type(rr, len, dname_len);
+
+	z = local_zones_lookup(local_zones, rr, dname_len,
+			labs, rr_class, rr_type);
+	if (!z) {
+		ssl_printf(ssl, "error no zone for rr %s\n", arg);
+		return 0;
+	}
+
+	ld = local_zone_find_data(z, rr, dname_len, labs);
+	if (!ld) {
+		ssl_printf(ssl, "error no local data for rr %s\n", arg);
+		return 0;
+	}
+
+	struct local_rrset* prev=NULL, *p=ld->rrsets;
+	while (p && ntohs(p->rrset->rk.type) != rr_type) {
+		prev = p;
+		p = p->next;
+	}
+
+	if (!p) {
+		ssl_printf(ssl, "error no rrset for rr %s\n", arg);
+		return 0;
+    }
+
+	d = (struct packed_rrset_data*)p->rrset->entry.data;
+	if (!packed_rrset_find_rr(d, rdata, rdata_len, &index)) {
+		ssl_printf(ssl, "error rr %s not found in rrset\n", arg);
+		return 0;
+	}
+
+	if (!local_rrset_remove_rr(d, index)) {
+		ssl_printf(ssl, "error unable to delete rr %s\n", arg);
+		return 0;
+	}
+
+	return 1;
+}
+
 /** Remove RR data */
 static int
 perform_data_remove(RES* ssl, struct local_zones* zones, char* arg)
 {
-	uint8_t* nm;
-	int nmlabs;
-	size_t nmlen;
-	if(!parse_arg_name(ssl, arg, &nm, &nmlen, &nmlabs))
+	uint8_t rr[LDNS_RR_BUF_SIZE], *nm;
+	size_t len = sizeof(rr);
+	int status, nmlabs;
+	size_t nmlen, dname_len;
+
+	/* try to parse as a rr first */
+	status = sldns_str2wire_rr_buf(arg, rr, &len, &dname_len, 3600,
+				NULL, 0, NULL, 0);
+
+	/* try to parse as a domain name second */
+	if (status != 0) {
+		if (parse_arg_name(ssl, arg, &nm, &nmlen, &nmlabs)) {
+			local_zones_del_data(zones, nm,
+				nmlen, nmlabs, LDNS_RR_CLASS_IN);
+			free(nm);
+			return 1;
+		}
+		ssl_printf(ssl, "error cannot parse rr %s at %d: %s\n", arg,
+			LDNS_WIREPARSE_OFFSET(status),
+			sldns_get_errorstr_parse(status));
 		return 0;
-	local_zones_del_data(zones, nm,
-		nmlen, nmlabs, LDNS_RR_CLASS_IN);
-	free(nm);
+	}
+
+	/* handle the rr case */
+	if (!perform_data_remove_rr(ssl, zones, rr, len, dname_len, arg))
+		return 0;
+
 	return 1;
 }
 
