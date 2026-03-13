@@ -11,6 +11,7 @@
 	- For #278: fast_reload can reload tls-service-key, tls-service-pem
 	  and tls-cert-bundle changes. It checks the modification time of
 	  the tls-service-key and tls-service-pem files for update.
+	- Fix detection of http listening port in fast_reload.
 
 9 March 2026: Wouter
 	- Fix compile failure in unbound-checkconf for older gcc compiler.

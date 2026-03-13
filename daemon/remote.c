@@ -7798,7 +7798,9 @@ fr_worker_pickup_listen_dnsport(struct worker* worker)
 		for(ll = front->cps; ll; ll = ll->next) {
 			struct comm_point* cp = ll->com;
 			if(cp->type == comm_tcp_accept &&
-				cp->pp2_enabled /* true for http */) {
+				cp->tcp_handlers &&
+				cp->max_tcp_count > 0 &&
+				cp->tcp_handlers[0]->type == comm_http) {
 				if(cp->ssl)
 					cp->ssl = doh_sslctx;
 			} else if(cp->type == comm_tcp_accept) {
@@ -7905,8 +7907,8 @@ fast_reload_worker_pickup_changes(struct worker* worker)
 #ifdef USE_CACHEDB
 	worker->env.cachedb_enabled = worker->daemon->env->cachedb_enabled;
 #endif
-	fr_worker_pickup_outside_network(worker);
 	fr_worker_pickup_listen_dnsport(worker);
+	fr_worker_pickup_outside_network(worker);
 #ifdef USE_DNSTAP
 	fr_worker_pickup_dnstap_changes(worker);
 #endif
