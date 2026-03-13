@@ -1493,4 +1493,7 @@ size_t getmem_str(char* str);
  */
 int cfg_ports_list_contains(char* ports, int p);
 
+/** get the file mtime stat (or error, with errno and nonexist) */
+int file_get_mtime(const char* file, time_t* mtime, long* ns, int* nonexist);
+
 #endif /* UTIL_CONFIG_FILE_H */

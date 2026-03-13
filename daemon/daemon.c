@@ -199,6 +199,181 @@ signal_handling_playback(struct worker* wrk)
 	sig_record_reload = 0;
 }
 
+#ifdef HAVE_SSL
+/* setup a listening ssl context, fatal_exit() on any failure */
+static void
+setup_listen_sslctx(void** ctx, int is_dot, int is_doh,
+	struct config_file* cfg, char* chroot)
+{
+	char* key = cfg->ssl_service_key;
+	char* pem = cfg->ssl_service_pem;
+	if(chroot && strncmp(key, chroot, strlen(chroot)) == 0)
+		key += strlen(chroot);
+	if(chroot && pem && strncmp(pem, chroot, strlen(chroot)) == 0)
+		pem += strlen(chroot);
+	if(!(*ctx = listen_sslctx_create(key, pem, NULL,
+		cfg->tls_ciphers, cfg->tls_ciphersuites,
+		(cfg->tls_session_ticket_keys.first &&
+		cfg->tls_session_ticket_keys.first->str[0] != 0),
+		is_dot, is_doh, cfg->tls_use_system_policy_versions))) {
+		fatal_exit("could not set up listen SSL_CTX");
+	}
+}
+#endif /* HAVE_SSL */
+
+/* setups the needed ssl contexts, fatal_exit() on any failure */
+void
+daemon_setup_sslctxs(struct daemon* daemon, struct config_file* cfg)
+{
+#ifdef HAVE_SSL
+	char* bundle, *chroot = daemon->chroot;
+	if(cfg->ssl_service_key && cfg->ssl_service_key[0]) {
+		char* key = cfg->ssl_service_key;
+		char* pem = cfg->ssl_service_pem;
+		if(chroot && strncmp(key, chroot, strlen(chroot)) == 0)
+			key += strlen(chroot);
+		if(chroot && pem && strncmp(pem, chroot, strlen(chroot)) == 0)
+			pem += strlen(chroot);
+
+		/* setup the session keys; the callback to use them will be
+		 * attached to each sslctx separately */
+		if(cfg->tls_session_ticket_keys.first &&
+			cfg->tls_session_ticket_keys.first->str[0] != 0) {
+			if(!listen_sslctx_setup_ticket_keys(
+				cfg->tls_session_ticket_keys.first, chroot)) {
+				fatal_exit("could not set session ticket SSL_CTX");
+			}
+		}
+		(void)setup_listen_sslctx(&daemon->listen_dot_sslctx, 1, 0,
+			cfg, chroot);
+#ifdef HAVE_NGHTTP2_NGHTTP2_H
+		if(cfg_has_https(cfg)) {
+			(void)setup_listen_sslctx(&daemon->listen_doh_sslctx,
+				0, 1, cfg, chroot);
+		}
+#endif
+#ifdef HAVE_NGTCP2
+		if(cfg_has_quic(cfg)) {
+			if(!(daemon->listen_quic_sslctx = quic_sslctx_create(
+				key, pem, NULL))) {
+				fatal_exit("could not set up quic SSL_CTX");
+			}
+		}
+#endif /* HAVE_NGTCP2 */
+
+		/* Store the file name and mtime to detect changes later. */
+		daemon->ssl_service_key = strdup(cfg->ssl_service_key);
+		if(!daemon->ssl_service_key)
+			fatal_exit("could not setup ssl ctx: out of memory");
+		daemon->ssl_service_pem = strdup(cfg->ssl_service_pem);
+		if(!daemon->ssl_service_pem)
+			fatal_exit("could not setup ssl ctx: out of memory");
+		if(!file_get_mtime(key,
+			&daemon->mtime_ssl_service_key,
+			&daemon->mtime_ns_ssl_service_key, NULL))
+			log_err("Could not stat(%s): %s",
+				key, strerror(errno));
+		if(!file_get_mtime(pem,
+			&daemon->mtime_ssl_service_pem,
+			&daemon->mtime_ns_ssl_service_pem, NULL))
+			log_err("Could not stat(%s): %s",
+				pem, strerror(errno));
+	}
+	bundle = cfg->tls_cert_bundle;
+	if(chroot && bundle && strncmp(bundle, chroot, strlen(chroot)) == 0)
+		bundle += strlen(chroot);
+	if(!(daemon->connect_dot_sslctx = connect_sslctx_create(NULL, NULL,
+		bundle, cfg->tls_win_cert)))
+		fatal_exit("could not set up connect SSL_CTX");
+#else /* HAVE_SSL */
+	(void)daemon;(void)cfg;
+#endif /* HAVE_SSL */
+}
+
+/** Delete the ssl ctxs */
+static void
+daemon_delete_sslctxs(struct daemon* daemon)
+{
+#ifdef HAVE_SSL
+	listen_sslctx_delete_ticket_keys();
+	SSL_CTX_free((SSL_CTX*)daemon->listen_dot_sslctx);
+	daemon->listen_dot_sslctx = NULL;
+	SSL_CTX_free((SSL_CTX*)daemon->listen_doh_sslctx);
+	daemon->listen_doh_sslctx = NULL;
+	SSL_CTX_free((SSL_CTX*)daemon->connect_dot_sslctx);
+	daemon->connect_dot_sslctx = NULL;
+	free(daemon->ssl_service_key);
+	daemon->ssl_service_key = NULL;
+	free(daemon->ssl_service_pem);
+	daemon->ssl_service_pem = NULL;
+#else
+	(void)daemon;
+#endif
+#ifdef HAVE_NGTCP2
+	SSL_CTX_free((SSL_CTX*)daemon->listen_quic_sslctx);
+	daemon->listen_quic_sslctx = NULL;
+#endif
+}
+
+/** See if the SSL cert files have changed */
+static int
+ssl_cert_changed(struct daemon* daemon, struct config_file* cfg)
+{
+	time_t mtime = 0;
+	long ns = 0;
+	log_assert(daemon->ssl_service_key && cfg->ssl_service_key);
+	if(strcmp(daemon->ssl_service_key, cfg->ssl_service_key) != 0)
+		return 1;
+	if(strcmp(daemon->ssl_service_pem, cfg->ssl_service_pem) != 0)
+		return 1;
+	if(!file_get_mtime(daemon->ssl_service_key, &mtime, &ns, NULL)) {
+		log_err("Could not stat(%s): %s",
+			daemon->ssl_service_key, strerror(errno));
+		/* It has probably changed, but file read is likely going to
+		 * fail. */
+		return 0;
+	}
+	if(mtime != daemon->mtime_ssl_service_key ||
+		ns != daemon->mtime_ns_ssl_service_key)
+		return 1;
+	if(!file_get_mtime(daemon->ssl_service_pem, &mtime, &ns, NULL)) {
+		log_err("Could not stat(%s): %s",
+			daemon->ssl_service_pem, strerror(errno));
+		/* It has probably changed, but file read is likely going to
+		 * fail. */
+		return 0;
+	}
+	if(mtime != daemon->mtime_ssl_service_pem ||
+		ns != daemon->mtime_ns_ssl_service_pem)
+		return 1;
+	return 0;
+}
+
+/** Reload the sslctxs if they have changed */
+static void
+daemon_reload_sslctxs(struct daemon* daemon)
+{
+#ifdef HAVE_SSL
+	if(daemon->cfg->ssl_service_key && daemon->cfg->ssl_service_key[0]) {
+		/* See if changed */
+		if(!daemon->ssl_service_key ||
+			ssl_cert_changed(daemon,daemon->cfg)) {
+			verbose(VERB_ALGO, "Reloading certificates");
+			daemon_delete_sslctxs(daemon);
+			daemon_setup_sslctxs(daemon, daemon->cfg);
+		}
+	} else {
+		/* See if sslctxs are removed from config. */
+		if(daemon->ssl_service_key) {
+			verbose(VERB_ALGO, "Removing certificates");
+			daemon_delete_sslctxs(daemon);
+		}
+	}
+#else
+	(void)daemon;
+#endif
+}
+
 struct daemon* 
 daemon_init(void)
 {
@@ -745,6 +920,7 @@ daemon_fork(struct daemon* daemon)
 #endif
 
 	log_assert(daemon);
+	daemon_reload_sslctxs(daemon);
 	if(!(daemon->env->views = views_create()))
 		fatal_exit("Could not create views: out of memory");
 	/* create individual views and their localzone/data trees */
@@ -991,15 +1167,7 @@ daemon_delete(struct daemon* daemon)
 	free(daemon->pidfile);
 	free(daemon->cfgfile);
 	free(daemon->env);
-#ifdef HAVE_SSL
-	listen_sslctx_delete_ticket_keys();
-	SSL_CTX_free((SSL_CTX*)daemon->listen_dot_sslctx);
-	SSL_CTX_free((SSL_CTX*)daemon->listen_doh_sslctx);
-	SSL_CTX_free((SSL_CTX*)daemon->connect_dot_sslctx);
-#endif
-#ifdef HAVE_NGTCP2
-	SSL_CTX_free((SSL_CTX*)daemon->listen_quic_sslctx);
-#endif
+	daemon_delete_sslctxs(daemon);
 	free(daemon);
 	/* lex cleanup */
 	ub_c_lex_destroy();

@@ -1799,7 +1799,7 @@ void ub_openssl_lock_delete(void)
 #endif /* OPENSSL_THREADS */
 }
 
-int listen_sslctx_setup_ticket_keys(struct config_strlist* tls_session_ticket_keys) {
+int listen_sslctx_setup_ticket_keys(struct config_strlist* tls_session_ticket_keys, char* chroot) {
 #ifdef HAVE_SSL
 	size_t s = 1;
 	struct config_strlist* p;
@@ -1817,14 +1817,18 @@ int listen_sslctx_setup_ticket_keys(struct config_strlist* tls_session_ticket_ke
 		size_t n;
 		unsigned char *data;
 		FILE *f;
+		char* fstr;
 
 		data = (unsigned char *)malloc(80);
 		if(!data)
 			return 0;
 
-		f = fopen(p->str, "rb");
+		fstr = p->str;
+		if(chroot && strncmp(fstr, chroot, strlen(chroot)) == 0)
+			fstr += strlen(chroot);
+		f = fopen(fstr, "rb");
 		if(!f) {
-			log_err("could not read tls-session-ticket-key %s: %s", p->str, strerror(errno));
+			log_err("could not read tls-session-ticket-key %s: %s", fstr, strerror(errno));
 			free(data);
 			return 0;
 		}
@@ -1832,11 +1836,11 @@ int listen_sslctx_setup_ticket_keys(struct config_strlist* tls_session_ticket_ke
 		fclose(f);
 
 		if(n != 80) {
-			log_err("tls-session-ticket-key %s is %d bytes, must be 80 bytes", p->str, (int)n);
+			log_err("tls-session-ticket-key %s is %d bytes, must be 80 bytes", fstr, (int)n);
 			free(data);
 			return 0;
 		}
-		verbose(VERB_OPS, "read tls-session-ticket-key: %s", p->str);
+		verbose(VERB_OPS, "read tls-session-ticket-key: %s", fstr);
 
 		keys->key_name = data;
 		keys->aes_key = data + 16;
