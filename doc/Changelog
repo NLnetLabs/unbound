@@ -7,6 +7,7 @@
 	- Fix #278: DoT: complete unbound restart required on certificate
 	  renew. Fix so that a reload checks if the files have changed, and
 	  if so, reload the contexts. Also for DoH, DoQ and outgoing DoT.
+	- iana portlist updated.
 
 9 March 2026: Wouter
 	- Fix compile failure in unbound-checkconf for older gcc compiler.
