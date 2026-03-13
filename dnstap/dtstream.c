@@ -2133,6 +2133,8 @@ static void* dnstap_io(void* arg)
 	struct dt_io_thread* dtio = (struct dt_io_thread*)arg;
 	time_t secs = 0;
 	struct timeval now;
+	const char name[16] = "unbound/dnstap"; /* seems to be the safest size
+						   between different OSes */
 
 #if defined(HAVE_GETTID) && !defined(THREADS_DISABLED)
 	dtio->thread_tid = gettid();
@@ -2141,6 +2143,8 @@ static void* dnstap_io(void* arg)
 	else
 #endif
 		log_thread_set(&dtio->threadnum);
+
+	ub_thread_setname(dtio->tid, name);
 
 	/* setup */
 	verbose(VERB_ALGO, "start dnstap io thread");
