@@ -8,6 +8,9 @@
 	  renew. Fix so that a reload checks if the files have changed, and
 	  if so, reload the contexts. Also for DoH, DoQ and outgoing DoT.
 	- iana portlist updated.
+	- For #278: fast_reload can reload tls-service-key, tls-service-pem
+	  and tls-cert-bundle changes. It checks the modification time of
+	  the tls-service-key and tls-service-pem files for update.
 
 9 March 2026: Wouter
 	- Fix compile failure in unbound-checkconf for older gcc compiler.

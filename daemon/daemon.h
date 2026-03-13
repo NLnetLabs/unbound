@@ -244,4 +244,23 @@ int setup_acl_for_ports(struct acl_list* list, struct listen_port* port_list);
 /* setups the needed ssl contexts, fatal_exit() on any failure */
 void daemon_setup_sslctxs(struct daemon* daemon, struct config_file* cfg);
 
+/** See if the SSL cert files have changed */
+int ssl_cert_changed(struct daemon* daemon, struct config_file* cfg);
+
+/** Setup the listening DoT SSL_CTX, returns the ssl ctx. */
+void* daemon_setup_listen_dot_sslctx(struct daemon* daemon,
+	struct config_file* cfg);
+
+/** Setup the listening DoH SSL_CTX, returns the ssl ctx. */
+void* daemon_setup_listen_doh_sslctx(struct daemon* daemon,
+	struct config_file* cfg);
+
+/** Setup the listening Quic SSL_CTX, returns the ssl ctx */
+void* daemon_setup_listen_quic_sslctx(struct daemon* daemon,
+	struct config_file* cfg);
+
+/** Setup the connect DoT SSL_CTX, returns the ssl ctx */
+void* daemon_setup_connect_dot_sslctx(struct daemon* daemon,
+	struct config_file* cfg);
+
 #endif /* DAEMON_H */

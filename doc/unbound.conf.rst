@@ -1048,9 +1048,13 @@ These options are part of the ``server:`` section.
     certificate is in the :ref:`tls-service-pem<unbound.conf.tls-service-pem>`
     file and it must also be specified if
     :ref:`tls-service-key<unbound.conf.tls-service-key>` is specified.
-    Enabling or disabling this service requires a restart (a reload is not
-    enough), because the key is read while root permissions are held and before
-    chroot (if any).
+    If the key is stored with root permissions or outside of chroot, then
+    a change or enabling or disabling requires a restart (a reload is not
+    enough).
+    But if the key file (and tls-service-pem file) are accessible, then they
+    are read in on reload, and fast_reload.
+    The server checks the modification time of the file (and the filename)
+    to see if the file has changed for reload.
     The ports enabled implicitly or explicitly via
     :ref:`tls-port<unbound.conf.tls-port>` and
     :ref:`https-port<unbound.conf.https-port>` do not provide normal DNS TCP

@@ -221,12 +221,73 @@ setup_listen_sslctx(void** ctx, int is_dot, int is_doh,
 }
 #endif /* HAVE_SSL */
 
+#ifdef HAVE_SSL
+void* daemon_setup_listen_dot_sslctx(struct daemon* daemon,
+	struct config_file* cfg)
+{
+	void* ctx;
+	(void)setup_listen_sslctx(&ctx, 1, 0, cfg, daemon->chroot);
+	return ctx;
+}
+#endif /* HAVE_SSL */
+
+#ifdef HAVE_SSL
+#ifdef HAVE_NGHTTP2_NGHTTP2_H
+void* daemon_setup_listen_doh_sslctx(struct daemon* daemon,
+	struct config_file* cfg)
+{
+	void* ctx;
+	(void)setup_listen_sslctx(&ctx, 0, 1, cfg, daemon->chroot);
+	return ctx;
+}
+#endif /* HAVE_NGHTTP2_NGHTTP2_H */
+#endif /* HAVE_SSL */
+
+#ifdef HAVE_SSL
+#ifdef HAVE_NGTCP2
+void* daemon_setup_listen_quic_sslctx(struct daemon* daemon,
+	struct config_file* cfg)
+{
+	void* ctx;
+	char* chroot = daemon->chroot;
+	char* key = cfg->ssl_service_key;
+	char* pem = cfg->ssl_service_pem;
+	if(chroot && strncmp(key, chroot, strlen(chroot)) == 0)
+		key += strlen(chroot);
+	if(chroot && pem && strncmp(pem, chroot, strlen(chroot)) == 0)
+		pem += strlen(chroot);
+
+	if(!(ctx = quic_sslctx_create(key, pem, NULL))) {
+		fatal_exit("could not set up quic SSL_CTX");
+	}
+	return ctx;
+}
+#endif /* HAVE_NGTCP2 */
+#endif /* HAVE_SSL */
+
+#ifdef HAVE_SSL
+void* daemon_setup_connect_dot_sslctx(struct daemon* daemon,
+	struct config_file* cfg)
+{
+	void* ctx;
+	char* bundle, *chroot = daemon->chroot;
+	bundle = cfg->tls_cert_bundle;
+	if(chroot && bundle && strncmp(bundle, chroot, strlen(chroot)) == 0)
+		bundle += strlen(chroot);
+
+	if(!(ctx = connect_sslctx_create(NULL, NULL, bundle,
+		cfg->tls_win_cert)))
+		fatal_exit("could not set up connect SSL_CTX");
+	return ctx;
+}
+#endif /* HAVE_SSL */
+
 /* setups the needed ssl contexts, fatal_exit() on any failure */
 void
 daemon_setup_sslctxs(struct daemon* daemon, struct config_file* cfg)
 {
 #ifdef HAVE_SSL
-	char* bundle, *chroot = daemon->chroot;
+	char* chroot = daemon->chroot;
 	if(cfg->ssl_service_key && cfg->ssl_service_key[0]) {
 		char* key = cfg->ssl_service_key;
 		char* pem = cfg->ssl_service_pem;
@@ -244,20 +305,18 @@ daemon_setup_sslctxs(struct daemon* daemon, struct config_file* cfg)
 				fatal_exit("could not set session ticket SSL_CTX");
 			}
 		}
-		(void)setup_listen_sslctx(&daemon->listen_dot_sslctx, 1, 0,
-			cfg, chroot);
+		daemon->listen_dot_sslctx = daemon_setup_listen_dot_sslctx(
+			daemon, cfg);
 #ifdef HAVE_NGHTTP2_NGHTTP2_H
 		if(cfg_has_https(cfg)) {
-			(void)setup_listen_sslctx(&daemon->listen_doh_sslctx,
-				0, 1, cfg, chroot);
+			daemon->listen_doh_sslctx =
+				daemon_setup_listen_doh_sslctx(daemon, cfg);
 		}
 #endif
 #ifdef HAVE_NGTCP2
 		if(cfg_has_quic(cfg)) {
-			if(!(daemon->listen_quic_sslctx = quic_sslctx_create(
-				key, pem, NULL))) {
-				fatal_exit("could not set up quic SSL_CTX");
-			}
+			daemon->listen_quic_sslctx =
+				daemon_setup_listen_quic_sslctx(daemon, cfg);
 		}
 #endif /* HAVE_NGTCP2 */
 
@@ -279,12 +338,8 @@ daemon_setup_sslctxs(struct daemon* daemon, struct config_file* cfg)
 			log_err("Could not stat(%s): %s",
 				pem, strerror(errno));
 	}
-	bundle = cfg->tls_cert_bundle;
-	if(chroot && bundle && strncmp(bundle, chroot, strlen(chroot)) == 0)
-		bundle += strlen(chroot);
-	if(!(daemon->connect_dot_sslctx = connect_sslctx_create(NULL, NULL,
-		bundle, cfg->tls_win_cert)))
-		fatal_exit("could not set up connect SSL_CTX");
+	daemon->connect_dot_sslctx = daemon_setup_connect_dot_sslctx(
+		daemon, cfg);
 #else /* HAVE_SSL */
 	(void)daemon;(void)cfg;
 #endif /* HAVE_SSL */
@@ -315,20 +370,28 @@ daemon_delete_sslctxs(struct daemon* daemon)
 #endif
 }
 
-/** See if the SSL cert files have changed */
-static int
+int
 ssl_cert_changed(struct daemon* daemon, struct config_file* cfg)
 {
 	time_t mtime = 0;
 	long ns = 0;
+	char* chroot = daemon->chroot;
+	char* key = cfg->ssl_service_key;
+	char* pem = cfg->ssl_service_pem;
 	log_assert(daemon->ssl_service_key && cfg->ssl_service_key);
+	if(chroot && strncmp(key, chroot, strlen(chroot)) == 0)
+		key += strlen(chroot);
+	if(chroot && pem && strncmp(pem, chroot, strlen(chroot)) == 0)
+		pem += strlen(chroot);
+
 	if(strcmp(daemon->ssl_service_key, cfg->ssl_service_key) != 0)
 		return 1;
-	if(strcmp(daemon->ssl_service_pem, cfg->ssl_service_pem) != 0)
+	if(daemon->ssl_service_pem && cfg->ssl_service_pem &&
+	   strcmp(daemon->ssl_service_pem, cfg->ssl_service_pem) != 0)
 		return 1;
-	if(!file_get_mtime(daemon->ssl_service_key, &mtime, &ns, NULL)) {
+	if(!file_get_mtime(key, &mtime, &ns, NULL)) {
 		log_err("Could not stat(%s): %s",
-			daemon->ssl_service_key, strerror(errno));
+			key, strerror(errno));
 		/* It has probably changed, but file read is likely going to
 		 * fail. */
 		return 0;
@@ -336,9 +399,9 @@ ssl_cert_changed(struct daemon* daemon, struct config_file* cfg)
 	if(mtime != daemon->mtime_ssl_service_key ||
 		ns != daemon->mtime_ns_ssl_service_key)
 		return 1;
-	if(!file_get_mtime(daemon->ssl_service_pem, &mtime, &ns, NULL)) {
+	if(!file_get_mtime(pem, &mtime, &ns, NULL)) {
 		log_err("Could not stat(%s): %s",
-			daemon->ssl_service_pem, strerror(errno));
+			pem, strerror(errno));
 		/* It has probably changed, but file read is likely going to
 		 * fail. */
 		return 0;
