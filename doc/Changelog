@@ -12,6 +12,7 @@
 	  and tls-cert-bundle changes. It checks the modification time of
 	  the tls-service-key and tls-service-pem files for update.
 	- Fix detection of http listening port in fast_reload.
+	- Fix to add tls-service-key to memory printout for fast_reload.
 
 9 March 2026: Wouter
 	- Fix compile failure in unbound-checkconf for older gcc compiler.

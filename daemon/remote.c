@@ -5325,6 +5325,8 @@ fr_printmem(struct fast_reload_thread* fr,
 	size_t mem = 0;
 	if(fr_poll_for_quit(fr))
 		return 1;
+	mem += getmem_str(ct->ssl_service_key);
+	mem += getmem_str(ct->ssl_service_pem);
 	mem += views_get_mem(ct->views);
 	mem += respip_set_get_mem(ct->respip_set);
 	mem += auth_zones_get_mem(ct->auth_zones);
