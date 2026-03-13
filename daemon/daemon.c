@@ -837,6 +837,12 @@ daemon_fork(struct daemon* daemon)
 	 * the thread_start() procedure.
 	 */
 	set_log_thread_id(daemon->workers[0], daemon->cfg);
+	/* If shm stats need an offset, calculate it */
+	if(daemon->cfg->shm_enable && daemon->cfg->stat_interval > 0) {
+		daemon->stat_time_specific = 1;
+		daemon->stat_time_offset =
+			((int)time(NULL))%daemon->cfg->stat_interval;
+	}
 
 #if defined(HAVE_EV_LOOP) || defined(HAVE_EV_DEFAULT_LOOP)
 	/* in libev the first inited base gets signals */

@@ -143,7 +143,14 @@ struct daemon {
 	/** the dnstap environment master value, copied and changed by threads*/
 	struct dt_env* dtenv;
 #endif
+	/** The SHM info for shared memory stats. */
 	struct shm_main_info* shm_info;
+	/** * If the timeout for statistics is attempted at specific offset.
+	 * If it is true, the stat timeout is the interval+offset, and that
+	 * picks (roughly) the same time offset every time period. */
+	int stat_time_specific;
+	/** if the timeout is specific, what offset in the period. */
+	int stat_time_offset;
 	/** some response-ip tags or actions are configured if true */
 	int use_response_ip;
 	/** some RPZ policies are configured */
