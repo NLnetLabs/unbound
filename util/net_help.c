@@ -1534,6 +1534,42 @@ add_WIN_cacerts_to_openssl_store(SSL_CTX* tls_ctx)
 }
 #endif /* USE_WINSOCK */
 
+int connect_sslctx_update(void *sslctx, char* verifypem, int wincert)
+{
+#ifdef HAVE_SSL
+	if((verifypem && verifypem[0]) || wincert) {
+		SSL_CTX* ctx = (SSL_CTX *) sslctx;
+
+		if (!ctx)
+			return 0;
+		if(verifypem && verifypem[0]) {
+			if(!SSL_CTX_load_verify_locations(ctx, verifypem, NULL)) {
+				log_crypto_err("error in SSL_CTX verify");
+				return 0;
+			}
+		}
+		if(wincert) {
+#ifdef USE_WINSOCK
+			if(!add_WIN_cacerts_to_openssl_store(ctx)) {
+				log_crypto_err("error in add_WIN_cacerts_to_openssl_store");
+				return 0;
+			}
+#else
+			if(!SSL_CTX_set_default_verify_paths(ctx)) {
+				log_crypto_err("error in default_verify_paths");
+				return 0;
+			}
+#endif
+		}
+		SSL_CTX_set_verify(ctx, SSL_VERIFY_PEER, NULL);
+	}
+	return 1;
+#else
+	(void)verifypem; (void)wincert;
+	return 0;
+#endif
+}
+
 void* connect_sslctx_create(char* key, char* pem, char* verifypem, int wincert)
 {
 #ifdef HAVE_SSL
@@ -1596,32 +1632,9 @@ void* connect_sslctx_create(char* key, char* pem, char* verifypem, int wincert)
 			return NULL;
 		}
 	}
-	if((verifypem && verifypem[0]) || wincert) {
-		if(verifypem && verifypem[0]) {
-			if(!SSL_CTX_load_verify_locations(ctx, verifypem, NULL)) {
-				log_crypto_err("error in SSL_CTX verify");
-				SSL_CTX_free(ctx);
-				return NULL;
-			}
-		}
-#ifdef USE_WINSOCK
-		if(wincert) {
-			if(!add_WIN_cacerts_to_openssl_store(ctx)) {
-				log_crypto_err("error in add_WIN_cacerts_to_openssl_store");
-				SSL_CTX_free(ctx);
-				return NULL;
-			}
-		}
-#else
-		if(wincert) {
-			if(!SSL_CTX_set_default_verify_paths(ctx)) {
-				log_crypto_err("error in default_verify_paths");
-				SSL_CTX_free(ctx);
-				return NULL;
-			}
-		}
-#endif
-		SSL_CTX_set_verify(ctx, SSL_VERIFY_PEER, NULL);
+	if (!connect_sslctx_update(ctx, verifypem, wincert)) {
+		SSL_CTX_free(ctx);
+		return NULL;
 	}
 	return ctx;
 #else
