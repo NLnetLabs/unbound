@@ -811,7 +811,7 @@ struct comm_point* outnet_comm_point_for_tcp(struct outside_network* outnet,
 struct comm_point* outnet_comm_point_for_http(struct outside_network* outnet,
 	comm_point_callback_type* cb, void* cb_arg,
 	struct sockaddr_storage* to_addr, socklen_t to_addrlen, int timeout,
-	int ssl, char* host, char* path, struct config_file* cfg);
+	int ssl, char* host, char* path, struct config_file* cfg, char* etag);
 
 /** connect tcp connection to addr, 0 on failure */
 int outnet_tcp_connect(int s, struct sockaddr_storage* addr, socklen_t addrlen);

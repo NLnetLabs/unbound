@@ -4875,6 +4875,10 @@ http_process_initial_header(struct comm_point* c)
 	} else if(strncasecmp(line, "Transfer-Encoding: chunked", 19+7) == 0) {
 		c->tcp_byte_count = 0;
 		c->http_is_chunked = 1;
+	} else if(strncasecmp(line, "ETag: ", 6) == 0) {
+		if (strlen(line + 6) < sizeof(c->etag)) {
+			strcpy(c->etag, line + 6);
+		}
 	} else if(line[0] == 0) {
 		/* end of initial headers */
 		c->http_in_headers = 0;
@@ -6398,6 +6402,7 @@ comm_point_create_http_out(struct comm_base *base, size_t bufsize,
 	c->http_in_chunk_headers = 0;
 	c->http_is_chunked = 0;
 	c->http_temp = temp;
+	c->etag[0] = 0;
 #ifdef USE_MSG_FASTOPEN
 	c->tcp_do_fastopen = 1;
 #endif
