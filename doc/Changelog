@@ -1,3 +1,6 @@
+20 March 2026: Wouter
+	- Fix for testcode pktview to check buffer size and log errors.
+
 13 March 2026: Yorgos
 	- Fix to ignore out-of-zone DNAME records for CNAME synthesis. Thanks
 	  to Yuxiao Wu, Yiyi Wang, Zhang Chao, Baojun Liu, and Haixin Duan from
