@@ -1,3 +1,10 @@
+24 March 2026: Wouter
+	- Fix to check for invalid http content length and chunk size,
+	  and to check the RR rdata field lengths when decompressing and
+	  inserting RRs from an authority zone transfer. This stops
+	  large memory use and heap buffer-overflow read errors. Thanks
+	  to Haruto Kimura (Stella) for the report.
+
 20 March 2026: Wouter
 	- Fix for testcode pktview to check buffer size and log errors.
 
