@@ -68,28 +68,6 @@
 /** The prefix for the unbound statistics. */
 #define METRICS_PREFIX "unbound_"
 
-/**
- * list of connection accepting file descriptors
- */
-struct metrics_acceptlist {
-	struct metrics_acceptlist* next;
-	int accept_fd;
-	char* ident;
-	struct daemon_metrics* metrics;
-};
-
-/**
- * The metrics daemon state.
- */
-struct daemon_metrics {
-	/** The worker for this metrics endpoint */
-	struct worker* worker;
-	/** commpoints for accepting HTTP connections */
-	struct metrics_acceptlist* accept_list;
-	/** libevent http server */
-	struct evhttp *http_server;
-};
-
 /** The callback that handles a metrics http request. */
 static void metrics_http_callback(struct evhttp_request *req, void *p);
 

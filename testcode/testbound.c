@@ -49,6 +49,7 @@
 #include "daemon/remote.h"
 #include "libunbound/worker.h"
 #include "daemon/worker.h"
+#include "daemon/metrics.h"
 #include "util/config_file.h"
 #include "sldns/keyraw.h"
 #ifdef UB_ON_WINDOWS
@@ -667,7 +668,7 @@ void remote_get_opt_ssl(char* ATTR_UNUSED(str), void* ATTR_UNUSED(arg))
 /* fake metrics */
 struct daemon_metrics* daemon_metrics_create(void)
 {
-	return (struct daemon_metrics*)calloc(1, sizeof(void*));
+	return (struct daemon_metrics*)calloc(1, sizeof(struct daemon_metrics));
 }
 
 void daemon_metrics_delete(struct daemon_metrics* m)

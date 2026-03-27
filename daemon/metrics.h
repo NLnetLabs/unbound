@@ -44,9 +44,32 @@
 struct daemon_metrics;
 struct config_file;
 struct worker;
+struct evhttp;
 
 /* the metrics daemon needs little backlog */
 #define TCP_BACKLOG_METRICS 16 /* listen() tcp backlog */
+
+/**
+ * list of connection accepting file descriptors
+ */
+struct metrics_acceptlist {
+	struct metrics_acceptlist* next;
+	int accept_fd;
+	char* ident;
+	struct daemon_metrics* metrics;
+};
+
+/**
+ * The metrics daemon state.
+ */
+struct daemon_metrics {
+	/** The worker for this metrics endpoint */
+	struct worker* worker;
+	/** commpoints for accepting HTTP connections */
+	struct metrics_acceptlist* accept_list;
+	/** libevent http server */
+	struct evhttp *http_server;
+};
 
 /**
  * Create new metrics endpoint for the daemon.
