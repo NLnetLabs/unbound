@@ -1,5 +1,6 @@
 27 March 2026: Wouter
 	- Fix to allow the control-interface config to use ip@port notation.
+	- Fix test code to allow empty hex answer packets from testbound.
 
 24 March 2026: Wouter
 	- Fix to check for invalid http content length and chunk size,
