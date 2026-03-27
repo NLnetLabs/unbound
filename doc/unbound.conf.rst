@@ -247,6 +247,8 @@ These options are part of the ``server:`` section.
     :doc:`unbound-control(8)</manpages/unbound-control>`.
     The counters are listed in
     :doc:`unbound-control(8)</manpages/unbound-control>`.
+    The counters are also available from the metrics interface,
+    :ref:`metrics-enable<unbound.conf.metrics-enable>` .
     Keeping track of more statistics takes time.
 
     Default: no
@@ -3419,6 +3421,46 @@ These options are part of the ``server:`` section.
     enabled to increase privacy on the outgoing reports.
 
     Default: no
+
+
+@@UAHL@unbound.conf@metrics-enable@@: *<yes or no>*
+    Enable the prometheus metrics HTTP endpoint.
+    It exposes the same statistics as the
+    :ref:`stats_noreset<unbound-control.commands.stats_noreset>`,
+    command, but with metric names
+    following the prometheus specification. (Requires libevent2)
+
+    Beware, that when using
+    :ref:`stats<unbound-control.commands.stats`
+    (instead of stats_noreset), the statistics will be reset for
+    the HTTP metrics endpoint as well.
+
+    Default: no
+
+
+@@UAHL@unbound.conf@metrics-interface@@: *<ip4 or ip6[@port] | interface name>*
+    Unbound will bind to the listed addresses or interfaces to serve the
+    prometheus metrics.
+    Can be given multiple times to bind multiple ip-addresses.
+    Use 0.0.0.0 and ::0 to bind to the wildcard interface.
+
+    If an interface name is used instead of ip4 or ip6, the list of IP
+    addresses associated with that interface is picked up and used at
+    server start.
+
+    Default is 127.0.0.1 and ::1.
+
+
+@@UAHL@unbound.conf@metrics-port@@: *<number>*
+    The port number for the HTTP service.
+
+    Default is 9100.
+
+
+@@UAHL@unbound.conf@metrics-path@@: *<string>*
+    The HTTP path to expose the metrics at.
+
+    Default is "/metrics".
 
 .. _unbound.conf.remote:
 

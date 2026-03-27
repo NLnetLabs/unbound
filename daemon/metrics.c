@@ -191,6 +191,26 @@ metrics_add_open(struct daemon_metrics* metrics, struct config_file* cfg,
 #endif
 		}
 	} else {
+		char* s = strchr(ip, '@');
+		char newif[128];
+		if(s) {
+			/* override port with ifspec@port */
+			int portnr;
+			if((size_t)(s-ip) >= sizeof(newif)) {
+				log_err("ifname too long: %s", ip);
+				return -1;
+			}
+			portnr = atoi(s+1);
+			if(portnr < 0 || 0 == portnr || portnr > 65535) {
+				log_err("invalid portnumber in metrics-interface: %s", ip);
+				return -1;
+			}
+			(void)strlcpy(newif, ip, sizeof(newif));
+			newif[s-ip] = 0;
+			ip = newif;
+			snprintf(port, sizeof(port), "%d", portnr);
+			port[sizeof(port)-1]=0;
+		}
 		hints.ai_socktype = SOCK_STREAM;
 		hints.ai_flags = AI_PASSIVE | AI_NUMERICHOST;
 		/* if we had no interface ip name, "default" is what we
@@ -260,13 +280,20 @@ daemon_metrics_open_ports(struct daemon_metrics* metrics,
 {
 	assert(cfg->metrics_enable);
 	if(cfg->metrics_ifs.first) {
-		struct config_strlist* p;
-		for(p = cfg->metrics_ifs.first; p; p = p->next) {
-			if(!metrics_add_open(metrics, cfg, p->str,
+		char** rcif = NULL;
+		int i, num_rcif = 0;
+		if(!resolve_interface_names(NULL, 0, cfg->metrics_ifs.first,
+			&rcif, &num_rcif)) {
+			return 0;
+		}
+		for(i=0; i<num_rcif; i++) {
+			if(!metrics_add_open(metrics, cfg, rcif[i],
 				cfg->metrics_port, 1)) {
+				config_del_strarray(rcif, num_rcif);
 				return 0;
 			}
 		}
+		config_del_strarray(rcif, num_rcif);
 	} else {
 		/* defaults */
 		if(cfg->do_ip6 && !metrics_add_open(metrics, cfg, "::1",
