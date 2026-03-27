@@ -5555,8 +5555,21 @@ xfr_transfer_init_fetch(struct auth_xfer* xfr, struct module_env* env)
 #endif
 
 	if(master->http) {
-		struct auth_zone* z = auth_zone_find(
-			env->auth_zones, xfr->name, xfr->namelen, xfr->dclass);
+		char etag[128], *etag_str = NULL;
+		struct auth_zone* z;
+		/* Obtain locks and structures. */
+		lock_basic_unlock(&xfr->lock);
+		if(!xfr_process_reacquire_locks(xfr, env, &z)) {
+			/* The zone is gone, ignore xfr transfer. */
+			return 1; /* Stop processing this xfr. */
+		}
+		/* Holding xfr and z locks. */
+
+		if(z && z->etag[0] && strlen(z->etag) < sizeof(etag)) {
+			strlcpy(etag, z->etag, sizeof(etag));
+			etag_str = etag;
+		}
+		lock_rw_unlock(&z->lock);
 		/* perform http fetch */
 		/* store http port number into sockaddr,
 		 * unless someone used unbound's host@port notation */
@@ -5566,7 +5579,7 @@ xfr_transfer_init_fetch(struct auth_xfer* xfr, struct module_env* env)
 		xfr->task_transfer->cp = outnet_comm_point_for_http(
 			env->outnet, auth_xfer_transfer_http_callback, xfr,
 			&addr, addrlen, -1, master->ssl, master->host,
-			master->file, env->cfg, (z && z->etag[0] ? z->etag : NULL));
+			master->file, env->cfg, etag_str);
 		if(!xfr->task_transfer->cp) {
 			char zname[LDNS_MAX_DOMAINLEN], as[256];
 			dname_str(xfr->name, zname);
