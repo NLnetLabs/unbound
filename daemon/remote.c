@@ -4599,6 +4599,26 @@ fr_init_time(struct timeval* time_start, struct timeval* time_read,
  * are kept in here. They can then be deleted.
  */
 struct fast_reload_construct {
+	/** ssl context for listening to dnstcp over ssl */
+	void* listen_dot_sslctx;
+	/** ssl context for connecting to dnstcp over ssl */
+	void* connect_dot_sslctx;
+	/** ssl context for listening to DoH */
+	void* listen_doh_sslctx;
+	/** ssl context for listening to quic */
+	void* listen_quic_sslctx;
+	/** the file name that the ssl context is made with, private key. */
+	char* ssl_service_key;
+	/** the file name that the ssl context is made with, certificate. */
+	char* ssl_service_pem;
+	/** modification time for ssl_service_key, in sec and ns. Like
+	 * in a struct timespec, but without that for portability. */
+	time_t mtime_ssl_service_key;
+	long mtime_ns_ssl_service_key;
+	/** modification time for ssl_service_pem, in sec and ns. Like
+	 * in a struct timespec, but without that for portability. */
+	time_t mtime_ssl_service_pem;
+	long mtime_ns_ssl_service_pem;
 	/** construct for views */
 	struct views* views;
 	/** construct for auth zones */
@@ -4902,9 +4922,6 @@ fr_check_compat_cfg(struct fast_reload_thread* fr, struct config_file* newcfg)
 	FR_CHECK_CHANGED_CFG("http_notls_downstream", http_notls_downstream, changed_str);
 	FR_CHECK_CHANGED_CFG("https-port", https_port, changed_str);
 	FR_CHECK_CHANGED_CFG("tls-port", ssl_port, changed_str);
-	FR_CHECK_CHANGED_CFG_STR("tls-service-key", ssl_service_key, changed_str);
-	FR_CHECK_CHANGED_CFG_STR("tls-service-pem", ssl_service_pem, changed_str);
-	FR_CHECK_CHANGED_CFG_STR("tls-cert-bundle", tls_cert_bundle, changed_str);
 	FR_CHECK_CHANGED_CFG_STRLIST("proxy-protocol-port", proxy_protocol_port, changed_str);
 	FR_CHECK_CHANGED_CFG_STRLIST("tls-additional-port", tls_additional_port, changed_str);
 	FR_CHECK_CHANGED_CFG_STR("interface-automatic-ports", if_automatic_ports, changed_str);
@@ -5019,6 +5036,19 @@ fr_construct_clear(struct fast_reload_construct* ct)
 	wait_limits_free(&ct->wait_limits_netblock);
 	wait_limits_free(&ct->wait_limits_cookie_netblock);
 	domain_limits_free(&ct->domain_limits);
+#ifdef HAVE_SSL
+	/* The SSL contexts can be SSL_CTX_free here. It is reference
+	 * counted. So ongoing transfers with can continue.
+	 * Once they are done, the context is freed. */
+	SSL_CTX_free((SSL_CTX*)ct->listen_dot_sslctx);
+	SSL_CTX_free((SSL_CTX*)ct->connect_dot_sslctx);
+	SSL_CTX_free((SSL_CTX*)ct->listen_doh_sslctx);
+#endif /* HAVE_SSL */
+#ifdef HAVE_NGTCP2
+	SSL_CTX_free((SSL_CTX*)ct->listen_quic_sslctx);
+#endif
+	free(ct->ssl_service_key);
+	free(ct->ssl_service_pem);
 	/* Delete the log identity here so that the global value is not
 	 * reset by config_delete. */
 	if(ct->oldcfg && ct->oldcfg->log_identity) {
@@ -5271,6 +5301,8 @@ fr_printmem(struct fast_reload_thread* fr,
 	size_t mem = 0;
 	if(fr_poll_for_quit(fr))
 		return 1;
+	mem += getmem_str(ct->ssl_service_key);
+	mem += getmem_str(ct->ssl_service_pem);
 	mem += views_get_mem(ct->views);
 	mem += respip_set_get_mem(ct->respip_set);
 	mem += auth_zones_get_mem(ct->auth_zones);
@@ -5504,6 +5536,96 @@ auth_zones_check_changes(struct fast_reload_thread* fr,
 	return 1;
 }
 
+/** Check if the sslctxs have changed. */
+static int
+fr_check_sslctx_change(struct fast_reload_thread* fr,
+	struct config_file* newcfg)
+{
+#ifdef HAVE_SSL
+	struct daemon* daemon = fr->worker->daemon;
+	if(newcfg->ssl_service_key && newcfg->ssl_service_key[0]) {
+		if(!daemon->ssl_service_key ||
+			ssl_cert_changed(daemon, newcfg))
+			return 1;
+	} else {
+		if(daemon->ssl_service_key)
+			return 1; /* it is removed */
+	}
+	if((daemon->cfg->tls_cert_bundle && !newcfg->tls_cert_bundle) ||
+	   (!daemon->cfg->tls_cert_bundle && newcfg->tls_cert_bundle) ||
+	   (daemon->cfg->tls_cert_bundle && newcfg->tls_cert_bundle &&
+	    strcmp(daemon->cfg->tls_cert_bundle, newcfg->tls_cert_bundle)!=0))
+		return 1; /* The tls-cert-bundle has changed and return
+			true here makes it reload the connect_dot_sslctx. */
+#else
+	(void)fr; (void)newcfg;
+#endif /* HAVE_SSL */
+	return 0;
+}
+
+/** Create the SSL CTXs when they have changed. */
+static int
+ct_create_sslctxs(struct fast_reload_construct* ct,
+	struct config_file* newcfg, struct daemon* daemon)
+{
+#ifdef HAVE_SSL
+	char* chroot = daemon->chroot;
+	char* key = newcfg->ssl_service_key;
+	char* pem = newcfg->ssl_service_pem;
+
+	if(!(newcfg->ssl_service_key && newcfg->ssl_service_key[0])) {
+		/* Leave listen ctxs and file str at NULL */
+		ct->connect_dot_sslctx = daemon_setup_connect_dot_sslctx(
+			daemon, newcfg);
+		return 1;
+	}
+
+	if(chroot && strncmp(key, chroot, strlen(chroot)) == 0)
+		key += strlen(chroot);
+	if(chroot && pem && strncmp(pem, chroot, strlen(chroot)) == 0)
+		pem += strlen(chroot);
+
+	ct->listen_dot_sslctx = daemon_setup_listen_dot_sslctx(daemon, newcfg);
+#ifdef HAVE_NGHTTP2_NGHTTP2_H
+	if(cfg_has_https(newcfg)) {
+		ct->listen_doh_sslctx = daemon_setup_listen_doh_sslctx(
+			daemon, newcfg);
+	}
+#endif
+#ifdef HAVE_NGTCP2
+	if(cfg_has_quic(newcfg)) {
+		ct->listen_quic_sslctx = daemon_setup_listen_quic_sslctx(
+			daemon, newcfg);
+	}
+#endif /* HAVE_NGTCP2 */
+	ct->connect_dot_sslctx = daemon_setup_connect_dot_sslctx(daemon,
+		newcfg);
+
+	/* Store mtime and names */
+	ct->ssl_service_key = strdup(newcfg->ssl_service_key);
+	if(!ct->ssl_service_key) {
+		log_err("ct_create_sslctxs: out of memory");
+		return 0;
+	}
+	ct->ssl_service_pem = strdup(newcfg->ssl_service_pem);
+	if(!ct->ssl_service_pem) {
+		log_err("ct_create_sslctxs: out of memory");
+		return 0;
+	}
+	if(!file_get_mtime(key, &ct->mtime_ssl_service_key,
+		&ct->mtime_ns_ssl_service_key, NULL))
+		log_err("Could not stat(%s): %s",
+			key, strerror(errno));
+	if(!file_get_mtime(pem, &ct->mtime_ssl_service_pem,
+		&ct->mtime_ns_ssl_service_pem, NULL))
+		log_err("Could not stat(%s): %s",
+			pem, strerror(errno));
+#else
+	(void)ct; (void)newcfg; (void)daemon;
+#endif /* HAVE_SSL */
+	return 1;
+}
+
 /** fast reload thread, construct from config the new items */
 static int
 fr_construct_from_config(struct fast_reload_thread* fr,
@@ -5511,6 +5633,13 @@ fr_construct_from_config(struct fast_reload_thread* fr,
 {
 	int have_view_respip_cfg = 0;
 
+	fr->sslctxs_changed = fr_check_sslctx_change(fr, newcfg);
+	if(fr->sslctxs_changed) {
+		if(!ct_create_sslctxs(ct, newcfg, fr->worker->daemon)) {
+			fr_construct_clear(ct);
+			return 0;
+		}
+	}
 	if(!(ct->views = views_create())) {
 		fr_construct_clear(ct);
 		return 0;
@@ -5786,6 +5915,44 @@ auth_zones_swap(struct auth_zones* az, struct auth_zones* data)
 	 * that contain tasks in progress, like zone transfers.
 	 * The unchanged zones can keep their tasks in the tree, and thus
 	 * the xfer elements can continue to be their callbacks. */
+}
+
+/** Swap two void* */
+static void
+void_ptr_swap(void** a, void **b)
+{
+	void* tmp = *a;
+	*a = *b;
+	*b = tmp;
+}
+
+/** Swap two char* */
+static void
+char_ptr_swap(char** a, char **b)
+{
+	char* tmp = *a;
+	*a = *b;
+	*b = tmp;
+}
+
+/** Swap and set ssl ctx information */
+static void
+sslctxs_swap(struct daemon* daemon, struct fast_reload_construct* ct)
+{
+	void_ptr_swap(&daemon->listen_dot_sslctx, &ct->listen_dot_sslctx);
+	void_ptr_swap(&daemon->connect_dot_sslctx, &ct->connect_dot_sslctx);
+#ifdef HAVE_NGHTTP2_NGHTTP2_H
+	void_ptr_swap(&daemon->listen_doh_sslctx, &ct->listen_doh_sslctx);
+#endif
+#ifdef HAVE_NGTCP2
+	void_ptr_swap(&daemon->listen_quic_sslctx, &ct->listen_quic_sslctx);
+#endif /* HAVE_NGTCP2 */
+	char_ptr_swap(&daemon->ssl_service_key, &ct->ssl_service_key);
+	char_ptr_swap(&daemon->ssl_service_pem, &ct->ssl_service_pem);
+	daemon->mtime_ssl_service_key = ct->mtime_ssl_service_key;
+	daemon->mtime_ns_ssl_service_key = ct->mtime_ns_ssl_service_key;
+	daemon->mtime_ssl_service_pem = ct->mtime_ssl_service_pem;
+	daemon->mtime_ns_ssl_service_pem = ct->mtime_ns_ssl_service_pem;
 }
 
 #if defined(ATOMIC_POINTER_LOCK_FREE) && defined(HAVE_LINK_ATOMIC_STORE)
@@ -6169,6 +6336,15 @@ fr_atomic_copy_cfg(struct config_file* oldcfg, struct config_file* cfg,
 	COPY_VAR_int(iter_scrub_cname);
 	COPY_VAR_int(max_global_quota);
 	COPY_VAR_int(iter_scrub_promiscuous);
+
+#undef COPY_VAR_int
+#undef COPY_VAR_ptr
+#undef COPY_VAR_unsigned_int
+#undef COPY_VAR_size_t
+#undef COPY_VAR_uint8_t
+#undef COPY_VAR_uint16_t
+#undef COPY_VAR_uint32_t
+#undef COPY_VAR_int32_t
 }
 #endif /* ATOMIC_POINTER_LOCK_FREE && HAVE_LINK_ATOMIC_STORE */
 
@@ -6394,6 +6570,9 @@ fr_reload_config(struct fast_reload_thread* fr, struct config_file* newcfg,
 	daemon->env->cachedb_enabled = cachedb_is_enabled(&daemon->mods,
 		daemon->env);
 #endif
+	if(fr->sslctxs_changed) {
+		sslctxs_swap(daemon, ct);
+	}
 #ifdef USE_DNSTAP
 	if(env->cfg->dnstap) {
 		if(!fr->fr_nopause)
@@ -7590,6 +7769,42 @@ fr_worker_pickup_auth_changes(struct worker* worker,
 	}
 }
 
+/** Fast reload, the worker picks up changes in listen_dnsport. */
+static void
+fr_worker_pickup_listen_dnsport(struct worker* worker)
+{
+	struct listen_dnsport* front = worker->front;
+	struct daemon* daemon = worker->daemon;
+	if(worker->daemon->fast_reload_thread->sslctxs_changed) {
+		struct listen_list* ll;
+		void* dot_sslctx = daemon->listen_dot_sslctx;
+		void* doh_sslctx = daemon->listen_doh_sslctx;
+		void* quic_sslctx = daemon->listen_quic_sslctx;
+		for(ll = front->cps; ll; ll = ll->next) {
+			struct comm_point* cp = ll->com;
+			if(cp->type == comm_tcp_accept &&
+				cp->tcp_handlers &&
+				cp->max_tcp_count > 0 &&
+				cp->tcp_handlers[0]->type == comm_http) {
+				if(cp->ssl)
+					cp->ssl = doh_sslctx;
+			} else if(cp->type == comm_tcp_accept) {
+				if(cp->ssl)
+					cp->ssl = dot_sslctx;
+#ifdef HAVE_NGTCP2
+			} else if(cp->type == comm_doq) {
+				if(cp->ssl) {
+					cp->ssl = quic_sslctx;
+					if(cp->doq_socket)
+						cp->doq_socket->ctx =
+							(SSL_CTX*)quic_sslctx;
+				}
+#endif
+			}
+		}
+	}
+}
+
 /** Fast reload, the worker picks up changes in outside_network. */
 static void
 fr_worker_pickup_outside_network(struct worker* worker)
@@ -7605,6 +7820,8 @@ fr_worker_pickup_outside_network(struct worker* worker)
 	outnet->tcp_reuse_timeout = cfg->tcp_reuse_timeout;
 	outnet->tcp_auth_query_timeout = cfg->tcp_auth_query_timeout;
 	outnet->delayclose = cfg->delay_close;
+	if(worker->daemon->fast_reload_thread->sslctxs_changed)
+		outnet->sslctx = worker->daemon->connect_dot_sslctx;
 	if(outnet->delayclose) {
 #ifndef S_SPLINT_S
 		outnet->delay_tv.tv_sec = cfg->delay_close/1000;
@@ -7675,6 +7892,7 @@ fast_reload_worker_pickup_changes(struct worker* worker)
 #ifdef USE_CACHEDB
 	worker->env.cachedb_enabled = worker->daemon->env->cachedb_enabled;
 #endif
+	fr_worker_pickup_listen_dnsport(worker);
 	fr_worker_pickup_outside_network(worker);
 #ifdef USE_DNSTAP
 	fr_worker_pickup_dnstap_changes(worker);

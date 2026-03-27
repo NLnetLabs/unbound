@@ -368,6 +368,10 @@ These options are part of the ``server:`` section.
     Larger numbers need extra resources from the operating system.
     For performance a very large value is best, use libevent to make this
     possible.
+    Should be higher (preferably double) than the value of
+    :ref:`num-queries-per-thread<unbound.conf.num-queries-per-thread>` to
+    account for cases where the request list is full and avoid file descriptor
+    starvation.
 
     Default: 4096 (libevent) / 960 (minievent) / 48 (windows)
 
@@ -1046,9 +1050,13 @@ These options are part of the ``server:`` section.
     certificate is in the :ref:`tls-service-pem<unbound.conf.tls-service-pem>`
     file and it must also be specified if
     :ref:`tls-service-key<unbound.conf.tls-service-key>` is specified.
-    Enabling or disabling this service requires a restart (a reload is not
-    enough), because the key is read while root permissions are held and before
-    chroot (if any).
+    If the key is stored with root permissions or outside of chroot, then
+    a change or enabling or disabling requires a restart (a reload is not
+    enough).
+    But if the key file (and tls-service-pem file) are accessible, then they
+    are read in on reload, and fast_reload.
+    The server checks the modification time of the file (and the filename)
+    to see if the file has changed for reload.
     The ports enabled implicitly or explicitly via
     :ref:`tls-port<unbound.conf.tls-port>` and
     :ref:`https-port<unbound.conf.https-port>` do not provide normal DNS TCP
@@ -2016,6 +2024,11 @@ These options are part of the ``server:`` section.
     This protects against so-called DNS Rebinding, where a user browser is
     turned into a network proxy, allowing remote access through the browser to
     other parts of your private network.
+
+    The option removes resource records of types A, AAAA, SVCB and HTTPS
+    that match the filter.
+    Inside the SVCB and HTTPS records, the svcparams of type ipv4hint
+    and ipv6hint are checked for matches.
 
     Some names can be allowed to contain your private addresses, by default all
     the :ref:`local-data<unbound.conf.local-data>` that you configured is

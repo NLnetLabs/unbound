@@ -62,6 +62,9 @@
 #include "sldns/wire2str.h"
 #include "sldns/parseutil.h"
 #include "iterator/iterator.h"
+#ifdef HAVE_SYS_STAT_H
+#include <sys/stat.h>
+#endif
 #ifdef HAVE_GLOB_H
 # include <glob.h>
 #endif
@@ -3007,4 +3010,28 @@ cfg_has_quic(struct config_file* cfg)
 	(void)cfg;
 	return 0;
 #endif
+}
+
+int
+file_get_mtime(const char* file, time_t* mtime, long* ns, int* nonexist)
+{
+	struct stat s;
+	if(stat(file, &s) != 0) {
+		*mtime = 0;
+		*ns = 0;
+		if(nonexist)
+			*nonexist = (errno == ENOENT);
+		return 0;
+	}
+	if(nonexist)
+		*nonexist = 0;
+	*mtime = s.st_mtime;
+#ifdef HAVE_STRUCT_STAT_ST_MTIMENSEC
+	*ns = s.st_mtimensec;
+#elif defined(HAVE_STRUCT_STAT_ST_MTIM_TV_NSEC)
+	*ns = s.st_mtim.tv_nsec;
+#else
+	*ns = 0;
+#endif
+	return 1;
 }

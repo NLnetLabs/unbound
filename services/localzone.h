@@ -57,6 +57,9 @@ struct sldns_buffer;
 struct comm_reply;
 struct config_strlist;
 
+extern const char** local_zones_default_special;
+extern const char** local_zones_default_reverse;
+
 /**
  * Local zone type
  * This type determines processing for queries that did not match

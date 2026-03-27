@@ -1384,6 +1384,9 @@ decompress_rr_into_buffer(struct sldns_buffer* buf, uint8_t* pkt,
 				len = 0;
 				break;
 			case LDNS_RDF_TYPE_STR:
+				/* Check rdlen for resilience, because it is
+				 * checked above, that rdlen > 0 */
+				if(rdlen < 1) return 0; /* malformed */
 				len = rd[0] + 1;
 				break;
 			default:
@@ -1391,6 +1394,8 @@ decompress_rr_into_buffer(struct sldns_buffer* buf, uint8_t* pkt,
 				break;
 			}
 			if(len) {
+				if(len > rdlen)
+					return 0; /* malformed */
 				if(!sldns_buffer_available(buf, len))
 					return 0; /* too long for buffer */
 				sldns_buffer_write(buf, rd, len);

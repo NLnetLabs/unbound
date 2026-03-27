@@ -1,3 +1,52 @@
+24 March 2026: Wouter
+	- Fix to check for invalid http content length and chunk size,
+	  and to check the RR rdata field lengths when decompressing and
+	  inserting RRs from an authority zone transfer. This stops
+	  large memory use and heap buffer-overflow read errors. Thanks
+	  to Haruto Kimura (Stella) for the report.
+
+20 March 2026: Wouter
+	- Fix for testcode pktview to check buffer size and log errors.
+
+13 March 2026: Yorgos
+	- Fix to ignore out-of-zone DNAME records for CNAME synthesis. Thanks
+	  to Yuxiao Wu, Yiyi Wang, Zhang Chao, Baojun Liu, and Haixin Duan from
+	  Tsinghua University.
+
+13 March 2026: Wouter
+	- Fix #278: DoT: complete unbound restart required on certificate
+	  renew. Fix so that a reload checks if the files have changed, and
+	  if so, reload the contexts. Also for DoH, DoQ and outgoing DoT.
+	- iana portlist updated.
+	- For #278: fast_reload can reload tls-service-key, tls-service-pem
+	  and tls-cert-bundle changes. It checks the modification time of
+	  the tls-service-key and tls-service-pem files for update.
+	- Fix detection of http listening port in fast_reload.
+	- Fix to add tls-service-key to memory printout for fast_reload.
+
+9 March 2026: Wouter
+	- Fix compile failure in unbound-checkconf for older gcc compiler.
+	- Merge #1418: Apply cache TTL policy to DNAME and synthesized
+	  CNAME on wire path.
+
+6 March 2026: Wouter
+	- Merge #1415: Add lock unlock for view in memory error handling.
+
+6 March 2026: Yorgos
+	- Document the suggestion for a higher value for 'outgoing-range';
+	  helps when the request list is full.
+	- Warn for unused 'nodefault' local-zone configuration in
+	  unbound-checkconf (related to #1416).
+
+5 March 2026: Wouter
+	- Fix for DNS Rebinding Bypass via SVCB/HTTPS Records in Unbound.
+	  Thanks to Kunta Chu, School of Software, Tsinghua University,
+	  Taofei Guo, Peking University, and Jianjun Chen, Institute for
+	  Network Sciences and Cyberspace, Tsinghua University for the
+	  report. The private-address option is fixed to also elide
+	  SVCB and HTTPS records that match the filter.
+	- Update generated man pages.
+
 4 March 2026: Yorgos
 	- For #1411: Introduce a failing case in the rpl test so that it only
 	  passes with the fix in place.

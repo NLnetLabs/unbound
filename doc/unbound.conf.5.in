@@ -382,6 +382,10 @@ Default depends on compile options.
 Larger numbers need extra resources from the operating system.
 For performance a very large value is best, use libevent to make this
 possible.
+Should be higher (preferably double) than the value of
+\fI\%num\-queries\-per\-thread\fP to
+account for cases where the request list is full and avoid file descriptor
+starvation.
 .sp
 Default: 4096 (libevent) / 960 (minievent) / 48 (windows)
 .UNINDENT
@@ -2274,6 +2278,11 @@ Additionally, the DNSSEC validator may mark the answers bogus.
 This protects against so\-called DNS Rebinding, where a user browser is
 turned into a network proxy, allowing remote access through the browser to
 other parts of your private network.
+.sp
+The option removes resource records of types A, AAAA, SVCB and HTTPS
+that match the filter.
+Inside the SVCB and HTTPS records, the svcparams of type ipv4hint
+and ipv6hint are checked for matches.
 .sp
 Some names can be allowed to contain your private addresses, by default all
 the \fI\%local\-data\fP that you configured is

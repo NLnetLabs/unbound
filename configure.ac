@@ -1778,6 +1778,7 @@ if test $ac_cv_func_daemon = yes; then
 ])
 fi
 
+AC_CHECK_MEMBERS([struct stat.st_mtimensec, struct stat.st_mtim.tv_nsec])
 AC_CHECK_MEMBERS([struct sockaddr_un.sun_len],,,[
 AC_INCLUDES_DEFAULT
 #ifdef HAVE_SYS_UN_H
