@@ -255,7 +255,8 @@ worker_handle_service_reply(struct comm_point* c, void* arg, int error,
 		return 0;
 	}
 	/* sanity check. */
-	if(!LDNS_QR_WIRE(sldns_buffer_begin(c->buffer))
+	if(sldns_buffer_limit(c->buffer) < LDNS_HEADER_SIZE
+		|| !LDNS_QR_WIRE(sldns_buffer_begin(c->buffer))
 		|| LDNS_OPCODE_WIRE(sldns_buffer_begin(c->buffer)) !=
 			LDNS_PACKET_QUERY
 		|| LDNS_QDCOUNT(sldns_buffer_begin(c->buffer)) > 1) {
