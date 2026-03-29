@@ -658,6 +658,10 @@ AS_IF([test x_$enable_alloc_checks = x_yes],[
 	])
 ])
 
+if test "$on_mingw" = "yes"; then
+	LIBS="$LIBS -lntdll"
+fi
+
 # check windows threads (we use them, not pthreads, on windows).
 if test "$on_mingw" = "yes"; then
 # check windows threads
