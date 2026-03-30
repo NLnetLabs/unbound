@@ -290,22 +290,28 @@ static int
 shm_thread_is_first(struct shm_main_info* shm_info, int thread_num,
 	struct daemon* daemon)
 {
-	/* The usual method, all thread executed last time, and there
-	 * is no statistics in progress. */
+	/* The usual method, all threads executed last time, and there
+	 * is no statistics callback in progress. */
 	if(!shm_info->volley_in_progress)
 		return 1;
-	/* See if we are already active, if so, the timer fired twice
-	 * for this thread during the statistics in progress.
-	 * Another thread is not active during the statistics process,
-	 * so this thread must be the first of this new round without that
-	 * other thread. */
+	/* See if we are already active, if so, the timer seems to have fired
+	 * twice for this thread which means other thread(s) have not gone
+	 * through their stats callbacks yet.
+	 * (There should have been a last thread to reset
+	 * shm_info->volley_in_progress and shm_info->thread_volley)
+	 * The other thread(s) are not yet active during this statistics round,
+	 * so this thread must be the first of this new round disregarding the
+	 * other busy thread(s).
+	 * When the other thread(s) have time again, they will process their
+	 * stats callback and hopefully properly end a stats round where all
+	 * threads got to calculate their statistics. */
 	if(shm_info->thread_volley[thread_num] != 0) {
 		/* The new round starts and zeroes the total. The previous
-		 * partial total is discarded. That means while a thread
-		 * is performing a long task, eg. loading a large zone perhaps,
-		 * the total is not updated and stays the same in the
-		 * shared memory area. Once that thread performs the statistic
-		 * callback again, the total is updated again.
+		 * partial total is discarded. That means while other thread(s)
+		 * are performing a long task, eg. loading a large zone
+		 * perhaps, the total is not updated and stays the same in the
+		 * shared memory area. Once that other thread(s) perform the
+		 * statistic callback again, the total is updated again.
 		 *
 		 * The threads busy with long tasks have 0 in the array.
 		 * The array is inited for a new round. */
@@ -320,8 +326,9 @@ shm_thread_is_first(struct shm_main_info* shm_info, int thread_num,
 static int
 shm_thread_is_last(struct daemon* daemon)
 {
-	/* This means that all threads have been active and this thread
-	 * is the last one. All the thread_volley values are true then. */
+	/* Being last means that all threads have been active for this stats
+	 * round and this thread is the last one; also active. All the
+	 * thread_volley values should be true then. */
 	int i;
 	for(i=0; i<daemon->num; i++) {
 		if(!daemon->shm_info->thread_volley[i])

@@ -145,7 +145,7 @@ struct daemon {
 #endif
 	/** The SHM info for shared memory stats. */
 	struct shm_main_info* shm_info;
-	/** * If the timeout for statistics is attempted at specific offset.
+	/** if the timeout for statistics is attempted at specific offset.
 	 * If it is true, the stat timeout is the interval+offset, and that
 	 * picks (roughly) the same time offset every time period. */
 	int stat_time_specific;

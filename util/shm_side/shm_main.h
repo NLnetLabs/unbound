@@ -65,8 +65,10 @@ struct shm_main_info {
 	/** This mutex is on the volley information. */
 	lock_basic_type lock;
 	/** If there is a volley, a number of stat timer callbacks by the
-	 * threads, in progress. If not, it was never started or has ended
-	 * previously. */
+	 * threads, in progress. If not, there is no volley in progress and the
+	 * previous stat run has terminated succesfully for all threads.
+	 * Usually activated by the first thread and deactivated by the last
+	 * thread that starts its stat callback. */
 	int volley_in_progress;
 	/** Per thread, if they have put in stats. 0 if not. */
 	int* thread_volley;
