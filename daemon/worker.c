@@ -2134,6 +2134,9 @@ worker_restart_timer(struct worker* worker)
 			nows = (int)now.tv_sec;
 			/* The next time is on the timer interval, at the
 			 * specific offset, time value % interval = offset. */
+			/* It relies on the integer division below to drop the
+			 * remainder in order to calculate the expected
+			 * result. */
 			spec = ((nows-offset)/interval+1)*interval+offset;
 			/* This is instead of an assertion, and should not
 			 * be needed. So assert(spec > nows), tv is going to
