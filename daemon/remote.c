@@ -307,6 +307,26 @@ add_open(const char* ip, int nr, struct listen_port** list, int noproto_is_err,
 #endif
 		}
 	} else {
+		char* s = strchr(ip, '@');
+		char newif[128];
+		if(s) {
+			/* override port with ifspec@port */
+			int portnr;
+			if((size_t)(s-ip) >= sizeof(newif)) {
+				log_err("ifname too long: %s", ip);
+				return -1;
+			}
+			portnr = atoi(s+1);
+			if(portnr < 0 || 0 == portnr || portnr > 65535) {
+				log_err("invalid portnumber in control-interface: %s", ip);
+				return -1;
+			}
+			(void)strlcpy(newif, ip, sizeof(newif));
+			newif[s-ip] = 0;
+			ip = newif;
+			snprintf(port, sizeof(port), "%d", portnr);
+			port[sizeof(port)-1]=0;
+		}
 		hints.ai_socktype = SOCK_STREAM;
 		hints.ai_flags = AI_PASSIVE | AI_NUMERICHOST;
 		if((r = getaddrinfo(ip, port, &hints, &res)) != 0 || !res) {

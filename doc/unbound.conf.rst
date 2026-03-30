@@ -3499,7 +3499,7 @@ To setup the correct self-signed certificates use the
     Default: no
 
 
-@@UAHL@unbound.conf.remote@control-interface@@: *<IP address or interface name or path>*
+@@UAHL@unbound.conf.remote@control-interface@@: *<IP address or interface name[@port] or path>*
     Give IPv4 or IPv6 addresses or local socket path to listen on for control
     commands.
     If an interface name is used instead of an IP address, the list of IP

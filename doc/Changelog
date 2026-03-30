@@ -1,3 +1,11 @@
+30 March 2026: Wouter
+	- Merge #1408: Fix shared memory stats with threads.
+
+27 March 2026: Wouter
+	- Fix to allow the control-interface config to use ip@port notation.
+	- Fix test code to allow empty hex answer packets from testbound.
+	- Fix defense in depth for service callback with empty packet.
+
 24 March 2026: Wouter
 	- Fix to check for invalid http content length and chunk size,
 	  and to check the RR rdata field lengths when decompressing and
