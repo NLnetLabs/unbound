@@ -1687,7 +1687,6 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 		error_encode(c->buffer, ret, &qinfo,
 			*(uint16_t*)(void *)sldns_buffer_begin(c->buffer),
 			sldns_buffer_read_u16_at(c->buffer, 2), &reply_edns);
-		regional_free_all(worker->scratchpad);
 		goto send_reply;
 	}
 	if(edns.edns_present) {
@@ -1701,7 +1700,6 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 			extended_error_encode(c->buffer, EDNS_RCODE_BADVERS, &qinfo,
 				*(uint16_t*)(void *)sldns_buffer_begin(c->buffer),
 				sldns_buffer_read_u16_at(c->buffer, 2), 0, &edns);
-			regional_free_all(worker->scratchpad);
 			goto send_reply;
 		}
 		if(edns.udp_size < NORMAL_UDP_SIZE &&
@@ -1749,7 +1747,6 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 			sldns_buffer_begin(c->buffer),
 			sldns_buffer_read_u16_at(c->buffer, 2),
 			0, &edns);
-		regional_free_all(worker->scratchpad);
 		goto send_reply;
 	} else {
 		/* Cookie required, but no cookie present on UDP */
@@ -1766,7 +1763,6 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 			sldns_buffer_begin(c->buffer),
 			sldns_buffer_read_u16_at(c->buffer, 2),
 			&edns);
-		regional_free_all(worker->scratchpad);
 		goto send_reply;
 	}
 
@@ -1791,7 +1787,6 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 		sldns_buffer_write_at(c->buffer, 4,
 			(uint8_t*)"\0\0\0\0\0\0\0\0", 8);
 		sldns_buffer_flip(c->buffer);
-		regional_free_all(worker->scratchpad);
 		goto send_reply;
 	}
 	if(worker->stats.extended)
@@ -1801,14 +1796,12 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 		edns.udp_size = 65535; /* max size for TCP replies */
 	if(qinfo.qclass == LDNS_RR_CLASS_CH && answer_chaos(worker, &qinfo,
 		&edns, repinfo, c->buffer)) {
-		regional_free_all(worker->scratchpad);
 		goto send_reply;
 	}
 	if(LDNS_OPCODE_WIRE(sldns_buffer_begin(c->buffer)) ==
 		LDNS_PACKET_NOTIFY) {
 		answer_notify(worker, &qinfo, &edns, c->buffer,
 			&repinfo->client_addr, repinfo->client_addrlen);
-		regional_free_all(worker->scratchpad);
 		goto send_reply;
 	}
 	if(local_zones_answer(worker->daemon->local_zones, &worker->env, &qinfo,
@@ -1962,12 +1955,10 @@ lookup_cache:
 						original_edns_list);
 					if(!partial_rep) {
 						rc = 0;
-						regional_free_all(worker->scratchpad);
 						goto send_reply_rc;
 					}
 				} else if(!partial_rep) {
 					lock_rw_unlock(&e->lock);
-					regional_free_all(worker->scratchpad);
 					goto send_reply;
 				} else {
 					/* Note that we've already released the
@@ -2002,7 +1993,6 @@ lookup_cache:
 				*(uint16_t*)(void *)sldns_buffer_begin(c->buffer),
 				sldns_buffer_read_u16_at(c->buffer, 2), repinfo,
 				&edns)) {
-				regional_free_all(worker->scratchpad);
 				goto send_reply;
 			}
 			verbose(VERB_ALGO, "answer norec from cache -- "
@@ -2029,9 +2019,13 @@ lookup_cache:
 	worker_mem_report(worker, NULL);
 	return 0;
 
+/* The send_reply label sets the return code to 1 before falling through to send_reply_rc. */
 send_reply:
 	rc = 1;
+
+/* The send_reply_rc label does not set a return code and assumes the caller has done so. It frees the worker scratchpad memory. */
 send_reply_rc:
+	regional_free_all(worker->scratchpad);
 	if(need_drop) {
 		comm_point_drop_reply(repinfo);
 		return 0;
