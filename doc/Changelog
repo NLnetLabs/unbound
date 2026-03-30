@@ -1,3 +1,6 @@
+30 March 2026: Wouter
+	- Merge #1408: Fix shared memory stats with threads.
+
 27 March 2026: Wouter
 	- Fix to allow the control-interface config to use ip@port notation.
 	- Fix test code to allow empty hex answer packets from testbound.
