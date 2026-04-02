@@ -73,8 +73,9 @@ static struct proxy_protocol_lookup_table pp_parse_errors_data[] = {
 void
 pp_init(void (*write_uint16)(void* buf, uint16_t data),
 	void (*write_uint32)(void* buf, uint32_t data)) {
-	pp_data.write_uint16 = write_uint16;
-	pp_data.write_uint32 = write_uint32;
+	if (__atomic_load_n(&pp_data.write_uint16, __ATOMIC_ACQUIRE)) return;
+     __atomic_store_n(&pp_data.write_uint16, write_uint16, __ATOMIC_RELEASE);
+     __atomic_store_n(&pp_data.write_uint32, write_uint32, __ATOMIC_RELEASE);
 }
 
 const char*
