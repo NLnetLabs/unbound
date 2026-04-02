@@ -3443,10 +3443,20 @@ These options are part of the ``server:`` section.
     command, but with metric names
     following the prometheus specification. (Requires libevent2)
 
-    Beware, that when using
+    Use it with settings, extended-statistics: yes that collects more
+    information,
+    :ref:`extended-statistics<unbound.conf.extended-statistics>` .
+    And set statistics-cumulative: yes, because the metrics are
+    defined as cumulative counters for the number of queries,
+    :ref:`statistics-cumulative<unbound.conf.statistics-cumulative>` .
+
+    Access from the metrics endpoint does not reset the statistics.
+    Beware, if statistics-cumulative is disabled, that when using
     :ref:`stats<unbound-control.commands.stats`
     (instead of stats_noreset), the statistics will be reset for
     the HTTP metrics endpoint as well.
+    With statistics-cumulative enabled, the stats (and stats_noreset)
+    command can be used to also get a look at the statistics information.
 
     Default: no
 

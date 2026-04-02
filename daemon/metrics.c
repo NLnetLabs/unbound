@@ -257,6 +257,8 @@ daemon_metrics_open_ports(struct daemon_metrics* metrics,
 	struct config_file* cfg)
 {
 	assert(cfg->metrics_enable);
+	if(!cfg->stat_cumulative)
+		log_warn("metrics-enable: yes but statistics-cumulative: no, access to control command 'stats' would reset the stat counters, perhaps set 'statistics-cumulative: yes'.");
 	if(cfg->metrics_ifs.first) {
 		char** rcif = NULL;
 		int i, num_rcif = 0;
@@ -334,7 +336,7 @@ metrics_print_types(struct evbuffer *reply)
 {
 	char* prefix = METRICS_PREFIX;
 	print_metric_help_and_type(reply, prefix, "hits_queries",
-		"Unbound DNS traffic and cache hits", "gauge");
+		"Unbound DNS traffic and cache hits", "counter");
 	print_metric_help_and_type(reply, prefix, "queue_queries",
 		"Unbound requestlist size", "gauge");
 	print_metric_help_and_type(reply, prefix, "recursion_time",
@@ -540,7 +542,7 @@ metrics_print_hist(struct evbuffer* reply, struct ub_stats_info* s)
 	size_t i;
 
 	print_metric_help_and_type(reply, prefix, "histogram_seconds",
-		"Unbound DNS histogram of reply time", "gauge");
+		"Unbound DNS histogram of reply time", "counter");
 
 	hist = timehist_setup();
 	if(!hist) {
@@ -581,7 +583,7 @@ metrics_print_ext(struct evbuffer* reply, struct ub_stats_info* s,
 
 	/* TYPE */
 	print_metric_help_and_type(reply, prefix, "by_type_queries",
-		"Unbound DNS queries by type", "gauge");
+		"Unbound DNS queries by type", "counter");
 	for(i=0; i<UB_STATS_QTYPE_NUM; i++) {
 		if(inhibit_zero && s->svr.qtype[i] == 0)
 			continue;
@@ -610,7 +612,7 @@ metrics_print_ext(struct evbuffer* reply, struct ub_stats_info* s,
 
 	/* CLASS */
 	print_metric_help_and_type(reply, prefix, "by_class_queries",
-		"Unbound DNS queries by class", "gauge");
+		"Unbound DNS queries by class", "counter");
 	for(i=0; i<UB_STATS_QCLASS_NUM; i++) {
 		if(inhibit_zero && s->svr.qclass[i] == 0)
 			continue;
@@ -630,7 +632,7 @@ metrics_print_ext(struct evbuffer* reply, struct ub_stats_info* s,
 
 	/* OPCODE */
 	print_metric_help_and_type(reply, prefix, "by_opcode_queries",
-		"Unbound DNS queries by opcode", "gauge");
+		"Unbound DNS queries by opcode", "counter");
 	for(i=0; i<UB_STATS_OPCODE_NUM; i++) {
 		if(inhibit_zero && s->svr.qopcode[i] == 0)
 			continue;
@@ -646,7 +648,7 @@ metrics_print_ext(struct evbuffer* reply, struct ub_stats_info* s,
 
 	/* RCODE */
 	print_metric_help_and_type(reply, prefix, "by_rcode_queries",
-		"Unbound DNS answers by rcode", "gauge");
+		"Unbound DNS answers by rcode", "counter");
 	for(i=0; i<UB_STATS_RCODE_NUM; i++) {
 		/* Always include RCODEs 0-5 */
 		if(inhibit_zero && i > LDNS_RCODE_REFUSED && s->svr.ans_rcode[i] == 0)
@@ -667,7 +669,7 @@ metrics_print_ext(struct evbuffer* reply, struct ub_stats_info* s,
 
 	/* FLAGS */
 	print_metric_help_and_type(reply, prefix, "by_flags_queries",
-		"Unbound DNS queries by flags", "gauge");
+		"Unbound DNS queries by flags", "counter");
 	INFO_EXT_STATS("by_flags_queries", "flag", "QR", s->svr.qbit_QR);
 	INFO_EXT_STATS("by_flags_queries", "flag", "AA", s->svr.qbit_AA);
 	INFO_EXT_STATS("by_flags_queries", "flag", "TC", s->svr.qbit_TC);
@@ -683,7 +685,7 @@ metrics_print_ext(struct evbuffer* reply, struct ub_stats_info* s,
 
 	/* transport */
 	print_metric_help_and_type(reply, prefix, "by_transport_queries",
-		"Unbound DNS queries by transport", "gauge");
+		"Unbound DNS queries by transport", "counter");
 	INFO_EXT_STATS("by_transport_queries", "transport", "tcp",
 		s->svr.qtcp);
 	INFO_EXT_STATS("by_transport_queries", "transport", "tcpout",
@@ -705,13 +707,13 @@ metrics_print_ext(struct evbuffer* reply, struct ub_stats_info* s,
 
 	/* iteration */
 	print_metric_help_and_type(reply, prefix, "ratelimited_queries",
-		"Unbound DNS queries ratelimited", "gauge");
+		"Unbound DNS queries ratelimited", "counter");
 	INFO_EXT_STATS("ratelimited_queries", "type", "ratelimited",
 		s->svr.queries_ratelimited);
 
 	/* validation */
 	print_metric_help_and_type(reply, prefix, "validation_queries",
-		"Unbound DNS queries DNSSEC validated", "gauge");
+		"Unbound DNS queries DNSSEC validated", "counter");
 	INFO_EXT_STATS("validation_queries", "type", "secure",
 		s->svr.ans_secure);
 	INFO_EXT_STATS("validation_queries", "type", "bogus",
@@ -727,7 +729,7 @@ metrics_print_ext(struct evbuffer* reply, struct ub_stats_info* s,
 
 	/* threat detection */
 	print_metric_help_and_type(reply, prefix, "threat_queries",
-		"Unbound DNS queries threats", "gauge");
+		"Unbound DNS queries threats", "counter");
 	INFO_EXT_STATS("threat_queries", "type", "unwanted.queries",
 		s->svr.unwanted_queries);
 	INFO_EXT_STATS("threat_queries", "type", "unwanted.replies",
@@ -753,7 +755,7 @@ metrics_print_ext(struct evbuffer* reply, struct ub_stats_info* s,
 
 	/* applied RPZ actions */
 	print_metric_help_and_type(reply, prefix, "rpz_actions",
-		"Unbound DNS RPZ actions", "gauge");
+		"Unbound DNS RPZ actions", "counter");
 	for(i=0; i<UB_STATS_RPZ_ACTION_NUM; i++) {
 		if(i == RPZ_NO_OVERRIDE_ACTION)
 			continue;
@@ -765,7 +767,7 @@ metrics_print_ext(struct evbuffer* reply, struct ub_stats_info* s,
 
 	/* handling mechanism */
 	print_metric_help_and_type(reply, prefix, "handled_queries",
-		"Unbound DNS queries by handling mechanism", "gauge");
+		"Unbound DNS queries by handling mechanism", "counter");
 #ifdef USE_DNSCRYPT
 	INFO_EXT_STATS("cache_items", "count", "dnscrypt_shared_secret.cache",
 		s->svr.shared_secret_cache_count);
@@ -867,8 +869,7 @@ metrics_http_callback(struct evhttp_request *req, void *p)
 
 	evhttp_add_header(evhttp_request_get_output_headers(req),
 			  "Content-Type", "text/plain; version=0.0.4");
-	do_metrics_stats(reply, metrics->worker,
-		!metrics->worker->daemon->cfg->stat_cumulative);
+	do_metrics_stats(reply, metrics->worker, 0 /* no reset */);
 	evhttp_send_reply(req, HTTP_OK, NULL, reply);
 	verbose(VERB_DETAIL, "metrics operation completed, response sent");
 	evbuffer_free(reply);
