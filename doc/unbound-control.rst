@@ -170,6 +170,8 @@ There are several commands that the server understands.
     :ref:`tcp-auth-query-timeout<unbound.conf.tcp-auth-query-timeout>`,
     :ref:`delay-close<unbound.conf.delay-close>`.
     :ref:`iter-scrub-promiscuous<unbound.conf.iter-scrub-promiscuous>`.
+    :ref:`tls-service-key<unbound.conf.tls-service-key>`.
+    :ref:`tls-service-pem<unbound.conf.tls-service-pem>`.
 
     It does not work with
     :ref:`interface<unbound.conf.interface>` and

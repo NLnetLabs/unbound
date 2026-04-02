@@ -567,9 +567,11 @@ void ub_openssl_lock_delete(void);
 /**
  * setup TLS session ticket
  * @param tls_session_ticket_keys: TLS ticket secret filenames
+ * @param chroot: if not NULL, the chroot that is in use.
  * @return false on failure (alloc failure).
  */
-int listen_sslctx_setup_ticket_keys(struct config_strlist* tls_session_ticket_keys);
+int listen_sslctx_setup_ticket_keys(
+	struct config_strlist* tls_session_ticket_keys, char* chroot);
 
 /** Free memory used for TLS session ticket keys */
 void listen_sslctx_delete_ticket_keys(void);

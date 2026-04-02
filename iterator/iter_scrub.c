@@ -285,6 +285,17 @@ synth_cname_rrset(uint8_t** sname, size_t* snamelen, uint8_t* alias,
 		return NULL;
 	memmove(cn->rr_first->ttl_data, rrset->rr_first->ttl_data,
 		sizeof(uint32_t)); /* RFC6672: synth CNAME TTL == DNAME TTL */
+	/* Apply cache TTL policy so DNAME and synthesized CNAME stay equal
+	 * and respect cache-min-ttl/cache-max-ttl (same as rdata_copy path). */
+	if(!SERVE_ORIGINAL_TTL) {
+		uint32_t ttl = sldns_read_uint32(cn->rr_first->ttl_data);
+		time_t ttl_t = (time_t)ttl;
+		if(ttl_t < MIN_TTL) ttl_t = MIN_TTL;
+		if(ttl_t > MAX_TTL) ttl_t = MAX_TTL;
+		ttl = (uint32_t)ttl_t;
+		sldns_write_uint32(cn->rr_first->ttl_data, ttl);
+		sldns_write_uint32(rrset->rr_first->ttl_data, ttl);
+	}
 	sldns_write_uint16(cn->rr_first->ttl_data+4, aliaslen);
 	memmove(cn->rr_first->ttl_data+6, alias, aliaslen);
 	cn->rr_first->size = sizeof(uint16_t)+aliaslen;
@@ -455,8 +466,9 @@ scrub_normalize(sldns_buffer* pkt, struct msg_parse* msg,
 				pkt, msg, prev, &rrset);
 			continue;
 		}
-		if(rrset->type == LDNS_RR_TYPE_DNAME && 
-			pkt_strict_sub(pkt, sname, rrset->dname)) {
+		if(rrset->type == LDNS_RR_TYPE_DNAME &&
+			pkt_strict_sub(pkt, sname, rrset->dname) &&
+			pkt_sub(pkt, rrset->dname, zonename)) {
 			/* check if next rrset is correct CNAME. else,
 			 * synthesize a CNAME */
 			struct rrset_parse* nx = rrset->rrset_all_next;
@@ -502,8 +514,6 @@ scrub_normalize(sldns_buffer* pkt, struct msg_parse* msg,
 				log_err("out of memory synthesizing CNAME");
 				return 0;
 			}
-			/* FIXME: resolve the conflict between synthesized 
-			 * CNAME ttls and the cache. */
 			rrset = nx;
 			continue;
 
@@ -525,7 +535,8 @@ scrub_normalize(sldns_buffer* pkt, struct msg_parse* msg,
 			if(nx && nx->section == LDNS_SECTION_ANSWER &&
 				nx->type == LDNS_RR_TYPE_DNAME &&
 				nx->rr_count == 1 &&
-				pkt_strict_sub(pkt, sname, nx->dname)) {
+				pkt_strict_sub(pkt, sname, nx->dname) &&
+				pkt_sub(pkt, nx->dname, zonename)) {
 				/* there is a DNAME after this CNAME, it 
 				 * is in the ANSWER section, and the DNAME
 				 * applies to the name we cover */
@@ -972,8 +983,10 @@ scrub_sanitize(sldns_buffer* pkt, struct msg_parse* msg,
 		}
 
 		/* remove private addresses */
-		if( (rrset->type == LDNS_RR_TYPE_A || 
-			rrset->type == LDNS_RR_TYPE_AAAA)) {
+		if(rrset->type == LDNS_RR_TYPE_A ||
+			rrset->type == LDNS_RR_TYPE_AAAA ||
+			rrset->type == LDNS_RR_TYPE_SVCB ||
+			rrset->type == LDNS_RR_TYPE_HTTPS) {
 
 			/* do not set servfail since this leads to too
 			 * many drops of other people using rfc1918 space */

@@ -4870,8 +4870,17 @@ http_process_initial_header(struct comm_point* c)
 			return 0;
 		}
 	} else if(strncasecmp(line, "Content-Length: ", 16) == 0) {
-		if(!c->http_is_chunked)
-			c->tcp_byte_count = (size_t)atoi(line+16);
+		if(!c->http_is_chunked) {
+			char* end = NULL;
+			long long cl;
+			errno = 0;
+			cl = strtoll(line+16, &end, 10);
+			if(end == line+16 || errno != 0 || cl < 0) {
+				verbose(VERB_ALGO, "http invalid Content-Length: " ARG_LL "d", cl);
+				return 0; /* reject */
+			}
+			c->tcp_byte_count = (size_t)cl;
+		}
 	} else if(strncasecmp(line, "Transfer-Encoding: chunked", 19+7) == 0) {
 		c->tcp_byte_count = 0;
 		c->http_is_chunked = 1;
@@ -4927,9 +4936,15 @@ http_process_chunk_header(struct comm_point* c)
 	if(c->http_in_chunk_headers == 1) {
 		/* read chunked start line */
 		char* end = NULL;
-		c->tcp_byte_count = (size_t)strtol(line, &end, 16);
-		if(end == line)
+		long chunk_sz;
+		errno = 0;
+		chunk_sz = strtol(line, &end, 16);
+		if(end == line || errno != 0 || chunk_sz < 0) {
+			verbose(VERB_ALGO, "http invalid chunk size: %ld",
+				chunk_sz);
 			return 0;
+		}
+		c->tcp_byte_count = (size_t)chunk_sz;
 		c->http_in_chunk_headers = 0;
 		/* remove header text from front of buffer */
 		http_moveover_buffer(c->buffer);
