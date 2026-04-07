@@ -7816,7 +7816,9 @@ fr_worker_pickup_listen_dnsport(struct worker* worker)
 		struct listen_list* ll;
 		void* dot_sslctx = daemon->listen_dot_sslctx;
 		void* doh_sslctx = daemon->listen_doh_sslctx;
+#ifdef HAVE_NGTCP2
 		void* quic_sslctx = daemon->listen_quic_sslctx;
+#endif  /* HAVE_NGTCP2 */
 		for(ll = front->cps; ll; ll = ll->next) {
 			struct comm_point* cp = ll->com;
 			if(cp->type == comm_tcp_accept &&
@@ -7836,7 +7838,7 @@ fr_worker_pickup_listen_dnsport(struct worker* worker)
 						cp->doq_socket->ctx =
 							(SSL_CTX*)quic_sslctx;
 				}
-#endif
+#endif  /* HAVE_NGTCP2 */
 			}
 		}
 	}

@@ -1,3 +1,6 @@
+7 April 2026: Yorgos
+	- Fix unused variable warning.
+
 30 March 2026: Wouter
 	- Merge #1408: Fix shared memory stats with threads.
 
