@@ -1,3 +1,10 @@
+10 April 2026: Wouter
+	- Fix for EDNS client subnet so that it does not store SERVFAIL in
+	  the global cache after a failed lookup, such as timeouts. A failure
+	  entry is stored in the subnet cache, for the query name, for a
+	  couple of seconds. Queries can continue to use the subnet cache
+	  during that time.
+
 7 April 2026: Yorgos
 	- Fix unused variable warning.
 
