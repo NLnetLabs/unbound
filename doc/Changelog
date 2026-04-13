@@ -1,3 +1,6 @@
+13 April 2026: Yorgos
+	- Update the documentation of 'max-query-restarts' in the man page.
+
 10 April 2026: Wouter
 	- Fix for EDNS client subnet so that it does not store SERVFAIL in
 	  the global cache after a failed lookup, such as timeouts. A failure

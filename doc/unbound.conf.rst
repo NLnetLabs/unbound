@@ -3269,6 +3269,10 @@ These options are part of the ``server:`` section.
     Hard limit on the number of times Unbound is allowed to restart a query
     upon encountering a CNAME record.
     Results in SERVFAIL when reached.
+    This applies to chained CNAME records but not sporadic CNAME records that
+    could be encountered in the lifetime of the query's resolution effort.
+    When a CNAME chain concludes, the counter keeping track of this limit is
+    reset.
     Changing this value needs caution as it can allow long CNAME chains to be
     accepted, where Unbound needs to verify (resolve) each link individually.
 
