@@ -3,6 +3,7 @@
 	  When alloc_reg_obtain has an empty list, return a new allocation.
 	- Fix clang analyzer warning for subnetmod, when return_msg is
 	  NULL for update cache, like when it stores servfail status.
+	- iana portlist updated.
 
 13 April 2026: Yorgos
 	- Update the documentation of 'max-query-restarts' in the man page.
