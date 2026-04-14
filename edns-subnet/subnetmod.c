@@ -456,6 +456,10 @@ update_cache(struct module_qstate *qstate, int id)
 			diff_size);
 		return;
 	}
+	if(!qstate->return_msg) {
+		lock_rw_unlock(&lru_entry->lock);
+		return;
+	}
 	/* Step 2, find the correct tree */
 	if (!(tree = get_tree(lru_entry->data, edns, sne, qstate->env->cfg))) {
 		lock_rw_unlock(&lru_entry->lock);
