@@ -193,6 +193,9 @@ server:
 	# Limit on number of CNAME, DNAME records for incoming packets.
 	# iter-scrub-cname: 11
 
+	# Limit on number of RRSIGs for an RRset for incoming packets.
+	# iter-scrub-rrsig: 8
+
 	# Limit on upstream queries for an incoming query and its recursion.
 	# max-global-quota: 200
 

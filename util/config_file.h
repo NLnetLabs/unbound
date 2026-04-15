@@ -794,6 +794,8 @@ struct config_file {
 	size_t iter_scrub_ns;
 	/** limit on CNAME, DNAME RRs in answer for the iterator scrubber. */
 	int iter_scrub_cname;
+	/** limit on RRSIGs for an RRset for the iterator scrubber. */
+	int iter_scrub_rrsig;
 	/** limit on upstream queries for an incoming query and subqueries. */
 	int max_global_quota;
 	/** Should the iterator scrub promiscuous NS rrsets, from positive

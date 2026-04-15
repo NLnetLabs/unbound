@@ -6371,6 +6371,7 @@ fr_atomic_copy_cfg(struct config_file* oldcfg, struct config_file* cfg,
 	COPY_VAR_int(ede);
 	COPY_VAR_int(iter_scrub_ns);
 	COPY_VAR_int(iter_scrub_cname);
+	COPY_VAR_int(iter_scrub_rrsig);
 	COPY_VAR_int(max_global_quota);
 	COPY_VAR_int(iter_scrub_promiscuous);
 

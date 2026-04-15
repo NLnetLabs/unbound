@@ -215,6 +215,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_HARDEN_UNKNOWN_ADDITIONAL VAR_DISABLE_EDNS_DO VAR_CACHEDB_NO_STORE
 %token VAR_LOG_DESTADDR VAR_CACHEDB_CHECK_WHEN_SERVE_EXPIRED
 %token VAR_COOKIE_SECRET_FILE VAR_ITER_SCRUB_NS VAR_ITER_SCRUB_CNAME
+%token VAR_ITER_SCRUB_RRSIG
 %token VAR_MAX_GLOBAL_QUOTA VAR_HARDEN_UNVERIFIED_GLUE VAR_LOG_TIME_ISO
 %token VAR_ITER_SCRUB_PROMISCUOUS VAR_LOG_THREAD_ID
 
@@ -359,6 +360,7 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_harden_unknown_additional | server_disable_edns_do |
 	server_log_destaddr | server_cookie_secret_file |
 	server_iter_scrub_ns | server_iter_scrub_cname | server_max_global_quota |
+	server_iter_scrub_rrsig |
 	server_harden_unverified_glue | server_log_time_iso | server_iter_scrub_promiscuous
 	;
 stub_clause: stubstart contents_stub
@@ -4252,6 +4254,15 @@ server_iter_scrub_cname: VAR_ITER_SCRUB_CNAME STRING_ARG
 		if(atoi($2) == 0 && strcmp($2, "0") != 0)
 			yyerror("number expected");
 		else cfg_parser->cfg->iter_scrub_cname = atoi($2);
+		free($2);
+	}
+	;
+server_iter_scrub_rrsig: VAR_ITER_SCRUB_RRSIG STRING_ARG
+	{
+		OUTYY(("P(server_iter_scrub_rrsig:%s)\n", $2));
+		if(atoi($2) == 0 && strcmp($2, "0") != 0)
+			yyerror("number expected");
+		else cfg_parser->cfg->iter_scrub_rrsig = atoi($2);
 		free($2);
 	}
 	;

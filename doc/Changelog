@@ -2,6 +2,10 @@
 	- Fix RFC7766 compliance when client sends EOF over TCP. It stops
 	  pending replies and closes. Thanks to Yuxiao Wu, Tsinghua
 	  University for the report.
+	- Fix to shorten RRSIG count in scrubber, this protects against
+	  an overly large number of RRSIGs. It can be configured with
+	  `iter-scrub-rrsig: 8`, it has default 8. Thanks to Yuxiao Wu,
+	  Tsinghua University for the report.
 
 14 April 2026: Wouter
 	- Fix #1017: memory corruption related core dumps.

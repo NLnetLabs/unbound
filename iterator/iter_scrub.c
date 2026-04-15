@@ -419,6 +419,43 @@ shorten_rrset(sldns_buffer* pkt, struct rrset_parse* rrset, int count)
 	else	rrset->rr_first = NULL;
 }
 
+/** Shorten RRSIGs list */
+static void
+shorten_rrsig(sldns_buffer* pkt, struct rrset_parse* rrset, int count)
+{
+	/* The too large list of RRSIGs on the RRset is shortened.
+	 * This is so that too large content does not overwhelm the cache.
+	 * The validator does not validate more than a max number of
+	 * RRSIGs as well. */
+	int i;
+	struct rr_parse* rr = rrset->rrsig_first, *prev = NULL;
+	if(!rr)
+		return;
+	for(i=0; i<count; i++) {
+		prev = rr;
+		rr = rr->next;
+		if(!rr)
+			return; /* The RRSIG list is already short. */
+	}
+	if(verbosity >= VERB_QUERY
+		&& rrset->dname_len <= LDNS_MAX_DOMAINLEN) {
+		uint8_t buf[LDNS_MAX_DOMAINLEN+1];
+		dname_pkt_copy(pkt, buf, rrset->dname);
+		log_nametypeclass(VERB_QUERY, "normalize: shorten RRSIGs:",
+			buf, rrset->type, ntohs(rrset->rrset_class));
+	}
+	/* remove further rrsigs */
+	rrset->rrsig_last = prev;
+	rrset->rrsig_count = count;
+	while(rr) {
+		rrset->size -= rr->size;
+		rr = rr->next;
+	}
+	if(rrset->rrsig_last)
+		rrset->rrsig_last->next = NULL;
+	else	rrset->rrsig_first = NULL;
+}
+
 /**
  * This routine normalizes a response. This includes removing "irrelevant"
  * records from the answer and additional sections and (re)synthesizing
@@ -456,6 +493,8 @@ scrub_normalize(sldns_buffer* pkt, struct msg_parse* msg,
 	prev = NULL;
 	rrset = msg->rrset_first;
 	while(rrset && rrset->section == LDNS_SECTION_ANSWER) {
+		if((int)rrset->rrsig_count > env->cfg->iter_scrub_rrsig)
+			shorten_rrsig(pkt, rrset, env->cfg->iter_scrub_rrsig);
 		if(cname_length > env->cfg->iter_scrub_cname) {
 			/* Too many CNAMEs, or DNAMEs, from the authority
 			 * server, scrub down the length to something
@@ -631,6 +670,8 @@ scrub_normalize(sldns_buffer* pkt, struct msg_parse* msg,
 				"RRset:", pkt, msg, prev, &rrset);
 			continue;
 		}
+		if((int)rrset->rrsig_count > env->cfg->iter_scrub_rrsig)
+			shorten_rrsig(pkt, rrset, env->cfg->iter_scrub_rrsig);
 		/* only one NS set allowed in authority section */
 		if(rrset->type==LDNS_RR_TYPE_NS) {
 			/* NS set must be pertinent to the query */
@@ -773,6 +814,8 @@ scrub_normalize(sldns_buffer* pkt, struct msg_parse* msg,
 				"RRset:", pkt, msg, prev, &rrset);
 			continue;
 		}
+		if((int)rrset->rrsig_count > env->cfg->iter_scrub_rrsig)
+			shorten_rrsig(pkt, rrset, env->cfg->iter_scrub_rrsig);
 		prev = rrset;
 		rrset = rrset->rrset_all_next;
 	}

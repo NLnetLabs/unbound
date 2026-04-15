@@ -3297,6 +3297,15 @@ These options are part of the ``server:`` section.
     Default: 11
 
 
+@@UAHL@unbound.conf@iter-scrub-rrsig@@: *<number>*
+    Limit on the number of RRSIGs allowed for an RRset, from the iterator
+    scrubber.
+    This protects against an overly large number of RRSIGs.
+    Clips off the remainder of the RRSIG list at that point.
+
+    Default: 8
+
+
 @@UAHL@unbound.conf@max-global-quota@@: *<number>*
     Limit on the number of upstream queries sent out for an incoming query and
     its subqueries from recursion.
