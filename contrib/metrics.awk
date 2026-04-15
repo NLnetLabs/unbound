@@ -2,7 +2,7 @@
 # and output prometheus metrics style output.
 # use these options:
 #	server:		extended-statistics: yes
-#			statistics-cumulative: no
+#			statistics-cumulative: yes
 #			statistics-interval: 0
 #	remote-control: control-enable: yes
 # Can use it like unbound-control stats | awk -f "metrics.awk"
@@ -17,7 +17,7 @@ BEGIN {
 # print the output metrics
 END {
 	print "# HELP unbound_hits_queries Unbound DNS traffic and cache hits"
-	print "# TYPE unbound_hits_queries gauge"
+	print "# TYPE unbound_hits_queries counter"
 	print "unbound_hits_queries{type=\"total.num.queries\"} " val["total.num.queries"];
 	for (x=0; x<99; x++) {
 		if(val["thread" $x ".num.queries"] != "") {
@@ -70,7 +70,7 @@ END {
 	print ""
 
 	print "# HELP unbound_by_type_queries Unbound DNS queries by type"
-	print "# TYPE unbound_by_type_queries gauge"
+	print "# TYPE unbound_by_type_queries counter"
 	for(x in val) {
 		if(x ~ /^num.query.type./) {
 			if(val[x] != "") {
@@ -82,7 +82,7 @@ END {
 	print ""
 
 	print "# HELP unbound_by_class_queries Unbound DNS queries by class"
-	print "# TYPE unbound_by_class_queries gauge"
+	print "# TYPE unbound_by_class_queries counter"
 	for(x in val) {
 		if(x ~ /^num.query.class./) {
 			if(val[x] != "") {
@@ -94,7 +94,7 @@ END {
 	print ""
 
 	print "# HELP unbound_by_opcode_queries Unbound DNS queries by opcode"
-	print "# TYPE unbound_by_opcode_queries gauge"
+	print "# TYPE unbound_by_opcode_queries counter"
 	for(x in val) {
 		if(x ~ /^num.query.opcode./) {
 			if(val[x] != "") {
@@ -106,7 +106,7 @@ END {
 	print ""
 
 	print "# HELP unbound_by_rcode_queries Unbound DNS answers by rcode"
-	print "# TYPE unbound_by_rcode_queries gauge"
+	print "# TYPE unbound_by_rcode_queries counter"
 	for(x in val) {
 		if(x ~ /^num.answer.rcode./) {
 			if(val[x] != "") {
@@ -118,7 +118,7 @@ END {
 	print ""
 
 	print "# HELP unbound_by_flags_queries Unbound DNS queries by flags"
-	print "# TYPE unbound_by_flags_queries gauge"
+	print "# TYPE unbound_by_flags_queries counter"
 	for(x in val) {
 		if(x ~ /^num.query.flags./) {
 			if(val[x] != "") {
@@ -136,7 +136,7 @@ END {
 	print ""
 
 	print "# HELP unbound_histogram_seconds Unbound DNS histogram of reply time"
-	print "# TYPE unbound_histogram_seconds gauge"
+	print "# TYPE unbound_histogram_seconds counter"
 	print "unbound_histogram_seconds{bucket=\"000000.000000.to.000000.000001\"} " val["histogram.000000.000000.to.000000.000001"];
 	print "unbound_histogram_seconds{bucket=\"000000.000001.to.000000.000002\"} " val["histogram.000000.000001.to.000000.000002"];
 	print "unbound_histogram_seconds{bucket=\"000000.000002.to.000000.000004\"} " val["histogram.000000.000002.to.000000.000004"];

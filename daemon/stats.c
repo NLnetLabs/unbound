@@ -611,3 +611,42 @@ void server_stats_downstream_cookie(struct ub_server_stats* stats,
 		stats->num_queries_cookie_invalid++;
 	}
 }
+
+void stats_get_mem_info(struct worker* worker, struct ub_mem_stat_info* mem)
+{
+	struct daemon* daemon = worker->daemon;
+	mem->msg = slabhash_get_mem(daemon->env->msg_cache);
+	mem->rrset = slabhash_get_mem(&daemon->env->rrset_cache->table);
+	mem->val = mod_get_mem(&worker->env, "validator");
+	mem->iter = mod_get_mem(&worker->env, "iterator");
+	mem->respip = mod_get_mem(&worker->env, "respip");
+#ifdef CLIENT_SUBNET
+	mem->subnet = mod_get_mem(&worker->env, "subnetcache");
+#else
+	mem->subnet = 0;
+#endif /* CLIENT_SUBNET */
+#ifdef USE_IPSECMOD
+	mem->ipsecmod = mod_get_mem(&worker->env, "ipsecmod");
+#else
+	mem->ipsecmod = 0;
+#endif /* USE_IPSECMOD */
+#ifdef USE_DNSCRYPT
+	if(daemon->dnscenv) {
+		mem->dnscrypt_shared_secret = slabhash_get_mem(
+			daemon->dnscenv->shared_secrets_cache);
+		mem->dnscrypt_nonce = slabhash_get_mem(
+			daemon->dnscenv->nonces_cache);
+	} else {
+		mem->dnscrypt_shared_secret = 0;
+		mem->dnscrypt_nonce = 0;
+	}
+#else
+	mem->dnscrypt_shared_secret = 0;
+	mem->dnscrypt_nonce = 0;
+#endif /* USE_DNSCRYPT */
+#ifdef WITH_DYNLIBMODULE
+	mem->dynlib = mod_get_mem(&worker->env, "dynlib");
+#else
+	mem->dynlib = 0;
+#endif /* WITH_DYNLIBMODULE */
+}

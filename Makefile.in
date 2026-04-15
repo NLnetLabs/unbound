@@ -187,9 +187,9 @@ unittcpreuse.lo unitdoq.lo unitinfra.lo
 UNITTEST_OBJ_LINK=$(UNITTEST_OBJ) worker_cb.lo $(COMMON_OBJ) $(SLDNS_OBJ) \
 $(COMPAT_OBJ)
 DAEMON_SRC=daemon/acl_list.c daemon/cachedump.c daemon/daemon.c \
-daemon/remote.c daemon/stats.c daemon/unbound.c daemon/worker.c @WIN_DAEMON_SRC@
+daemon/remote.c daemon/stats.c daemon/metrics.c daemon/unbound.c daemon/worker.c @WIN_DAEMON_SRC@
 DAEMON_OBJ=acl_list.lo cachedump.lo daemon.lo \
-shm_main.lo remote.lo stats.lo unbound.lo \
+shm_main.lo remote.lo stats.lo metrics.lo unbound.lo \
 worker.lo @WIN_DAEMON_OBJ@
 DAEMON_OBJ_LINK=$(DAEMON_OBJ) $(COMMON_OBJ_ALL_SYMBOLS) $(SLDNS_OBJ) \
 $(COMPAT_OBJ) @WIN_DAEMON_OBJ_LINK@
@@ -721,6 +721,7 @@ depend:
 ipset.lo ipset.o: $(srcdir)/ipset/ipset.c
 doqclient.lo doqclient.o: $(srcdir)/testcode/doqclient.c
 unitdoq.lo unitdoq.o: $(srcdir)/testcode/unitdoq.c
+metrics.lo metrics.o: $(srcdir)/daemon/metrics.c
 
 # Dependencies
 dns.lo dns.o: $(srcdir)/services/cache/dns.c config.h $(srcdir)/iterator/iter_delegpt.h $(srcdir)/util/log.h \

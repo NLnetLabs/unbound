@@ -249,40 +249,13 @@ shm_general_info(struct worker* worker)
 	stat_timeval_subtract(&shm_stat->time.up_sec, &shm_stat->time.up_usec, worker->env.now_tv, &worker->daemon->time_boot);
 	stat_timeval_subtract(&shm_stat->time.elapsed_sec, &shm_stat->time.elapsed_usec, worker->env.now_tv, &worker->daemon->time_last_stat);
 
-	shm_stat->mem.msg = (long long)slabhash_get_mem(worker->env.msg_cache);
-	shm_stat->mem.rrset = (long long)slabhash_get_mem(&worker->env.rrset_cache->table);
-	shm_stat->mem.dnscrypt_shared_secret = 0;
-#ifdef USE_DNSCRYPT
-	if(worker->daemon->dnscenv) {
-		shm_stat->mem.dnscrypt_shared_secret = (long long)slabhash_get_mem(
-			worker->daemon->dnscenv->shared_secrets_cache);
-		shm_stat->mem.dnscrypt_nonce = (long long)slabhash_get_mem(
-			worker->daemon->dnscenv->nonces_cache);
-	}
-#endif
-	shm_stat->mem.val = (long long)mod_get_mem(&worker->env, "validator");
-	shm_stat->mem.iter = (long long)mod_get_mem(&worker->env, "iterator");
-	shm_stat->mem.respip = (long long)mod_get_mem(&worker->env, "respip");
-
 	/* subnet mem value is available in shm, also when not enabled,
 	 * to make the struct easier to memmap by other applications,
 	 * independent of the configuration of unbound */
-	shm_stat->mem.subnet = 0;
-#ifdef CLIENT_SUBNET
-	shm_stat->mem.subnet = (long long)mod_get_mem(&worker->env,
-		"subnetcache");
-#endif
 	/* ipsecmod mem value is available in shm, also when not enabled,
 	 * to make the struct easier to memmap by other applications,
 	 * independent of the configuration of unbound */
-	shm_stat->mem.ipsecmod = 0;
-#ifdef USE_IPSECMOD
-	shm_stat->mem.ipsecmod = (long long)mod_get_mem(&worker->env,
-		"ipsecmod");
-#endif
-#ifdef WITH_DYNLIBMODULE
-	shm_stat->mem.dynlib = (long long)mod_get_mem(&worker->env, "dynlib");
-#endif
+	stats_get_mem_info(worker, &shm_stat->mem);
 }
 
 /** See if the thread is first. Caller has lock. */

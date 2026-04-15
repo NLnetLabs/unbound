@@ -56,6 +56,7 @@ struct local_zones;
 struct views;
 struct ub_randstate;
 struct daemon_remote;
+struct daemon_metrics;
 struct respip_set;
 struct shm_main_info;
 struct doq_table;
@@ -99,6 +100,10 @@ struct daemon {
 	struct listen_port* rc_ports;
 	/** remote control connections management (for first worker) */
 	struct daemon_remote* rc;
+	/** port number for metrics that has ports opened. */
+	int metrics_port;
+	/** metrics endpoint connections management (for first worker) */
+	struct daemon_metrics* metrics;
 	/** ssl context for listening to dnstcp over ssl */
 	void* listen_dot_sslctx;
 	/** ssl context for connecting to dnstcp over ssl */

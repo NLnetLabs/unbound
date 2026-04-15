@@ -1159,6 +1159,23 @@ server:
 	# Timeout in milliseconds for TCP queries to auth servers.
 	# tcp-auth-query-timeout: 3000
 
+	# Enable the prometheus metrics HTTP endpoint. Default is no.
+	# metrics-enable: no
+
+	# Interfaces to expose the HTTP endpoint on, default is on localhost.
+	# Interfaces can be specified by IP address or interface name.
+	# With an interface name, all IP addresses associated with that
+	# interface are used. Default is 127.0.0.1 and ::1.
+	# metrics-interface: 127.0.0.1
+	# metrics-interface: ::1
+	# metrics-interface: lo
+
+	# Port number for the HTTP metrics endpoint. Default is 9100.
+	# metrics-port: 9100
+
+	# HTTP path for the metrics endpoint. Default is "/metrics".
+	# metrics-path: "/metrics"
+
 
 # Python config section. To enable:
 # o use --with-pythonmodule to configure before compiling.

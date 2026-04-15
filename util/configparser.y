@@ -126,6 +126,8 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_INFRA_CACHE_MIN_RTT VAR_INFRA_CACHE_MAX_RTT VAR_INFRA_KEEP_PROBING
 %token VAR_DNS64_PREFIX VAR_DNS64_SYNTHALL VAR_DNS64_IGNORE_AAAA
 %token VAR_NAT64_PREFIX
+%token VAR_METRICS_ENABLE VAR_METRICS_INTERFACE VAR_METRICS_PORT
+%token VAR_METRICS_PATH
 %token VAR_DNSTAP VAR_DNSTAP_ENABLE VAR_DNSTAP_SOCKET_PATH VAR_DNSTAP_IP
 %token VAR_DNSTAP_TLS VAR_DNSTAP_TLS_SERVER_NAME VAR_DNSTAP_TLS_CERT_BUNDLE
 %token VAR_DNSTAP_TLS_CLIENT_KEY_FILE VAR_DNSTAP_TLS_CLIENT_CERT_FILE
@@ -359,7 +361,9 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_harden_unknown_additional | server_disable_edns_do |
 	server_log_destaddr | server_cookie_secret_file |
 	server_iter_scrub_ns | server_iter_scrub_cname | server_max_global_quota |
-	server_harden_unverified_glue | server_log_time_iso | server_iter_scrub_promiscuous
+	server_harden_unverified_glue | server_log_time_iso | server_iter_scrub_promiscuous |
+	server_metrics_enable | server_metrics_interface |
+	server_metrics_port | server_metrics_path
 	;
 stub_clause: stubstart contents_stub
 	{
@@ -2748,6 +2752,52 @@ server_response_ip_tag: VAR_RESPONSE_IP_TAG STRING_ARG STRING_ARG
 		}
 	}
 	;
+server_metrics_enable: VAR_METRICS_ENABLE STRING_ARG
+	{
+		OUTYY(("P(server_metrics_enable:%s)\n", $2));
+#ifdef USE_METRICS
+		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
+			yyerror("expected yes or no.");
+		else cfg_parser->cfg->metrics_enable = (strcmp($2, "yes")==0);
+#else
+		if(strcmp($2, "yes")==0)
+			log_warn("%s:%d the server is not compiled with "
+				"prometheus metrics.", cfg_parser->filename,
+				cfg_parser->line);
+#endif
+		free($2);
+	};
+server_metrics_interface: VAR_METRICS_INTERFACE STRING_ARG
+	{
+		OUTYY(("P(server_metrics_interface:%s)\n", $2));
+#ifdef USE_METRICS
+		if(!cfg_strlist_append(&cfg_parser->cfg->metrics_ifs, $2))
+			yyerror("out of memory");
+#else
+		free($2);
+#endif
+	};
+server_metrics_port: VAR_METRICS_PORT STRING_ARG
+	{
+		OUTYY(("P(server_metrics_port:%s)\n", $2));
+#ifdef USE_METRICS
+		if(atoi($2) == 0 && strcmp($2,"0")!=0)
+			yyerror("port number expected");
+		else
+			cfg_parser->cfg->metrics_port = atoi($2);
+#endif
+		free($2);
+	};
+server_metrics_path: VAR_METRICS_PATH STRING_ARG
+	{
+		OUTYY(("P(server_metrics_path:%s)\n", $2));
+#ifdef USE_METRICS
+		free(cfg_parser->cfg->metrics_path);
+		cfg_parser->cfg->metrics_path = $2;
+#else
+		free($2);
+#endif
+	};
 server_ip_ratelimit: VAR_IP_RATELIMIT STRING_ARG
 	{
 		OUTYY(("P(server_ip_ratelimit:%s)\n", $2));

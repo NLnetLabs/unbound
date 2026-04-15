@@ -1,0 +1,113 @@
+# #-- prometheus_metrics.test --#
+# source the master var file when it's there
+[ -f ../.tpkg.var.master ] && source ../.tpkg.var.master
+# use .tpkg.var.test for in test variable passing
+[ -f .tpkg.var.test ] && source .tpkg.var.test
+
+. ../common.sh
+PRE="../.."
+
+NUM_A_QUERIES=5
+NUM_TXT_QUERIES=3
+
+# query server a few times
+for i in $(seq 1 $NUM_A_QUERIES); do
+	dig @127.0.0.1 -p "$UNBOUND_PORT" www.example.com. A IN | tee out2
+	if grep "192.0.2.10" out2; then
+		echo "OK"
+	else
+		echo "data not present"
+		exit 1
+	fi
+done
+
+for i in $(seq 1 $NUM_TXT_QUERIES); do
+	dig @127.0.0.1 -p "$UNBOUND_PORT" a.example.com. TXT IN | tee out2
+	if grep "abcdef text" out2; then
+		echo "OK"
+	else
+		echo "data not present"
+		exit 1
+	fi
+done
+
+# stats no reset for comparison
+echo ""
+echo ">> unbound-control stats"
+$PRE/unbound-control -c ub.conf stats_noreset | tee stats
+
+# check metrics
+if ! curl -Ssi "http://127.0.0.1:$METRICS_PORT/metrics" -o metrics.out; then
+	echo "FAIL curl failed"
+	exit 1
+fi
+
+echo ""
+echo ">> metrics output"
+cat metrics.out
+
+echo ""
+echo ">> checks"
+
+# more tests
+if grep -Fx "unbound_hits_queries{type=\"total.num.queries\"} $((NUM_TXT_QUERIES+NUM_A_QUERIES))" metrics.out; then
+	echo "OK"
+else
+	echo "FAIL total num"
+	exit 1
+fi
+
+if grep -Fx "unbound_by_type_queries{type=\"TXT\"} $NUM_TXT_QUERIES" metrics.out; then
+	echo "OK"
+else
+	echo "FAIL txt num"
+	exit 1
+fi
+
+if grep -Fx "unbound_by_type_queries{type=\"A\"} $NUM_A_QUERIES" metrics.out; then
+	echo "OK"
+else
+	echo "FAIL A num"
+	exit 1
+fi
+
+# and check statistics are the same as metrics
+if grep "total.num.queries=$((NUM_TXT_QUERIES+NUM_A_QUERIES))" stats; then echo "OK"; else echo "FAIL"; exit 1; fi
+if grep "num.query.type.TXT=$NUM_TXT_QUERIES" stats; then echo "OK"; else echo "FAIL"; exit 1; fi
+if grep "num.query.type.A=$NUM_A_QUERIES" stats; then echo "OK"; else echo "FAIL"; exit 1; fi
+
+# check that metrics shows no reset to stats after using nsd-control stats
+# check metrics again
+if ! curl -Ssi "http://127.0.0.1:$METRICS_PORT/metrics" -o metrics.out2; then
+	echo "FAIL to curl again"
+	exit 1
+fi
+
+echo ""
+echo ">> metrics output"
+cat metrics.out2
+echo ""
+echo ">> checks"
+
+if grep -Fx "unbound_hits_queries{type=\"total.num.queries\"} $((NUM_TXT_QUERIES+NUM_A_QUERIES))" metrics.out2; then
+	echo "OK"
+else
+	echo "FAIL total num again"
+	exit 1
+fi
+
+if grep -Fx "unbound_by_flags_queries{flag=\"RD\"} $((NUM_TXT_QUERIES+NUM_A_QUERIES))" metrics.out2; then
+	echo "OK"
+else
+	echo "FAIL RD num again"
+	exit 1
+fi
+
+if grep -Fx "unbound_hits_queries{type=\"total.num.cachehits\"} $((NUM_TXT_QUERIES+NUM_A_QUERIES))" metrics.out2; then
+	echo "OK"
+else
+	echo "FAIL cachehits num again"
+	exit 1
+fi
+
+exit 0
