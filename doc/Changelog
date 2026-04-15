@@ -1,3 +1,8 @@
+15 April 2026: Wouter
+	- Fix RFC7766 compliance when client sends EOF over TCP. It stops
+	  pending replies and closes. Thanks to Yuxiao Wu, Tsinghua
+	  University for the report.
+
 14 April 2026: Wouter
 	- Fix #1017: memory corruption related core dumps.
 	  When alloc_reg_obtain has an empty list, return a new allocation.
