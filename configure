@@ -22242,6 +22242,12 @@ then :
   printf "%s\n" "#define HAVE_SSL_GET0_PEERNAME 1" >>confdefs.h
 
 fi
+ac_fn_c_check_func "$LINENO" "X509_get_extended_key_usage" "ac_cv_func_X509_get_extended_key_usage"
+if test "x$ac_cv_func_X509_get_extended_key_usage" = xyes
+then :
+  printf "%s\n" "#define HAVE_X509_GET_EXTENDED_KEY_USAGE 1" >>confdefs.h
+
+fi
 ac_fn_c_check_func "$LINENO" "X509_VERIFY_PARAM_set1_host" "ac_cv_func_X509_VERIFY_PARAM_set1_host"
 if test "x$ac_cv_func_X509_VERIFY_PARAM_set1_host" = xyes
 then :

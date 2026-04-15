@@ -837,6 +837,9 @@
 /* Define to 1 if you have the <ws2tcpip.h> header file. */
 #undef HAVE_WS2TCPIP_H
 
+/* Define to 1 if you have the 'X509_get_extended_key_usage' function. */
+#undef HAVE_X509_GET_EXTENDED_KEY_USAGE
+
 /* Define to 1 if you have the 'X509_VERIFY_PARAM_set1_host' function. */
 #undef HAVE_X509_VERIFY_PARAM_SET1_HOST
 
