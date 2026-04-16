@@ -12,6 +12,9 @@
 	  configure option, related to #1401, is no longer needed with the new
 	  option and the current default.
 
+16 April 2026: Wouter
+	- Fix configure, autoconf for #1406.
+
 15 April 2026: Wouter
 	- Fix RFC7766 compliance when client sends EOF over TCP. It stops
 	  pending replies and closes. Thanks to Yuxiao Wu, Tsinghua
