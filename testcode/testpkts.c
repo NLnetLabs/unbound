@@ -1774,11 +1774,14 @@ adjust_packet(struct entry* match, uint8_t** answer_pkt, size_t *answer_len,
 		memmove(res+LDNS_HEADER_SIZE+dlen+4,
 			orig+LDNS_HEADER_SIZE+olen+4,
 			reslen-(LDNS_HEADER_SIZE+dlen+4));
+	} else if(origlen == 0) {
+		res = NULL;
+		reslen = 0;
 	} else {
 		res = memdup(orig, origlen);
 		reslen = origlen;
 	}
-	if(!res) {
+	if(!res && reslen > 0) {
 		verbose(1, "out of memory; send without adjust\n");
 		return;
 	}

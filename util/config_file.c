@@ -62,6 +62,9 @@
 #include "sldns/wire2str.h"
 #include "sldns/parseutil.h"
 #include "iterator/iterator.h"
+#ifdef HAVE_SYS_STAT_H
+#include <sys/stat.h>
+#endif
 #ifdef HAVE_GLOB_H
 # include <glob.h>
 #endif
@@ -423,6 +426,7 @@ config_create(void)
 	cfg->dns_error_reporting = 0;
 	cfg->iter_scrub_ns = 20;
 	cfg->iter_scrub_cname = 11;
+	cfg->iter_scrub_rrsig = 8;
 	cfg->iter_scrub_promiscuous = 1;
 	cfg->max_global_quota = 200;
 	return cfg;
@@ -774,6 +778,7 @@ int config_set_option(struct config_file* cfg, const char* opt,
 	else S_YNO("dns-error-reporting:", dns_error_reporting)
 	else S_NUMBER_OR_ZERO("iter-scrub-ns:", iter_scrub_ns)
 	else S_NUMBER_OR_ZERO("iter-scrub-cname:", iter_scrub_cname)
+	else S_NUMBER_OR_ZERO("iter-scrub-rrsig:", iter_scrub_rrsig)
 	else S_YNO("iter-scrub-promiscuous:", iter_scrub_promiscuous)
 	else S_NUMBER_OR_ZERO("max-global-quota:", max_global_quota)
 	else S_YNO("serve-original-ttl:", serve_original_ttl)
@@ -1253,6 +1258,7 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_YNO(opt, "dns-error-reporting", dns_error_reporting)
 	else O_DEC(opt, "iter-scrub-ns", iter_scrub_ns)
 	else O_DEC(opt, "iter-scrub-cname", iter_scrub_cname)
+	else O_DEC(opt, "iter-scrub-rrsig", iter_scrub_rrsig)
 	else O_YNO(opt, "iter-scrub-promiscuous", iter_scrub_promiscuous)
 	else O_DEC(opt, "max-global-quota", max_global_quota)
 	else O_YNO(opt, "serve-original-ttl", serve_original_ttl)
@@ -3033,4 +3039,28 @@ cfg_tls_protocols_allowed(const char* tls_protocols, int* allow12, int* allow13)
 		while(*s && isspace((unsigned char)*s))
 			s++;
 	}
+}
+
+int
+file_get_mtime(const char* file, time_t* mtime, long* ns, int* nonexist)
+{
+	struct stat s;
+	if(stat(file, &s) != 0) {
+		*mtime = 0;
+		*ns = 0;
+		if(nonexist)
+			*nonexist = (errno == ENOENT);
+		return 0;
+	}
+	if(nonexist)
+		*nonexist = 0;
+	*mtime = s.st_mtime;
+#ifdef HAVE_STRUCT_STAT_ST_MTIMENSEC
+	*ns = s.st_mtimensec;
+#elif defined(HAVE_STRUCT_STAT_ST_MTIM_TV_NSEC)
+	*ns = s.st_mtim.tv_nsec;
+#else
+	*ns = 0;
+#endif
+	return 1;
 }

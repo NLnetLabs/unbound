@@ -226,6 +226,7 @@ STEP 150 TIME_PASSES ELAPSE 200
 STEP 160 FLUSH_MESSAGE www.example.com. IN A
 
 ; cache has no answer, cachedb is expired
+; but it needs to be validated.
 STEP 170 QUERY
 ENTRY_BEGIN
 REPLY RD DO
@@ -235,12 +236,14 @@ ENTRY_END
 
 STEP 180 CHECK_ANSWER
 ENTRY_BEGIN
-MATCH all ttl ede=3
+MATCH all ttl
+;ede=3
 REPLY QR RD RA DO NOERROR
 SECTION QUESTION
 www.example.com. IN A
 SECTION ANSWER
-www.example.com. 123 IN A 1.2.3.4
+;www.example.com. 123 IN A 1.2.3.4
+www.example.com. 200 IN A 1.2.3.4
 ENTRY_END
 
 STEP 190 TRAFFIC
@@ -298,14 +301,17 @@ SECTION QUESTION
 www.example.com. IN A
 ENTRY_END
 
+; but it needs to be validated
 STEP 280 CHECK_ANSWER
 ENTRY_BEGIN
-MATCH all ttl ede=3
+MATCH all ttl
+;ede=3
 REPLY QR RD RA DO NOERROR
 SECTION QUESTION
 www.example.com. IN A
 SECTION ANSWER
-www.example.com. 123 IN A 1.2.3.4
+;www.example.com. 123 IN A 1.2.3.4
+www.example.com. 200 IN A 1.2.3.4
 ENTRY_END
 
 STEP 290 TRAFFIC

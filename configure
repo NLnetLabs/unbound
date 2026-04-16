@@ -23270,6 +23270,23 @@ fi
 
 fi
 
+ac_fn_c_check_member "$LINENO" "struct stat" "st_mtimensec" "ac_cv_member_struct_stat_st_mtimensec" "$ac_includes_default"
+if test "x$ac_cv_member_struct_stat_st_mtimensec" = xyes
+then :
+
+printf "%s\n" "#define HAVE_STRUCT_STAT_ST_MTIMENSEC 1" >>confdefs.h
+
+
+fi
+ac_fn_c_check_member "$LINENO" "struct stat" "st_mtim.tv_nsec" "ac_cv_member_struct_stat_st_mtim_tv_nsec" "$ac_includes_default"
+if test "x$ac_cv_member_struct_stat_st_mtim_tv_nsec" = xyes
+then :
+
+printf "%s\n" "#define HAVE_STRUCT_STAT_ST_MTIM_TV_NSEC 1" >>confdefs.h
+
+
+fi
+
 ac_fn_c_check_member "$LINENO" "struct sockaddr_un" "sun_len" "ac_cv_member_struct_sockaddr_un_sun_len" "
 $ac_includes_default
 #ifdef HAVE_SYS_UN_H

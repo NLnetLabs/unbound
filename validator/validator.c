@@ -2699,7 +2699,9 @@ val_operate(struct module_qstate* qstate, enum module_ev event, int id,
 		if(!needs_validation(qstate, qstate->return_rcode, 
 			qstate->return_msg)) {
 			/* no need to validate this */
-			if(qstate->return_msg)
+			/* For valrec responses, leave at sec_status_unchecked,
+			 * no security status has been requested for it. */
+			if(qstate->return_msg && !qstate->is_valrec)
 				qstate->return_msg->rep->security =
 					sec_status_indeterminate;
 			qstate->ext_state[id] = module_finished;

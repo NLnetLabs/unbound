@@ -735,6 +735,12 @@
 /* Define to 1 if `sun_len' is a member of `struct sockaddr_un'. */
 #undef HAVE_STRUCT_SOCKADDR_UN_SUN_LEN
 
+/* Define to 1 if `st_mtimensec' is a member of `struct stat'. */
+#undef HAVE_STRUCT_STAT_ST_MTIMENSEC
+
+/* Define to 1 if `st_mtim.tv_nsec' is a member of `struct stat'. */
+#undef HAVE_STRUCT_STAT_ST_MTIM_TV_NSEC
+
 /* Define if you have Swig libraries and header files. */
 #undef HAVE_SWIG
 

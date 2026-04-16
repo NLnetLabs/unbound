@@ -255,6 +255,8 @@ struct fast_reload_thread {
 	struct fast_reload_auth_change* auth_zone_change_list;
 	/** the old tree of auth zones, to lookup. */
 	struct auth_zones* old_auth_zones;
+	/** If the ssl ctxs have changed. */
+	int sslctxs_changed;
 };
 
 /**

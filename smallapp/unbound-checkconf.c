@@ -44,6 +44,7 @@
 
 #include "config.h"
 #include <ctype.h>
+#include "util/as112.h"
 #include "util/log.h"
 #include "util/config_file.h"
 #include "util/module.h"
@@ -188,11 +189,56 @@ donotquerylocalhostcheck(struct config_file* cfg)
 	}
 }
 
+static void
+nodefaultzonescheck(struct config_file* cfg)
+{
+	struct config_strlist* d;
+	const char** zstr;
+	size_t len;
+
+#define COMPARE_ZONE_NAME(confname, builtname, len)		\
+	(strncasecmp(confname, builtname, (len)) == 0 &&	\
+	(strlen(confname) == (len) ||				\
+	(strlen(confname) == (len) + 1				\
+	&& confname[(len)] == '.')))
+
+	for(d = cfg->local_zones_nodefault; d; d = d->next) {
+		if(!cfg->unblock_lan_zones) {
+			for(zstr = as112_zones; *zstr; zstr++) {
+				len = strlen(*zstr) - 1; /* trailing '.' */
+				if(COMPARE_ZONE_NAME(d->str, *zstr, len))
+					goto default_continue;
+			}
+		}
+		for(zstr = local_zones_default_special; *zstr; zstr++) {
+			len = strlen(*zstr) - 1; /* trailing '.' */
+			if(COMPARE_ZONE_NAME(d->str, *zstr, len))
+				goto default_continue;
+		}
+		for(zstr = local_zones_default_reverse; *zstr; zstr++) {
+			len = strlen(*zstr) - 1; /* trailing '.' */
+			if(COMPARE_ZONE_NAME(d->str, *zstr, len))
+				goto default_continue;
+		}
+		if(COMPARE_ZONE_NAME(d->str, "localhost.", 10 - 1))
+			goto default_continue;
+		fprintf(stderr, "unbound-checkconf: warning: local-zone: '%s' "
+			"is configured as 'nodefault' but there is no such "
+			"default local-zone. Check the unbound.conf "
+			"documentation for default configured local-zones.\n",
+			d->str);
+default_continue:
+		; /* statement to jump to, for older gcc. */
+	}
+#undef COMPARE_ZONE_NAME
+}
+
 /** check localzones */
 static void
 localzonechecks(struct config_file* cfg)
 {
 	struct local_zones* zs;
+	nodefaultzonescheck(cfg);
 	if(!(zs = local_zones_create()))
 		fatal_exit("out of memory");
 	if(!local_zones_apply_cfg(zs, cfg))

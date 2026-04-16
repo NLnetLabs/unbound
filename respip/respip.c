@@ -973,6 +973,9 @@ respip_rewrite_reply(const struct query_info* qinfo,
 					lock_rw_unlock(&raddr->lock);
 					lock_rw_unlock(&a->lock);
 					lock_rw_unlock(&az->rpz_lock);
+					if(view) {
+                    	lock_rw_unlock(&view->lock);
+					}
 					return 0;
 				}
 				if(rpz_used) {

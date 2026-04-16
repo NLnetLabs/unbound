@@ -366,6 +366,10 @@ These options are part of the ``server:`` section.
     Larger numbers need extra resources from the operating system.
     For performance a very large value is best, use libevent to make this
     possible.
+    Should be higher (preferably double) than the value of
+    :ref:`num-queries-per-thread<unbound.conf.num-queries-per-thread>` to
+    account for cases where the request list is full and avoid file descriptor
+    starvation.
 
     Default: 4096 (libevent) / 960 (minievent) / 48 (windows)
 
@@ -1044,9 +1048,13 @@ These options are part of the ``server:`` section.
     certificate is in the :ref:`tls-service-pem<unbound.conf.tls-service-pem>`
     file and it must also be specified if
     :ref:`tls-service-key<unbound.conf.tls-service-key>` is specified.
-    Enabling or disabling this service requires a restart (a reload is not
-    enough), because the key is read while root permissions are held and before
-    chroot (if any).
+    If the key is stored with root permissions or outside of chroot, then
+    a change or enabling or disabling requires a restart (a reload is not
+    enough).
+    But if the key file (and tls-service-pem file) are accessible, then they
+    are read in on reload, and fast_reload.
+    The server checks the modification time of the file (and the filename)
+    to see if the file has changed for reload.
     The ports enabled implicitly or explicitly via
     :ref:`tls-port<unbound.conf.tls-port>` and
     :ref:`https-port<unbound.conf.https-port>` do not provide normal DNS TCP
@@ -2006,6 +2014,11 @@ These options are part of the ``server:`` section.
     turned into a network proxy, allowing remote access through the browser to
     other parts of your private network.
 
+    The option removes resource records of types A, AAAA, SVCB and HTTPS
+    that match the filter.
+    Inside the SVCB and HTTPS records, the svcparams of type ipv4hint
+    and ipv6hint are checked for matches.
+
     Some names can be allowed to contain your private addresses, by default all
     the :ref:`local-data<unbound.conf.local-data>` that you configured is
     allowed to, and you can specify additional names using
@@ -2656,6 +2669,33 @@ These options are part of the ``server:`` section.
         redirected, so that users with web browsers cannot access sites with
         suffix example.com.
 
+        A ``CNAME`` record can also be provided via local-data:
+
+        .. code-block:: text
+
+            local-zone: "example.com." redirect
+            local-data: "example.com. CNAME www.example.org."
+
+        In that case, the ``CNAME`` is resolved and the answer
+        includes resolved target records as well.
+        The ``CNAME`` record has to be with the zone name of the local-zone,
+        and there can be one CNAME, not more.
+        The ``CNAME`` record has to be at the zone apex of the
+        ``redirect`` zone, then it is used for redirection.
+        The resolution proceeds with upstream DNS resolution, and
+        that does not include the lookup in local zones.
+        So the record is not able to point in local zones, but it
+        can point to upstream DNS answers.
+
+        ``CNAME`` resolution is supported only in type ``redirect``
+        local-zone, and in type ``inform_redirect`` local-zone.
+
+        As different from ``CNAME`` records that are used elsewhere, in
+        the ``redirect`` type local-zone, it is supported that in the target
+        of the record a wildcard label gets expanded to the query name, with
+        for example: ``example.com. CNAME *.foo.net.`` gets expanded
+        to ``www.example.com. CNAME www.example.com.foo.net.``.
+
     @@UAHL@unbound.conf.local-zone.type@inform@@
         The query is answered normally, same as
         :ref:`transparent<unbound.conf.local-zone.type.transparent>`.
@@ -2695,6 +2735,9 @@ These options are part of the ``server:`` section.
     @@UAHL@unbound.conf.local-zone.type@always_refuse@@
         Like :ref:`refuse<unbound.conf.local-zone.type.refuse>`, but ignores
         local data and refuses the query.
+        This type also blocks queries of type DS for the zone name.
+        That can break the DNSSEC chain of trust, but it is refused anyway.
+        The block for type DS assists in more completely blocking the zone.
 
     @@UAHL@unbound.conf.local-zone.type@always_nxdomain@@
         Like :ref:`static<unbound.conf.local-zone.type.static>`, but ignores
@@ -3217,6 +3260,10 @@ These options are part of the ``server:`` section.
     Hard limit on the number of times Unbound is allowed to restart a query
     upon encountering a CNAME record.
     Results in SERVFAIL when reached.
+    This applies to chained CNAME records but not sporadic CNAME records that
+    could be encountered in the lifetime of the query's resolution effort.
+    When a CNAME chain concludes, the counter keeping track of this limit is
+    reset.
     Changing this value needs caution as it can allow long CNAME chains to be
     accepted, where Unbound needs to verify (resolve) each link individually.
 
@@ -3239,6 +3286,15 @@ These options are part of the ``server:`` section.
     Clips off the remainder of the reply packet at that point.
 
     Default: 11
+
+
+@@UAHL@unbound.conf@iter-scrub-rrsig@@: *<number>*
+    Limit on the number of RRSIGs allowed for an RRset, from the iterator
+    scrubber.
+    This protects against an overly large number of RRSIGs.
+    Clips off the remainder of the RRSIG list at that point.
+
+    Default: 8
 
 
 @@UAHL@unbound.conf@max-global-quota@@: *<number>*
@@ -3405,7 +3461,7 @@ To setup the correct self-signed certificates use the
     Default: no
 
 
-@@UAHL@unbound.conf.remote@control-interface@@: *<IP address or interface name or path>*
+@@UAHL@unbound.conf.remote@control-interface@@: *<IP address or interface name[@port] or path>*
     Give IPv4 or IPv6 addresses or local socket path to listen on for control
     commands.
     If an interface name is used instead of an IP address, the list of IP
@@ -4154,6 +4210,17 @@ servers.
 @@UAHL@unbound.conf.nat64@nat64-prefix@@: *<IPv6 prefix>*
     Use a specific NAT64 prefix to reach IPv4-only servers.
     The prefix length must be one of /32, /40, /48, /56, /64 or /96.
+
+    The NAT64 prefix is allowed by the
+    :ref:`do-not-query-address<unbound.conf.do-not-query-address>` option,
+    so that there is a clear outcome of addresses in both; the NAT64 prefix
+    is allowed.
+    The IPv4 address could be filtered by the
+    :ref:`do-not-query-address<unbound.conf.do-not-query-address>` option,
+    if needed.
+    Allowing the NAT64 prefix is useful when using do-not-query-address
+    for a cluster of machines that is IPv6-only and uses NAT64, but does
+    not have internet access.
 
     Default: 64:ff9b::/96 (same as :ref:`dns64-prefix<unbound.conf.dns64.dns64-prefix>`)
 

@@ -794,6 +794,8 @@ struct config_file {
 	size_t iter_scrub_ns;
 	/** limit on CNAME, DNAME RRs in answer for the iterator scrubber. */
 	int iter_scrub_cname;
+	/** limit on RRSIGs for an RRset for the iterator scrubber. */
+	int iter_scrub_rrsig;
 	/** limit on upstream queries for an incoming query and subqueries. */
 	int max_global_quota;
 	/** Should the iterator scrub promiscuous NS rrsets, from positive
@@ -1507,5 +1509,8 @@ int cfg_tls_protocols_is_valid(const char* tls_protocols);
  * @param allow13: will be true if TLSv1.3 is configured.
  */
 void cfg_tls_protocols_allowed(const char* tls_protocols, int* allow12, int* allow13);
+
+/** get the file mtime stat (or error, with errno and nonexist) */
+int file_get_mtime(const char* file, time_t* mtime, long* ns, int* nonexist);
 
 #endif /* UTIL_CONFIG_FILE_H */

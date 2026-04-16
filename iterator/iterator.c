@@ -297,6 +297,7 @@ error_response_cache(struct module_qstate* qstate, int id, int rcode)
 	struct reply_info err;
 	struct msgreply_entry* msg;
 	if(qstate->no_cache_store) {
+		qstate->error_response_cache = 1;
 		return error_response(qstate, id, rcode);
 	}
 	if(qstate->prefetch_leeway > NORR_TTL) {

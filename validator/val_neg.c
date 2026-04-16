@@ -1289,6 +1289,8 @@ neg_nsec3_proof_ds(struct val_neg_zone* zone, uint8_t* qname, size_t qname_len,
 		if(!(msg = dns_msg_create(qname, qname_len, 
 			LDNS_RR_TYPE_DS, zone->dclass, region, 1))) 
 			return NULL;
+		/* The cache response means recursion is available. */
+		msg->rep->flags |= BIT_RA;
 		/* TTL reduced in grab_nsec */
 		if(!dns_msg_authadd(msg, region, ce_rrset, 0)) 
 			return NULL;
@@ -1323,6 +1325,8 @@ neg_nsec3_proof_ds(struct val_neg_zone* zone, uint8_t* qname, size_t qname_len,
 		if(!(msg = dns_msg_create(qname, qname_len, 
 			LDNS_RR_TYPE_DS, zone->dclass, region, 3))) 
 			return NULL;
+		/* The cache response means recursion is available. */
+		msg->rep->flags |= BIT_RA;
 		/* now=0 because TTL was reduced in grab_nsec */
 		if(!dns_msg_authadd(msg, region, ce_rrset, 0)) 
 			return NULL;
@@ -1413,6 +1417,8 @@ val_neg_getmsg(struct val_neg_cache* neg, struct query_info* qinfo,
 		if(!(msg = dns_msg_create(qinfo->qname, qinfo->qname_len, 
 			qinfo->qtype, qinfo->qclass, region, 2))) 
 			return NULL;
+		/* The cache response means recursion is available. */
+		msg->rep->flags |= BIT_RA;
 		if(!dns_msg_authadd(msg, region, nsec, 0)) 
 			return NULL;
 		if(addsoa && !add_soa(rrset_cache, now, region, msg, NULL))
@@ -1426,6 +1432,8 @@ val_neg_getmsg(struct val_neg_cache* neg, struct query_info* qinfo,
 		if(!(msg = dns_msg_create(qinfo->qname, qinfo->qname_len, 
 			qinfo->qtype, qinfo->qclass, region, 3))) 
 			return NULL;
+		/* The cache response means recursion is available. */
+		msg->rep->flags |= BIT_RA;
 		if(!(ce = nsec_closest_encloser(qinfo->qname, nsec)))
 			return NULL;
 		dname_count_size_labels(ce, &ce_len);

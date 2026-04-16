@@ -232,8 +232,15 @@ find_closest_of_type(struct module_env* env, uint8_t* qname, size_t qnamelen,
 
 	/* snip off front part of qname until the type is found */
 	while(qnamelen > 0) {
-		if((rrset = rrset_cache_lookup(env->rrset_cache, qname, 
-			qnamelen, searchtype, qclass, 0, now, 0))) {
+		rrset = rrset_cache_lookup(env->rrset_cache, qname,
+			qnamelen, searchtype, qclass, 0, now, 0);
+		if(!rrset && searchtype == LDNS_RR_TYPE_DNAME)
+			/* If not found, for type DNAME, try 0TTL stored,
+			 * for its grace period. */
+			rrset = rrset_cache_lookup(env->rrset_cache, qname,
+				qnamelen, searchtype, qclass,
+				PACKED_RRSET_UPSTREAM_0TTL, now, 0);
+		if(rrset) {
 			uint8_t* origqname = qname;
 			size_t origqnamelen = qnamelen;
 			if(!noexpiredabove)
@@ -766,8 +773,15 @@ synth_dname_msg(struct ub_packed_rrset_key* rrset, struct regional* region,
 		rrset->entry.data;
 	uint8_t* newname, *dtarg = NULL;
 	size_t newlen, dtarglen;
-	if(TTL_IS_EXPIRED(d->ttl, now))
-		return NULL;
+	time_t rr_ttl;
+	if(TTL_IS_EXPIRED(d->ttl, now)) {
+		/* Allow TTL=0 DNAME from upstream within grace period */
+		if(!(rrset->rk.flags & PACKED_RRSET_UPSTREAM_0TTL))
+			return NULL;
+		rr_ttl = 0;
+	} else {
+		rr_ttl = d->ttl - now;
+	}
 	/* only allow validated (with DNSSEC) DNAMEs used from cache 
 	 * for insecure DNAMEs, query again. */
 	*sec_status = d->security;
@@ -779,7 +793,7 @@ synth_dname_msg(struct ub_packed_rrset_key* rrset, struct regional* region,
 	msg->rep->flags = BIT_QR; /* reply, no AA, no error */
         msg->rep->authoritative = 0; /* reply stored in cache can't be authoritative */
 	msg->rep->qdcount = 1;
-	msg->rep->ttl = d->ttl - now;
+	msg->rep->ttl = rr_ttl;
 	msg->rep->prefetch_ttl = PREFETCH_TTL_CALC(msg->rep->ttl);
 	msg->rep->serve_expired_ttl = msg->rep->ttl + SERVE_EXPIRED_TTL;
 	msg->rep->serve_expired_norec_ttl = 0;
@@ -831,7 +845,7 @@ synth_dname_msg(struct ub_packed_rrset_key* rrset, struct regional* region,
 	if(!newd)
 		return NULL;
 	ck->entry.data = newd;
-	newd->ttl = d->ttl - now; /* RFC6672: synth CNAME TTL == DNAME TTL */
+	newd->ttl = rr_ttl; /* RFC6672: synth CNAME TTL == DNAME TTL */
 	newd->count = 1;
 	newd->rrsig_count = 0;
 	newd->trust = rrset_trust_ans_noAA;
