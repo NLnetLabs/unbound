@@ -1,3 +1,17 @@
+16 April 2026: Yorgos
+	- Merge #1406: Introduce new 'tls-protocols' configuration option.
+	- Introduce new 'tls-protocols' configuration option that specifies
+	  which of the supported TLS protocols will be used.
+	  This change invalidates some previous changes:
+	- TLSv1.2 is again enabled by default, but can be selectively turned
+	  off if desired (related to #1303).
+	- The biefly introduced (not yet released) 'tls-use-system-versions'
+	  configuration option, that addressed #1346, is reverted in favor of
+	  'tls-protocols'.
+	- The briefly introduced (not yet released) '--enable-system-tls'
+	  configure option, related to #1401, is no longer needed with the new
+	  option and the current default.
+
 15 April 2026: Wouter
 	- Fix RFC7766 compliance when client sends EOF over TCP. It stops
 	  pending replies and closes. Thanks to Yuxiao Wu, Tsinghua
