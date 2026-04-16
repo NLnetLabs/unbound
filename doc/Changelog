@@ -11,6 +11,8 @@
 	- The briefly introduced (not yet released) '--enable-system-tls'
 	  configure option, related to #1401, is no longer needed with the new
 	  option and the current default.
+	- Fix cleaning up DoH session. The same query can be on multiple
+	  streams in a session.
 
 16 April 2026: Wouter
 	- Fix configure, autoconf for #1406.
