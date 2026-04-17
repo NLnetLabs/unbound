@@ -127,7 +127,7 @@ hdlr(DWORD ctrl)
 static void
 reportev(const char* str)
 {
-	char b[256];
+	char b[512];
 	char e[256];
 	HANDLE* s;
 	LPCTSTR msg = b;
