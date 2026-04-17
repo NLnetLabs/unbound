@@ -1139,9 +1139,13 @@ The file must contain the private key for the TLS session, the public
 certificate is in the \fI\%tls\-service\-pem\fP
 file and it must also be specified if
 \fI\%tls\-service\-key\fP is specified.
-Enabling or disabling this service requires a restart (a reload is not
-enough), because the key is read while root permissions are held and before
-chroot (if any).
+If the key is stored with root permissions or outside of chroot, then
+a change or enabling or disabling requires a restart (a reload is not
+enough).
+But if the key file (and tls\-service\-pem file) are accessible, then they
+are read in on reload, and fast_reload.
+The server checks the modification time of the file (and the filename)
+to see if the file has changed for reload.
 The ports enabled implicitly or explicitly via
 \fI\%tls\-port\fP and
 \fI\%https\-port\fP do not provide normal DNS TCP
@@ -3765,6 +3769,10 @@ Default: 32
 Hard limit on the number of times Unbound is allowed to restart a query
 upon encountering a CNAME record.
 Results in SERVFAIL when reached.
+This applies to chained CNAME records but not sporadic CNAME records that
+could be encountered in the lifetime of the query\(aqs resolution effort.
+When a CNAME chain concludes, the counter keeping track of this limit is
+reset.
 Changing this value needs caution as it can allow long CNAME chains to be
 accepted, where Unbound needs to verify (resolve) each link individually.
 .sp
@@ -3789,6 +3797,16 @@ chains.
 Clips off the remainder of the reply packet at that point.
 .sp
 Default: 11
+.UNINDENT
+.INDENT 0.0
+.TP
+.B iter\-scrub\-rrsig: \fI<number>\fP 
+Limit on the number of RRSIGs allowed for an RRset, from the iterator
+scrubber.
+This protects against an overly large number of RRSIGs.
+Clips off the remainder of the RRSIG list at that point.
+.sp
+Default: 8
 .UNINDENT
 .INDENT 0.0
 .TP
@@ -3973,7 +3991,7 @@ Default: no
 .UNINDENT
 .INDENT 0.0
 .TP
-.B control\-interface: \fI<IP address or interface name or path>\fP 
+.B control\-interface: \fI<IP address or interface name[@port] or path>\fP 
 Give IPv4 or IPv6 addresses or local socket path to listen on for control
 commands.
 If an interface name is used instead of an IP address, the list of IP

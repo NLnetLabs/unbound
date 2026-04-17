@@ -15,6 +15,7 @@
 	  function.
 	- Fix ttl comparisons in rdata_copy for 32bit signed or unsigned.
 	- Fix subnet store of servfail to not leak memory.
+	- Update generated man pages.
 
 17 April 2026: Yorgos
 	- Merge #1400: Support pthread_setname_np. Adds support for

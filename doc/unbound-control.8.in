@@ -168,6 +168,8 @@ ipset,
 \fI\%tcp\-auth\-query\-timeout\fP,
 \fI\%delay\-close\fP\&.
 \fI\%iter\-scrub\-promiscuous\fP\&.
+\fI\%tls\-service\-key\fP\&.
+\fI\%tls\-service\-pem\fP\&.
 .sp
 It does not work with
 \fI\%interface\fP and
