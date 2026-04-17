@@ -189,6 +189,8 @@ jobs:
           cd ..
           export prepath=`pwd`
           echo prepath=${prepath}
+          # parralel build option
+          export MINJ="-j4"
           echo "choco install winflexbison3"
           choco install winflexbison3
           echo 'LEX="win_flex"'
@@ -211,8 +213,8 @@ jobs:
           C:/msys64/usr/bin/perl ./Configure no-shared no-asm -DOPENSSL_NO_CAPIENG mingw64 --prefix="$prepath/openssl" PERL="C:/msys64/usr/bin/perl"
           # make the libs only, build faster
           echo "make build_libs"
-          #make
-          make build_libs
+          #make $MINJ
+          make $MINJ build_libs
           mv Makefile Makefile.orig
           # fixup \\ in the installtop to /.
           echo "fixup INSTALLTOP"
@@ -244,7 +246,7 @@ jobs:
           mv xmlwf/Makefile xmlwf/Makefile.orig
           sed -e 's/SHELL/SHELLZZ/g' < xmlwf/Makefile.orig > xmlwf/Makefile
           echo "make"
-          make
+          make $MINJ
           echo "make install"
           make install
           cd ..
@@ -252,7 +254,7 @@ jobs:
           cd unbound
           echo "./configure --enable-debug --enable-static-exe --disable-flto \"--with-ssl=$prepath/openssl\" --with-libexpat=\"$prepath/expat\" --disable-shared"
           ./configure --enable-debug --enable-static-exe --disable-flto "--with-ssl=$prepath/openssl" --with-libexpat="$prepath/expat" --disable-shared
-          make
+          make $MINJ
           # specific test output
           #make testbound.exe; ./testbound.exe -s
           #make testbound; ./testbound.exe -p testdata/acl.rpl -o -vvvv
@@ -347,7 +349,7 @@ jobs:
           echo "::endgroup::"
       - name: cross-platform-action on ${{ matrix.cross_platform_os }} ${{ matrix.cross_platform_version }}
         if: ${{ matrix.with_cross_platform_action == 'yes' }}
-        uses: cross-platform-actions/action@v0.25.0
+        uses: cross-platform-actions/action@v1.0.0
         env:
           CROSS_PLATFORM_OS: ${{ matrix.cross_platform_os }}
         with:

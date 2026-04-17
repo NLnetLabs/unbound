@@ -5,6 +5,9 @@
 	  pem option for stat calls.
 	- Fix to compile the shm code when there is no shmget.
 	- Update github ci to use actions/checkout@v6.
+	- Update github ci cross platform to use
+	  cross-platform-actions/action@v1.0.0.
+	- Fix github ci to speed up with parralel build, for windows ci.
 
 16 April 2026: Yorgos
 	- Merge #1406: Introduce new 'tls-protocols' configuration option.
