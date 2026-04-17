@@ -10,6 +10,7 @@
 	- Fix github ci to speed up with parralel build, for windows ci.
 	- Fix compat/chacha_private sigma and tau definitions to use
 	  nonstring attribute.
+	- Fix compat/gmtime_r old style definition syntax.
 
 16 April 2026: Yorgos
 	- Merge #1406: Introduce new 'tls-protocols' configuration option.
