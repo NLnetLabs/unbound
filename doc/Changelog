@@ -14,6 +14,7 @@
 	- Fix to increase size of the buffer for the win_svc reportev log
 	  function.
 	- Fix ttl comparisons in rdata_copy for 32bit signed or unsigned.
+	- Fix subnet store of servfail to not leak memory.
 
 16 April 2026: Yorgos
 	- Merge #1406: Introduce new 'tls-protocols' configuration option.

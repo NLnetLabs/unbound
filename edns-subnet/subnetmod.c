@@ -452,8 +452,13 @@ update_cache(struct module_qstate *qstate, int id)
 		diff_size = (data->reason_fail?strlen(data->reason_fail)+1:0)
 			- diff_size;
 		lock_rw_unlock(&lru_entry->lock);
-		slabhash_update_space_used(subnet_msg_cache, h, NULL,
-			diff_size);
+		if (need_to_insert) {
+			slabhash_insert(subnet_msg_cache, h, lru_entry,
+				lru_entry->data, NULL);
+		} else {
+			slabhash_update_space_used(subnet_msg_cache, h, NULL,
+				diff_size);
+		}
 		return;
 	}
 	if(!qstate->return_msg) {
