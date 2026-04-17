@@ -336,11 +336,16 @@ daemon_setup_sslctxs(struct daemon* daemon, struct config_file* cfg)
 			&daemon->mtime_ns_ssl_service_key, NULL))
 			log_err("Could not stat(%s): %s",
 				key, strerror(errno));
-		if(!file_get_mtime(pem,
-			&daemon->mtime_ssl_service_pem,
-			&daemon->mtime_ns_ssl_service_pem, NULL))
-			log_err("Could not stat(%s): %s",
-				pem, strerror(errno));
+		if(pem) {
+			if(!file_get_mtime(pem,
+				&daemon->mtime_ssl_service_pem,
+				&daemon->mtime_ns_ssl_service_pem, NULL))
+				log_err("Could not stat(%s): %s",
+					pem, strerror(errno));
+		} else {
+			daemon->mtime_ssl_service_pem = 0;
+			daemon->mtime_ns_ssl_service_pem = 0;
+		}
 	}
 	daemon->connect_dot_sslctx = daemon_setup_connect_dot_sslctx(
 		daemon, cfg);
@@ -403,16 +408,18 @@ ssl_cert_changed(struct daemon* daemon, struct config_file* cfg)
 	if(mtime != daemon->mtime_ssl_service_key ||
 		ns != daemon->mtime_ns_ssl_service_key)
 		return 1;
-	if(!file_get_mtime(pem, &mtime, &ns, NULL)) {
-		log_err("Could not stat(%s): %s",
-			pem, strerror(errno));
-		/* It has probably changed, but file read is likely going to
-		 * fail. */
-		return 0;
+	if(pem) {
+		if(!file_get_mtime(pem, &mtime, &ns, NULL)) {
+			log_err("Could not stat(%s): %s",
+				pem, strerror(errno));
+			/* It has probably changed, but file read is likely going to
+			 * fail. */
+			return 0;
+		}
+		if(mtime != daemon->mtime_ssl_service_pem ||
+			ns != daemon->mtime_ns_ssl_service_pem)
+			return 1;
 	}
-	if(mtime != daemon->mtime_ssl_service_pem ||
-		ns != daemon->mtime_ns_ssl_service_pem)
-		return 1;
 	return 0;
 }
 
