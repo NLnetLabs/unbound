@@ -731,6 +731,73 @@ int main(void) {return 0;}
 		])
 fi
 
+if test x_$ub_have_pthreads != x_no; then
+	# Long checks to support pthread_setname_np().
+	# Some OSes have the extra non-portable functions in a specific
+	# header file.
+	AC_CHECK_HEADERS([pthread_np.h],,, [AC_INCLUDES_DEFAULT])
+	# MacOS only has 1 argument, the name.
+	AC_MSG_CHECKING([whether pthread_setname_np has only 1 argument])
+	AC_COMPILE_IFELSE([AC_LANG_PROGRAM([AC_INCLUDES_DEFAULT
+#include <pthread.h>
+#ifdef HAVE_PTHREAD_NP_H
+#include <pthread_np.h>
+#endif
+	],[
+	    (void)pthread_setname_np("");
+	])],[
+	    AC_MSG_RESULT(yes)
+	    AC_DEFINE(HAVE_PTHREAD_SETNAME_NP1, 1, [Define if pthread_setname_np has only 1 argument.])
+	],[
+	    AC_MSG_RESULT(no)
+	])
+	# NetBSD has 3 arguments to allow for formatting of the name.
+	AC_MSG_CHECKING([whether pthread_setname_np has 3 arguments])
+	AC_COMPILE_IFELSE([AC_LANG_PROGRAM([AC_INCLUDES_DEFAULT
+#include <pthread.h>
+#ifdef HAVE_PTHREAD_NP_H
+#include <pthread_np.h>
+#endif
+	],[
+	    (void)pthread_setname_np(0, "", NULL);
+	])],[
+	    AC_MSG_RESULT(yes)
+	    AC_DEFINE(HAVE_PTHREAD_SETNAME_NP3, 1, [Define if pthread_setname_np has 3 arguments.])
+	],[
+	    AC_MSG_RESULT(no)
+	])
+	# Most OSes have the common 2 arguments, thread and name.
+	AC_MSG_CHECKING([whether pthread_setname_np has the common 2 arguments])
+	AC_COMPILE_IFELSE([AC_LANG_PROGRAM([AC_INCLUDES_DEFAULT
+#include <pthread.h>
+#ifdef HAVE_PTHREAD_NP_H
+#include <pthread_np.h>
+#endif
+	],[
+	    (void)pthread_setname_np(0, "");
+	])],[
+	    AC_MSG_RESULT(yes)
+	    AC_DEFINE(HAVE_PTHREAD_SETNAME_NP, 1, [Define if pthread_setname_np has the common 2 arguments.])
+	],[
+	    AC_MSG_RESULT(no)
+	])
+	# FreeBSD/OpenBSD use a slightly different function name.
+	AC_MSG_CHECKING([whether pthread_setname_np exists as pthread_set_name_np instead])
+	AC_COMPILE_IFELSE([AC_LANG_PROGRAM([AC_INCLUDES_DEFAULT
+#include <pthread.h>
+#ifdef HAVE_PTHREAD_NP_H
+#include <pthread_np.h>
+#endif
+	],[
+	    (void)pthread_set_name_np(0, "");
+	])],[
+	    AC_MSG_RESULT(yes)
+	    AC_DEFINE(HAVE_PTHREAD_SET_NAME_NP, 1, [Define if pthread_setname_np exists as pthread_set_name_np instead.])
+	],[
+	    AC_MSG_RESULT(no)
+	])
+fi
+
 # check solaris thread library
 AC_ARG_WITH(solaris-threads, AS_HELP_STRING([--with-solaris-threads],[use solaris native thread library.]), [ ],[ withval="no" ])
 ub_have_sol_threads=no
