@@ -324,9 +324,13 @@ daemon_setup_sslctxs(struct daemon* daemon, struct config_file* cfg)
 		daemon->ssl_service_key = strdup(cfg->ssl_service_key);
 		if(!daemon->ssl_service_key)
 			fatal_exit("could not setup ssl ctx: out of memory");
-		daemon->ssl_service_pem = strdup(cfg->ssl_service_pem);
-		if(!daemon->ssl_service_pem)
-			fatal_exit("could not setup ssl ctx: out of memory");
+		if(cfg->ssl_service_pem) {
+			daemon->ssl_service_pem = strdup(cfg->ssl_service_pem);
+			if(!daemon->ssl_service_pem)
+				fatal_exit("could not setup ssl ctx: out of memory");
+		} else {
+			daemon->ssl_service_pem = NULL;
+		}
 		if(!file_get_mtime(key,
 			&daemon->mtime_ssl_service_key,
 			&daemon->mtime_ns_ssl_service_key, NULL))
