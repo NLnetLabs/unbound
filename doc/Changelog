@@ -13,6 +13,7 @@
 	- Fix compat/gmtime_r old style definition syntax.
 	- Fix to increase size of the buffer for the win_svc reportev log
 	  function.
+	- Fix ttl comparisons in rdata_copy for 32bit signed or unsigned.
 
 16 April 2026: Yorgos
 	- Merge #1406: Introduce new 'tls-protocols' configuration option.
