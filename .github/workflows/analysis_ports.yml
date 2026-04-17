@@ -173,7 +173,7 @@ jobs:
             cross_platform_config: "--enable-debug --disable-flto --with-libevent --disable-static"
  
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           submodules: false
           persist-credentials: false
