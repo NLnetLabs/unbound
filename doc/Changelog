@@ -16,6 +16,11 @@
 	- Fix ttl comparisons in rdata_copy for 32bit signed or unsigned.
 	- Fix subnet store of servfail to not leak memory.
 
+17 April 2026: Yorgos
+	- Merge #1400: Support pthread_setname_np. Adds support for
+	  pthread_setname_np and variants to set the name on spawned threads
+	  for easier debugging/monitoring.
+
 16 April 2026: Yorgos
 	- Merge #1406: Introduce new 'tls-protocols' configuration option.
 	- Introduce new 'tls-protocols' configuration option that specifies
