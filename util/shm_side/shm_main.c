@@ -234,6 +234,7 @@ void shm_main_shutdown(struct daemon* daemon)
 #endif /* HAVE_SHMGET */
 }
 
+#ifdef HAVE_SHMGET
 /** Copy general info into the stat structure. */
 static void
 shm_general_info(struct worker* worker)
@@ -284,7 +285,9 @@ shm_general_info(struct worker* worker)
 	shm_stat->mem.dynlib = (long long)mod_get_mem(&worker->env, "dynlib");
 #endif
 }
+#endif /* HAVE_SHMGET */
 
+#ifdef HAVE_SHMGET
 /** See if the thread is first. Caller has lock. */
 static int
 shm_thread_is_first(struct shm_main_info* shm_info, int thread_num,
@@ -321,7 +324,9 @@ shm_thread_is_first(struct shm_main_info* shm_info, int thread_num,
 	}
 	return 0;
 }
+#endif /* HAVE_SHMGET */
 
+#ifdef HAVE_SHMGET
 /** See if the thread is last. Caller has lock. */
 static int
 shm_thread_is_last(struct daemon* daemon)
@@ -336,6 +341,7 @@ shm_thread_is_last(struct daemon* daemon)
 	}
 	return 1;
 }
+#endif /* HAVE_SHMGET */
 
 void shm_main_run(struct worker *worker)
 {

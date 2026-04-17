@@ -3,6 +3,7 @@
 	  from a clang analyzer warning.
 	- Fix setup of ssl context copy, to check for the tls service
 	  pem option for stat calls.
+	- Fix to compile the shm code when there is no shmget.
 
 16 April 2026: Yorgos
 	- Merge #1406: Introduce new 'tls-protocols' configuration option.
