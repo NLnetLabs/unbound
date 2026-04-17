@@ -736,6 +736,8 @@ if test x_$ub_have_pthreads != x_no; then
 	# Some OSes have the extra non-portable functions in a specific
 	# header file.
 	AC_CHECK_HEADERS([pthread_np.h],,, [AC_INCLUDES_DEFAULT])
+	BAKCFLAGS="$CFLAGS"
+	CFLAGS="$CFLAGS -Werror"
 	# MacOS only has 1 argument, the name.
 	AC_MSG_CHECKING([whether pthread_setname_np has only 1 argument])
 	AC_COMPILE_IFELSE([AC_LANG_PROGRAM([AC_INCLUDES_DEFAULT
@@ -796,6 +798,7 @@ if test x_$ub_have_pthreads != x_no; then
 	],[
 	    AC_MSG_RESULT(no)
 	])
+	CFLAGS="$BAKCFLAGS"
 fi
 
 # check solaris thread library

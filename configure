@@ -19092,6 +19092,8 @@ then :
 
 fi
 
+	BAKCFLAGS="$CFLAGS"
+	CFLAGS="$CFLAGS -Werror"
 	# MacOS only has 1 argument, the name.
 	{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking whether pthread_setname_np has only 1 argument" >&5
 printf %s "checking whether pthread_setname_np has only 1 argument... " >&6; }
@@ -19240,6 +19242,7 @@ printf "%s\n" "no" >&6; }
 
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
+	CFLAGS="$BAKCFLAGS"
 fi
 
 # check solaris thread library

@@ -17,6 +17,7 @@
 	- Fix subnet store of servfail to not leak memory.
 	- Update generated man pages.
 	- Update generated configure, with autoconf.
+	- Fix pthread_setname detection to fail on warnings.
 
 17 April 2026: Yorgos
 	- Merge #1400: Support pthread_setname_np. Adds support for
