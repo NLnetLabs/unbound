@@ -6849,6 +6849,7 @@ static void* fast_reload_thread_main(void* arg)
 		log_thread_set(&fast_reload_thread->threadnum);
 
 	ub_thread_setname(fast_reload_thread->tid, name);
+	(void)name; /* When setname is not defined, ignore the name variable. */
 
 	verbose(VERB_ALGO, "start fast reload thread");
 	if(fast_reload_thread->fr_verb >= 1) {
