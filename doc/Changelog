@@ -1,5 +1,6 @@
 20 April 2026: Wouter
 	- Fix compile warnings for thread setname routine, and test compile.
+	- Fix unused variable warning when compiled without ssl.
 
 17 April 2026: Wouter
 	- Fix setup of ssl context copy of the tls service pem option,

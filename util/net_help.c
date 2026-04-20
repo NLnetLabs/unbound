@@ -1451,6 +1451,7 @@ void* listen_sslctx_create(const char* key, const char* pem,
 	(void)key; (void)pem; (void)verifypem;
 	(void)tls_ciphers; (void)tls_ciphersuites;
 	(void)set_ticket_keys_cb; (void)is_dot; (void)is_doh;
+	(void)tls_protocols;
 	return NULL;
 #endif /* HAVE_SSL */
 }
@@ -1864,7 +1865,7 @@ int listen_sslctx_setup_ticket_keys(struct config_strlist* tls_session_ticket_ke
 	keys->key_name = NULL;
 	return 1;
 #else
-	(void)tls_session_ticket_keys;
+	(void)tls_session_ticket_keys; (void)chroot;
 	return 0;
 #endif
 }
