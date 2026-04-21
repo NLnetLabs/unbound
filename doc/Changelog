@@ -26,6 +26,12 @@
 	  domain names in the SOA rdata are checked before the
 	  authority code picks up the zone serial.
 	  Thanks to Halil Oktay for the report.
+	- Fix that upstream TLS connections are not reused as TLS
+	  connections for a different name, at the same IP. This
+	  checks that the tls name is correct when reusing the
+	  upstream connections. Thanks to TaoFei Guo from Peking
+	  University and JianJun Chen from Tsinghua University for
+	  the report.
 
 20 April 2026: Wouter
 	- Fix compile warnings for thread setname routine, and test compile.
