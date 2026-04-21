@@ -34,6 +34,11 @@
 	  the report.
 	- Fix that signatures are not allowed with revoked dnskeys.
 	  Thanks to Qifan Zhang, Palo Alto Networks for the report.
+	- Fix that a DNAME with an unsigned CNAME is checked for
+	  the correct match. This stops that for certain zone
+	  configurations an unchecked unsigned CNAME could get
+	  secure status. Thanks to Qifan Zhang, Palo Alto Networks
+	  for the report.
 
 20 April 2026: Wouter
 	- Fix compile warnings for thread setname routine, and test compile.

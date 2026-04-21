@@ -710,6 +710,37 @@ validate_msg_signatures(struct module_qstate* qstate, struct val_qstate* vq,
 			((struct packed_rrset_data*)chase_reply->rrsets[i-1]->entry.data)->security == sec_status_secure &&
 			dname_strict_subdomain_c(s->rk.dname, chase_reply->rrsets[i-1]->rk.dname)
 			) {
+			/* Check that the CNAME target matches the DNAME
+			 * derivation. Zone changes during the redirection
+			 * lookups or looped DNAMEs can have such a CNAME. */
+			uint8_t expected_target[LDNS_MAX_DOMAINLEN];
+			uint8_t* cname_target = NULL;
+			size_t cname_target_len = 0;
+			get_cname_target(s, &cname_target, &cname_target_len);
+			if(!cname_target ||
+				!derive_cname_from_dname(s, /* CNAME RRset */
+				chase_reply->rrsets[i-1], /* DNAME RRset */
+				expected_target, /* Output buffer */
+				sizeof(expected_target))) {
+				verbose(VERB_ALGO, "DNAME CNAME derivation failed");
+				errinf_ede(qstate, "DNAME CNAME derivation failed", reason_bogus);
+				errinf_origin(qstate, qstate->reply_origin);
+				chase_reply->security = sec_status_bogus;
+				update_reason_bogus(chase_reply, reason_bogus);
+				return 0;
+			}
+			if(query_dname_compare(cname_target, expected_target) != 0) {
+				verbose(VERB_ALGO, "CNAME target mismatch: not synthesized from DNAME");
+				errinf_ede(qstate, "CNAME target mismatch: not synthesized from DNAME", reason_bogus);
+				errinf_dname(qstate, ", for", s->rk.dname);
+				errinf_dname(qstate, "CNAME", cname_target);
+				errinf(qstate, ",");
+				errinf_origin(qstate, qstate->reply_origin);
+				chase_reply->security = sec_status_bogus;
+				update_reason_bogus(chase_reply, reason_bogus);
+				return 0;
+			}
+
 			/* CNAME was synthesized by our own iterator */
 			/* since the DNAME verified, mark the CNAME as secure */
 			((struct packed_rrset_data*)s->entry.data)->security =
