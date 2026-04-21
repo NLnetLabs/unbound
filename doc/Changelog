@@ -1,6 +1,15 @@
 21 April 2026: Wouter
 	- Add test case for malformed SVCB records. Thanks to
 	  Qifan Zhang, Palo Alto Networks for the additional test.
+	- Fix for the Jiggle Attack. The server is fixed to answer
+	  with errors for error cases, and does not stay silent.
+	  In addition, the error replies do not contain parts of the
+	  incoming query. This is more conformant, stops reflection
+	  and stops it as a covert channel. Thanks to Yuqi Qiu and
+	  Xiang Li, Nankai University (AOSP Lab) for the report.
+	  In addition, thanks to Qifan Zhang, Palo Alto Networks, for
+	  noting the fingerprinting possibility, that is also fixed
+	  with this.
 
 20 April 2026: Wouter
 	- Fix compile warnings for thread setname routine, and test compile.
