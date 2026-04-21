@@ -32,6 +32,8 @@
 	  upstream connections. Thanks to TaoFei Guo from Peking
 	  University and JianJun Chen from Tsinghua University for
 	  the report.
+	- Fix that signatures are not allowed with revoked dnskeys.
+	  Thanks to Qifan Zhang, Palo Alto Networks for the report.
 
 20 April 2026: Wouter
 	- Fix compile warnings for thread setname routine, and test compile.
