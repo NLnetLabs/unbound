@@ -45,6 +45,7 @@
 	  the step in the chain of trust as secure, when it was not.
 	  Thanks to Qifan Zhang, Palo Alto Networks for the report.
 	- Set version number to 1.25.0 of code repository.
+	- Fix doxygen comment syntax.
 
 20 April 2026: Wouter
 	- Fix compile warnings for thread setname routine, and test compile.

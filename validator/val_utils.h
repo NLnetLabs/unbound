@@ -429,7 +429,7 @@ struct dns_msg* val_find_DS(struct module_env* env, uint8_t* nm, size_t nmlen,
 
 /**
  * Derive expected CNAME target from DNAME substitution per RFC 6672 s3.1
- * @param cname: CNAME RRset, (e.g., b.d.a005.test CNAME <some cname target>)
+ * @param cname: CNAME RRset, (e.g., b.d.a005.test CNAME 'some cname target')
  * @param dname: DNAME RRset, (e.g., d.a005.test DNAME tgt.a005.test)
  * @param out: Output buffer for expected CNAME target
  * @param outlen: Output buffer size
