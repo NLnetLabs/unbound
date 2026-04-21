@@ -10,6 +10,10 @@
 	  In addition, thanks to Qifan Zhang, Palo Alto Networks, for
 	  noting the fingerprinting possibility, that is also fixed
 	  with this.
+	- Fix EDNS extended RCODE reflection. This fixes that
+	  the server does not echo extended rcode values after class
+	  chaos queries. Thanks to Qifan Zhang, Palo Alto Networks
+	  for the report.
 
 20 April 2026: Wouter
 	- Fix compile warnings for thread setname routine, and test compile.
