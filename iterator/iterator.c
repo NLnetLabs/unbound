@@ -3224,8 +3224,19 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 	} else iter_scrub_ds(iq->response, NULL, NULL);
 	if(type == RESPONSE_TYPE_THROWAWAY &&
 		FLAGS_GET_RCODE(iq->response->rep->flags) == LDNS_RCODE_YXDOMAIN) {
-		/* YXDOMAIN is a permanent error, no need to retry */
-		type = RESPONSE_TYPE_ANSWER;
+		/* YXDOMAIN is a permanent error for DNAME expansion overflow
+		 * (RFC 6672 Section 2.2). Only accept if the response
+		 * contains a DNAME record in the answer section; otherwise
+		 * treat as invalid, to make sure the authoritative answer
+		 * make sense. */
+		size_t i;
+		for(i=0; i<iq->response->rep->an_numrrsets; i++) {
+			if(ntohs(iq->response->rep->rrsets[i]->rk.type)
+				== LDNS_RR_TYPE_DNAME) {
+				type = RESPONSE_TYPE_ANSWER;
+				break;
+			}
+		}
 	}
 	if(type == RESPONSE_TYPE_CNAME)
 		origtypecname = 1;

@@ -14,6 +14,11 @@
 	  the server does not echo extended rcode values after class
 	  chaos queries. Thanks to Qifan Zhang, Palo Alto Networks
 	  for the report.
+	- Fix for iterator RCODE handling of YXDOMAIN. This fixes
+	  that the server only accepts YXDOMAIN answers that contain
+	  a DNAME record. This stops bad answers, and checks that
+	  the authoritative server gives correct replies.
+	  Thanks to Qifan Zhang, Palo Alto Networks for the report.
 
 20 April 2026: Wouter
 	- Fix compile warnings for thread setname routine, and test compile.
