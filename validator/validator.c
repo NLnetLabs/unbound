@@ -3123,6 +3123,62 @@ ds_response_to_ke(struct module_qstate* qstate, struct val_qstate* vq,
 			LDNS_SECTION_ANSWER, qstate, &verified, reasonbuf,
 			sizeof(reasonbuf));
 		if(sec == sec_status_secure) {
+			/* Check for wildcard expansion */
+			uint8_t* wc = NULL;
+			size_t wl = 0;
+
+			if(!val_rrset_wildcard(cname, &wc, &wl)) {
+				verbose(VERB_ALGO, "CNAME has inconsistent wildcard signatures");
+				reason = "wildcard CNAME inconsistent signatures";
+				errinf_ede(qstate, reason, reason_bogus);
+				goto return_bogus;
+			}
+
+			if(wc != NULL) {
+				/* Wildcard expansion detected - require NSEC proof */
+				/* So this is a wildcard CNAME response to DS.
+				 * If the wildcard is bogus then we have bogus.
+				 * If the wildcard is true, then there is
+				 * not a referral point here or lower,
+				 * that can be insecure,
+				 * and also no DS records, here or lower. */
+				/* For a valid chain, to DS, but this
+				 * wildcard CNAME happens in a middle label,
+				 * then that can not happen, because there is
+				 * data under that label, and thus the wildcard
+				 * should not expand.
+				 * If we are going to the wildcard, that also
+				 * does not expand the wildcard, when above it.
+				 * So for valids lookup chains to DS, no
+				 * wildcard CNAME is expected on middle labels.
+				 * For lookups to an insecure point, the
+				 * delegation is information under the label,
+				 * and thus the wildcard does not expand.
+				 * So, no insecure point is possible.
+				 * Can not get a valid chain of trust, or
+				 * to a delegation point for insecure.
+				 * Or the wildcard, its nxdomain for the qname
+				 * proof, is invalid, in which case this is
+				 * a bogus reply.
+				 * If this was a lookup where a wildcard
+				 * expansion is genuinely expected, eg,
+				 * a dnssec valid wildcard query, then the
+				 * lookup should go to the right point, and
+				 * not into the wildcard under the zone name.
+				 * For insecure, or wildcard missing
+				 * signatures, it would have to have found
+				 * the DS or insecure point earlier, in the
+				 * downwards search.
+				 * So for missing signatures, it turns the
+				 * missing signatures into a failure to the
+				 * wildcard CNAME, as the reported log.
+				 */
+				verbose(VERB_ALGO, "wildcard CNAME in chain of trust means no DS can be found and it is also not a delegation point that can be insecure");
+				reason = "wildcard CNAME in chain of trust means no DS found and it is also not a delegation point that can be insecure";
+				errinf_ede(qstate, reason, reason_bogus);
+				goto return_bogus;
+			}
+
 			verbose(VERB_ALGO, "CNAME validated, "
 				"proof that DS does not exist");
 			/* and that it is not a referral point */

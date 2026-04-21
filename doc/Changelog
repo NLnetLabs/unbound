@@ -39,6 +39,11 @@
 	  configurations an unchecked unsigned CNAME could get
 	  secure status. Thanks to Qifan Zhang, Palo Alto Networks
 	  for the report.
+	- Fix handling of wildcard CNAMEs in the chain of trust.
+	  An improper wildcard in the chain of trust would send
+	  the retries to the wrong upstream. Also it could label
+	  the step in the chain of trust as secure, when it was not.
+	  Thanks to Qifan Zhang, Palo Alto Networks for the report.
 
 20 April 2026: Wouter
 	- Fix compile warnings for thread setname routine, and test compile.
