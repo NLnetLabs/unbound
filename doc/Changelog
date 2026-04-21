@@ -19,6 +19,13 @@
 	  a DNAME record. This stops bad answers, and checks that
 	  the authoritative server gives correct replies.
 	  Thanks to Qifan Zhang, Palo Alto Networks for the report.
+	- Fix for missing bounds check for decompressing dnames
+	  for downloaded authority zones. This fixes that the server
+	  could end up with malformed zone content after receiving
+	  truncated packet contents from an AXFR. In addition, the
+	  domain names in the SOA rdata are checked before the
+	  authority code picks up the zone serial.
+	  Thanks to Halil Oktay for the report.
 
 20 April 2026: Wouter
 	- Fix compile warnings for thread setname routine, and test compile.
