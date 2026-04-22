@@ -3767,7 +3767,7 @@ doq_repinfo_retrieve_localaddr(struct comm_reply* repinfo,
 		memset(sa6, 0, *localaddrlen);
 		sa6->sin6_family = AF_INET6;
 		memmove(&sa6->sin6_addr, &repinfo->pktinfo.v6info.ipi6_addr,
-			*localaddrlen);
+			sizeof(struct in_addr6));
 		sa6->sin6_port = repinfo->doq_srcport;
 #endif
 	} else {
@@ -3777,7 +3777,7 @@ doq_repinfo_retrieve_localaddr(struct comm_reply* repinfo,
 		memset(sa, 0, *localaddrlen);
 		sa->sin_family = AF_INET;
 		memmove(&sa->sin_addr, &repinfo->pktinfo.v4info.ipi_addr,
-			*localaddrlen);
+			sizeof(struct in_addr));
 		sa->sin_port = repinfo->doq_srcport;
 #elif defined(IP_RECVDSTADDR)
 		struct sockaddr_in* sa = (struct sockaddr_in*)localaddr;
