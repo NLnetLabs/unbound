@@ -1,6 +1,7 @@
 23 April 2026: Wouter
 	- Merge #1441: Fix buffer overrun in
 	  doq_repinfo_retrieve_localaddr().
+	- For #1441: Fix type of ipv6 addr struct.
 
 21 April 2026: Wouter
 	- Add test case for malformed SVCB records. Thanks to

@@ -3767,7 +3767,7 @@ doq_repinfo_retrieve_localaddr(struct comm_reply* repinfo,
 		memset(sa6, 0, *localaddrlen);
 		sa6->sin6_family = AF_INET6;
 		memmove(&sa6->sin6_addr, &repinfo->pktinfo.v6info.ipi6_addr,
-			sizeof(struct in_addr6));
+			sizeof(struct in6_addr));
 		sa6->sin6_port = repinfo->doq_srcport;
 #endif
 	} else {
