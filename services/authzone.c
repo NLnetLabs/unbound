@@ -5125,7 +5125,7 @@ apply_axfr(struct auth_xfer* xfr, struct auth_zone* z,
 /** apply HTTP to zone in memory. z is locked. false on failure(mallocfail) */
 static int
 apply_http(struct auth_xfer* xfr, struct auth_zone* z,
-	struct sldns_buffer* scratch_buffer)
+	struct sldns_buffer* scratch_buffer, char* etag)
 {
 	/* parse data in chunks */
 	/* parse RR's and read into memory. ignore $INCLUDE from the
@@ -5218,6 +5218,10 @@ apply_http(struct auth_xfer* xfr, struct auth_zone* z,
 				sldns_buffer_begin(scratch_buffer));
 			return 0;
 		}
+	}
+	if (etag) {
+		verbose(VERB_OPS, "etag %s stored", etag);
+		strcpy(z->etag, etag);
 	}
 	return 1;
 }
@@ -5344,7 +5348,7 @@ static int xfr_process_reacquire_locks(struct auth_xfer* xfr,
  * return false if it did not work */
 static int
 xfr_process_chunk_list(struct auth_xfer* xfr, struct module_env* env,
-	int* ixfr_fail)
+	int* ixfr_fail, char *etag)
 {
 	struct auth_zone* z;
 
@@ -5358,7 +5362,7 @@ xfr_process_chunk_list(struct auth_xfer* xfr, struct module_env* env,
 
 	/* apply data */
 	if(xfr->task_transfer->master->http) {
-		if(!apply_http(xfr, z, env->scratch_buffer)) {
+		if(!apply_http(xfr, z, env->scratch_buffer, etag)) {
 			lock_rw_unlock(&z->lock);
 			verbose(VERB_ALGO, "http from %s: could not store data",
 				xfr->task_transfer->master->host);
@@ -5576,6 +5580,21 @@ xfr_transfer_init_fetch(struct auth_xfer* xfr, struct module_env* env)
 #endif
 
 	if(master->http) {
+		char etag[128], *etag_str = NULL;
+		struct auth_zone* z;
+		/* Obtain locks and structures. */
+		lock_basic_unlock(&xfr->lock);
+		if(!xfr_process_reacquire_locks(xfr, env, &z)) {
+			/* The zone is gone, ignore xfr transfer. */
+			return 1; /* Stop processing this xfr. */
+		}
+		/* Holding xfr and z locks. */
+
+		if(z && z->etag[0] && strlen(z->etag) < sizeof(etag)) {
+			strlcpy(etag, z->etag, sizeof(etag));
+			etag_str = etag;
+		}
+		lock_rw_unlock(&z->lock);
 		/* perform http fetch */
 		/* store http port number into sockaddr,
 		 * unless someone used unbound's host@port notation */
@@ -5585,7 +5604,7 @@ xfr_transfer_init_fetch(struct auth_xfer* xfr, struct module_env* env)
 		xfr->task_transfer->cp = outnet_comm_point_for_http(
 			env->outnet, auth_xfer_transfer_http_callback, xfr,
 			&addr, addrlen, -1, master->ssl, master->host,
-			master->file, env->cfg);
+			master->file, env->cfg, etag_str);
 		if(!xfr->task_transfer->cp) {
 			char zname[LDNS_MAX_DOMAINLEN], as[256];
 			dname_str(xfr->name, zname);
@@ -6134,10 +6153,10 @@ xfer_link_data(sldns_buffer* pkt, struct auth_xfer* xfr)
 /** task transfer.  the list of data is complete. process it and if failed
  * move to next master, if succeeded, end the task transfer */
 static void
-process_list_end_transfer(struct auth_xfer* xfr, struct module_env* env)
+process_list_end_transfer(struct auth_xfer* xfr, struct module_env* env, char* etag)
 {
 	int ixfr_fail = 0;
-	if(xfr_process_chunk_list(xfr, env, &ixfr_fail)) {
+	if(xfr_process_chunk_list(xfr, env, &ixfr_fail, etag)) {
 		/* it worked! */
 		auth_chunks_delete(xfr->task_transfer);
 
@@ -6291,9 +6310,15 @@ auth_xfer_transfer_tcp_callback(struct comm_point* c, void* arg, int err,
 	}
 	/* if the transfer is done now, disconnect and process the list */
 	if(transferdone) {
-		comm_point_delete(xfr->task_transfer->cp);
+		/* Convey etag (captured on the comm_point) to auth zone,
+		 * if there was any */
+		struct comm_point *cp;
+		cp = xfr->task_transfer->cp;
 		xfr->task_transfer->cp = NULL;
-		process_list_end_transfer(xfr, env);
+		process_list_end_transfer(xfr, env,
+			(  xfr->task_transfer->master->http && cp->etag[0]
+			?  cp->etag : NULL));
+		comm_point_delete(cp);
 		return 0;
 	}
 
@@ -6355,11 +6380,17 @@ auth_xfer_transfer_http_callback(struct comm_point* c, void* arg, int err,
 	}
 	/* if the transfer is done now, disconnect and process the list */
 	if(err == NETEVENT_DONE) {
+		/* Convey etag (captured on the comm_point) to auth zone,
+		 * if there was any */
+		struct comm_point *cp;
 		if(repinfo) repinfo->c = NULL; /* signal cp deleted to
 				the routine calling this callback */
-		comm_point_delete(xfr->task_transfer->cp);
+		cp = xfr->task_transfer->cp;
 		xfr->task_transfer->cp = NULL;
-		process_list_end_transfer(xfr, env);
+		process_list_end_transfer(xfr, env,
+			(  xfr->task_transfer->master->http && cp->etag[0]
+			?  cp->etag : NULL));
+		comm_point_delete(cp);
 		return 0;
 	}
 

@@ -279,6 +279,8 @@ struct comm_point {
 	struct sldns_buffer* http_temp;
 	/** http stored content in buffer */
 	size_t http_stored;
+	/** http Entity-Tag */
+	char etag[128];
 	/* -------- HTTP/2 ------- */
 	/** http2 session */
 	struct http2_session* h2_session;
