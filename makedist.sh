@@ -466,9 +466,13 @@ if [ "$DOWIN" = "yes" ]; then
 		|| error_cleanup "Could not configure"
 		set +x
     else
+		# Add -l:libssp:a to statically link libssp if possible.
+		# Put it at the end of LIBS, to satisfy also linked in
+		# dependencies.
 		set -x
 		$configure --enable-debug --enable-static-exe --disable-flto --disable-gost $* $cross_flag \
 		|| error_cleanup "Could not configure"
+		sed -i Makefile -e 's/^\(LIBS=.*\)$/\1 -l:libssp.a/'
 		set +x
     fi
     info "Calling make"
@@ -485,6 +489,7 @@ if [ "$DOWIN" = "yes" ]; then
 		|| error_cleanup "Could not configure"
 		set +x
     else
+		# Do not add -l:libssp:a statically because it is a shared build.
 		set -x
 		$configure --enable-debug --disable-flto --disable-gost $* $shared_cross_flag \
 		|| error_cleanup "Could not configure"

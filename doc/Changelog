@@ -1,6 +1,7 @@
 29 April 2026: Wouter
 	- tag for 1.25.0. The code repository continues with 1.25.1 in
 	  development.
+	- Fix windows 64bit build for libssp dependency.
 
 23 April 2026: Wouter
 	- Merge #1441: Fix buffer overrun in
