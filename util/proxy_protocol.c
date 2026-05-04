@@ -73,8 +73,9 @@ static struct proxy_protocol_lookup_table pp_parse_errors_data[] = {
 void
 pp_init(void (*write_uint16)(void* buf, uint16_t data),
 	void (*write_uint32)(void* buf, uint32_t data)) {
-	pp_data.write_uint16 = write_uint16;
-	pp_data.write_uint32 = write_uint32;
+	if (__atomic_load_n(&pp_data.write_uint16, __ATOMIC_ACQUIRE)) return;
+     __atomic_store_n(&pp_data.write_uint32, write_uint32, __ATOMIC_RELEASE);
+     __atomic_store_n(&pp_data.write_uint16, write_uint16, __ATOMIC_RELEASE);
 }
 
 const char*
@@ -93,6 +94,13 @@ pp2_write_to_buf(uint8_t* buf, size_t buflen,
 {
 	int af;
 	size_t expected_size;
+	void (*write_uint16)(void* buf, uint16_t data);
+    void (*write_uint32)(void* buf, uint32_t data);
+
+    write_uint16 = __atomic_load_n(&pp_data.write_uint16, __ATOMIC_ACQUIRE);
+    write_uint32 = __atomic_load_n(&pp_data.write_uint32, __ATOMIC_ACQUIRE);
+    if (!write_uint16 || !write_uint32) return 0;
+
 	if(!src) return 0;
 	af = (int)((struct sockaddr_in*)src)->sin_family;
 	expected_size = PP2_HEADER_SIZE + (af==AF_INET?12:36);
@@ -112,14 +120,14 @@ pp2_write_to_buf(uint8_t* buf, size_t buflen,
 			(stream?PP2_PROT_STREAM:PP2_PROT_DGRAM);
 		buf++;
 		/* length */
-		(*pp_data.write_uint16)(buf, 12);
+        (*write_uint16)(buf, 12);
 		buf += 2;
 		/* src addr */
 		memcpy(buf,
 			&((struct sockaddr_in*)src)->sin_addr.s_addr, 4);
 		buf += 4;
 		/* dst addr */
-		(*pp_data.write_uint32)(buf, 0);
+		(*write_uint32)(buf, 0);
 		buf += 4;
 		/* src port */
 		memcpy(buf,
@@ -127,7 +135,7 @@ pp2_write_to_buf(uint8_t* buf, size_t buflen,
 		buf += 2;
 		/* dst addr */
 		/* dst port */
-		(*pp_data.write_uint16)(buf, 12);
+		(*write_uint16)(buf, 12)
 		break;
 #ifdef INET6
 	case AF_INET6:
@@ -136,7 +144,7 @@ pp2_write_to_buf(uint8_t* buf, size_t buflen,
 			(stream?PP2_PROT_STREAM:PP2_PROT_DGRAM);
 		buf++;
 		/* length */
-		(*pp_data.write_uint16)(buf, 36);
+		(*write_uint16)(buf, 36);
 		buf += 2;
 		/* src addr */
 		memcpy(buf,
@@ -149,7 +157,7 @@ pp2_write_to_buf(uint8_t* buf, size_t buflen,
 		memcpy(buf, &((struct sockaddr_in6*)src)->sin6_port, 2);
 		buf += 2;
 		/* dst port */
-		(*pp_data.write_uint16)(buf, 0);
+		(*write_uint16)(buf, 0);
 		break;
 #endif /* INET6 */
 	case AF_UNIX:
