@@ -1,3 +1,10 @@
+7 May 2026: Wouter
+	- Fix for Heap Out-of-Bounds Write via size_t-to-int Truncation
+	  in setup_if() - outside_network_create(). This fixes that
+	  large values for num_ports do not overflow and create
+	  invalid references after integer truncation. Thanks
+	  to Karnakar Reddy (@karnakarreddi) for the report.
+
 1 May 2026: Wouter
 	- iana portlist updated.
 
