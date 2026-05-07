@@ -940,8 +940,10 @@ thread_start(void* arg)
 		port_num = 0;
 #endif
 	if(!worker_init(worker, worker->daemon->cfg,
-			worker->daemon->ports[port_num], 0))
+			worker->daemon->ports[port_num], 0)) {
+		log_thread_set(NULL);
 		fatal_exit("Could not initialize thread");
+	}
 
 	worker_work(worker);
 	return NULL;
@@ -1103,8 +1105,10 @@ daemon_fork(struct daemon* daemon)
 
 #if defined(HAVE_EV_LOOP) || defined(HAVE_EV_DEFAULT_LOOP)
 	/* in libev the first inited base gets signals */
-	if(!worker_init(daemon->workers[0], daemon->cfg, daemon->ports[0], 1))
+	if(!worker_init(daemon->workers[0], daemon->cfg, daemon->ports[0], 1)) {
+		log_thread_set(NULL);
 		fatal_exit("Could not initialize main thread");
+	}
 #endif
 	
 	/* Now create the threads and init the workers.
@@ -1117,8 +1121,10 @@ daemon_fork(struct daemon* daemon)
 	 */
 #if !(defined(HAVE_EV_LOOP) || defined(HAVE_EV_DEFAULT_LOOP))
 	/* libevent has the last inited base get signals (or any base) */
-	if(!worker_init(daemon->workers[0], daemon->cfg, daemon->ports[0], 1))
+	if(!worker_init(daemon->workers[0], daemon->cfg, daemon->ports[0], 1)) {
+		log_thread_set(NULL);
 		fatal_exit("Could not initialize main thread");
+	}
 #endif
 	signal_handling_playback(daemon->workers[0]);
 

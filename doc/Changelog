@@ -4,6 +4,7 @@
 	  large values for num_ports do not overflow and create
 	  invalid references after integer truncation. Thanks
 	  to Karnakar Reddy (@karnakarreddi) for the report.
+	- Fix to clean up log ids after a failure to start a worker thread.
 
 1 May 2026: Wouter
 	- iana portlist updated.
