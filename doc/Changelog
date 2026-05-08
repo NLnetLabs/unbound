@@ -1,3 +1,8 @@
+8 May 2026: Wouter
+	- Fix to relax assertions after the TTL 0 handling change.
+	  This relaxes an assertion in cachedb (it fails instead),
+	  and for packet_rrset_copy_region.
+
 7 May 2026: Wouter
 	- Fix for Heap Out-of-Bounds Write via size_t-to-int Truncation
 	  in setup_if() - outside_network_create(). This fixes that

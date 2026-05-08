@@ -362,8 +362,11 @@ packed_rrset_copy_region(struct ub_packed_rrset_key* key,
 		 * of the novel ghost attack mitigation i.e., using the
 		 * qstarttime for NS RRSets. In that case make sure that the
 		 * returned TTL is not higher than the original one. */
-		log_assert(d->ttl_add <= now ||
-			(ntohs(key->rk.type) == LDNS_RR_TYPE_NS));
+		/* For types other than type NS, auth zone and rpz code
+		 * can have ttl_add values. Also time could conceivably move
+		 * in reverse, due to operator action, and it is prudent
+		 * to not assert on that here.
+		 * So there is no assertion d->ttl_add <= now || type==NS */
 		now_control = SERVE_ORIGINAL_TTL ? data->ttl_add
 			: (d->ttl_add > now ? d->ttl_add : now );
 		for(i=0; i<d->count + d->rrsig_count; i++) {

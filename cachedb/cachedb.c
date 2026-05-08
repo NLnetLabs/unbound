@@ -863,6 +863,11 @@ cachedb_handle_query(struct module_qstate* qstate,
 				return;
 		}
 		/* No 0TTL answers escaping from external cache. */
+		if(qstate->return_msg->rep->ttl == 0) {
+			qstate->return_msg = NULL;
+			qstate->ext_state[id] = module_wait_module;
+			return;
+		}
 		log_assert(qstate->return_msg->rep->ttl > 0);
 		qstate->is_cachedb_answer = 1;
 		/* we are done with the query */
