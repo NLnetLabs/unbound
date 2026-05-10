@@ -1,0 +1,222 @@
+# #-- nftset.test --#
+# source the master var file when it's there
+[ -f ../.tpkg.var.master ] && source ../.tpkg.var.master
+# use .tpkg.var.test for in test variable passing
+[ -f .tpkg.var.test ] && source .tpkg.var.test
+
+. ../common.sh
+PRE="../.."
+
+# Make all the queries. They need to succeed by the way.
+echo "> dig www.example.net."
+dig @127.0.0.1 -p $UNBOUND_PORT www.example.net. | tee outfile
+echo "> check answer"
+if grep "1.1.1.1" outfile; then
+	echo "OK"
+else
+	echo "> cat logfiles"
+	cat fwd.log
+	cat unbound.log
+	echo "Not OK"
+	exit 1
+fi
+echo "> check nftset"
+if grep "ipset: add 1.1.1.1 to atotallymadeupnamefor4 for www.example.net." unbound.log; then
+	echo "nftset OK"
+else
+	echo "> cat logfiles"
+	cat fwd.log
+	cat unbound.log
+	echo "Not OK"
+	exit 1
+fi
+
+echo "> dig www.example.net. AAAA"
+dig @127.0.0.1 -p $UNBOUND_PORT www.example.net. AAAA | tee outfile
+echo "> check answer"
+if grep "::1" outfile; then
+	echo "OK"
+else
+	echo "> cat logfiles"
+	cat fwd.log
+	cat unbound.log
+	echo "Not OK"
+	exit 1
+fi
+echo "> check nftset"
+if grep "ipset: add ::1 to atotallymadeupnamefor6 for www.example.net." unbound.log; then
+	echo "nftset OK"
+else
+	echo "> cat logfiles"
+	cat fwd.log
+	cat unbound.log
+	echo "Not OK"
+	exit 1
+fi
+
+echo "> dig cname.example.net."
+dig @127.0.0.1 -p $UNBOUND_PORT cname.example.net. | tee outfile
+echo "> check answer"
+if grep "2.2.2.2" outfile; then
+	echo "OK"
+else
+	echo "> cat logfiles"
+	cat fwd.log
+	cat unbound.log
+	echo "Not OK"
+	exit 1
+fi
+echo "> check nftset"
+if grep "ipset: add 2.2.2.2 to atotallymadeupnamefor4 for target.example.net." unbound.log; then
+	echo "nftset OK"
+else
+	echo "> cat logfiles"
+	cat fwd.log
+	cat unbound.log
+	echo "Not OK"
+	exit 1
+fi
+
+echo "> dig cname.example.net. AAAA"
+dig @127.0.0.1 -p $UNBOUND_PORT cname.example.net. AAAA | tee outfile
+echo "> check answer"
+if grep "::2" outfile; then
+	echo "OK"
+else
+	echo "> cat logfiles"
+	cat fwd.log
+	cat unbound.log
+	echo "Not OK"
+	exit 1
+fi
+echo "> check nftset"
+if grep "ipset: add ::2 to atotallymadeupnamefor6 for target.example.net." unbound.log; then
+	echo "nftset OK"
+else
+	echo "> cat logfiles"
+	cat fwd.log
+	cat unbound.log
+	echo "Not OK"
+	exit 1
+fi
+
+echo "> dig outsidecname.example.net."
+dig @127.0.0.1 -p $UNBOUND_PORT outsidecname.example.net. | tee outfile
+echo "> check answer"
+if grep "3.3.3.3" outfile; then
+	echo "OK"
+else
+	echo "> cat logfiles"
+	cat fwd.log
+	cat unbound.log
+	echo "Not OK"
+	exit 1
+fi
+echo "> check nftset"
+if grep "ipset: add 3.3.3.3 to atotallymadeupnamefor4 for target.example.com." unbound.log; then
+	echo "nftset OK"
+else
+	echo "> cat logfiles"
+	cat fwd.log
+	cat unbound.log
+	echo "Not OK"
+	exit 1
+fi
+
+echo "> dig outsidecname.example.net. AAAA"
+dig @127.0.0.1 -p $UNBOUND_PORT outsidecname.example.net. AAAA | tee outfile
+echo "> check answer"
+if grep "::3" outfile; then
+	echo "OK"
+else
+	echo "> cat logfiles"
+	cat fwd.log
+	cat unbound.log
+	echo "Not OK"
+	exit 1
+fi
+echo "> check nftset"
+if grep "ipset: add ::3 to atotallymadeupnamefor6 for target.example.com." unbound.log; then
+	echo "nftset OK"
+else
+	echo "> cat logfiles"
+	cat fwd.log
+	cat unbound.log
+	echo "Not OK"
+	exit 1
+fi
+
+echo "> dig lookslikeexample.net. AAAA"
+dig @127.0.0.1 -p $UNBOUND_PORT lookslikeexample.net. AAAA | tee outfile
+echo "> check answer"
+if grep "::4" outfile; then
+	echo "OK"
+else
+	echo "> cat logfiles"
+	cat fwd.log
+	cat unbound.log
+	echo "Not OK"
+	exit 1
+fi
+echo "> check nftset (should NOT be added)"
+if grep "ipset: add ::4 to atotallymadeupnamefor6 for lookslikeexample.net." unbound.log; then
+	echo "> cat logfiles"
+	cat fwd.log
+	cat unbound.log
+	echo "Not OK"
+	exit 1
+else
+	echo "nftset OK"
+fi
+
+# Test per-zone set routing
+echo "> dig target.example.com. (per-zone)"
+dig @127.0.0.1 -p $UNBOUND_PORT target.example.com. | tee outfile
+echo "> check answer"
+if grep "3.3.3.3" outfile; then
+	echo "OK"
+else
+	echo "> cat logfiles"
+	cat fwd.log
+	cat unbound.log
+	echo "Not OK"
+	exit 1
+fi
+echo "> check nftset (should use custom_v4)"
+if grep "ipset: add 3.3.3.3 to custom_v4 for target.example.com." unbound.log; then
+	echo "per-zone nftset OK"
+else
+	echo "> cat logfiles"
+	cat fwd.log
+	cat unbound.log
+	echo "Not OK"
+	exit 1
+fi
+
+echo "> dig target.example.com. AAAA (per-zone)"
+dig @127.0.0.1 -p $UNBOUND_PORT target.example.com. AAAA | tee outfile
+echo "> check answer"
+if grep "::3" outfile; then
+	echo "OK"
+else
+	echo "> cat logfiles"
+	cat fwd.log
+	cat unbound.log
+	echo "Not OK"
+	exit 1
+fi
+echo "> check nftset (should use custom_v6)"
+if grep "ipset: add ::3 to custom_v6 for target.example.com." unbound.log; then
+	echo "per-zone nftset OK"
+else
+	echo "> cat logfiles"
+	cat fwd.log
+	cat unbound.log
+	echo "Not OK"
+	exit 1
+fi
+
+echo "> cat logfiles"
+cat fwd.log
+echo "> OK"
+exit 0

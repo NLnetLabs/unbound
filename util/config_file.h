@@ -468,7 +468,7 @@ struct config_file {
 	struct config_str2list* local_zones;
 	/** local zones nodefault list */
 	struct config_strlist* local_zones_nodefault;
-#ifdef USE_IPSET
+#if defined(USE_IPSET) || defined(USE_NFTSET)
 	/** local zones ipset list */
 	struct config_strlist* local_zones_ipset;
 #endif
@@ -780,9 +780,13 @@ struct config_file {
 	char* cookie_secret_file;
 
 	/* ipset module */
-#ifdef USE_IPSET
-	char* ipset_name_v4;
-	char* ipset_name_v6;
+#if defined(USE_IPSET) || defined(USE_NFTSET)
+	int ipset_use_nft;    /* 1 if nftset: section was used (nft backend), 0 for ipset: (ip backend) */
+	char* ipset_family;   /* nft backend only: "inet" (default), "ip", or "ip6" */
+	char* ipset_table;    /* nft backend only: required */
+	char* ipset_name_v4;  /* global fallback v4 set (optional when ipset_zones covers all zones) */
+	char* ipset_name_v6;  /* global fallback v6 set (optional when ipset_zones covers all zones) */
+	struct config_str3list *ipset_zones; /* per-zone entries: zone name, v4 set name, v6 set name */
 #endif
 	/** respond with Extended DNS Errors (RFC8914) */
 	int ede;
@@ -900,7 +904,7 @@ struct config_view {
 	struct config_strlist* local_data;
 	/** local zones nodefault list */
 	struct config_strlist* local_zones_nodefault;
-#ifdef USE_IPSET
+#if defined(USE_IPSET) || defined(USE_NFTSET)
 	/** local zones ipset list */
 	struct config_strlist* local_zones_ipset;
 #endif
@@ -1394,6 +1398,10 @@ struct config_parser_state {
 	const char* chroot;
 	/** if we are started in a toplevel, or not, after a force_toplevel */
 	int started_toplevel;
+#if defined(USE_IPSET) || defined(USE_NFTSET)
+	/** set to 1 once either ipset:/nftset: section is parsed; detects duplicates */
+	int ipset_section_seen;
+#endif
 };
 
 /** global config parser object used during config parsing */

@@ -388,6 +388,9 @@
 /* If we have atomic_store */
 #undef HAVE_LINK_ATOMIC_STORE
 
+/* Define to 1 if you have the <linux/netfilter/nf_tables.h> header file. */
+#undef HAVE_LINUX_NETFILTER_NF_TABLES_H
+
 /* Define to 1 if you have the <linux/net_tstamp.h> header file. */
 #undef HAVE_LINUX_NET_TSTAMP_H
 
@@ -1034,7 +1037,7 @@
 /* Define to 1 to use ipsecmod support. */
 #undef USE_IPSECMOD
 
-/* Define to 1 to use ipset support */
+/* Define to 1 to enable the ip backend in the ipset module */
 #undef USE_IPSET
 
 /* Define if you enable libevent */
@@ -1053,6 +1056,9 @@
 
 /* Define this to enable client TCP Fast Open. */
 #undef USE_MSG_FASTOPEN
+
+/* Define to 1 to enable the nft backend in the ipset module */
+#undef USE_NFTSET
 
 /* Define this to use ngtcp2_crypto_ossl. */
 #undef USE_NGTCP2_CRYPTO_OSSL
