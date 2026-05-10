@@ -1386,16 +1386,30 @@ remote-control:
 #     # redis logical database to use for the replica server, 0 is the default database.
 #     redis-replica-logical-db: 0
 
-# IPSet
-# Add specify domain into set via ipset.
-# To enable:
-# o use --enable-ipset to configure before compiling;
-# o Unbound then needs to run as root user.
+# ipset module
+# Add resolved A/AAAA addresses into a kernel firewall set.
+# The section name selects the backend:
+#   ipset:  — legacy iptables ipset (or PF tables on BSD); --enable-ipset
+#   nftset: — nftables sets (Linux only); --enable-nftset
+# Only one section may be present. Either flag can be used alone or both
+# compiled in (runtime choice is the section name, not a 'backend:' field).
+# Unbound needs CAP_NET_ADMIN (typically run as root).
+#
+# iptables ipset example:
 # ipset:
-#     # set name for ip v4 addresses
 #     name-v4: "list-v4"
-#     # set name for ip v6 addresses
 #     name-v6: "list-v6"
+#     # per-zone set routing (optional)
+#     # set: "example.com." "v4_example" "v6_example"
+#
+# nftables example:
+# nftset:
+#     # family: "inet"   # "inet" (default), "ip", or "ip6"
+#     table:  "fw4"
+#     name-v4: "list-v4"
+#     name-v6: "list-v6"
+#     # per-zone set routing (optional)
+#     # set: "example.com." "v4_example" "v6_example"
 #
 
 # Dnstap logging support, if compiled in by using --enable-dnstap to configure.

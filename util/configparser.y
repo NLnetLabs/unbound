@@ -200,7 +200,8 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_WAIT_LIMIT_NETBLOCK VAR_WAIT_LIMIT_COOKIE_NETBLOCK
 %token VAR_STREAM_WAIT_SIZE VAR_TLS_CIPHERS VAR_TLS_CIPHERSUITES VAR_TLS_USE_SNI
 %token VAR_TLS_PROTOCOLS
-%token VAR_IPSET VAR_IPSET_NAME_V4 VAR_IPSET_NAME_V6
+%token VAR_IPSET VAR_NFTSET VAR_IPSET_NAME_V4 VAR_IPSET_NAME_V6
+%token VAR_IPSET_FAMILY VAR_IPSET_TABLE VAR_IPSET_SET
 %token VAR_TLS_SESSION_TICKET_KEYS VAR_RPZ VAR_TAGS VAR_RPZ_ACTION_OVERRIDE
 %token VAR_RPZ_CNAME_OVERRIDE VAR_RPZ_LOG VAR_RPZ_LOG_NAME
 %token VAR_DYNLIB VAR_DYNLIB_FILE VAR_EDNS_CLIENT_STRING
@@ -226,7 +227,7 @@ toplevelvar: serverstart contents_server | stub_clause |
 	forward_clause | pythonstart contents_py |
 	rcstart contents_rc | dtstart contents_dt | view_clause |
 	dnscstart contents_dnsc | cachedbstart contents_cachedb |
-	ipsetstart contents_ipset | authstart contents_auth |
+	ipsetstart contents_ipset | nftsetstart contents_ipset | authstart contents_auth |
 	rpzstart contents_rpz | dynlibstart contents_dl |
 	force_toplevel
 	;
@@ -2403,14 +2404,15 @@ server_local_zone: VAR_LOCAL_ZONE STRING_ARG STRING_ARG
 		   && strcmp($3, "noview")!=0
 		   && strcmp($3, "inform")!=0 && strcmp($3, "inform_deny")!=0
 		   && strcmp($3, "inform_redirect") != 0
-		   && strcmp($3, "ipset") != 0) {
+		   && strcmp($3, "ipset") != 0
+		   && strcmp($3, "nftset") != 0) {
 			yyerror("local-zone type: expected static, deny, "
 				"refuse, redirect, transparent, "
 				"typetransparent, inform, inform_deny, "
 				"inform_redirect, always_transparent, block_a, "
 				"always_refuse, always_nxdomain, "
 				"always_nodata, always_deny, always_null, "
-				"noview, nodefault or ipset");
+				"noview, nodefault, ipset, or nftset");
 			free($2);
 			free($3);
 		} else if(strcmp($3, "nodefault")==0) {
@@ -2418,8 +2420,9 @@ server_local_zone: VAR_LOCAL_ZONE STRING_ARG STRING_ARG
 				local_zones_nodefault, $2))
 				yyerror("out of memory");
 			free($3);
-#ifdef USE_IPSET
-		} else if(strcmp($3, "ipset")==0) {
+#if defined(USE_IPSET) || defined(USE_NFTSET)
+		} else if(strcmp($3, "ipset")==0 || strcmp($3, "nftset")==0) {
+			/* nftset is an accepted synonym for ipset */
 			size_t len = strlen($2);
 			/* Make sure to add the trailing dot.
 			 * These are str compared to domain names. */
@@ -3389,14 +3392,15 @@ view_local_zone: VAR_LOCAL_ZONE STRING_ARG STRING_ARG
 		   && strcmp($3, "noview")!=0
 		   && strcmp($3, "inform")!=0 && strcmp($3, "inform_deny")!=0
 		   && strcmp($3, "inform_redirect") != 0
-		   && strcmp($3, "ipset") != 0) {
+		   && strcmp($3, "ipset") != 0
+		   && strcmp($3, "nftset") != 0) {
 			yyerror("local-zone type: expected static, deny, "
 				"refuse, redirect, transparent, "
 				"typetransparent, inform, inform_deny, "
 				"inform_redirect, always_transparent, "
 				"always_refuse, always_nxdomain, "
 				"always_nodata, always_deny, always_null, "
-				"noview, nodefault or ipset");
+				"noview, nodefault, ipset, or nftset");
 			free($2);
 			free($3);
 		} else if(strcmp($3, "nodefault")==0) {
@@ -3404,8 +3408,9 @@ view_local_zone: VAR_LOCAL_ZONE STRING_ARG STRING_ARG
 				local_zones_nodefault, $2))
 				yyerror("out of memory");
 			free($3);
-#ifdef USE_IPSET
-		} else if(strcmp($3, "ipset")==0) {
+#if defined(USE_IPSET) || defined(USE_NFTSET)
+		} else if(strcmp($3, "ipset")==0 || strcmp($3, "nftset")==0) {
+			/* nftset is an accepted synonym for ipset */
 			size_t len = strlen($2);
 			/* Make sure to add the trailing dot.
 			 * These are str compared to domain names. */
@@ -4316,15 +4321,62 @@ ipsetstart: VAR_IPSET
 	{
 		OUTYY(("\nP(ipset:)\n"));
 		cfg_parser->started_toplevel = 1;
+	#if defined(USE_IPSET) || defined(USE_NFTSET)
+		if(cfg_parser->ipset_section_seen)
+			yyerror("only one of ipset: or nftset: may be specified");
+		cfg_parser->ipset_section_seen = 1;
+		/* ipset_use_nft stays 0: ip backend */
+	#endif
+	}
+	;
+nftsetstart: VAR_NFTSET
+	{
+		OUTYY(("\nP(nftset:)\n"));
+		cfg_parser->started_toplevel = 1;
+	#if defined(USE_IPSET) || defined(USE_NFTSET)
+		if(cfg_parser->ipset_section_seen)
+			yyerror("only one of ipset: or nftset: may be specified");
+		cfg_parser->ipset_section_seen = 1;
+		cfg_parser->cfg->ipset_use_nft = 1;
+	#endif
 	}
 	;
 contents_ipset: contents_ipset content_ipset
 	| ;
-content_ipset: ipset_name_v4 | ipset_name_v6
+content_ipset: ipset_family | ipset_table |
+	ipset_name_v4 | ipset_name_v6 | ipset_set
+	;
+ipset_family: VAR_IPSET_FAMILY STRING_ARG
+	{
+	#if defined(USE_IPSET) || defined(USE_NFTSET)
+		OUTYY(("P(ipset family:%s)\n", $2));
+		if(cfg_parser->cfg->ipset_family)
+			yyerror("ipset family override, there must be one family");
+		free(cfg_parser->cfg->ipset_family);
+		cfg_parser->cfg->ipset_family = $2;
+	#else
+		OUTYY(("P(Compiled without ipset, ignoring)\n"));
+		free($2);
+	#endif
+	}
+	;
+ipset_table: VAR_IPSET_TABLE STRING_ARG
+	{
+	#if defined(USE_IPSET) || defined(USE_NFTSET)
+		OUTYY(("P(ipset table:%s)\n", $2));
+		if(cfg_parser->cfg->ipset_table)
+			yyerror("ipset table override, there must be one table");
+		free(cfg_parser->cfg->ipset_table);
+		cfg_parser->cfg->ipset_table = $2;
+	#else
+		OUTYY(("P(Compiled without ipset, ignoring)\n"));
+		free($2);
+	#endif
+	}
 	;
 ipset_name_v4: VAR_IPSET_NAME_V4 STRING_ARG
 	{
-	#ifdef USE_IPSET
+	#if defined(USE_IPSET) || defined(USE_NFTSET)
 		OUTYY(("P(name-v4:%s)\n", $2));
 		if(cfg_parser->cfg->ipset_name_v4)
 			yyerror("ipset name v4 override, there must be one "
@@ -4339,7 +4391,7 @@ ipset_name_v4: VAR_IPSET_NAME_V4 STRING_ARG
 	;
 ipset_name_v6: VAR_IPSET_NAME_V6 STRING_ARG
 	{
-	#ifdef USE_IPSET
+	#if defined(USE_IPSET) || defined(USE_NFTSET)
 		OUTYY(("P(name-v6:%s)\n", $2));
 		if(cfg_parser->cfg->ipset_name_v6)
 			yyerror("ipset name v6 override, there must be one "
@@ -4349,6 +4401,25 @@ ipset_name_v6: VAR_IPSET_NAME_V6 STRING_ARG
 	#else
 		OUTYY(("P(Compiled without ipset, ignoring)\n"));
 		free($2);
+	#endif
+	}
+	;
+ipset_set: VAR_IPSET_SET STRING_ARG STRING_ARG STRING_ARG
+	{
+	#if defined(USE_IPSET) || defined(USE_NFTSET)
+		OUTYY(("P(ipset set:%s %s %s)\n", $2, $3, $4));
+		if(!cfg_str3list_insert(&cfg_parser->cfg->ipset_zones,
+			$2, $3, $4)) {
+			yyerror("out of memory");
+			free($2);
+			free($3);
+			free($4);
+		}
+	#else
+		OUTYY(("P(Compiled without ipset, ignoring)\n"));
+		free($2);
+		free($3);
+		free($4);
 	#endif
 	}
 	;

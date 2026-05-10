@@ -2164,57 +2164,88 @@ case "$enable_ipsecmod" in
 		;;
 esac
 
-# check for ipset if requested
-AC_ARG_ENABLE(ipset, AS_HELP_STRING([--enable-ipset],[enable ipset module]))
-case "$enable_ipset" in
-    yes)
-		AC_DEFINE([USE_IPSET], [1], [Define to 1 to use ipset support])
-		IPSET_SRC="ipset/ipset.c"
-		AC_SUBST(IPSET_SRC)
-		IPSET_OBJ="ipset.lo"
-		AC_SUBST(IPSET_OBJ)
+# ipset module — supports ip backend (--enable-ipset) and/or nft backend
+# (--enable-nftset). Either or both may be selected; the module is built
+# whenever at least one backend is enabled.
+AC_ARG_ENABLE(ipset, AS_HELP_STRING([--enable-ipset],[enable ip backend (iptables ipset / BSD PF) in the ipset module]))
+AC_ARG_ENABLE(nftset, AS_HELP_STRING([--enable-nftset],[enable nft backend (nftables sets) in the ipset module; Linux only, requires linux/netfilter/nf_tables.h]))
 
-		# BSD's pf
-		AC_CHECK_HEADERS([net/pfvar.h], [], [
-		    # mnl
-		    AC_ARG_WITH(libmnl, AS_HELP_STRING([--with-libmnl=path],[specify explicit path for libmnl.]),
-			[ ],[ withval="yes" ])
-		    found_libmnl="no"
-		    AC_MSG_CHECKING(for libmnl)
-		    if test x_$withval = x_ -o x_$withval = x_yes; then
-			withval="/usr/local /opt/local /usr/lib /usr/pkg /usr/sfw /usr"
-		    fi
-		    for dir in $withval ; do
-			if test -f "$dir/include/libmnl/libmnl.h" -o -f "$dir/include/libmnl/libmnl/libmnl.h"; then
-				found_libmnl="yes"
-				dnl assume /usr is in default path.
-				extralibmnl=""
-				if test -f "$dir/include/libmnl/libmnl/libmnl.h"; then
-					extralibmnl="/libmnl"
-				fi
-				if test "$dir" != "/usr" -o -n "$extralibmnl"; then
-					CPPFLAGS="$CPPFLAGS -I$dir/include$extralibmnl"
-				fi
-				if test "$dir" != "/usr"; then
-					LDFLAGS="$LDFLAGS -L$dir/lib"
-				fi
-				AC_MSG_RESULT(found in $dir)
-				LIBS="$LIBS -lmnl"
-				break;
+ipset_module_enabled=no
+
+if test "$enable_ipset" = "yes"; then
+	AC_DEFINE([USE_IPSET], [1], [Define to 1 to enable the ip backend in the ipset module])
+	ipset_module_enabled=yes
+
+	# BSD's pf — if present, the ip backend talks to /dev/pf instead of
+	# requiring libmnl for the ip backend. libmnl may still be required
+	# below if --enable-nftset was also requested.
+	AC_CHECK_HEADERS([net/pfvar.h], [have_pfvar=yes], [have_pfvar=no], [
+	  #include <netinet/in.h>
+	  #include <net/if.h>
+	])
+fi
+
+if test "$enable_nftset" = "yes"; then
+	AC_CHECK_HEADERS([linux/netfilter/nf_tables.h], [
+	    AC_DEFINE([USE_NFTSET], [1], [Define to 1 to enable the nft backend in the ipset module])
+	    ipset_module_enabled=yes
+	], [
+	    AC_MSG_ERROR([Could not find linux/netfilter/nf_tables.h; the nft backend is Linux-only])
+	], [
+	    #include <netinet/in.h>
+	    #include <net/if.h>
+	    #include <linux/netfilter.h>
+	])
+fi
+
+if test "$ipset_module_enabled" = "yes"; then
+	IPSET_SRC="ipset/ipset.c"
+	AC_SUBST(IPSET_SRC)
+	IPSET_OBJ="ipset.lo"
+	AC_SUBST(IPSET_OBJ)
+
+	# libmnl is required on Linux for either backend. On BSD only the ip
+	# backend is supported (talks to PF) so libmnl is not required there.
+	need_libmnl=no
+	if test "$enable_nftset" = "yes"; then
+		need_libmnl=yes
+	fi
+	if test "$enable_ipset" = "yes" -a "$have_pfvar" != "yes"; then
+		need_libmnl=yes
+	fi
+
+	if test "$need_libmnl" = "yes"; then
+	    AC_ARG_WITH(libmnl, AS_HELP_STRING([--with-libmnl=path],[specify explicit path for libmnl.]),
+		[ ],[ withval="yes" ])
+	    found_libmnl="no"
+	    AC_MSG_CHECKING(for libmnl)
+	    if test x_$withval = x_ -o x_$withval = x_yes; then
+		withval="/usr/local /opt/local /usr/lib /usr/pkg /usr/sfw /usr"
+	    fi
+	    for dir in $withval ; do
+		if test -f "$dir/include/libmnl/libmnl.h" -o -f "$dir/include/libmnl/libmnl/libmnl.h"; then
+			found_libmnl="yes"
+			dnl assume /usr is in default path.
+			extralibmnl=""
+			if test -f "$dir/include/libmnl/libmnl/libmnl.h"; then
+				extralibmnl="/libmnl"
 			fi
-		    done
-		    if test x_$found_libmnl != x_yes; then
-			  AC_MSG_ERROR([Could not find libmnl, libmnl.h])
-		    fi
-		], [
-		  #include <netinet/in.h>
-		  #include <net/if.h>
-		])
-		;;
-    no|*)
-    	# nothing
-		;;
-esac
+			if test "$dir" != "/usr" -o -n "$extralibmnl"; then
+				CPPFLAGS="$CPPFLAGS -I$dir/include$extralibmnl"
+			fi
+			if test "$dir" != "/usr"; then
+				LDFLAGS="$LDFLAGS -L$dir/lib"
+			fi
+			AC_MSG_RESULT(found in $dir)
+			LIBS="$LIBS -lmnl"
+			break;
+		fi
+	    done
+	    if test x_$found_libmnl != x_yes; then
+		  AC_MSG_ERROR([Could not find libmnl, libmnl.h])
+	    fi
+	fi
+fi
 AC_ARG_ENABLE(explicit-port-randomisation, AS_HELP_STRING([--disable-explicit-port-randomisation],[disable explicit source port randomisation and rely on the kernel to provide random source ports]))
 case "$enable_explicit_port_randomisation" in
 	no)
