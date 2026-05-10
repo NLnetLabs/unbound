@@ -1,0 +1,10 @@
+server:
+	chroot: ""
+	username: ""
+	directory: "."
+	pidfile: ""
+
+nftset:
+	table: "fw4"
+	name-v4: "blocklist"
+	name-v4: "blocklist2"

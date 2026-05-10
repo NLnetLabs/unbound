@@ -301,8 +301,11 @@ config_create(void)
 	cfg->neg_cache_size = 1 * 1024 * 1024;
 	cfg->local_zones = NULL;
 	cfg->local_zones_nodefault = NULL;
-#ifdef USE_IPSET
+#if defined(USE_IPSET) || defined(USE_NFTSET)
 	cfg->local_zones_ipset = NULL;
+#if defined(USE_NFTSET) && !defined(USE_IPSET)
+	cfg->ipset_use_nft = 1;
+#endif
 #endif
 	cfg->local_zones_disable_default = 0;
 	cfg->local_data = NULL;
@@ -417,9 +420,12 @@ config_create(void)
 	cfg->redis_replica_logical_db = 0;
 #endif  /* USE_REDIS */
 #endif  /* USE_CACHEDB */
-#ifdef USE_IPSET
+#if defined(USE_IPSET) || defined(USE_NFTSET)
+	cfg->ipset_family = NULL;
+	cfg->ipset_table = NULL;
 	cfg->ipset_name_v4 = NULL;
 	cfg->ipset_name_v6 = NULL;
+	cfg->ipset_zones = NULL;
 #endif
 	cfg->ede = 0;
 	cfg->ede_serve_expired = 0;
@@ -1445,7 +1451,9 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_DEC(opt, "redis-replica-logical-db", redis_replica_logical_db)
 #endif  /* USE_REDIS */
 #endif  /* USE_CACHEDB */
-#ifdef USE_IPSET
+#if defined(USE_IPSET) || defined(USE_NFTSET)
+	else O_STR(opt, "family", ipset_family)
+	else O_STR(opt, "table", ipset_table)
 	else O_STR(opt, "name-v4", ipset_name_v4)
 	else O_STR(opt, "name-v6", ipset_name_v6)
 #endif
@@ -1473,6 +1481,9 @@ create_cfg_parser(struct config_file* cfg, char* filename, const char* chroot)
 	cfg_parser->cfg = cfg;
 	cfg_parser->chroot = chroot;
 	cfg_parser->started_toplevel = 0;
+#if defined(USE_IPSET) || defined(USE_NFTSET)
+	cfg_parser->ipset_section_seen = 0;
+#endif
 	init_cfg_parse();
 }
 
@@ -1713,7 +1724,7 @@ config_delview(struct config_view* p)
 	free(p->name);
 	config_deldblstrlist(p->local_zones);
 	config_delstrlist(p->local_zones_nodefault);
-#ifdef USE_IPSET
+#if defined(USE_IPSET) || defined(USE_NFTSET)
 	config_delstrlist(p->local_zones_ipset);
 #endif
 	config_delstrlist(p->local_data);
@@ -1812,7 +1823,7 @@ config_delete(struct config_file* cfg)
 	free(cfg->val_nsec3_key_iterations);
 	config_deldblstrlist(cfg->local_zones);
 	config_delstrlist(cfg->local_zones_nodefault);
-#ifdef USE_IPSET
+#if defined(USE_IPSET) || defined(USE_NFTSET)
 	config_delstrlist(cfg->local_zones_ipset);
 #endif
 	config_delstrlist(cfg->local_data);
@@ -1871,9 +1882,12 @@ config_delete(struct config_file* cfg)
 	free(cfg->redis_replica_server_password);
 #endif  /* USE_REDIS */
 #endif  /* USE_CACHEDB */
-#ifdef USE_IPSET
+#if defined(USE_IPSET) || defined(USE_NFTSET)
+	free(cfg->ipset_family);
+	free(cfg->ipset_table);
 	free(cfg->ipset_name_v4);
 	free(cfg->ipset_name_v6);
+	config_deltrplstrlist(cfg->ipset_zones);
 #endif
 	free(cfg);
 }
@@ -2730,7 +2744,7 @@ cfg_parse_local_zone(struct config_file* cfg, const char* val)
 	if(strcmp(type, "nodefault")==0) {
 		return cfg_strlist_insert(&cfg->local_zones_nodefault,
 			strdup(name));
-#ifdef USE_IPSET
+#if defined(USE_IPSET) || defined(USE_NFTSET)
 	} else if(strcmp(type, "ipset")==0) {
 		return cfg_strlist_insert(&cfg->local_zones_ipset,
 			strdup(name));
