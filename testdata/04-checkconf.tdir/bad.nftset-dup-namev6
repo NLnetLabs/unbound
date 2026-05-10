@@ -1,0 +1,10 @@
+server:
+	chroot: ""
+	username: ""
+	directory: "."
+	pidfile: ""
+
+nftset:
+	table: "fw4"
+	name-v6: "blocklist6"
+	name-v6: "blocklist6b"
