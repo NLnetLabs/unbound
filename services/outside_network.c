@@ -3351,9 +3351,9 @@ serviced_udp_callback(struct comm_point* c, void* arg, int error,
 	if(error == NETEVENT_TIMEOUT) {
 		if(sq->status == serviced_query_UDP_EDNS && sq->last_rtt < 5000 &&
 		   (serviced_query_udp_size(sq, serviced_query_UDP_EDNS_FRAG) < serviced_query_udp_size(sq, serviced_query_UDP_EDNS))) {
-			/* fallback to 1480/1280 */
+			/* fallback to 1472/1232 */
 			sq->status = serviced_query_UDP_EDNS_FRAG;
-			log_name_addr(VERB_ALGO, "try edns1xx0", sq->qbuf+10,
+			log_name_addr(VERB_ALGO, "try edns1xx2", sq->qbuf+10,
 				&sq->addr, sq->addrlen);
 			if(!serviced_udp_send(sq, c->buffer)) {
 				serviced_callbacks(sq, NETEVENT_CLOSED, c, rep);
