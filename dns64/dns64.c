@@ -643,6 +643,12 @@ handle_event_moddone(struct module_qstate* qstate, int id)
 		qstate->return_msg->rep &&
 		reply_find_answer_rrset(&qstate->qinfo, qstate->return_msg->rep);
 	int synth_qname = 0;
+	if(could_synth && !has_data && qstate->env->need_to_validate &&
+		qstate->return_msg && qstate->return_msg->rep &&
+		qstate->return_msg->rep->security == sec_status_bogus) {
+		verbose(VERB_ALGO, "dns64: bogus AAAA reply not synthesized");
+		could_synth = 0;
+	}
 
 	if(could_synth &&
 		(!has_data ||

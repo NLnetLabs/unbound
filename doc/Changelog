@@ -4,6 +4,12 @@
 	  packet_rrset_copy_region before using it. Thanks to Xin Wang
 	  and Jiajia Liu, Northwestern Polytechnical University, for
 	  the report.
+	- Fix that for dns64 answers, the AAAA query is checked to be
+	  DNSSEC validated, when DNSSEC is enabled. This improves
+	  the RFC6147 conformance of Unbound. Thanks to Xin Wang
+	  and Jiajia Liu, Northwestern Polytechnical University, for
+	  the report. In addition, thanks to Qifan Zhang, Palo Alto
+	  Networks, for reporting it.
 
 11 May 2026: Yorgos
 	- Fix comment and verbose logging for EDNS fallback buffer size.
