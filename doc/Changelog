@@ -18,6 +18,9 @@
 	  DNSKEYs with leading zeroes for n. Thanks to Xin Wang and
 	  Jiajia Liu, Northwestern Polytechnical University, for
 	  the report.
+	- Fix DNSKEY size calculation for noncanonical RSA DNSKEYs
+	  with leading zeroes for n. Thanks to Xin Wang and Jiajia Liu,
+	  Northwestern Polytechnical University, for the report.
 
 11 May 2026: Yorgos
 	- Fix comment and verbose logging for EDNS fallback buffer size.
