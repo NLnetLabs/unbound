@@ -1874,9 +1874,9 @@ _verify_nettle_rsa(sldns_buffer* buf, unsigned int digest_size, char* sigblock,
 	}
 	mod_offset = exp_offset + exp_len;
 	nettle_rsa_public_key_init(&pubkey);
-	pubkey.size = keylen - mod_offset;
 	nettle_mpz_set_str_256_u(pubkey.e, exp_len, &key[exp_offset]);
-	nettle_mpz_set_str_256_u(pubkey.n, pubkey.size, &key[mod_offset]);
+	nettle_mpz_set_str_256_u(pubkey.n, keylen - mod_offset, &key[mod_offset]);
+	pubkey.size = nettle_mpz_sizeinbase_256_u(pubkey.n);
 
 	/* Digest content of "buf" and verify its RSA signature in "sigblock"*/
 	nettle_mpz_init_set_str_256_u(signature, sigblock_len, (uint8_t*)sigblock);
