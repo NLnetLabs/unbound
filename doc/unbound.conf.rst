@@ -642,7 +642,7 @@ These options are part of the ``server:`` section.
 
 @@UAHL@unbound.conf@so-sndbuf@@: *<number>*
     If not 0, then set the SO_SNDBUF socket option to get more buffer space on
-    UDP port 53 outgoing queries.
+    UDP port 53 outgoing responses.
     This for very busy servers handles spikes in answer traffic, otherwise:
 
     .. code-block:: text
