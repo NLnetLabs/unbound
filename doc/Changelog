@@ -10,6 +10,10 @@
 	  and Jiajia Liu, Northwestern Polytechnical University, for
 	  the report. In addition, thanks to Qifan Zhang, Palo Alto
 	  Networks, for reporting it.
+	- Fix for allocation-failure hardening of rrset cache wildcard
+	  storage and canonical NSEC owner replacement. Thanks to Xin
+	  Wang and Jiajia Liu, Northwestern Polytechnical University,
+	  for the report.
 
 11 May 2026: Yorgos
 	- Fix comment and verbose logging for EDNS fallback buffer size.

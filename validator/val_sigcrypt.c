@@ -1322,10 +1322,11 @@ rrset_canonical(struct regional* region, sldns_buffer* buf,
 	 * the non-existence proves. */
 	if(ntohs(k->rk.type) == LDNS_RR_TYPE_NSEC &&
 		section == LDNS_SECTION_AUTHORITY && qstate) {
-		k->rk.dname = regional_alloc_init(qstate->region, can_owner,
+		uint8_t* new_dname = regional_alloc_init(qstate->region, can_owner,
 			can_owner_len);
-		if(!k->rk.dname)
+		if(!new_dname)
 			return 0;
+		k->rk.dname = new_dname;
 		k->rk.dname_len = can_owner_len;
 	}
 	
