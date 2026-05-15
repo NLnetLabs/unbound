@@ -1,5 +1,9 @@
 15 May 2026: Wouter
 	- Fix man page entry for so-sndbuf, it is for responses sent out.
+	- Fix val_find_DS for robustness, to check the result of
+	  packet_rrset_copy_region before using it. Thanks to Xin Wang
+	  and Jiajia Liu, Northwestern Polytechnical University, for
+	  the report.
 
 11 May 2026: Yorgos
 	- Fix comment and verbose logging for EDNS fallback buffer size.
