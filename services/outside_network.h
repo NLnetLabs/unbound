@@ -500,7 +500,7 @@ struct serviced_query {
 		serviced_query_UDP_EDNS_fallback,
 		/** probe to test TCP noEDNS0 (EDNS gives FORMERRorNOTIMP) */
 		serviced_query_TCP_EDNS_fallback,
-		/** send UDP query with EDNS1480 (or 1280) */
+		/** send UDP query with EDNS1472 (or 1232) */
 		serviced_query_UDP_EDNS_FRAG
 	} 	
 		/** variable with current status */ 
