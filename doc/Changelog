@@ -1,3 +1,8 @@
+18 May 2026: Wouter
+	- Fix for mixed class referrals, the resolver uses the query
+	  class. Thanks to Xin Wang and Jiajia Liu, Northwestern
+	  Polytechnical University, for the report.
+
 15 May 2026: Wouter
 	- Fix man page entry for so-sndbuf, it is for responses sent out.
 	- Fix val_find_DS for robustness, to check the result of

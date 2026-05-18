@@ -398,11 +398,12 @@ delegpt_count_missing_targets(struct delegpt* dp, int* alllame)
 
 /** find NS rrset in given list */
 static struct ub_packed_rrset_key*
-find_NS(struct reply_info* rep, size_t from, size_t to)
+find_NS(struct reply_info* rep, size_t from, size_t to, uint16_t qclass)
 {
 	size_t i;
 	for(i=from; i<to; i++) {
-		if(ntohs(rep->rrsets[i]->rk.type) == LDNS_RR_TYPE_NS)
+		if(ntohs(rep->rrsets[i]->rk.type) == LDNS_RR_TYPE_NS &&
+			ntohs(rep->rrsets[i]->rk.rrset_class) == qclass)
 			return rep->rrsets[i];
 	}
 	return NULL;
@@ -416,12 +417,14 @@ delegpt_from_message(struct dns_msg* msg, struct regional* region)
 	size_t i;
 	/* look for NS records in the authority section... */
 	ns_rrset = find_NS(msg->rep, msg->rep->an_numrrsets, 
-		msg->rep->an_numrrsets+msg->rep->ns_numrrsets);
+		msg->rep->an_numrrsets+msg->rep->ns_numrrsets,
+		msg->qinfo.qclass);
 
 	/* In some cases (even legitimate, perfectly legal cases), the 
 	 * NS set for the "referral" might be in the answer section. */
 	if(!ns_rrset)
-		ns_rrset = find_NS(msg->rep, 0, msg->rep->an_numrrsets);
+		ns_rrset = find_NS(msg->rep, 0, msg->rep->an_numrrsets,
+			msg->qinfo.qclass);
 	
 	/* If there was no NS rrset in the authority section, then this 
 	 * wasn't a referral message. (It might not actually be a 
@@ -447,10 +450,12 @@ delegpt_from_message(struct dns_msg* msg, struct regional* region)
 			i < (msg->rep->an_numrrsets+msg->rep->ns_numrrsets))
 			continue;
 
-		if(ntohs(s->rk.type) == LDNS_RR_TYPE_A) {
+		if(ntohs(s->rk.type) == LDNS_RR_TYPE_A &&
+			ntohs(s->rk.rrset_class) == msg->qinfo.qclass) {
 			if(!delegpt_add_rrset_A(dp, region, s, 0, NULL))
 				return NULL;
-		} else if(ntohs(s->rk.type) == LDNS_RR_TYPE_AAAA) {
+		} else if(ntohs(s->rk.type) == LDNS_RR_TYPE_AAAA &&
+			ntohs(s->rk.rrset_class) == msg->qinfo.qclass) {
 			if(!delegpt_add_rrset_AAAA(dp, region, s, 0, NULL))
 				return NULL;
 		}
