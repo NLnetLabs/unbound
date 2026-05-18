@@ -1,9 +1,18 @@
 /**
  * \file
- * This file implements the ipset module.  It can handle packets by putting
- * the A and AAAA addresses that are configured in unbound.conf as type
- * ipset (local-zone statements) into a firewall rule IPSet.  For firewall
+ * This file implements the ipset/nftset module.  It can handle packets by
+ * putting the A and AAAA addresses that are configured in unbound.conf as
+ * type ipset (local-zone statements) into a firewall set.  For firewall
  * blacklist and whitelist usage.
+ *
+ * The same module entry points serve two backends, distinguished by the
+ * section name in unbound.conf:
+ *   ipset:   legacy iptables ipset on Linux, or PF tables on BSD.
+ *   nftset:  nftables sets on Linux (Linux-only).
+ *
+ * Both Linux backends speak netlink directly via libmnl.  Sends are
+ * fire-and-forget; after every send the kernel error queue is drained
+ * non-blocking and any reported errors are logged.
  */
 #include "config.h"
 #include "ipset/ipset.h"
@@ -17,6 +26,10 @@
 #include "sldns/wire2str.h"
 #include "sldns/parseutil.h"
 
+#if defined(HAVE_NET_PFVAR_H) && defined(USE_NFTSET)
+#error "nftset cannot be compiled with PF (BSD) support. nftset is Linux-only."
+#endif
+
 #ifdef HAVE_NET_PFVAR_H
 #include <fcntl.h>
 #include <sys/ioctl.h>
@@ -26,12 +39,40 @@
 typedef intptr_t filter_dev;
 #else
 #include <libmnl/libmnl.h>
+#include <linux/netlink.h>
 #include <linux/netfilter/nfnetlink.h>
+#ifdef USE_IPSET
 #include <linux/netfilter/ipset/ip_set.h>
+#endif
+#ifdef USE_NFTSET
+#include <linux/netfilter.h>
+#include <linux/netfilter/nf_tables.h>
+#endif
 typedef struct mnl_socket * filter_dev;
+
+/* NETLINK_EXT_ACK and the NLMSGERR attributes were added in Linux 4.12.
+ * Provide fallbacks so older build environments still compile. */
+#ifndef NETLINK_EXT_ACK
+#define NETLINK_EXT_ACK 11
+#endif
+#ifndef NLM_F_CAPPED
+#define NLM_F_CAPPED 0x100
+#endif
+#ifndef NLM_F_ACK_TLVS
+#define NLM_F_ACK_TLVS 0x200
+#endif
+#ifndef NLMSGERR_ATTR_MSG
+#define NLMSGERR_ATTR_MSG 1
 #endif
 
-#define BUFF_LEN 256
+/* A 2KB stack buffer by far large enough to hold the netlink request messages
+ * that we build, but additionally needs to be large enough to hold the the 
+ * netlink NLMSG_ERROR that may be produced by netlink_drain_errors.
+ * This includes the entire original message plus an error string. */
+#define NETLINK_BUFF_LEN 2048
+#endif
+
+#define DNAME_BUFF_LEN 256
 
 /**
  * Return an error
@@ -52,7 +93,7 @@ static int error_response(struct module_qstate* qstate, int id, int rcode) {
 }
 
 #ifdef HAVE_NET_PFVAR_H
-static void * open_filter() {
+static void * open_filter(void) {
 	filter_dev dev;
 
 	dev = open("/dev/pf", O_RDWR);
@@ -64,8 +105,9 @@ static void * open_filter() {
 		return (void *)dev;
 }
 #else
-static void * open_filter() {
+static void * open_filter(void) {
 	filter_dev dev;
+	int on = 1;
 
 	dev = mnl_socket_open(NETLINK_NETFILTER);
 	if (!dev) {
@@ -78,11 +120,101 @@ static void * open_filter() {
 		log_err("ipset: could not bind netfilter.");
 		return NULL;
 	}
+
+	/* Ask the kernel for a human-readable error string when an add is
+	 * rejected.  Best-effort: ignore failure on older kernels. */
+	(void)setsockopt(mnl_socket_get_fd(dev), SOL_NETLINK,
+		NETLINK_EXT_ACK, &on, sizeof(on));
+
 	return (void *)dev;
+}
+
+/* Drain any pending kernel replies on the netlink socket non-blocking and
+ * log any NLMSG_ERROR messages.  Called after every send.  Best-effort:
+ * caller / per-message context is not preserved, just the kernel error
+ * string is enough for diagnosing misconfiguration. */
+static void
+netlink_drain_errors(filter_dev dev, char* buf, size_t buflen)
+{
+       int fd = mnl_socket_get_fd(dev);
+       ssize_t r;
+       int n;
+       struct nlmsghdr *nlh;
+
+       for (;;) {
+               r = recv(fd, buf, buflen, MSG_DONTWAIT);
+               if (r < 0) {
+                       if (errno == EINTR)
+                               continue;
+                       break;
+               }
+               if (r == 0)
+                       break;
+               if ((size_t)r == buflen) {
+                       log_warn("ipset: netlink error report possibly truncated");
+               }
+               n = (int)r;
+               for (nlh = (struct nlmsghdr *)buf; mnl_nlmsg_ok(nlh, n); nlh = mnl_nlmsg_next(nlh, &n)) {
+                       struct nlmsgerr *e;
+                       const char *msg = NULL;
+                       size_t hlen, total, alen;
+                       void *start;
+                       struct nlattr *attr;
+
+                       if (nlh->nlmsg_type != NLMSG_ERROR)
+                               continue;
+
+                       e = mnl_nlmsg_get_payload(nlh);
+                       if (!e->error)
+                               continue;
+
+                       hlen = sizeof(*e);
+                       total = mnl_nlmsg_get_payload_len(nlh);
+                       if (!(nlh->nlmsg_flags & NLM_F_CAPPED))
+                               hlen += mnl_nlmsg_get_payload_len(&e->msg);
+
+                       if ((nlh->nlmsg_flags & NLM_F_ACK_TLVS) && hlen < total) {
+                               start = (char *)e + hlen;
+                               alen = total - hlen;
+                               mnl_attr_for_each_payload(start, alen) {
+                                       if (mnl_attr_get_type(attr) == NLMSGERR_ATTR_MSG) {
+                                               msg = mnl_attr_get_str(attr);
+                                               break;
+                                       }
+                               }
+                       }
+                       log_err("ipset: kernel reported error: %s%s%s",
+                               strerror(-e->error),
+                               msg ? ": " : "",
+                               msg ? msg : "");
+               }
+       }
 }
 #endif
 
-#ifdef HAVE_NET_PFVAR_H
+#ifndef HAVE_NET_PFVAR_H
+static struct nlmsghdr *
+netlink_put_hdr(char *buf, uint16_t type, uint16_t family, uint16_t flags,
+	uint32_t seq, uint16_t res_id)
+{
+	struct nlmsghdr *nlh;
+	struct nfgenmsg *nfh;
+
+	nlh = mnl_nlmsg_put_header(buf);
+	nlh->nlmsg_type = type;
+	nlh->nlmsg_flags = NLM_F_REQUEST | flags;
+	nlh->nlmsg_seq = seq;
+
+	nfh = mnl_nlmsg_put_extra_header(nlh, sizeof(struct nfgenmsg));
+	nfh->nfgen_family = family;
+	nfh->version = NFNETLINK_V0;
+	nfh->res_id = htons(res_id);
+
+	return nlh;
+}
+#endif
+
+#if defined(HAVE_NET_PFVAR_H) && defined(USE_IPSET)
 static int add_to_ipset(filter_dev dev, const char *setname, const void *ipaddr, int af) {
 	struct pfioc_table io;
 	struct pfr_addr addr;
@@ -138,12 +270,11 @@ static int add_to_ipset(filter_dev dev, const char *setname, const void *ipaddr,
 	}
 	return 0;
 }
-#else
+#elif defined(USE_IPSET)
 static int add_to_ipset(filter_dev dev, const char *setname, const void *ipaddr, int af) {
 	struct nlmsghdr *nlh;
-	struct nfgenmsg *nfg;
 	struct nlattr *nested[2];
-	static char buffer[BUFF_LEN];
+	char buffer[NETLINK_BUFF_LEN];
 
 	if (strlen(setname) >= IPSET_MAXNAMELEN) {
 		errno = ENAMETOOLONG;
@@ -154,14 +285,8 @@ static int add_to_ipset(filter_dev dev, const char *setname, const void *ipaddr,
 		return -1;
 	}
 
-	nlh = mnl_nlmsg_put_header(buffer);
-	nlh->nlmsg_type = IPSET_CMD_ADD | (NFNL_SUBSYS_IPSET << 8);
-	nlh->nlmsg_flags = NLM_F_REQUEST|NLM_F_ACK|NLM_F_EXCL;
-
-	nfg = mnl_nlmsg_put_extra_header(nlh, sizeof(struct nfgenmsg));
-	nfg->nfgen_family = af;
-	nfg->version = NFNETLINK_V0;
-	nfg->res_id = htons(0);
+	nlh = netlink_put_hdr(buffer, IPSET_CMD_ADD | (NFNL_SUBSYS_IPSET << 8),
+		af, NLM_F_ACK | NLM_F_EXCL, 0, 0);
 
 	mnl_attr_put_u8(nlh, IPSET_ATTR_PROTOCOL, IPSET_PROTOCOL);
 	mnl_attr_put(nlh, IPSET_ATTR_SETNAME, strlen(setname) + 1, setname);
@@ -175,9 +300,108 @@ static int add_to_ipset(filter_dev dev, const char *setname, const void *ipaddr,
 	if (mnl_socket_sendto(dev, nlh, nlh->nlmsg_len) < 0) {
 		return -1;
 	}
+	netlink_drain_errors(dev, buffer, sizeof(buffer));
 	return 0;
 }
-#endif
+#endif /* USE_IPSET */
+
+#ifdef USE_NFTSET
+static int nft_parse_family(const char *name) {
+	if (!name || !name[0])         return NFPROTO_INET;
+	if (strcmp(name, "inet") == 0) return NFPROTO_INET;
+	if (strcmp(name, "ip")   == 0) return NFPROTO_IPV4;
+	if (strcmp(name, "ip6")  == 0) return NFPROTO_IPV6;
+	return -1;
+}
+
+static int add_to_nftset(filter_dev dev, const char *table,
+	const char *setname, const void *ipaddr, int af, int nfproto,
+	uint32_t *seq)
+{
+	char buffer[NETLINK_BUFF_LEN];
+	struct nlmsghdr *nlh;
+	struct nlattr *nested[3];
+	size_t off = 0, addr_size;
+	uint8_t end_addr[sizeof(struct in6_addr)];
+	int i, overflow;
+
+	if (!table || !table[0] || !setname || !setname[0]) {
+		errno = EINVAL;
+		return -1;
+	}
+	if (strlen(table) >= NFT_TABLE_MAXNAMELEN ||
+		strlen(setname) >= NFT_SET_MAXNAMELEN) {
+		errno = ENAMETOOLONG;
+		return -1;
+	}
+	if (af == AF_INET) {
+		addr_size = sizeof(struct in_addr);
+	} else if (af == AF_INET6) {
+		addr_size = sizeof(struct in6_addr);
+	} else {
+		errno = EAFNOSUPPORT;
+		return -1;
+	}
+
+	/* Compute exclusive interval end (ipaddr + 1, network byte order). */
+	memcpy(end_addr, ipaddr, addr_size);
+	overflow = 1;
+	for (i = (int)addr_size - 1; i >= 0 && overflow; i--) {
+		overflow += (unsigned char)end_addr[i];
+		end_addr[i] = overflow & 0xff;
+		overflow >>= 8;
+	}
+
+	nlh = netlink_put_hdr(buffer, NFNL_MSG_BATCH_BEGIN, NFPROTO_UNSPEC,
+		0, (*seq)++, NFNL_SUBSYS_NFTABLES);
+	off += nlh->nlmsg_len;
+
+	nlh = netlink_put_hdr(buffer + off,
+		(NFNL_SUBSYS_NFTABLES << 8) | NFT_MSG_NEWSETELEM,
+		nfproto, NLM_F_CREATE | NLM_F_ACK, (*seq)++, 0);
+
+	mnl_attr_put_strz(nlh, NFTA_SET_ELEM_LIST_TABLE, table);
+	mnl_attr_put_strz(nlh, NFTA_SET_ELEM_LIST_SET, setname);
+
+	nested[0] = mnl_attr_nest_start(nlh, NFTA_SET_ELEM_LIST_ELEMENTS);
+
+	nested[1] = mnl_attr_nest_start(nlh, NLA_F_NESTED | 1);
+	nested[2] = mnl_attr_nest_start(nlh, NFTA_SET_ELEM_KEY);
+	mnl_attr_put(nlh, NFTA_DATA_VALUE | NLA_F_NET_BYTEORDER,
+		addr_size, ipaddr);
+	mnl_attr_nest_end(nlh, nested[2]);
+	mnl_attr_nest_end(nlh, nested[1]);
+
+	/* Interval sets need an explicit exclusive end (ipaddr+1, INTERVAL_END
+	 * flag); without it the kernel creates an open-ended interval.
+	 * If the addition overflows (e.g., 255.255.255.255 + 1), the interval
+	 * inherently ends at the boundary of the address space, so no explicit
+	 * INTERVAL_END is needed. */
+	if (!overflow) {
+		nested[1] = mnl_attr_nest_start(nlh, NLA_F_NESTED | 2);
+		mnl_attr_put_u32(nlh, NFTA_SET_ELEM_FLAGS,
+			htonl(NFT_SET_ELEM_INTERVAL_END));
+		nested[2] = mnl_attr_nest_start(nlh, NFTA_SET_ELEM_KEY);
+		mnl_attr_put(nlh, NFTA_DATA_VALUE | NLA_F_NET_BYTEORDER,
+			addr_size, end_addr);
+		mnl_attr_nest_end(nlh, nested[2]);
+		mnl_attr_nest_end(nlh, nested[1]);
+	}
+
+	mnl_attr_nest_end(nlh, nested[0]);
+	off += nlh->nlmsg_len;
+
+	nlh = netlink_put_hdr(buffer + off, NFNL_MSG_BATCH_END, NFPROTO_UNSPEC,
+		0, (*seq)++, NFNL_SUBSYS_NFTABLES);
+	off += nlh->nlmsg_len;
+
+	if (mnl_socket_sendto(dev, buffer, off) < 0) {
+		return -1;
+	}
+	netlink_drain_errors(dev, buffer, sizeof(buffer));
+	return 0;
+}
+#endif /* USE_NFTSET */
 
 static void
 ipset_add_rrset_data(struct ipset_env *ie,
@@ -205,7 +429,22 @@ ipset_add_rrset_data(struct ipset_env *ie,
 					snprintf(ip, sizeof(ip), "(inet_ntop_error)");
 				verbose(VERB_QUERY, "ipset: add %s to %s for %s", ip, setname, dname);
 			}
-			ret = add_to_ipset((filter_dev)ie->dev, setname, rr_data + 2, af);
+#ifdef USE_NFTSET
+			if (ie->use_nft) {
+				ret = add_to_nftset((filter_dev)ie->dev,
+					ie->table, setname, rr_data + 2,
+					af, ie->nfproto, &ie->seq);
+			} else
+#endif
+			{
+#ifdef USE_IPSET
+				ret = add_to_ipset((filter_dev)ie->dev,
+					setname, rr_data + 2, af);
+#else
+				(void)setname;
+				ret = -1;
+#endif
+			}
 			if (ret < 0) {
 				log_err("ipset: could not add %s into %s", dname, setname);
 
@@ -226,22 +465,22 @@ ipset_check_zones_for_rrset(struct module_env *env, struct ipset_env *ie,
 	struct ub_packed_rrset_key *rrset, const char *qname, int qlen,
 	const char *setname, int af)
 {
-	static char dname[BUFF_LEN];
+	char dname[DNAME_BUFF_LEN];
 	const char *ds, *qs;
 	int dlen, plen;
 
 	struct config_strlist *p;
 	struct packed_rrset_data *d;
 
-	dlen = sldns_wire2str_dname_buf(rrset->rk.dname, rrset->rk.dname_len, dname, BUFF_LEN);
+	dlen = sldns_wire2str_dname_buf(rrset->rk.dname, rrset->rk.dname_len, dname, DNAME_BUFF_LEN);
 	if (dlen == 0) {
 		log_err("bad domain name");
 		return -1;
 	}
-	if (dname[dlen - 1] == '.') {
+	if (dlen > 0 && dname[dlen - 1] == '.') {
 		dlen--;
 	}
-	if (qname[qlen - 1] == '.') {
+	if (qlen > 0 && qname[qlen - 1] == '.') {
 		qlen--;
 	}
 
@@ -249,7 +488,7 @@ ipset_check_zones_for_rrset(struct module_env *env, struct ipset_env *ie,
 		ds = NULL;
 		qs = NULL;
 		plen = strlen(p->str);
-		if (p->str[plen - 1] == '.') {
+		if (plen > 0 && p->str[plen - 1] == '.') {
 			plen--;
 		}
 
@@ -261,8 +500,24 @@ ipset_check_zones_for_rrset(struct module_env *env, struct ipset_env *ie,
 		}
 		if ((ds && strncasecmp(p->str, ds, plen) == 0)
 			|| (qs && strncasecmp(p->str, qs, plen) == 0)) {
-			d = (struct packed_rrset_data*)rrset->entry.data;
-			ipset_add_rrset_data(ie, d, setname, af, dname);
+			const char *use_setname = setname; /* global fallback */
+			struct config_str3list *zp;
+			int zplen;
+			/* Check for a per-zone set: entry matching this zone */
+			for (zp = env->cfg->ipset_zones; zp; zp = zp->next) {
+				zplen = strlen(zp->str);
+				if (zplen > 0 && zp->str[zplen - 1] == '.') zplen--;
+				if (plen == zplen &&
+					strncasecmp(p->str, zp->str, plen) == 0) {
+					use_setname = (af == AF_INET) ?
+						zp->str2 : zp->str3;
+					break;
+				}
+			}
+			if (use_setname && strlen(use_setname) > 0) {
+				d = (struct packed_rrset_data*)rrset->entry.data;
+				ipset_add_rrset_data(ie, d, use_setname, af, dname);
+			}
 			break;
 		}
 	}
@@ -276,7 +531,7 @@ static int ipset_update(struct module_env *env, struct dns_msg *return_msg,
 	const char *setname;
 	struct ub_packed_rrset_key *rrset;
 	int af;
-	static char qname[BUFF_LEN];
+	char qname[DNAME_BUFF_LEN];
 	int qlen;
 
 #ifdef HAVE_NET_PFVAR_H
@@ -292,26 +547,34 @@ static int ipset_update(struct module_env *env, struct dns_msg *return_msg,
 #endif
 
 	qlen = sldns_wire2str_dname_buf(qinfo.qname, qinfo.qname_len,
-		qname, BUFF_LEN);
+		qname, DNAME_BUFF_LEN);
 	if(qlen == 0) {
 		log_err("bad domain name");
 		return -1;
 	}
 
 	for(i = 0; i < return_msg->rep->rrset_count; i++) {
+		int type_matched = 0;
 		setname = NULL;
+		af = 0;
 		rrset = return_msg->rep->rrsets[i];
 		if(ntohs(rrset->rk.type) == LDNS_RR_TYPE_A &&
 			ie->v4_enabled == 1) {
 			af = AF_INET;
 			setname = ie->name_v4;
+			type_matched = 1;
 		} else if(ntohs(rrset->rk.type) == LDNS_RR_TYPE_AAAA &&
 			ie->v6_enabled == 1) {
 			af = AF_INET6;
 			setname = ie->name_v6;
+			type_matched = 1;
 		}
 
-		if (setname) {
+		/* Enter zone lookup when this RRset type is enabled, even if no
+		 * global setname is configured — per-zone entries may supply the
+		 * set name, and ipset_check_zones_for_rrset() handles NULL
+		 * setname (no global fallback). */
+		if (type_matched) {
 			if(ipset_check_zones_for_rrset(env, ie, rrset, qname,
 				qlen, setname, af) == -1)
 				return -1;
@@ -340,6 +603,9 @@ int ipset_startup(struct module_env* env, int id) {
 	}
 #else
 	ipset_env->dev = NULL;
+#endif
+#ifdef USE_NFTSET
+	ipset_env->seq = 1;
 #endif
 	return 1;
 }
@@ -370,14 +636,55 @@ void ipset_destartup(struct module_env* env, int id) {
 int ipset_init(struct module_env* env, int id) {
 	struct ipset_env *ipset_env = env->modinfo[id];
 
+#ifdef USE_NFTSET
+	ipset_env->use_nft = env->cfg->ipset_use_nft;
+	if (ipset_env->use_nft) {
+		ipset_env->family = env->cfg->ipset_family ?
+			env->cfg->ipset_family : "inet";
+		ipset_env->table = env->cfg->ipset_table;
+		if (!ipset_env->table || !ipset_env->table[0]) {
+			log_err("nftset: 'table:' is required");
+			return 0;
+		}
+		ipset_env->nfproto = nft_parse_family(ipset_env->family);
+		if (ipset_env->nfproto < 0) {
+			log_err("nftset: invalid family '%s' (expected "
+				"inet, ip, or ip6)", ipset_env->family);
+			return 0;
+		}
+	} else
+#endif
+	{
+#ifdef USE_IPSET
+		if (env->cfg->ipset_family || env->cfg->ipset_table) {
+			log_err("ipset: 'family:' and 'table:' are not supported "
+				"by the ipset backend");
+			return 0;
+		}
+#else
+		log_err("ipset: ip backend not compiled in");
+		return 0;
+#endif
+	}
+
 	ipset_env->name_v4 = env->cfg->ipset_name_v4;
 	ipset_env->name_v6 = env->cfg->ipset_name_v6;
 
-	ipset_env->v4_enabled = !ipset_env->name_v4 || (strlen(ipset_env->name_v4) == 0) ? 0 : 1;
-	ipset_env->v6_enabled = !ipset_env->name_v6 || (strlen(ipset_env->name_v6) == 0) ? 0 : 1;
+	/* Enable based on configuration: any global name OR any per-zone entry
+	 * makes the corresponding family active. The per-zone match in
+	 * ipset_check_zones_for_rrset() will choose the actual set name. */
+	ipset_env->v4_enabled = ((ipset_env->name_v4 &&
+		strlen(ipset_env->name_v4) > 0) ||
+		env->cfg->ipset_zones) ? 1 : 0;
+	ipset_env->v6_enabled = ((ipset_env->name_v6 &&
+		strlen(ipset_env->name_v6) > 0) ||
+		env->cfg->ipset_zones) ? 1 : 0;
 
-	if ((ipset_env->v4_enabled < 1) && (ipset_env->v6_enabled < 1)) {
-		log_err("ipset: set name no configuration?");
+	/* OK if per-zone set: entries are present even without global name-v4/v6 */
+	if ((ipset_env->v4_enabled < 1) && (ipset_env->v6_enabled < 1) &&
+		!env->cfg->ipset_zones) {
+		log_err("ipset: no set names configured; add 'name-v4:'/'name-v6:' "
+			"for a global set or 'set: <zone> <v4> <v6>' for per-zone sets");
 		return 0;
 	}
 
@@ -466,14 +773,8 @@ void ipset_inform_super(struct module_qstate *ATTR_UNUSED(qstate),
 }
 
 void ipset_clear(struct module_qstate *qstate, int id) {
-	struct cachedb_qstate *iq;
 	if (!qstate) {
 		return;
-	}
-	iq = (struct cachedb_qstate *)qstate->minfo[id];
-	if (iq) {
-		/* free contents of iq */
-		/* TODO */
 	}
 	qstate->minfo[id] = NULL;
 }
@@ -486,8 +787,9 @@ size_t ipset_get_mem(struct module_env *env, int id) {
 	return sizeof(*ie);
 }
 
+#ifdef USE_IPSET
 /**
- * The ipset function block 
+ * The ipset function block
  */
 static struct module_func_block ipset_block = {
 	"ipset",
@@ -498,4 +800,20 @@ static struct module_func_block ipset_block = {
 struct module_func_block * ipset_get_funcblock(void) {
 	return &ipset_block;
 }
+#endif
 
+#ifdef USE_NFTSET
+/**
+ * The nftset function block — same functions, different name so that
+ * module_factory matches it against module-config: "nftset ...".
+ */
+static struct module_func_block nftset_block = {
+	"nftset",
+	&ipset_startup, &ipset_destartup, &ipset_init, &ipset_deinit,
+	&ipset_operate, &ipset_inform_super, &ipset_clear, &ipset_get_mem
+};
+
+struct module_func_block * nftset_get_funcblock(void) {
+	return &nftset_block;
+}
+#endif
