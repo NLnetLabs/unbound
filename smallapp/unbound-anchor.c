@@ -1674,6 +1674,11 @@ static unsigned long
 get_usage_of_ex(X509* cert)
 {
 	unsigned long val = 0;
+#ifdef HAVE_X509_GET_EXTENDED_KEY_USAGE
+	val = X509_get_extended_key_usage(cert);
+	if (val == UINT32_MAX)
+		return 0;
+#else
 	ASN1_BIT_STRING* s;
 	if((s=X509_get_ext_d2i(cert, NID_key_usage, NULL, NULL))) {
 		if(s->length > 0) {
@@ -1683,6 +1688,7 @@ get_usage_of_ex(X509* cert)
 		}
 		ASN1_BIT_STRING_free(s);
 	}
+#endif
 	return val;
 }
 
@@ -1718,8 +1724,10 @@ get_valid_signers(PKCS7* p7, const char* p7signer)
 			printf("signer %d: Subject: %s\n", i,
 				nmline?nmline:"no subject");
 			if(verb >= 3 && X509_NAME_get_text_by_NID(nm,
-				NID_commonName, buf, (int)sizeof(buf)))
+				NID_commonName, buf, (int)sizeof(buf))) {
+				
 				printf("commonName: %s\n", buf);
+			}
 			if(verb >= 3 && X509_NAME_get_text_by_NID(nm,
 				NID_pkcs9_emailAddress, buf, (int)sizeof(buf)))
 				printf("emailAddress: %s\n", buf);
