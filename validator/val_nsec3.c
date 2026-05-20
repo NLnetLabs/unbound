@@ -60,11 +60,6 @@
 #include "util/config_file.h"
 
 /**
- * Max number of NSEC3 calculations at once, suspend query for later.
- * 8 is low enough and allows for cases where multiple proofs are needed.
- */
-#define MAX_NSEC3_CALCULATIONS 8
-/**
  * When all allowed NSEC3 calculations at once resulted in error treat as
  * bogus. NSEC3 hash errors are not cached and this helps breaks loops with
  * erroneous data.

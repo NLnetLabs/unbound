@@ -16,6 +16,9 @@
 	- Fix CVE-2026-42534, Jostle logic bypass degrades resolution
 	  performance. Thanks to Qifan Zhang, Palo Alto Networks, for the
 	  report.
+	- Fix CVE-2026-42923, Degradation of service with unbounded NSEC3
+	  hash calculations. Thanks to Qifan Zhang, Palo Alto Networks, for
+	  the report.
 
 23 April 2026: Wouter
 	- Merge #1441: Fix buffer overrun in
