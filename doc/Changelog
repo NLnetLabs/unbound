@@ -8,6 +8,8 @@
 	  content. Thanks to Qifan Zhang, Palo Alto Networks, for the report.
 	- Fix CVE-2026-32792, Packet of death with DNSCrypt. Thanks to Andrew
 	  Griffiths from 'calif.io' for the report.
+	- Fix CVE-2026-40622, "Ghost domain name" variant. Thanks to Qifan
+	  Zhang, Palo Alto Networks, for the report.
 
 23 April 2026: Wouter
 	- Merge #1441: Fix buffer overrun in
