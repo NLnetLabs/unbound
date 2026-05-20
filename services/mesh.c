@@ -1078,14 +1078,6 @@ mesh_state_cleanup(struct mesh_state* mstate)
 	if(!mstate->replies_sent) {
 		struct mesh_reply* rep = mstate->reply_list;
 		struct mesh_cb* cb;
-		/* One http2 stream could bring down its comm_point along with
-		 * the other streams which could share the same query. Do all
-		 * the http2 stream bookkeeping upfront. */
-		for(; rep; rep=rep->next) {
-			if(rep->query_reply.c->use_h2)
-				http2_stream_remove_mesh_state(rep->h2_stream);
-		}
-		rep = mstate->reply_list;
 		/* in tcp_req_info, the mstates linked are removed, but
 		 * the reply_list is now NULL, so the remove-from-empty-list
 		 * takes no time and also it does not do the mesh accounting */
@@ -2366,7 +2358,7 @@ void mesh_list_remove(struct mesh_state* m, struct mesh_state** fp,
 }
 
 void mesh_state_remove_reply(struct mesh_area* mesh, struct mesh_state* m,
-	struct comm_point* cp)
+	struct comm_point* cp, struct http2_stream* h2_stream)
 {
 	struct mesh_reply* n, *prev = NULL;
 	n = m->reply_list;
@@ -2374,7 +2366,8 @@ void mesh_state_remove_reply(struct mesh_area* mesh, struct mesh_state* m,
 	 * there is no accounting twice */
 	if(!n) return; /* nothing to remove, also no accounting needed */
 	while(n) {
-		if(n->query_reply.c == cp) {
+		if(n->query_reply.c == cp
+			&& (!h2_stream || n->h2_stream == h2_stream)) {
 			/* unlink it */
 			if(prev) prev->next = n->next;
 			else m->reply_list = n->next;

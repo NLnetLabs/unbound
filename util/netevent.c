@@ -3174,7 +3174,7 @@ static void http2_stream_delete(struct http2_session* h2_session,
 {
 	if(h2_stream->mesh_state) {
 		mesh_state_remove_reply(h2_stream->mesh, h2_stream->mesh_state,
-			h2_session->c);
+			h2_session->c, h2_stream);
 		h2_stream->mesh_state = NULL;
 	}
 	http2_req_stream_clear(h2_stream);

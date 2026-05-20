@@ -2167,7 +2167,8 @@ void tcp_req_info_clear(struct tcp_req_info* req)
 	open = req->open_req_list;
 	while(open) {
 		nopen = open->next;
-		mesh_state_remove_reply(open->mesh, open->mesh_state, req->cp);
+		mesh_state_remove_reply(open->mesh, open->mesh_state, req->cp,
+			NULL);
 		free(open);
 		open = nopen;
 	}
