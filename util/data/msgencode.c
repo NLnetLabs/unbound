@@ -352,7 +352,6 @@ compress_any_dname(uint8_t* dname, sldns_buffer* pkt, int labs,
 		(p = compress_tree_lookup(tree, dname, labs, &insertpt))) {
 		if(!write_compressed_dname(pkt, dname, labs, p))
 			return RETVAL_TRUNC;
-		(*compress_count)++;
 	} else {
 		if(!dname_buffer_write(pkt, dname))
 			return RETVAL_TRUNC;
@@ -360,6 +359,7 @@ compress_any_dname(uint8_t* dname, sldns_buffer* pkt, int labs,
 	if(*compress_count < MAX_COMPRESSION_PER_MESSAGE &&
 		!compress_tree_store(dname, labs, pos, region, p, insertpt))
 		return RETVAL_OUTMEM;
+	(*compress_count)++;
 	return RETVAL_OK;
 }
 
