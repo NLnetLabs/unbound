@@ -1,3 +1,7 @@
+20 May 2026: Wouter
+	- Fix CVE-2026-33278, Possible remote code execution during DNSSEC
+	  validation. Thanks to Qifan Zhang, Palo Alto Networks, for the report.
+
 23 April 2026: Wouter
 	- Merge #1441: Fix buffer overrun in
 	  doq_repinfo_retrieve_localaddr().
