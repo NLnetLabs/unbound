@@ -35,6 +35,7 @@
 	- Unit test for CVE-2026-42959.
 	- Unit test for CVE-2026-40622.
 	- Unit test for CVE-2026-42960.
+	- Unit test for CVE-2026-44390.
 
 18 May 2026: Wouter
 	- Fix for mixed class referrals, the resolver uses the query
