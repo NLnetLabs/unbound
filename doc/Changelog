@@ -13,6 +13,9 @@
 	- Fix CVE-2026-41292, Parsing a long list of incoming EDNS options
 	  degrades performance. Thanks to GitHub user 'N0zoM1z0', also Qifan
 	  Zhang from Palo Alto Networks, for the report.
+	- Fix CVE-2026-42534, Jostle logic bypass degrades resolution
+	  performance. Thanks to Qifan Zhang, Palo Alto Networks, for the
+	  report.
 
 23 April 2026: Wouter
 	- Merge #1441: Fix buffer overrun in
