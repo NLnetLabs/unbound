@@ -27,6 +27,9 @@
 	  Networks, for the report.
 	- Fix CVE-2026-44608, Use after free and crash in RPZ code. Thanks
 	  to Qifan Zhang, Palo Alto Networks, for the report.
+	- Tag for 1.25.1 release, it contains the security fixes on 1.25.0.
+	  the code repository continues with in addition the previous fixes,
+	  for 1.25.2.
 
 18 May 2026: Wouter
 	- Fix for mixed class referrals, the resolver uses the query
