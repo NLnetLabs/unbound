@@ -950,6 +950,7 @@ parse_edns_options_from_query(uint8_t* rdata_ptr, size_t rdata_len,
 	struct comm_reply* repinfo, uint32_t now, struct regional* region,
 	struct cookie_secrets* cookie_secrets)
 {
+	int nsid_seen = 0, cookie_seen = 0, padding_seen = 0;
 	/* To respond with a Keepalive option, the client connection must have
 	 * received one message with a TCP Keepalive EDNS option, and that
 	 * option must have 0 length data. Subsequent messages sent on that
@@ -984,8 +985,9 @@ parse_edns_options_from_query(uint8_t* rdata_ptr, size_t rdata_len,
 		/* handle parse time edns options here */
 		switch(opt_code) {
 		case LDNS_EDNS_NSID:
-			if (!cfg || !cfg->nsid)
+			if (!cfg || !cfg->nsid || nsid_seen)
 				break;
+			nsid_seen = 1;
 			if(!edns_opt_list_append(&edns->opt_list_out,
 						LDNS_EDNS_NSID, cfg->nsid_len,
 						cfg->nsid, region)) {
@@ -1027,8 +1029,9 @@ parse_edns_options_from_query(uint8_t* rdata_ptr, size_t rdata_len,
 
 		case LDNS_EDNS_PADDING:
 			if(!cfg || !cfg->pad_responses ||
-					!c || c->type != comm_tcp ||!c->ssl)
+					!c || c->type != comm_tcp ||!c->ssl || padding_seen)
 				break;
+			padding_seen = 1;
 			if(!edns_opt_list_append(&edns->opt_list_out,
 						LDNS_EDNS_PADDING,
 						0, NULL, region)) {
@@ -1039,8 +1042,9 @@ parse_edns_options_from_query(uint8_t* rdata_ptr, size_t rdata_len,
 			break;
 
 		case LDNS_EDNS_COOKIE:
-			if(!cfg || !cfg->do_answer_cookie || !repinfo)
+			if(!cfg || !cfg->do_answer_cookie || !repinfo || cookie_seen)
 				break;
+			cookie_seen = 1;
 			if(opt_len != 8 && (opt_len < 16 || opt_len > 40)) {
 				verbose(VERB_ALGO, "worker request: "
 					"badly formatted cookie");

@@ -1,6 +1,9 @@
 20 May 2026: Wouter
 	- Fix CVE-2026-33278, Possible remote code execution during DNSSEC
 	  validation. Thanks to Qifan Zhang, Palo Alto Networks, for the report.
+	- Fix CVE-2026-42944, Heap overflow and crash with multiple nsid,
+	  cookie, padding EDNS options. Thanks to Qifan Zhang, Palo Alto
+	  Networks, for the report.
 
 23 April 2026: Wouter
 	- Merge #1441: Fix buffer overrun in
