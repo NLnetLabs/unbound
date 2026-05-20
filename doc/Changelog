@@ -35,6 +35,9 @@
 	- Unit test for CVE-2026-42959.
 	- Unit test for CVE-2026-40622.
 	- Unit test for CVE-2026-42960.
+	- Fix in depth for serve-expired responses from cachedb, that it
+	  does not store bogus. Thanks to Qifan Zhang, Palo Alto Networks,
+	  for the report.
 
 18 May 2026: Wouter
 	- Fix for mixed class referrals, the resolver uses the query

@@ -401,6 +401,12 @@ prep_data(struct module_qstate* qstate, struct sldns_buffer* buf)
 	   FLAGS_GET_RCODE(qstate->return_msg->rep->flags) !=
 		LDNS_RCODE_YXDOMAIN)
 		return 0;
+	/* Do not persist data the validator has not yet seen, or has rejected.
+	 * Otherwise an expired blob could maybe reach clients via
+	 * serve-expired. */
+	if(qstate->env->need_to_validate &&
+		qstate->return_msg->rep->security == sec_status_bogus)
+		return 0;
 	/* We don't store the reply if its TTL is 0. This is probably coming
 	 * from upstream and it is not meant to be stored. */
 	if(qstate->return_msg->rep->ttl == 0)
