@@ -3154,7 +3154,8 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 	orig_empty_nodata_found = iq->empty_nodata_found;
 	type = response_type_from_server(
 		(int)((iq->chase_flags&BIT_RD) || iq->chase_to_rd),
-		iq->response, &iq->qinfo_out, iq->dp, &iq->empty_nodata_found);
+		iq->response, &iq->qinfo_out, iq->dp, &iq->empty_nodata_found,
+		iq->msg_lame_empty, iq->msg_lame_referral);
 	iq->chase_to_rd = 0;
 	/* remove TC flag, if this is erroneously set by TCP upstream */
 	iq->response->rep->flags &= ~BIT_TC;
@@ -3760,7 +3761,8 @@ processPrimeResponse(struct module_qstate* qstate, int id)
 	iq->response->rep->flags &= ~(BIT_RD|BIT_RA); /* ignore rec-lame */
 	type = response_type_from_server(
 		(int)((iq->chase_flags&BIT_RD) || iq->chase_to_rd), 
-		iq->response, &iq->qchase, iq->dp, NULL);
+		iq->response, &iq->qchase, iq->dp, NULL, iq->msg_lame_empty,
+		iq->msg_lame_referral);
 	if(type == RESPONSE_TYPE_ANSWER) {
 		qstate->return_rcode = LDNS_RCODE_NOERROR;
 		qstate->return_msg = iq->response;
@@ -4369,7 +4371,10 @@ process_response(struct module_qstate* qstate, struct iter_qstate* iq,
 
 	/* normalize and sanitize: easy to delete items from linked lists */
 	if(!scrub_message(pkt, prs, &iq->qinfo_out, iq->dp->name, 
-		qstate->env->scratch, qstate->env, qstate, ie)) {
+		qstate->env->scratch, qstate->env, qstate, ie,
+		&iq->msg_lame_empty, &iq->msg_lame_referral,
+		(int)((iq->chase_flags&BIT_RD) || iq->chase_to_rd)
+		)) {
 		/* if 0x20 enabled, start fallback, but we have no message */
 		if(event == module_event_capsfail && !iq->caps_fallback) {
 			iq->caps_fallback = 1;

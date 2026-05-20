@@ -434,6 +434,13 @@ struct iter_qstate {
 	 * already so that it is accepted later. */
 	int empty_nodata_found;
 
+	/** Store if the answer was empty, but lame, before it became empty.*/
+	int msg_lame_empty;
+
+	/** Store if the answer was a referral, to self, before scrub. So the
+	 * it is not some sort of answer. */
+	int msg_lame_referral;
+
 	/** list of pending queries to authoritative servers. */
 	struct outbound_list outlist;
 
