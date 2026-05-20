@@ -22,6 +22,9 @@
 	- Fix CVE-2026-42960, Possible cache poisoning attack while following
 	  delegation. Thanks to TaoFei Guo from Peking University, Yang Luo
 	  and JianJun Chen, Tsinghua University, for the report.
+	- Fix CVE-2026-44390, Unbounded name compression in certain cases
+	  causes degradation of service. Thanks to Qifan Zhang, Palo Alto
+	  Networks, for the report.
 
 23 April 2026: Wouter
 	- Merge #1441: Fix buffer overrun in
