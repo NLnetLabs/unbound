@@ -30,6 +30,7 @@
 	- Tag for 1.25.1 release, it contains the security fixes on 1.25.0.
 	  the code repository continues with in addition the previous fixes,
 	  for 1.25.2.
+	- Unit test for CVE-2026-33278.
 
 18 May 2026: Wouter
 	- Fix for mixed class referrals, the resolver uses the query
