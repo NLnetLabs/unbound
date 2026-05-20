@@ -492,6 +492,7 @@ scrub_normalize(sldns_buffer* pkt, struct msg_parse* msg,
 	size_t snamelen = qinfo->qname_len;
 	struct rrset_parse* rrset, *prev, *nsset=NULL;
 	int cname_length = 0; /* number of CNAMEs, or DNAMEs */
+	int has_answer = 0; /* if answer section contains nonCNAME,nonDNAME */
 
 	if(FLAGS_GET_RCODE(msg->flags) != LDNS_RCODE_NOERROR &&
 		FLAGS_GET_RCODE(msg->flags) != LDNS_RCODE_NXDOMAIN &&
@@ -532,6 +533,11 @@ scrub_normalize(sldns_buffer* pkt, struct msg_parse* msg,
 					"size > 1: %u", 
 					(unsigned)rrset->rr_count);
 				return 0;
+			}
+			if(has_answer) {
+				remove_rrset("normalize: removing DNAME redirection after answer:",
+					pkt, msg, prev, &rrset);
+				continue;
 			}
 			if(!synth_cname(sname, snamelen, rrset, alias, 
 				&aliaslen, pkt)) {
@@ -583,6 +589,11 @@ scrub_normalize(sldns_buffer* pkt, struct msg_parse* msg,
 		if(rrset->type == LDNS_RR_TYPE_CNAME) {
 			struct rrset_parse* nx = rrset->rrset_all_next;
 			uint8_t* oldsname = sname;
+			if(has_answer) {
+				remove_rrset("normalize: removing redirection after answer:",
+					pkt, msg, prev, &rrset);
+				continue;
+			}
 			cname_length++;
 			/* see if the next one is a DNAME, if so, swap them */
 			if(nx && nx->section == LDNS_SECTION_ANSWER &&
@@ -661,6 +672,7 @@ scrub_normalize(sldns_buffer* pkt, struct msg_parse* msg,
 		 * will be removed by sanitize, so no additional for them */
 		if(dname_pkt_compare(pkt, qinfo->qname, rrset->dname) == 0)
 			mark_additional_rrset(pkt, msg, rrset);
+		has_answer = 1;
 		
 		prev = rrset;
 		rrset = rrset->rrset_all_next;

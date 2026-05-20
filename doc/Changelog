@@ -44,6 +44,9 @@
 	- Fix cleaning up DoH session. The same query can be on multiple
 	  streams in a session. Thanks to Qifan Zhang, Palo Alto Networks,
 	  for the report.
+	- Fix for signed same-owner CNAME and ordinary RRset responses.
+	  Thanks to Xin Wang and Jiajia Liu, Northwestern Polytechnical
+	  University, for the report.
 
 18 May 2026: Wouter
 	- Fix for mixed class referrals, the resolver uses the query
