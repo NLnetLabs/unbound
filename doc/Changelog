@@ -4,6 +4,8 @@
 	- Fix CVE-2026-42944, Heap overflow and crash with multiple nsid,
 	  cookie, padding EDNS options. Thanks to Qifan Zhang, Palo Alto
 	  Networks, for the report.
+	- Fix CVE-2026-42959, Crash during DNSSEC validation of malicious
+	  content. Thanks to Qifan Zhang, Palo Alto Networks, for the report.
 
 23 April 2026: Wouter
 	- Merge #1441: Fix buffer overrun in
