@@ -31,6 +31,7 @@
 	  the code repository continues with in addition the previous fixes,
 	  for 1.25.2.
 	- Unit test for CVE-2026-33278.
+	- Unit test for CVE-2026-42944.
 
 18 May 2026: Wouter
 	- Fix for mixed class referrals, the resolver uses the query
