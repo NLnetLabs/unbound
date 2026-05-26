@@ -1,3 +1,10 @@
+26 May 2026: Wouter
+	- Fix for mesh new client and mesh new callback to rollback the
+	  added address, tcp mesh state and callback when there is a failure
+	  to initialize. This fixes the mesh accounting of reply addresses.
+	  Thanks to Xin Wang, Jiapeng Li, and Jiajia Liu, Northwestern
+	  Polytechnical University, for the report
+
 20 May 2026: Wouter
 	- Fix CVE-2026-33278, Possible remote code execution during DNSSEC
 	  validation. Thanks to Qifan Zhang, Palo Alto Networks, for the report.

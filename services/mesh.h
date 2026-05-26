@@ -562,11 +562,12 @@ int mesh_state_attachment(struct mesh_state* super, struct mesh_state* sub);
  * @param qid: ID of reply.
  * @param qflags: original query flags.
  * @param qinfo: original query info.
+ * @param result: the allocated reply structure, for rollback.
  * @return: 0 on alloc error.
  */
 int mesh_state_add_reply(struct mesh_state* s, struct edns_data* edns,
 	struct comm_reply* rep, uint16_t qid, uint16_t qflags,
-	const struct query_info* qinfo);
+	const struct query_info* qinfo, struct mesh_reply** result);
 
 /**
  * Create new callback structure and attach it to a mesh state.
@@ -578,11 +579,12 @@ int mesh_state_add_reply(struct mesh_state* s, struct edns_data* edns,
  * @param cb_arg: callback user arg.
  * @param qid: ID of reply.
  * @param qflags: original query flags.
+ * @param result: the allocated callback structure, for rollback.
  * @return: 0 on alloc error.
  */
 int mesh_state_add_cb(struct mesh_state* s, struct edns_data* edns,
         struct sldns_buffer* buf, mesh_cb_func_type cb, void* cb_arg,
-	uint16_t qid, uint16_t qflags);
+	uint16_t qid, uint16_t qflags, struct mesh_cb** result);
 
 /**
  * Run the mesh. Run all runnable mesh states. Which can create new
