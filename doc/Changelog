@@ -30,6 +30,7 @@
 	- Fix that validator caps number of ANY RRsets it can
 	  validate, and the wait timer is shortened. Thanks to Qifan
 	  Zhang, Palo Alto Networks, for the report.
+	- Fix analyzer warning in mesh_new_client.
 
 26 May 2026: Wouter
 	- Fix for mesh new client and mesh new callback to rollback the

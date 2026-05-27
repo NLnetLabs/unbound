@@ -610,7 +610,8 @@ void mesh_new_client(struct mesh_area* mesh, struct query_info* qinfo,
 		}
 	}
 #endif
-	added_reply_without_accounting = 0;
+	/* Since the acccounting now happens,
+	 * added_reply_without_accounting = 0;   but that is not used. */
 	infra_wait_limit_inc(mesh->env->infra_cache, rep, *mesh->env->now,
 		mesh->env->cfg);
 	/* update statistics */
