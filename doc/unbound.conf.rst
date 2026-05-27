@@ -3078,6 +3078,18 @@ These options are part of the ``server:`` section.
     overloaded with random names, and keeps unbound from sending traffic to the
     nameservers for those zones.
 
+    It is intended to count the number of queries towards the nameservers
+    for the zone, and keep those queries limited.
+    When there is a delegation that needs a lot of lookups, those are
+    charged in the counters for the destination, the target name, of
+    the NS records.
+    Since that is where the nameserver lookup queries are sent to.
+    That keeps the target, the victim domain, from having many queries.
+    With the :ref:`ratelimit-factor<unbound.conf.ratelimit-factor>`, some
+    genuine queries that are also made to the target zone, can filter
+    through, and then end up in cache, where the genuine answers have
+    a chance to collect, keeping up service to some extent.
+
     .. note:: Configured forwarders are excluded from ratelimiting.
 
     Default: 0

@@ -16,6 +16,9 @@
 	- Fix to decrement the per-netblock tcp connection limits, so
 	  it keeps usable. Thanks to Qifan Zhang, Palo Alto Networks,
 	  for the report.
+	- Fix manual to document ratelimit, that it is for target
+	  nameservers for a domain, and keeps queries limited. Thanks
+	  to Qifan Zhang, Palo Alto Networks, for the report.
 
 26 May 2026: Wouter
 	- Fix for mesh new client and mesh new callback to rollback the
