@@ -160,10 +160,12 @@ verbose_key(struct autr_ta* ta, enum verbosity_value level,
  * Parse comments 
  * @param str: to parse
  * @param ta: trust key autotrust metadata
+ * @param header_seen: if an autotrust file header was seen.
+ *	Without such a header it is a list of resource records.
  * @return false on failure.
  */
 static int
-parse_comments(char* str, struct autr_ta* ta)
+parse_comments(char* str, struct autr_ta* ta, int header_seen)
 {
         int len = (int)strlen(str), pos = 0, timestamp = 0;
         char* comment = (char*) malloc(sizeof(char)*len+1);
@@ -196,10 +198,18 @@ parse_comments(char* str, struct autr_ta* ta)
                 free(comment);
                 return 0;
         }
-        if (pos <= 0)
-                ta->s = AUTR_STATE_VALID;
-        else
-        {
+        if (pos <= 0) {
+		if(header_seen) {
+			/* There was an autotrust trust anchor file header,
+			 * with a ;; id=.. line, so the entries
+			 * have to have ;;state= annotations. */
+			log_err("trust anchor in state file has no ;;state= "
+				"annotation, ignoring");
+			free(comment);
+			return 0;
+		}
+		ta->s = AUTR_STATE_VALID;
+        } else {
                 int s = (int) comments[pos] - '0';
                 switch(s)
                 {
@@ -523,12 +533,14 @@ add_trustanchor_frm_str(struct val_anchors* anchors, char* str,
  * @param prev: passed to ldns.
  * @param prev_len: length of prev
  * @param skip: if true, the result is NULL, but not an error, skip it.
+ * @param header_seen: if an autotrust file header was seen.
+ *	Without such a header it is a list of resource records.
  * @return false on failure, otherwise the tp read.
  */
 static struct trust_anchor*
 load_trustanchor(struct val_anchors* anchors, char* str, const char* fname,
 	uint8_t* origin, size_t origin_len, uint8_t** prev, size_t* prev_len,
-	int* skip)
+	int* skip, int header_seen)
 {
 	struct autr_ta* ta = NULL;
 	struct trust_anchor* tp = NULL;
@@ -538,7 +550,7 @@ load_trustanchor(struct val_anchors* anchors, char* str, const char* fname,
 	if(!ta)
 		return NULL;
 	lock_basic_lock(&tp->lock);
-	if(!parse_comments(str, ta)) {
+	if(!parse_comments(str, ta, header_seen)) {
 		lock_basic_unlock(&tp->lock);
 		return NULL;
 	}
@@ -992,8 +1004,8 @@ int autr_read_file(struct val_anchors* anchors, const char* nm)
         FILE* fd;
         /* keep track of line numbers */
         int line_nr = 0;
-        /* single line */
-        char line[10240];
+        /* single line, enough space for large DNSKEY, 64K, in hex and dname */
+        char line[10240+65536*2];
 	/* trust point being read */
 	struct trust_anchor *tp = NULL, *tp2;
 	int r;
@@ -1030,7 +1042,7 @@ int autr_read_file(struct val_anchors* anchors, const char* nm)
 			continue;
 		r = 0;
                 if(!(tp2=load_trustanchor(anchors, line, nm, origin,
-			origin_len, &prev, &prev_len, &r))) {
+			origin_len, &prev, &prev_len, &r, (tp!=NULL)))) {
 			if(!r) log_err("failed to load trust anchor from %s "
 				"at line %i, skipping", nm, line_nr);
                         /* try to do the rest */

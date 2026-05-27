@@ -1,3 +1,8 @@
+27 May 2026: Wouter
+	- Fix for autotrust state-file line overflow, that can give
+	  hold-down bypass. Thanks to Qifan Zhang, Palo Alto Networks,
+	  for the report.
+
 26 May 2026: Wouter
 	- Fix for mesh new client and mesh new callback to rollback the
 	  added address, tcp mesh state and callback when there is a failure
