@@ -660,6 +660,7 @@ handle_event_moddone(struct module_qstate* qstate, int id)
 
 	/* Store the response in cache. */
 	if( (!iq || !iq->started_no_cache_store) &&
+		!qstate->is_subnet_answer &&
 		qstate->return_msg &&
 		qstate->return_msg->rep &&
 		!dns_cache_store(
@@ -1015,6 +1016,7 @@ dns64_inform_super(struct module_qstate* qstate, int id,
 
 	/* Store the generated response in cache. */
 	if ( (!super_dq || !super_dq->started_no_cache_store) &&
+		!super->is_subnet_answer &&
 		!dns_cache_store(super->env, &super->qinfo, super->return_msg->rep,
 		0, super->prefetch_leeway, 0, NULL, super->query_flags,
 		qstate->qstarttime, qstate->is_valrec))

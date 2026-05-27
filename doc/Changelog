@@ -21,6 +21,9 @@
 	  to Qifan Zhang, Palo Alto Networks, for the report.
 	- Fix, in depth, for respip rewrite of dns64 responses. Thanks
 	  to Qifan Zhang, Palo Alto Networks, for the report.
+	- Fix that dns64 with subnetcache does not write ECS scoped
+	  answers to global cache. Thanks to Qifan Zhang, Palo Alto
+	  Networks, for the report.
 
 26 May 2026: Wouter
 	- Fix for mesh new client and mesh new callback to rollback the

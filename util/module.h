@@ -701,6 +701,8 @@ struct module_qstate {
 	time_t qstarttime;
 	/** whether a message from cachedb will be used for the reply */
 	int is_cachedb_answer;
+	/** whether the reply is subnet specific */
+	int is_subnet_answer;
 	/** if the response as error is from error_response_cache, and is
 	 * suitable for caching (briefly) the error response. Set by the
 	 * iterator when no_cache_store is enabled, and there is an error. */
