@@ -2100,6 +2100,8 @@ These options are part of the ``server:`` section.
     If disabled, Unbound responds with a short list of resource records if some
     can be found in the cache and makes the upstream type ANY query if there
     are none.
+    The option stops the DNSSEC validation from processing, possibly lengthy,
+    ANY responses, when the option is enabled.
 
     Default: no
 

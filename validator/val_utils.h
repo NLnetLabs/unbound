@@ -315,6 +315,16 @@ void val_fill_reply(struct reply_info* chase, struct reply_info* orig,
 	size_t cname_skip, uint8_t* name, size_t len, uint8_t* signer);
 
 /**
+ * Remove rrsets with index .. index+count from reply, from the answer section.
+ * @param rep: reply to remove it from.
+ * @param index: rrset to remove, must be in the answer section.
+ * @param count: number of rrsets to remove, starting from the index.
+ *	with count=1, it removes only the index rrset.
+ */
+void val_reply_remove_answers(struct reply_info* rep, size_t index,
+	size_t count);
+
+/**
  * Remove rrset with index from reply, from the authority section.
  * @param rep: reply to remove it from.
  * @param index: rrset to remove, must be in the authority section.

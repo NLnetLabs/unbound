@@ -1077,6 +1077,23 @@ val_fill_reply(struct reply_info* chase, struct reply_info* orig,
 		chase->ar_numrrsets;
 }
 
+void val_reply_remove_answers(struct reply_info* rep, size_t index,
+	size_t count)
+{
+	log_assert(index < rep->rrset_count);
+	log_assert(index < rep->an_numrrsets);
+	if(count == 0)
+		return; /* nothing to do */
+	log_assert(index+(count-1) < rep->rrset_count);
+	log_assert(index+(count-1) < rep->an_numrrsets);
+	if(rep->rrset_count - (count-1) - index - 1 > 0)
+	  memmove(rep->rrsets+index, rep->rrsets+index+(count-1)+1,
+		sizeof(struct ub_packed_rrset_key*)*
+		(rep->rrset_count - (count-1) - index - 1));
+	rep->an_numrrsets -= count;
+	rep->rrset_count -= count;
+}
+
 void val_reply_remove_auth(struct reply_info* rep, size_t index)
 {
 	log_assert(index < rep->rrset_count);
