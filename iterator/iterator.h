@@ -380,6 +380,10 @@ struct iter_qstate {
 	/** if true, already tested for ratelimiting and passed the test */
 	int ratelimit_ok;
 
+	/** If the last query, that may be a referral, incremented the
+	 * ratelimit counter. */
+	int ratelimit_incremented;
+
 	/**
 	 * The query must store NS records from referrals as parentside RRs
 	 * Enabled once it hits resolution problems, to throttle retries.

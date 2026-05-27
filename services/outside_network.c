@@ -3490,7 +3490,8 @@ outnet_serviced_query(struct outside_network* outnet,
 	char* tls_auth_name, struct sockaddr_storage* addr, socklen_t addrlen,
 	uint8_t* zone, size_t zonelen, struct module_qstate* qstate,
 	comm_point_callback_type* callback, void* callback_arg,
-	sldns_buffer* buff, struct module_env* env, int* was_ratelimited)
+	sldns_buffer* buff, struct module_env* env, int* was_ratelimited,
+	int* ratelimit_incremented)
 {
 	struct serviced_query* sq;
 	struct service_callback* cb;
@@ -3562,6 +3563,7 @@ outnet_serviced_query(struct outside_network* outnet,
 					"delegation point", zone,
 					LDNS_RR_TYPE_NS, LDNS_RR_CLASS_IN);
 			}
+			*ratelimit_incremented = 1;
 		}
 		/* make new serviced query entry */
 		sq = serviced_create(outnet, buff, dnssec, want_dnssec, nocaps,

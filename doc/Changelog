@@ -4,6 +4,9 @@
 	  for the report.
 	- Fix to limit the DSNS per-label walk in the iterator. Thanks
 	  to Qifan Zhang, Palo Alto Networks, for the report.
+	- Fix that the ratelimit is decremented on successful
+	  referrals. Thanks to Qifan Zhang, Palo Alto Networks, for
+	  the report.
 
 26 May 2026: Wouter
 	- Fix for mesh new client and mesh new callback to rollback the

@@ -375,6 +375,8 @@ struct module_env {
 	 * @param q: which query state to reactivate upon return.
 	 * @param was_ratelimited: it will signal back if the query failed to pass the
 	 *	ratelimit check.
+	 * @param ratelimit_incremented: set to true if the ratelimit counter
+	 *	was increased.
 	 * @return: false on failure (memory or socket related). no query was
 	 *	sent. Or returns an outbound entry with qsent and qstate set.
 	 *	This outbound_entry will be used on later module invocations
@@ -385,7 +387,8 @@ struct module_env {
 		int check_ratelimit,
 		struct sockaddr_storage* addr, socklen_t addrlen,
 		uint8_t* zone, size_t zonelen, int tcp_upstream, int ssl_upstream,
-		char* tls_auth_name, struct module_qstate* q, int* was_ratelimited);
+		char* tls_auth_name, struct module_qstate* q, int* was_ratelimited,
+		int* ratelimit_incremented);
 
 	/**
 	 * Detach-subqueries.

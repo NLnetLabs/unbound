@@ -3054,7 +3054,9 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 
 	/* Do not check ratelimit for forwarding queries or if we already got a
 	 * pass. */
-	sq_check_ratelimit = (!(iq->chase_flags & BIT_RD) && !iq->ratelimit_ok);
+	sq_check_ratelimit = ((!(iq->chase_flags & BIT_RD) &&
+		!iq->ratelimit_ok));
+	iq->ratelimit_incremented = 0;
 	/* We have a valid target. */
 	if(verbosity >= VERB_QUERY) {
 		log_query_info(VERB_QUERY, "sending query:", &iq->qinfo_out);
@@ -3080,7 +3082,8 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 		iq->dp->name, iq->dp->namelen,
 		(iq->dp->tcp_upstream || qstate->env->cfg->tcp_upstream),
 		(iq->dp->ssl_upstream || qstate->env->cfg->ssl_upstream),
-		target->tls_auth_name, qstate, &sq_was_ratelimited);
+		target->tls_auth_name, qstate, &sq_was_ratelimited,
+		&iq->ratelimit_incremented);
 	if(!outq) {
 		if(sq_was_ratelimited) {
 			lock_basic_lock(&ie->queries_ratelimit_lock);
@@ -3439,6 +3442,12 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 		iq->deleg_msg = iq->response;
 		/* Keep current delegation point for label comparison */
 		old_dp = iq->dp;
+		/* A referral reply is "pleasant", refund the
+		 * parent dp's rate charge before descending to the child. */
+		if(iq->ratelimit_incremented)
+			infra_ratelimit_dec(qstate->env->infra_cache,
+				old_dp->name, old_dp->namelen,
+				*qstate->env->now);
 		iq->dp = delegpt_from_message(iq->response, qstate->region);
 		if (qstate->env->cfg->qname_minimisation)
 			iq->minimisation_state = INIT_MINIMISE_STATE;

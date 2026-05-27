@@ -660,6 +660,8 @@ void pending_delete(struct outside_network* outnet, struct pending* p);
  * @param env: the module environment.
  * @param was_ratelimited: it will signal back if the query failed to pass the
  *	ratelimit check.
+ * @param ratelimit_incremented: set to true if the ratelimit counter
+ *	was increased.
  * @return 0 on error, or pointer to serviced query that is used to answer
  *	this serviced query may be shared with other callbacks as well.
  */
@@ -669,7 +671,8 @@ struct serviced_query* outnet_serviced_query(struct outside_network* outnet,
 	char* tls_auth_name, struct sockaddr_storage* addr, socklen_t addrlen,
 	uint8_t* zone, size_t zonelen, struct module_qstate* qstate,
 	comm_point_callback_type* callback, void* callback_arg,
-	struct sldns_buffer* buff, struct module_env* env, int* was_ratelimited);
+	struct sldns_buffer* buff, struct module_env* env, int* was_ratelimited,
+	int* ratelimit_incremented);
 
 /**
  * Remove service query callback.

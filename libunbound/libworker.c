@@ -879,7 +879,8 @@ struct outbound_entry* libworker_send_query(struct query_info* qinfo,
 	int check_ratelimit,
 	struct sockaddr_storage* addr, socklen_t addrlen, uint8_t* zone,
 	size_t zonelen, int tcp_upstream, int ssl_upstream, char* tls_auth_name,
-	struct module_qstate* q, int* was_ratelimited)
+	struct module_qstate* q, int* was_ratelimited,
+	int* ratelimit_incremented)
 {
 	struct libworker* w = (struct libworker*)q->env->worker;
 	struct outbound_entry* e = (struct outbound_entry*)regional_alloc(
@@ -891,7 +892,7 @@ struct outbound_entry* libworker_send_query(struct query_info* qinfo,
 		want_dnssec, nocaps, check_ratelimit, tcp_upstream, ssl_upstream,
 		tls_auth_name, addr, addrlen, zone, zonelen, q,
 		libworker_handle_service_reply, e, w->back->udp_buff, q->env,
-		was_ratelimited);
+		was_ratelimited, ratelimit_incremented);
 	if(!e->qsent) {
 		return NULL;
 	}
@@ -976,7 +977,8 @@ struct outbound_entry* worker_send_query(struct query_info* ATTR_UNUSED(qinfo),
 	struct sockaddr_storage* ATTR_UNUSED(addr), socklen_t ATTR_UNUSED(addrlen),
 	uint8_t* ATTR_UNUSED(zone), size_t ATTR_UNUSED(zonelen), int ATTR_UNUSED(tcp_upstream),
 	int ATTR_UNUSED(ssl_upstream), char* ATTR_UNUSED(tls_auth_name),
-	struct module_qstate* ATTR_UNUSED(q), int* ATTR_UNUSED(was_ratelimited))
+	struct module_qstate* ATTR_UNUSED(q), int* ATTR_UNUSED(was_ratelimited),
+	int* ATTR_UNUSED(ratelimit_incremented))
 {
 	log_assert(0);
 	return 0;
