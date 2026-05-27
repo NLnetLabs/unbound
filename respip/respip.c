@@ -899,27 +899,34 @@ respip_rewrite_reply(const struct query_info* qinfo,
 	int rpz_cname_override = 0;
 	char* log_name = NULL;
 
-	if(!cinfo)
-		goto done;
-	ctaglist = cinfo->taglist;
-	ctaglen = cinfo->taglen;
-	tag_actions = cinfo->tag_actions;
-	tag_actions_size = cinfo->tag_actions_size;
-	tag_datas = cinfo->tag_datas;
-	tag_datas_size = cinfo->tag_datas_size;
-	if(cinfo->view) {
-		view = cinfo->view;
-		lock_rw_rdlock(&view->lock);
-	} else if(cinfo->view_name) {
-		view = views_find_view(views, cinfo->view_name, 0);
-		if(!view) {
-			/* If the view no longer exists, the rewrite can not
-			 * be processed further. */
-			verbose(VERB_ALGO, "respip: failed because view %s no "
-				"longer exists", cinfo->view_name);
-			return 0;
+	if(!cinfo) {
+		/* Internal mesh sub-query (e.g. dns64 A lookup): no
+		 * per-client view/tags, but global response-ip and RPZ
+		 * rpz-ip must still apply. */
+		ctaglist = NULL; ctaglen = 0;
+		tag_actions = NULL; tag_actions_size = 0;
+		tag_datas = NULL; tag_datas_size = 0;
+	} else {
+		ctaglist = cinfo->taglist;
+		ctaglen = cinfo->taglen;
+		tag_actions = cinfo->tag_actions;
+		tag_actions_size = cinfo->tag_actions_size;
+		tag_datas = cinfo->tag_datas;
+		tag_datas_size = cinfo->tag_datas_size;
+		if(cinfo->view) {
+			view = cinfo->view;
+			lock_rw_rdlock(&view->lock);
+		} else if(cinfo->view_name) {
+			view = views_find_view(views, cinfo->view_name, 0);
+			if(!view) {
+				/* If the view no longer exists, the rewrite can not
+				 * be processed further. */
+				verbose(VERB_ALGO, "respip: failed because view %s no "
+					"longer exists", cinfo->view_name);
+				return 0;
+			}
+			/* The view is rdlocked by views_find_view. */
 		}
-		/* The view is rdlocked by views_find_view. */
 	}
 
 	log_assert(ipset);
