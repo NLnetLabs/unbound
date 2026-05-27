@@ -3280,6 +3280,10 @@ comm_point_tcp_accept_callback(int fd, short event, void* arg)
 #endif
 		return;
 	}
+	/* move per-netblock TCP-connection-limit handle to the handler so that
+	 * comm_point_close() on the handler decrements the count on close */
+	c_hdl->tcl_addr = c->tcl_addr;
+	c->tcl_addr = NULL;
 	/* Copy remote_address to client_address.
 	 * Simplest way/time for streams to do that. */
 	c_hdl->repinfo.client_addrlen = c_hdl->repinfo.remote_addrlen;
@@ -6594,7 +6598,10 @@ comm_point_close(struct comm_point* c)
 			c->event_added = 0;
 		}
 	}
-	tcl_close_connection(c->tcl_addr);
+	if(c->tcl_addr) {
+		tcl_close_connection(c->tcl_addr);
+		c->tcl_addr = NULL;
+	}
 	if(c->tcp_req_info)
 		tcp_req_info_clear(c->tcp_req_info);
 	if(c->h2_session)
