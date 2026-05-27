@@ -7,6 +7,9 @@
 	- Fix that the ratelimit is decremented on successful
 	  referrals. Thanks to Qifan Zhang, Palo Alto Networks, for
 	  the report.
+	- Fix that msgencode insert_query has the correct assertion,
+	  for a local_alias. Thanks to Qifan Zhang, Palo Alto Networks,
+	  for the report.
 
 26 May 2026: Wouter
 	- Fix for mesh new client and mesh new callback to rollback the
