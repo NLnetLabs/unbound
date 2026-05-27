@@ -104,6 +104,11 @@ extern int BLACKLIST_PENALTY;
 #define RTT_BAND 400
 /** Number of retries for empty nodata packets before it is accepted. */
 #define EMPTY_NODATA_RETRY_COUNT 2
+/** max label-strip iterations in DSNS_FIND_STATE (RFC 4035 4.2 parent-NS
+ * search) before giving up; bounds upstream NS sends per client DS.
+ * Means the max number of labels in grandchild to the grandparent zone that
+ * are co-hosted. */
+#define MAX_DSNS_FIND_COUNT    20
 
 /**
  * Iterator global state for nat64.
@@ -399,6 +404,8 @@ struct iter_qstate {
 	uint8_t* dsns_point;
 	/** length of the dname in dsns_point */
 	size_t dsns_point_len;
+	/** number of label-strip iterations performed in DSNS_FIND_STATE */
+	int dsns_count;
 
 	/** 
 	 * expected dnssec information for this iteration step. 

@@ -2366,6 +2366,12 @@ processDSNSFind(struct module_qstate* qstate, struct iter_qstate* iq, int id)
 
 	/* go up one (more) step, until we hit the dp, if so, end */
 	dname_remove_label(&iq->dsns_point, &iq->dsns_point_len);
+	if(++iq->dsns_count > MAX_DSNS_FIND_COUNT) {
+		verbose(VERB_QUERY, "DS NS search exceeded %d labels",
+			MAX_DSNS_FIND_COUNT);
+		errinf(qstate, "DS NS search exceeded label limit");
+		return error_response_cache(qstate, id, LDNS_RCODE_SERVFAIL);
+	}
 	if(query_dname_compare(iq->dsns_point, iq->dp->name) == 0) {
 		/* there was no inbetween nameserver, use the old delegation
 		 * point again.  And this time, because dsns_point is nonNULL
