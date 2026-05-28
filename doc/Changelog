@@ -1,3 +1,7 @@
+28 May 2026: Wouter
+	- Fix #1457: race condition causes segfault when starting
+	  threads.
+
 27 May 2026: Wouter
 	- Fix for autotrust state-file line overflow, that can give
 	  hold-down bypass. Thanks to Qifan Zhang, Palo Alto Networks,
