@@ -1,3 +1,7 @@
+29 May 2026: Wouter
+	- Fix header_seen detection for trust anchor files, so that it
+	  detects the id line.
+
 28 May 2026: Wouter
 	- Fix #1457: race condition causes segfault when starting
 	  threads.

@@ -858,16 +858,18 @@ parse_id(struct val_anchors* anchors, char* line)
  * @param anchors: the anchor is added to this, if "id:" is seen.
  * @param anchor: the anchor as result value or previously returned anchor
  * 	value to read the variable lines into.
+ * @param header_seen: if a header ';;id: example.com.' was seen.
  * @return: 0 no match, -1 failed syntax error, +1 success line read.
  * 	+2 revoked trust anchor file.
  */
 static int
 parse_var_line(char* line, struct val_anchors* anchors, 
-	struct trust_anchor** anchor)
+	struct trust_anchor** anchor, int* header_seen)
 {
 	struct trust_anchor* tp = *anchor;
 	int r = 0;
 	if(strncmp(line, ";;id: ", 6) == 0) {
+		*header_seen = 1;
 		*anchor = parse_id(anchors, line+6);
 		if(!*anchor) return -1;
 		else return 1;
@@ -1012,6 +1014,7 @@ int autr_read_file(struct val_anchors* anchors, const char* nm)
 	/* for $ORIGIN parsing */
 	uint8_t *origin=NULL, *prev=NULL;
 	size_t origin_len=0, prev_len=0;
+	int header_seen = 0;
 
         if (!(fd = fopen(nm, "r"))) {
                 log_err("unable to open %s for reading: %s", 
@@ -1020,7 +1023,7 @@ int autr_read_file(struct val_anchors* anchors, const char* nm)
         }
         verbose(VERB_ALGO, "reading autotrust anchor file %s", nm);
         while ( (r=read_multiline(line, sizeof(line), fd, &line_nr)) != 0) {
-		if(r == -1 || (r = parse_var_line(line, anchors, &tp)) == -1) {
+		if(r == -1 || (r = parse_var_line(line, anchors, &tp, &header_seen)) == -1) {
 			log_err("could not parse auto-trust-anchor-file "
 				"%s line %d", nm, line_nr);
 			fclose(fd);
@@ -1042,7 +1045,7 @@ int autr_read_file(struct val_anchors* anchors, const char* nm)
 			continue;
 		r = 0;
                 if(!(tp2=load_trustanchor(anchors, line, nm, origin,
-			origin_len, &prev, &prev_len, &r, (tp!=NULL)))) {
+			origin_len, &prev, &prev_len, &r, header_seen))) {
 			if(!r) log_err("failed to load trust anchor from %s "
 				"at line %i, skipping", nm, line_nr);
                         /* try to do the rest */
