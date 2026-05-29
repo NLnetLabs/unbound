@@ -2,6 +2,8 @@
 	- Fix header_seen detection for trust anchor files, so that it
 	  detects the id line.
 	- iana portlist updated.
+	- Update icannbundle.pem certificates in unbound-anchor. It
+	  has the public keys for 2009 to 2029 and for 2025 to 2045.
 
 28 May 2026: Wouter
 	- Fix #1457: race condition causes segfault when starting
