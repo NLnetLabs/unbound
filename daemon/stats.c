@@ -285,6 +285,8 @@ server_stats_compile(struct worker* worker, struct ub_stats_info* s, int reset)
 		NUM_BUCKETS_HIST);
 	s->svr.num_queries_discard_timeout +=
 		(long long)worker->env.mesh->num_queries_discard_timeout;
+	s->svr.num_queries_client_wait_timeout +=
+		(long long)worker->env.mesh->num_queries_client_wait_timeout;
 	s->svr.num_queries_replyaddr_limit +=
 		(long long)worker->env.mesh->num_queries_replyaddr_limit;
 	s->svr.num_queries_wait_limit +=
@@ -451,6 +453,8 @@ void server_stats_add(struct ub_stats_info* total, struct ub_stats_info* a)
 	total->svr.num_queries_cookie_invalid += a->svr.num_queries_cookie_invalid;
 	total->svr.num_queries_discard_timeout +=
 		a->svr.num_queries_discard_timeout;
+	total->svr.num_queries_client_wait_timeout +=
+		a->svr.num_queries_client_wait_timeout;
 	total->svr.num_queries_replyaddr_limit +=
 		a->svr.num_queries_replyaddr_limit;
 	total->svr.num_queries_wait_limit += a->svr.num_queries_wait_limit;

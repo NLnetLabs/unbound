@@ -821,6 +821,8 @@ print_stats(RES* ssl, const char* nm, struct ub_stats_info* s)
 		(unsigned long)s->svr.num_queries_cookie_invalid)) return 0;
 	if(!ssl_printf(ssl, "%s.num.queries_discard_timeout"SQ"%lu\n", nm,
 		(unsigned long)s->svr.num_queries_discard_timeout)) return 0;
+	if(!ssl_printf(ssl, "%s.num.queries_client_wait_timeout"SQ"%lu\n", nm,
+		(unsigned long)s->svr.num_queries_client_wait_timeout)) return 0;
 	if(!ssl_printf(ssl, "%s.num.queries_replyaddr_limit"SQ"%lu\n", nm,
 		(unsigned long)s->svr.num_queries_replyaddr_limit)) return 0;
 	if(!ssl_printf(ssl, "%s.num.queries_wait_limit"SQ"%lu\n", nm,
@@ -6263,6 +6265,7 @@ fr_atomic_copy_cfg(struct config_file* oldcfg, struct config_file* cfg,
 	COPY_VAR_int(rrset_roundrobin);
 	COPY_VAR_int(unknown_server_time_limit);
 	COPY_VAR_int(discard_timeout);
+	COPY_VAR_int(client_wait_timeout);
 	COPY_VAR_int(wait_limit);
 	COPY_VAR_int(wait_limit_cookie);
 	COPY_VAR_ptr(wait_limit_netblock);

@@ -231,6 +231,7 @@ mesh_create(struct module_stack* stack, struct module_env* env)
 	mesh->ans_expired = 0;
 	mesh->ans_cachedb = 0;
 	mesh->num_queries_discard_timeout = 0;
+	mesh->num_queries_client_wait_timeout = 0;
 	mesh->num_queries_replyaddr_limit = 0;
 	mesh->num_queries_wait_limit = 0;
 	mesh->num_dns_error_reports = 0;
@@ -2358,6 +2359,7 @@ mesh_stats_clear(struct mesh_area* mesh)
 	memset(&mesh->rpz_action[0], 0, sizeof(size_t)*UB_STATS_RPZ_ACTION_NUM);
 	mesh->ans_nodata = 0;
 	mesh->num_queries_discard_timeout = 0;
+	mesh->num_queries_client_wait_timeout = 0;
 	mesh->num_queries_replyaddr_limit = 0;
 	mesh->num_queries_wait_limit = 0;
 	mesh->num_dns_error_reports = 0;
