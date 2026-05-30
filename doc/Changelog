@@ -8,7 +8,6 @@
 
 28 May 2026: Wouter
 	- Fix #1457: race condition causes segfault when starting
-	  threads.
 
 27 May 2026: Wouter
 	- Fix for autotrust state-file line overflow, that can give
@@ -18,7 +17,6 @@
 	  to Qifan Zhang, Palo Alto Networks, for the report.
 	- Fix that the ratelimit is decremented on successful
 	  referrals. Thanks to Qifan Zhang, Palo Alto Networks, for
-	  the report.
 	- Fix that msgencode insert_query has the correct assertion,
 	  for a local_alias. Thanks to Qifan Zhang, Palo Alto Networks,
 	  for the report.
@@ -129,6 +127,15 @@
 	- Fix DNSKEY size calculation for noncanonical RSA DNSKEYs
 	  with leading zeroes for n. Thanks to Xin Wang and Jiajia Liu,
 	  Northwestern Polytechnical University, for the report.
+=======
+30 May 2026: Nikolay Shopik
+	- Add client-wait-timeout: server option that sends SERVFAIL with
+	  EDE 22 (No Reachable Authority) and text "client wait timeout
+	  exceeded" to a client whose query has been waiting longer than the
+	  configured milliseconds. Background resolution continues so the
+	  cache is populated for subsequent identical queries. Default 0
+	  (disabled). Off by default; opt-in.
+>>>>>>> 47c9108b8 (Changelog: add client-wait-timeout)
 
 11 May 2026: Yorgos
 	- Fix comment and verbose logging for EDNS fallback buffer size.
