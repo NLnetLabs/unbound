@@ -616,41 +616,16 @@ Default: 1900
 .INDENT 0.0
 .TP
 .B client\-wait\-timeout: \fI<msec>\fP
-Time in milliseconds before a client query that is still waiting for
+The wait time in msec before a client query that is still waiting for
 recursion is answered with SERVFAIL and Extended DNS Error code 22
-(No Reachable Authority) with the extra text \(dqclient wait timeout exceeded\(dq.
-Recursion continues in the background so that the cache is populated for
+(No Reachable Authority).
+Recursion continues in the background so the cache is populated for
 subsequent identical queries.
-Setting this to \fB0\fP disables the feature.
-.sp
-Useful values are typically in the range 1500 to 4000 ms.
-A value close to the stub resolver\(aqs own query timeout minimises spurious
-client retries to other resolvers but also reduces the latency benefit,
-while a lower value returns an answer to the client sooner at the cost of
-more retries.
-.sp
-Cache warming is best\-effort: if the upstream ultimately fails, that
-failure may itself be briefly cached, and in an anycast deployment a
-retried client may reach a different instance whose cache was not warmed.
-.sp
-This option bounds only the client\(aqs wait time, not the lifetime of the
-background recursion.
-In\-flight upstream queries persist until they complete or
-\fBinfra\-cache\-max\-rtt\fR elapses, so under a flood of slow or unreachable
-names many states can keep resolving simultaneously.
-Consider pairing this option with \fBwait\-limit\fR and a conservative
-\fBinfra\-cache\-max\-rtt\fR in hostile environments.
-.sp
-The Extended DNS Error option is attached only when \fBede:\fR is enabled
-and only on the UDP/TCP client path; libunbound callers receive a plain
-SERVFAIL without an EDE option.
-.sp
-If both \fBclient\-wait\-timeout\fR and
+The EDE code is only attached when \fBede:\fR is enabled.
+If both this and
 \fI\%serve\-expired\-client\-timeout\fP
-are configured, whichever timer fires first delivers its answer and the
-later timer becomes a no\-op.
-\fBunbound\-checkconf\fR warns when client\-wait\-timeout is less than
-serve\-expired\-client\-timeout while serve\-expired is enabled.
+are set, whichever timer fires first answers and the other becomes a no\-op.
+The value \fB0\fP disables it.
 .sp
 Default: 0
 .UNINDENT
