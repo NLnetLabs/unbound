@@ -225,6 +225,8 @@ server:
 	# IP packets
 	ip-dscp: 5
 
+	client-wait-timeout: 4000
+
 # Stub zones.
 # Create entries like below, to make all queries for 'example.com' and 
 # 'example.org' go to the given list of nameservers. list zero or more 

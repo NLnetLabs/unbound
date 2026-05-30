@@ -79,4 +79,65 @@ else
 	exit 1
 fi
 
+# test client-wait-timeout warning (serve-expired pre-emption)
+cat > tmpconf_cwt_warn.conf << 'EOF'
+server:
+	chroot: ""
+	directory: ""
+	pidfile: ""
+	username: ""
+	logfile: ""
+	serve-expired: yes
+	serve-expired-client-timeout: 10000
+	client-wait-timeout: 1000
+EOF
+echo $PRE/unbound-checkconf tmpconf_cwt_warn.conf
+$PRE/unbound-checkconf tmpconf_cwt_warn.conf > outfile 2>&1
+if test $? != 0; then
+	cat outfile
+	echo "wrong exit code, client-wait-timeout warning should not fail with error"
+	exit 1
+fi
+cat outfile
+if grep "client-wait-timeout" outfile; then
+	echo "OK"
+else
+	echo "Failed, should print client-wait-timeout warning"
+	exit 1
+fi
+
+# test client-wait-timeout positive value (accepted)
+cat > tmpconf_cwt_pos.conf << 'EOF'
+server:
+	chroot: ""
+	directory: ""
+	pidfile: ""
+	username: ""
+	logfile: ""
+	client-wait-timeout: 4000
+EOF
+echo $PRE/unbound-checkconf tmpconf_cwt_pos.conf
+$PRE/unbound-checkconf tmpconf_cwt_pos.conf
+if test $? != 0; then
+	echo "wrong exit code, client-wait-timeout: 4000 should be accepted"
+	exit 1
+fi
+
+# test client-wait-timeout negative value (rejected)
+cat > tmpconf_cwt_neg.conf << 'EOF'
+server:
+	chroot: ""
+	directory: ""
+	pidfile: ""
+	username: ""
+	logfile: ""
+	client-wait-timeout: -1
+EOF
+echo $PRE/unbound-checkconf tmpconf_cwt_neg.conf
+$PRE/unbound-checkconf tmpconf_cwt_neg.conf
+if test $? = 0; then
+	echo "wrong exit code, client-wait-timeout: -1 should be rejected"
+	exit 1
+fi
+
 exit 0
