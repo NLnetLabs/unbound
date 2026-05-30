@@ -463,6 +463,60 @@ mesh_remove_callback_without_accounting(struct mesh_state* s,
 	}
 }
 
+/** Return milliseconds elapsed from start to now; never negative. */
+static int
+age_ms(struct timeval* now, struct timeval* start)
+{
+	struct timeval diff;
+	if(timeval_smaller(now, start))
+		return 0;
+	timeval_subtract(&diff, now, start);
+	return (int)(diff.tv_sec * 1000 + diff.tv_usec / 1000);
+}
+
+/** Compute absolute deadline (start + timeout_ms) into out. */
+static void
+client_wait_deadline(struct timeval* out, struct timeval* start, int timeout_ms)
+{
+	out->tv_sec = start->tv_sec + timeout_ms / 1000;
+	out->tv_usec = start->tv_usec + (timeout_ms % 1000) * 1000;
+	if(out->tv_usec >= 1000000) {
+		out->tv_sec++;
+		out->tv_usec -= 1000000;
+	}
+}
+
+/** Init the client_wait_data structure and arm the timer (idempotent). */
+static int
+mesh_client_wait_init(struct mesh_state* mstate, int timeout_ms)
+{
+	struct timeval t;
+	if(!mstate->s.client_wait_data) {
+		mstate->s.client_wait_data = (struct client_wait_data*)
+			regional_alloc_zero(mstate->s.region,
+				sizeof(struct client_wait_data));
+		if(!mstate->s.client_wait_data)
+			return 0;
+	}
+	/* Create+arm the timer once. After a full sweep the callback deletes
+	 * the timer (NULLs it); a later-arriving client re-creates and re-arms
+	 * it here. A second concurrent client finds the timer already present
+	 * and does not disturb the earlier client's earlier deadline. */
+	if(!mstate->s.client_wait_data->timer) {
+		mstate->s.client_wait_data->timer = comm_timer_create(
+			mstate->s.env->worker_base, mesh_client_wait_callback,
+			mstate);
+		if(!mstate->s.client_wait_data->timer)
+			return 0;
+#ifndef S_SPLINT_S
+		t.tv_sec = timeout_ms / 1000;
+		t.tv_usec = (timeout_ms % 1000) * 1000;
+#endif
+		comm_timer_set(mstate->s.client_wait_data->timer, &t);
+	}
+	return 1;
+}
+
 void mesh_new_client(struct mesh_area* mesh, struct query_info* qinfo,
 	struct respip_client_info* cinfo, uint16_t qflags,
 	struct edns_data* edns, struct comm_reply* rep, uint16_t qid,
@@ -600,6 +654,14 @@ void mesh_new_client(struct mesh_area* mesh, struct query_info* qinfo,
 		log_err("mesh_new_client: out of memory initializing serve expired");
 		goto servfail_mem;
 	}
+	/* arm client-wait-timeout timer (idempotent; re-armed after a sweep) */
+	if(mesh->env->cfg->client_wait_timeout > 0) {
+		if(!mesh_client_wait_init(s,
+			mesh->env->cfg->client_wait_timeout))
+			log_err("mesh_new_client: out of memory "
+				"initializing client-wait-timeout");
+		/* soft-fail: query proceeds without the deadline */
+	}
 #ifdef USE_CACHEDB
 	if(!timeout && mesh->env->cfg->serve_expired &&
 		!mesh->env->cfg->serve_expired_client_timeout &&
@@ -729,6 +791,14 @@ mesh_new_callback(struct mesh_area* mesh, struct query_info* qinfo,
 		if(added)
 			mesh_state_delete(&s->s);
 		return 0;
+	}
+	/* arm client-wait-timeout timer (idempotent; re-armed after a sweep) */
+	if(mesh->env->cfg->client_wait_timeout > 0) {
+		if(!mesh_client_wait_init(s,
+			mesh->env->cfg->client_wait_timeout))
+			log_err("mesh_new_callback: out of memory "
+				"initializing client-wait-timeout");
+		/* soft-fail */
 	}
 #ifdef USE_CACHEDB
 	if(!timeout && mesh->env->cfg->serve_expired &&
@@ -1125,6 +1195,11 @@ mesh_state_cleanup(struct mesh_state* mstate)
 	if(mstate->s.serve_expired_data && mstate->s.serve_expired_data->timer) {
 		comm_timer_delete(mstate->s.serve_expired_data->timer);
 		mstate->s.serve_expired_data->timer = NULL;
+	}
+	/* Stop and delete the client-wait-timeout timer */
+	if(mstate->s.client_wait_data && mstate->s.client_wait_data->timer) {
+		comm_timer_delete(mstate->s.client_wait_data->timer);
+		mstate->s.client_wait_data->timer = NULL;
 	}
 	/* drop unsent replies */
 	if(!mstate->replies_sent) {
@@ -1777,6 +1852,11 @@ void mesh_query_done(struct mesh_state* mstate)
 		comm_timer_delete(mstate->s.serve_expired_data->timer);
 		mstate->s.serve_expired_data->timer = NULL;
 	}
+	/* No need for the client-wait-timeout timer anymore either. */
+	if(mstate->s.client_wait_data && mstate->s.client_wait_data->timer) {
+		comm_timer_delete(mstate->s.client_wait_data->timer);
+		mstate->s.client_wait_data->timer = NULL;
+	}
 	if(mstate->s.return_rcode == LDNS_RCODE_SERVFAIL ||
 		(rep && FLAGS_GET_RCODE(rep->flags) == LDNS_RCODE_SERVFAIL)) {
 		if(mstate->s.env->cfg->serve_expired) {
@@ -1931,6 +2011,132 @@ void mesh_query_done(struct mesh_state* mstate)
 	}
 }
 
+/** EDE text sent to clients that exceeded the client-wait-timeout. */
+static const char* CLIENT_WAIT_TIMEOUT_EDE_TEXT = "client wait timeout exceeded";
+
+void
+mesh_client_wait_callback(void* arg)
+{
+	struct mesh_state* mstate = (struct mesh_state*)arg;
+	struct module_qstate* qstate = &mstate->s;
+	struct mesh_area* mesh = qstate->env->mesh;
+	struct timeval now = *qstate->env->now_tv;
+	int deadline_ms = qstate->env->cfg->client_wait_timeout;
+	struct timeval next_fire, tv = {0, 0};
+	int have_next = 0;
+	int was_reply_state;
+	struct mesh_reply** prev;
+	struct mesh_reply* r;
+	struct mesh_cb** cprev;
+	struct mesh_cb* c;
+
+	if(!qstate->client_wait_data || !qstate->client_wait_data->timer)
+		return;
+	was_reply_state = (mstate->reply_list != NULL ||
+		mstate->cb_list != NULL);
+
+	/* reply_list: SERVFAIL+EDE22 each aged reply; track the earliest of the
+	 * remaining ones for rescheduling. Route through mesh_send_reply so the
+	 * reply_list=NULL re-entrancy guard, num_reply_addrs--, and
+	 * infra_wait_limit_dec happen exactly as on every other reply path. */
+	prev = &mstate->reply_list;
+	r = mstate->reply_list;
+	while(r) {
+		if(age_ms(&now, &r->start_time) >= deadline_ms) {
+			struct mesh_reply* next = r->next;
+			struct sldns_buffer* r_buffer = r->query_reply.c->buffer;
+			if(r->query_reply.c->tcp_req_info)
+				r_buffer = r->query_reply.c->tcp_req_info->spool_buffer;
+			/* EDE 22, gated on the global ede: switch; pre-appended so
+			 * mesh_send_reply's error_encode emits it. */
+			if(qstate->env->cfg->ede && r->edns.edns_present)
+				edns_opt_list_append_ede(&r->edns.opt_list_out,
+					qstate->region,
+					LDNS_EDE_NO_REACHABLE_AUTHORITY,
+					CLIENT_WAIT_TIMEOUT_EDE_TEXT);
+			if(verbosity >= VERB_ALGO) {
+				char addr_str[128];
+				addr_to_str(&r->query_reply.client_addr,
+					r->query_reply.client_addrlen,
+					addr_str, sizeof(addr_str));
+				verbose(VERB_ALGO, "client-wait-timeout: "
+					"SERVFAIL+EDE 22 to %s after %d ms",
+					addr_str, deadline_ms);
+			}
+			/* unlink before send; nodes are region-allocated so `next`
+			 * stays valid, and mesh_send_reply NULLs reply_list during
+			 * comm_point_send_reply to block re-entrant cleanup. */
+			*prev = next;
+			mesh_send_reply(mstate, LDNS_RCODE_SERVFAIL, NULL, r,
+				r_buffer, NULL, NULL);
+			if(r->query_reply.c->tcp_req_info)
+				tcp_req_info_remove_mesh_state(
+					r->query_reply.c->tcp_req_info, mstate);
+			mesh->num_queries_client_wait_timeout++;
+			r = next;
+		} else {
+			struct timeval d;
+			client_wait_deadline(&d, &r->start_time, deadline_ms);
+			if(!have_next || timeval_smaller(&d, &next_fire)) {
+				next_fire = d;
+				have_next = 1;
+			}
+			prev = &r->next;
+			r = r->next;
+		}
+	}
+
+	/* cb_list (libunbound): plain SERVFAIL, no EDE (intentional asymmetry). */
+	cprev = &mstate->cb_list;
+	c = mstate->cb_list;
+	while(c) {
+		if(age_ms(&now, &c->start_time) >= deadline_ms) {
+			struct mesh_cb* next = c->next;
+			*cprev = next;
+			mesh_do_callback(mstate, LDNS_RCODE_SERVFAIL, NULL, c,
+				&tv);
+			mesh->num_queries_client_wait_timeout++;
+			c = next;
+		} else {
+			struct timeval d;
+			client_wait_deadline(&d, &c->start_time, deadline_ms);
+			if(!have_next || timeval_smaller(&d, &next_fire)) {
+				next_fire = d;
+				have_next = 1;
+			}
+			cprev = &c->next;
+			c = c->next;
+		}
+	}
+
+	/* Per-state accounting: a state stops being a reply state only when it
+	 * has no more waiting replies/cbs. Mirrors mesh_query_done's transition;
+	 * decrement at most once. */
+	if(was_reply_state && !mstate->reply_list && !mstate->cb_list) {
+		log_assert(mesh->num_reply_states > 0);
+		mesh->num_reply_states--;
+		if(mstate->super_set.count == 0)
+			mesh->num_detached_states++;
+	}
+
+	/* Reschedule to the earliest remaining deadline, or delete the timer so
+	 * a later client re-arms it (serve-expired delete-in-callback pattern).
+	 * The state is kept alive for background resolution / cache warming. */
+	if(have_next) {
+		struct timeval delta;
+		if(timeval_smaller(&now, &next_fire))
+			timeval_subtract(&delta, &next_fire, &now);
+		else {
+			delta.tv_sec = 0;
+			delta.tv_usec = 1;
+		}
+		comm_timer_set(qstate->client_wait_data->timer, &delta);
+	} else {
+		comm_timer_delete(qstate->client_wait_data->timer);
+		qstate->client_wait_data->timer = NULL;
+	}
+}
+
 void mesh_walk_supers(struct mesh_area* mesh, struct mesh_state* mstate)
 {
 	struct mesh_state_ref* ref;
@@ -2013,6 +2219,7 @@ int mesh_state_add_cb(struct mesh_state* s, struct edns_data* edns,
 		return 0;
 	r->qid = qid;
 	r->qflags = qflags;
+	r->start_time = *s->s.env->now_tv;
 	r->next = s->cb_list;
 	s->cb_list = r;
 	*result = r;
