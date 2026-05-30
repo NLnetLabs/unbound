@@ -319,6 +319,7 @@ config_create(void)
 	cfg->rrset_roundrobin = 1;
 	cfg->unknown_server_time_limit = 376;
 	cfg->discard_timeout = 1900; /* msec */
+	cfg->client_wait_timeout = 0;
 	cfg->wait_limit = 1000;
 	cfg->wait_limit_cookie = 10000;
 	cfg->wait_limit_netblock = NULL;
@@ -797,6 +798,7 @@ int config_set_option(struct config_file* cfg, const char* opt,
 	else S_YNO("rrset-roundrobin:", rrset_roundrobin)
 	else S_NUMBER_OR_ZERO("unknown-server-time-limit:", unknown_server_time_limit)
 	else S_NUMBER_OR_ZERO("discard-timeout:", discard_timeout)
+	else S_NUMBER_OR_ZERO("client-wait-timeout:", client_wait_timeout)
 	else S_NUMBER_OR_ZERO("wait-limit:", wait_limit)
 	else S_NUMBER_OR_ZERO("wait-limit-cookie:", wait_limit_cookie)
 	else S_STRLIST("local-data:", local_data)
@@ -1296,6 +1298,7 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_YNO(opt, "rrset-roundrobin", rrset_roundrobin)
 	else O_DEC(opt, "unknown-server-time-limit", unknown_server_time_limit)
 	else O_DEC(opt, "discard-timeout", discard_timeout)
+	else O_DEC(opt, "client-wait-timeout", client_wait_timeout)
 	else O_DEC(opt, "wait-limit", wait_limit)
 	else O_DEC(opt, "wait-limit-cookie", wait_limit_cookie)
 	else O_LS2(opt, "wait-limit-netblock", wait_limit_netblock)
