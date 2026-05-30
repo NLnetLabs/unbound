@@ -629,6 +629,14 @@ struct serve_expired_data {
 };
 
 /**
+ * Struct to hold relevant data for client wait timeout
+ */
+struct client_wait_data {
+	/** libevent timer firing at the next client's deadline */
+	struct comm_timer* timer;
+};
+
+/**
  * Module state, per query.
  */
 struct module_qstate {
@@ -676,6 +684,8 @@ struct module_qstate {
 	time_t prefetch_leeway;
 	/** serve expired data */
 	struct serve_expired_data* serve_expired_data;
+	/** client wait timeout data */
+	struct client_wait_data* client_wait_data;
 
 	/** incoming edns options from the front end */
 	struct edns_option* edns_opts_front_in;
