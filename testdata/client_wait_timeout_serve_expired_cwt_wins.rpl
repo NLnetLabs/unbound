@@ -1,0 +1,71 @@
+; config options
+server:
+	module-config: "iterator"
+	qname-minimisation: "no"
+	minimal-responses: no
+	serve-expired: yes
+	serve-expired-client-timeout: 10000
+	client-wait-timeout: 1
+	ede: yes
+
+stub-zone:
+	name: "example.com"
+	stub-addr: 1.2.3.4
+CONFIG_END
+
+SCENARIO_BEGIN Test client-wait-timeout wins over serve-expired when cache empty
+
+; serve-expired-client-timeout (10s) > client-wait-timeout (1ms), and the cache
+; is empty, so serve-expired has nothing stale to serve. The client-wait timer
+; fires first and returns SERVFAIL+EDE22.
+
+; The stub answers NS referrals but never the A query, keeping the upstream A
+; query outstanding until the client-wait timer fires.
+RANGE_BEGIN 0 100
+	ADDRESS 1.2.3.4
+	ENTRY_BEGIN
+		MATCH opcode qtype qname
+		ADJUST copy_id
+		REPLY QR NOERROR
+		SECTION QUESTION
+			example.com. IN NS
+		SECTION ANSWER
+			example.com. IN NS ns.example.com.
+		SECTION ADDITIONAL
+			ns.example.com. IN A 1.2.3.4
+	ENTRY_END
+RANGE_END
+
+STEP 1 QUERY
+ENTRY_BEGIN
+	REPLY RD DO
+	SECTION QUESTION
+		example.com. IN A
+ENTRY_END
+
+; Advance time by 1 second (>> 1 ms client-wait timeout) to fire the timer.
+; serve-expired (10s) is far away and there is nothing stale to serve anyway.
+STEP 10 TIME_PASSES ELAPSE 1
+
+; The client should receive SERVFAIL with EDE 22 (No Reachable Authority)
+STEP 20 CHECK_ANSWER
+ENTRY_BEGIN
+	MATCH all ede=22
+	REPLY QR RD RA DO SERVFAIL
+	SECTION QUESTION
+		example.com. IN A
+ENTRY_END
+
+; Reply to the outstanding upstream A query so the scenario ends cleanly
+STEP 30 REPLY
+ENTRY_BEGIN
+	MATCH opcode qtype qname
+	ADJUST copy_id
+	REPLY QR AA NOERROR
+	SECTION QUESTION
+		example.com. IN A
+	SECTION ANSWER
+		example.com. 3600 IN A 1.2.3.4
+ENTRY_END
+
+SCENARIO_END

@@ -1,0 +1,134 @@
+; config options
+server:
+	module-config: "validator iterator"
+	qname-minimisation: "no"
+	minimal-responses: no
+	iter-scrub-promiscuous: no
+	serve-expired: yes
+	serve-expired-client-timeout: 1
+	serve-expired-reply-ttl: 30
+	ede: yes
+	ede-serve-expired: yes
+	client-wait-timeout: 10000
+
+stub-zone:
+	name: "example.com"
+	stub-addr: 1.2.3.4
+CONFIG_END
+
+SCENARIO_BEGIN Test serve-expired stale answer wins over client-wait-timeout
+
+; serve-expired-client-timeout (1ms) < client-wait-timeout (10s). A STALE cache
+; entry exists, so serve-expired fires first, detaches the reply, and returns the
+; stale record (NOERROR, TTL 30). The client-wait timer (10s) later finds nothing
+; to SERVFAIL. The client must NOT get SERVFAIL+EDE22.
+
+; ns.example.com.
+RANGE_BEGIN 0 100
+	ADDRESS 1.2.3.4
+	ENTRY_BEGIN
+		MATCH opcode qtype qname
+		ADJUST copy_id
+		REPLY QR NOERROR
+		SECTION QUESTION
+			example.com. IN NS
+		SECTION ANSWER
+			example.com. IN NS ns.example.com.
+		SECTION ADDITIONAL
+			ns.example.com. IN A 1.2.3.4
+	ENTRY_END
+RANGE_END
+
+; Answer the A query only during the priming window (range 0-20). After the TTL
+; expires and we re-query, the upstream never answers the A query, so the only
+; way to answer the client is the stale cache entry via serve-expired.
+RANGE_BEGIN 0 20
+	ADDRESS 1.2.3.4
+	; response to A query
+	ENTRY_BEGIN
+		MATCH opcode qtype qname
+		ADJUST copy_id
+		REPLY QR NOERROR
+		SECTION QUESTION
+			example.com. IN A
+		SECTION ANSWER
+			example.com. 200 IN A 5.6.7.8
+		SECTION AUTHORITY
+			example.com. IN NS ns.example.com.
+		SECTION ADDITIONAL
+			ns.example.com. IN A 1.2.3.4
+	ENTRY_END
+RANGE_END
+
+; Prime the cache: query with RD flag
+STEP 1 QUERY
+ENTRY_BEGIN
+	REPLY RD
+	SECTION QUESTION
+		example.com. IN A
+ENTRY_END
+
+; Check that we got the correct answer (now cached)
+STEP 10 CHECK_ANSWER
+ENTRY_BEGIN
+	MATCH all ttl
+	REPLY QR RD RA NOERROR
+	SECTION QUESTION
+		example.com. IN A
+	SECTION ANSWER
+		example.com. 200 IN A 5.6.7.8
+	SECTION AUTHORITY
+		example.com. IN NS ns.example.com.
+	SECTION ADDITIONAL
+		ns.example.com. IN A 1.2.3.4
+ENTRY_END
+
+; Wait for the TTL to expire so the cache entry becomes stale
+STEP 11 TIME_PASSES ELAPSE 3600
+
+; Query again. Upstream no longer answers the A query (range 0-20 is closed),
+; so serve-expired must serve the stale entry.
+STEP 30 QUERY
+ENTRY_BEGIN
+	REPLY RD DO
+	SECTION QUESTION
+		example.com. IN A
+ENTRY_END
+
+; Allow the serve-expired client timer (1ms) to expire. This is far below the
+; 10s client-wait-timeout, so serve-expired answers first.
+STEP 31 TIME_PASSES ELAPSE 1
+
+; Check that we got the STALE answer (NOERROR, reply-ttl 30) and NOT a SERVFAIL.
+; ede=3 (Stale Answer) is present; ede=22 must NOT be.
+STEP 40 CHECK_ANSWER
+ENTRY_BEGIN
+	MATCH all ttl ede=3
+	REPLY QR RD RA DO NOERROR
+	SECTION QUESTION
+		example.com. IN A
+	SECTION ANSWER
+		example.com.  30 IN A 5.6.7.8
+	SECTION AUTHORITY
+		example.com. 30 IN NS ns.example.com.
+	SECTION ADDITIONAL
+		ns.example.com. 30 IN A 1.2.3.4
+ENTRY_END
+
+; Reply to the outstanding query so the test doesn't fail with pending messages.
+STEP 41 REPLY
+ENTRY_BEGIN
+	MATCH opcode qtype qname
+	ADJUST copy_id
+	REPLY QR AA RD RA NOERROR
+	SECTION QUESTION
+		example.com. IN A
+	SECTION ANSWER
+		example.com.  3600 IN A 5.6.7.8
+	SECTION AUTHORITY
+		example.com. 3600 IN NS ns.example.com.
+	SECTION ADDITIONAL
+		ns.example.com. 3600 IN A 1.2.3.4
+ENTRY_END
+
+SCENARIO_END
