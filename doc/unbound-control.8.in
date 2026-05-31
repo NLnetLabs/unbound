@@ -877,17 +877,17 @@ number of queries with an invalid DNS Cookie by thread
 .UNINDENT
 .INDENT 0.0
 .TP
-.B threadX.num.queries_discard_timeout
+.B threadX.num.queries_discard_timeout 
 number of queries removed due to discard\-timeout by thread
 .UNINDENT
 .INDENT 0.0
 .TP
-.B threadX.num.queries_client_wait_timeout
+.B threadX.num.queries_client_wait_timeout 
 number of queries answered with SERVFAIL because the client\-wait\-timeout was exceeded by thread
 .UNINDENT
 .INDENT 0.0
 .TP
-.B threadX.num.queries_replyaddr_limit
+.B threadX.num.queries_replyaddr_limit 
 number of queries removed due to replyaddr limits by thread
 .UNINDENT
 .INDENT 0.0
@@ -1072,17 +1072,17 @@ summed over threads.
 .UNINDENT
 .INDENT 0.0
 .TP
-.B total.num.queries_discard_timeout
+.B total.num.queries_discard_timeout 
 summed over threads.
 .UNINDENT
 .INDENT 0.0
 .TP
-.B total.num.queries_client_wait_timeout
+.B total.num.queries_client_wait_timeout 
 summed over threads.
 .UNINDENT
 .INDENT 0.0
 .TP
-.B total.num.queries_replyaddr_limit
+.B total.num.queries_replyaddr_limit 
 summed over threads.
 .UNINDENT
 .INDENT 0.0

@@ -598,7 +598,7 @@ Default: 376
 .UNINDENT
 .INDENT 0.0
 .TP
-.B discard\-timeout: \fI<msec>\fP
+.B discard\-timeout: \fI<msec>\fP 
 The wait time in msec where recursion requests are dropped.
 This is to stop a large number of replies from accumulating.
 They receive no reply, the work item continues to recurse.
@@ -615,7 +615,7 @@ Default: 1900
 .UNINDENT
 .INDENT 0.0
 .TP
-.B client\-wait\-timeout: \fI<msec>\fP
+.B client\-wait\-timeout: \fI<msec>\fP 
 The wait time in msec before a client query that is still waiting for
 recursion is answered with SERVFAIL and Extended DNS Error code 22
 (No Reachable Authority).
