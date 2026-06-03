@@ -1313,7 +1313,7 @@ neg_nsec3_proof_ds(struct val_neg_zone* zone, uint8_t* qname, size_t qname_len,
 			!nsec3_has_type(ce_rrset, 0, LDNS_RR_TYPE_NS))
 			return NULL;
 		if(!(msg = dns_msg_create(qname, qname_len, 
-			LDNS_RR_TYPE_DS, zone->dclass, region, 1))) 
+			LDNS_RR_TYPE_DS, zone->dclass, region, 2))) /* ce + soa */
 			return NULL;
 		/* The cache response means recursion is available. */
 		msg->rep->flags |= BIT_RA;
