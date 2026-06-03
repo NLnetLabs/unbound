@@ -828,4 +828,7 @@ void auth_xfer_delete(struct auth_xfer* xfr);
  */
 void xfr_disown_tasks(struct auth_xfer* xfr, struct worker* worker);
 
+/** count number of open and closed parenthesis in a chunkline */
+int chunkline_count_parens(struct sldns_buffer* buf, size_t start);
+
 #endif /* SERVICES_AUTHZONE_H */

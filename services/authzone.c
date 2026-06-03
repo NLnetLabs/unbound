@@ -4462,29 +4462,31 @@ chunkline_get_line(struct auth_chunk** chunk, size_t* chunk_pos,
 }
 
 /** count number of open and closed parenthesis in a chunkline */
-static int
+int
 chunkline_count_parens(sldns_buffer* buf, size_t start)
 {
 	size_t end = sldns_buffer_position(buf);
 	size_t i;
 	int count = 0;
-	int squote = 0, dquote = 0;
+	int dquote = 0;
+	char prev_c = 0;
 	for(i=start; i<end; i++) {
 		char c = (char)sldns_buffer_read_u8_at(buf, i);
-		if(squote && c != '\'') continue;
-		if(dquote && c != '"') continue;
-		if(c == '"')
+		if(dquote && !(c == '"' && prev_c != '\\')) {
+			prev_c = (prev_c == '\\' && c == '\\') ? 0 : c;
+			continue;
+		}
+		if(c == '"' && prev_c != '\\')
 			dquote = !dquote; /* skip quoted part */
-		else if(c == '\'')
-			squote = !squote; /* skip quoted part */
-		else if(c == '(')
+		else if(c == '(' && prev_c != '\\')
 			count ++;
-		else if(c == ')')
+		else if(c == ')' && prev_c != '\\')
 			count --;
-		else if(c == ';') {
+		else if(c == ';' && prev_c != '\\') {
 			/* rest is a comment */
 			return count;
 		}
+		prev_c = (prev_c == '\\' && c == '\\') ? 0 : c;
 	}
 	return count;
 }
@@ -4495,20 +4497,22 @@ chunkline_remove_trailcomment(sldns_buffer* buf, size_t start)
 {
 	size_t end = sldns_buffer_position(buf);
 	size_t i;
-	int squote = 0, dquote = 0;
+	int dquote = 0;
+	char prev_c = 0;
 	for(i=start; i<end; i++) {
 		char c = (char)sldns_buffer_read_u8_at(buf, i);
-		if(squote && c != '\'') continue;
-		if(dquote && c != '"') continue;
-		if(c == '"')
+		if(dquote && !(c == '"' && prev_c != '\\')) {
+			prev_c = (prev_c == '\\' && c == '\\') ? 0 : c;
+			continue;
+		}
+		if(c == '"' && prev_c != '\\')
 			dquote = !dquote; /* skip quoted part */
-		else if(c == '\'')
-			squote = !squote; /* skip quoted part */
-		else if(c == ';') {
+		else if(c == ';' && prev_c != '\\') {
 			/* rest is a comment */
 			sldns_buffer_set_position(buf, i);
 			return;
 		}
+		prev_c = (prev_c == '\\' && c == '\\') ? 0 : c;
 	}
 	/* nothing to remove */
 }

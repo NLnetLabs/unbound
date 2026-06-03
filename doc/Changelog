@@ -11,6 +11,9 @@
 	  Polytechnical University, for the report.
 	- Fix parse of svcbparam ech, it had incorrect length. Thanks
 	  to Qifan Zhang, Palo Alto Networks for the report.
+	- Fix that quotation and escaping works the same in auth-zone
+	  url content, as in the zonefile read. Thanks to Qifan Zhang,
+	  Palo Alto Networks for the report.
 
 3 June 2026: Yorgos
 	- Fix const as reported by newest compiler warnings.
