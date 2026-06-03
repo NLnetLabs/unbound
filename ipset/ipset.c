@@ -219,15 +219,15 @@ ipset_check_zones_for_rrset(struct module_env *env, struct ipset_env *ie,
 	struct ub_packed_rrset_key *rrset, const char *qname, int qlen,
 	const char *setname, int af)
 {
-	char dname[BUFF_LEN];
+	char dname[LDNS_MAX_DOMAINLEN*4+16];
 	const char *ds, *qs;
 	int dlen, plen;
 
 	struct config_strlist *p;
 	struct packed_rrset_data *d;
 
-	dlen = sldns_wire2str_dname_buf(rrset->rk.dname, rrset->rk.dname_len, dname, BUFF_LEN);
-	if (dlen == 0) {
+	dlen = sldns_wire2str_dname_buf(rrset->rk.dname, rrset->rk.dname_len, dname, sizeof(dname));
+	if (dlen == 0 || dlen >= (int)sizeof(dname)) {
 		log_err("bad domain name");
 		return -1;
 	}
@@ -269,7 +269,7 @@ static int ipset_update(struct module_env *env, struct dns_msg *return_msg,
 	const char *setname;
 	struct ub_packed_rrset_key *rrset;
 	int af;
-	char qname[BUFF_LEN];
+	char qname[LDNS_MAX_DOMAINLEN*4+16];
 	int qlen;
 
 #ifdef HAVE_NET_PFVAR_H
@@ -285,8 +285,8 @@ static int ipset_update(struct module_env *env, struct dns_msg *return_msg,
 #endif
 
 	qlen = sldns_wire2str_dname_buf(qinfo.qname, qinfo.qname_len,
-		qname, BUFF_LEN);
-	if(qlen == 0) {
+		qname, sizeof(qname));
+	if(qlen == 0 || qlen >= (int)sizeof(qname)) {
 		log_err("bad domain name");
 		return -1;
 	}
