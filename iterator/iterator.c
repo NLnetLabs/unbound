@@ -3990,7 +3990,7 @@ processClassResponse(struct module_qstate* qstate, int id,
 		/* if there are records, copy RCODE */
 		/* lower sec_state if this message is lower */
 		if(from->rep->rrset_count != 0) {
-			size_t n = from->rep->rrset_count+to->rep->rrset_count;
+			size_t i, n = from->rep->rrset_count+to->rep->rrset_count;
 			struct ub_packed_rrset_key** dest, **d;
 			/* copy appropriate rcode */
 			to->rep->flags = from->rep->flags;
@@ -4012,24 +4012,49 @@ processClassResponse(struct module_qstate* qstate, int id,
 			memcpy(dest, to->rep->rrsets, to->rep->an_numrrsets
 				* sizeof(dest[0]));
 			dest += to->rep->an_numrrsets;
-			memcpy(dest, from->rep->rrsets, from->rep->an_numrrsets
-				* sizeof(dest[0]));
+			for(i=0; i<from->rep->an_numrrsets; i++) {
+				dest[i] = packed_rrset_copy_region(
+					from->rep->rrsets[i], forq->region, 0);
+				if(!dest[i]) {
+					log_err("malloc failed in collect ANY");
+					foriq->state = FINISHED_STATE;
+					return;
+				}
+			}
 			dest += from->rep->an_numrrsets;
 			/* copy NS */
 			memcpy(dest, to->rep->rrsets+to->rep->an_numrrsets,
 				to->rep->ns_numrrsets * sizeof(dest[0]));
 			dest += to->rep->ns_numrrsets;
-			memcpy(dest, from->rep->rrsets+from->rep->an_numrrsets,
-				from->rep->ns_numrrsets * sizeof(dest[0]));
+			for(i=0; i<from->rep->ns_numrrsets; i++) {
+				dest[i] = packed_rrset_copy_region(
+					from->rep->rrsets[
+					from->rep->an_numrrsets+i],
+					forq->region, 0);
+				if(!dest[i]) {
+					log_err("malloc failed in collect ANY");
+					foriq->state = FINISHED_STATE;
+					return;
+				}
+			}
 			dest += from->rep->ns_numrrsets;
 			/* copy AR */
 			memcpy(dest, to->rep->rrsets+to->rep->an_numrrsets+
 				to->rep->ns_numrrsets,
 				to->rep->ar_numrrsets * sizeof(dest[0]));
 			dest += to->rep->ar_numrrsets;
-			memcpy(dest, from->rep->rrsets+from->rep->an_numrrsets+
-				from->rep->ns_numrrsets,
-				from->rep->ar_numrrsets * sizeof(dest[0]));
+			for(i=0; i<from->rep->ar_numrrsets; i++) {
+				dest[i] = packed_rrset_copy_region(
+					from->rep->rrsets[
+					from->rep->an_numrrsets+
+					from->rep->ns_numrrsets+i],
+					forq->region, 0);
+				if(!dest[i]) {
+					log_err("malloc failed in collect ANY");
+					foriq->state = FINISHED_STATE;
+					return;
+				}
+			}
 			/* update counts */
 			to->rep->rrsets = d;
 			to->rep->an_numrrsets += from->rep->an_numrrsets;

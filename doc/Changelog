@@ -1,3 +1,12 @@
+3 June 2026: Wouter
+	- Fix that the processing of class responses does not have
+	  a heap use-after-free. That could happen if at least two
+	  distinct classes are configured for resolution. Thanks
+	  to Qifan Zhang, Palo Alto Networks for the report.
+	  In addition, thanks to Xin Wang, Jiapeng Li, and Jiajia
+	  Liu, Northwestern Polytechnical University, for also
+	  reporting this.
+
 29 May 2026: Wouter
 	- Fix header_seen detection for trust anchor files, so that it
 	  detects the id line.
