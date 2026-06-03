@@ -5549,8 +5549,30 @@ auth_zones_check_changes(struct fast_reload_thread* fr,
 				&old_serial)!=0);
 			have_new = (auth_zone_get_serial(new_z,
 				&new_serial)!=0);
+			/* A change in primaries, also means it is different
+			 * and the change makes it fire new transfers, from
+			 * the new primaries. */
+			/* Treat as changed when the old zone has an
+			 * outstanding ZONEMD DS/DNSKEY mesh callback.
+			 * This will make the worker pickup change code
+			 * remove the mesh callback, before the old zone is
+			 * deleted. Also it makes a new zonemd lookup.
+			 * The new lookup is needed, because the new zone
+			 * entry needs to have a valid zonemd result,
+			 * and if that is bad, needs to be invalidated.
+			 * Also if there is a race event where the
+			 * outstanding callback makes the zone invalid,
+			 * before fast-reload completes, the change makes
+			 * the new zone entry have a new zonemd lookup,
+			 * to then invalidate that new zone.
+			 * There is also a brief operational window at
+			 * program start when a zonemd has to be looked
+			 * up on-line, where the zone is operational.
+			 * And this copies that for such a race event.
+			 */
 			if(have_old != have_new || old_serial != new_serial
-				|| !xfr_masters_equal(old_xfr, new_xfr)) {
+				|| !xfr_masters_equal(old_xfr, new_xfr)
+				|| old_z->zonemd_callback_env != NULL) {
 				/* The zone has been changed. */
 				if(!fr_add_auth_zone_change(fr, old_z, new_z,
 					0, 0, 1)) {
