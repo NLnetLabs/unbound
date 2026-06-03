@@ -1410,6 +1410,7 @@ sldns_str2wire_svcbparam_ech_value(const char* val, uint8_t* rd, size_t* rd_len)
 			return LDNS_WIREPARSE_ERR_BUFFER_TOO_SMALL;
 		sldns_write_uint16(rd, SVCB_KEY_ECH);
 		sldns_write_uint16(rd + 2, 0);
+		*rd_len = 4;
 
 		return LDNS_WIREPARSE_ERR_OK;
 	}
