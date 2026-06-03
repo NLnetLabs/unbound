@@ -242,7 +242,7 @@ int
 extstrtoaddr(const char* str, struct sockaddr_storage* addr,
 	socklen_t* addrlen, int port)
 {
-	char* s;
+	const char* s;
 	if((s=strchr(str, '@'))) {
 		char buf[MAX_ADDR_STRLEN];
 		if(s-str >= MAX_ADDR_STRLEN) {
@@ -268,7 +268,7 @@ ipstrtoaddr(const char* ip, int port, struct sockaddr_storage* addr,
 	p = (uint16_t) port;
 	if(str_is_ip6(ip)) {
 		char buf[MAX_ADDR_STRLEN];
-		char* s;
+		const char* s;
 		struct sockaddr_in6* sa = (struct sockaddr_in6*)addr;
 		*addrlen = (socklen_t)sizeof(struct sockaddr_in6);
 		memset(sa, 0, *addrlen);
@@ -304,8 +304,9 @@ ipstrtoaddr(const char* ip, int port, struct sockaddr_storage* addr,
 int netblockstrtoaddr(const char* str, int port, struct sockaddr_storage* addr,
         socklen_t* addrlen, int* net)
 {
+	const char* s;
 	char buf[64];
-	char* s;
+	char* b = NULL;
 	*net = (str_is_ip6(str)?128:32);
 	if((s=strchr(str, '/'))) {
 		if(atoi(s+1) > *net) {
@@ -323,15 +324,15 @@ int netblockstrtoaddr(const char* str, int port, struct sockaddr_storage* addr,
 			return 0;
 		}
 		strlcpy(buf, str, sizeof(buf));
-		s = strchr(buf, '/');
-		if(s) *s = 0;
-		s = buf;
+		b = strchr(buf, '/');
+		if(b) *b = 0;
+		b = buf;
 	}
-	if(!ipstrtoaddr(s?s:str, port, addr, addrlen)) {
+	if(!ipstrtoaddr(b?b:str, port, addr, addrlen)) {
 		log_err("cannot parse ip address: '%s'", str);
 		return 0;
 	}
-	if(s) {
+	if(b) {
 		addr_mask(addr, *addrlen, *net);
 	}
 	return 1;

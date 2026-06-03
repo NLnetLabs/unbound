@@ -1944,7 +1944,7 @@ extract_port_from_str(const char* str, int max_port) {
 int
 cfg_mark_ports(const char* str, int allow, int* avail, int num)
 {
-	char* mid = strchr(str, '-');
+	const char* mid = strchr(str, '-');
 #ifdef DISABLE_EXPLICIT_PORT_RANDOMISATION
 	log_warn("Explicit port randomisation disabled, ignoring "
 		"outgoing-port-permit and outgoing-port-avoid configuration "
@@ -2647,10 +2647,10 @@ fname_after_chroot(const char* fname, struct config_file* cfg, int use_chdir)
 }
 
 /** return next space character in string */
-static char* next_space_pos(const char* str)
+static const char* next_space_pos(const char* str)
 {
-	char* sp = strchr(str, ' ');
-	char* tab = strchr(str, '\t');
+	const char* sp = strchr(str, ' ');
+	const char* tab = strchr(str, '\t');
 	if(!tab && !sp)
 		return NULL;
 	if(!sp) return tab;
@@ -2659,10 +2659,10 @@ static char* next_space_pos(const char* str)
 }
 
 /** return last space character in string */
-static char* last_space_pos(const char* str)
+static const char* last_space_pos(const char* str)
 {
-	char* sp = strrchr(str, ' ');
-	char* tab = strrchr(str, '\t');
+	const char* sp = strrchr(str, ' ');
+	const char* tab = strrchr(str, '\t');
 	if(!tab && !sp)
 		return NULL;
 	if(!sp) return tab;
@@ -2720,8 +2720,8 @@ cfg_parse_local_zone(struct config_file* cfg, const char* val)
 
 char* cfg_ptr_reverse(char* str)
 {
-	char* ip, *ip_end;
-	char* name;
+	const char* ip, *ip_end;
+	const char* name;
 	char* result;
 	char buf[1024];
 	struct sockaddr_storage addr;
@@ -2872,7 +2872,7 @@ if_listens_on(const char* ifname, int default_port, int port,
 	struct config_strlist* additional_ports)
 {
 	struct config_strlist* s;
-	char* p = strchr(ifname, '@');
+	const char* p = strchr(ifname, '@');
 	int if_port;
 	if(p) if_port = atoi(p+1);
 	else  if_port = default_port;

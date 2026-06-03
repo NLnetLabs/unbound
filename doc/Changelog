@@ -10,6 +10,9 @@
 	  Thanks to Xin Wang, Jiapeng Li, and Jiajia Liu, Northwestern
 	  Polytechnical University, for the report.
 
+3 June 2026: Yorgos
+	- Fix const as reported by newest compiler warnings.
+
 29 May 2026: Wouter
 	- Fix header_seen detection for trust anchor files, so that it
 	  detects the id line.

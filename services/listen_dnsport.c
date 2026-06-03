@@ -1126,7 +1126,7 @@ make_sock_port(int stype, const char* ifname, int port,
 	int use_systemd, int dscp, struct unbound_socket* ub_sock,
 	const char* additional)
 {
-	char* s = strchr(ifname, '@');
+	const char* s = strchr(ifname, '@');
 	if(s) {
 		/* override port with ifspec@port */
 		int port;

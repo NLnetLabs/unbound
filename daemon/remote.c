@@ -307,7 +307,7 @@ add_open(const char* ip, int nr, struct listen_port** list, int noproto_is_err,
 #endif
 		}
 	} else {
-		char* s = strchr(ip, '@');
+		const char* s = strchr(ip, '@');
 		char newif[128];
 		if(s) {
 			/* override port with ifspec@port */

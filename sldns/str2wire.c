@@ -1201,7 +1201,7 @@ sldns_str2wire_svcbparam_ipv4hint(const char* val, uint8_t* rd, size_t* rd_len)
 {
 	size_t count;
 	char ip_str[INET_ADDRSTRLEN+1];
-	char *next_ip_str;
+	const char *next_ip_str;
 	size_t i;
 
 	for (i = 0, count = 1; val[i]; i++) {
@@ -1256,7 +1256,7 @@ sldns_str2wire_svcbparam_ipv6hint(const char* val, uint8_t* rd, size_t* rd_len)
 {
 	size_t count;
 	char ip_str[INET6_ADDRSTRLEN+1];
-	char *next_ip_str;
+	const char *next_ip_str;
 	size_t i;
 
 	for (i = 0, count = 1; val[i]; i++) {
@@ -1317,7 +1317,7 @@ static int
 sldns_str2wire_svcbparam_mandatory(const char* val, uint8_t* rd, size_t* rd_len)
 {
 	size_t i, count, val_len;
-	char* next_key;
+	const char* next_key;
 
 	val_len = strlen(val);
 
