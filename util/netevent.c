@@ -951,6 +951,10 @@ static int consume_pp2_header(struct sldns_buffer* buf, struct comm_reply* rep,
 			{
 			struct sockaddr_in* addr =
 				(struct sockaddr_in*)&rep->client_addr;
+			if(ntohs(header->len) < PP2_HEADER_LEN_INET) {
+				verbose(VERB_OPS, "proxy_protocol: header too short for IPv4 address");
+				return 0;
+			}
 			addr->sin_family = AF_INET;
 			addr->sin_addr.s_addr = header->addr.addr4.src_addr;
 			addr->sin_port = header->addr.addr4.src_port;
@@ -963,6 +967,10 @@ static int consume_pp2_header(struct sldns_buffer* buf, struct comm_reply* rep,
 			{
 			struct sockaddr_in6* addr =
 				(struct sockaddr_in6*)&rep->client_addr;
+			if(ntohs(header->len) < PP2_HEADER_LEN_INET6) {
+				verbose(VERB_OPS, "proxy_protocol: header too short for IPv6 address");
+				return 0;
+			}
 			memset(addr, 0, sizeof(*addr));
 			addr->sin6_family = AF_INET6;
 			memcpy(&addr->sin6_addr,

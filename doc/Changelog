@@ -17,6 +17,9 @@
 	- Fix ipset module to use larger domain name buffers, and
 	  check buffer lengths. Thanks to Qifan Zhang, Palo Alto
 	  Networks for the report.
+	- Fix PROXYv2 header read and consume, it checks the header
+	  size. Thanks to Qifan Zhang, Palo Alto Networks for
+	  the report.
 
 3 June 2026: Yorgos
 	- Fix const as reported by newest compiler warnings.
