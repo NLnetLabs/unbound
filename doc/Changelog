@@ -28,6 +28,11 @@
 	- Fix that validation canonicalization of domain names
 	  in rdata checks for buffer bounds. Thanks to Qifan Zhang,
 	  Palo Alto Networks, for the report.
+	- Fix that dump_cache has a larger buffer for records,
+	  and it checks that an owner name does not collide with BADRR
+	  on the input, and changes verbosity on the log of failure in
+	  rrset to string.  Thanks to Qifan Zhang, Palo Alto Networks,
+	  for the report.
 
 3 June 2026: Yorgos
 	- Fix const as reported by newest compiler warnings.

@@ -296,7 +296,7 @@ int packed_rr_to_string(struct ub_packed_rrset_key* rrset, size_t i,
 	wlen = (size_t)sldns_wire2str_rr_buf(rr, rlen, dest, dest_len);
 	if(wlen >= dest_len) {
 		/* the output string was truncated */
-		log_info("rrbuf failure %d %s", (int)d->rr_len[i], dest);
+		verbose(VERB_ALGO, "rrbuf failure %d %s", (int)d->rr_len[i], dest);
 		dest[0] = 0;
 		return 0;
 	} 
