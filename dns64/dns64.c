@@ -832,6 +832,7 @@ dns64_adjust_a(int id, struct module_qstate* super, struct module_qstate* qstate
 	size_t i, s;
 	struct packed_rrset_data* fd, *dd;
 	struct ub_packed_rrset_key* fk, *dk;
+	int allocated_return_msg = 0;
 
 	verbose(VERB_ALGO, "converting A answers to AAAA answers");
 
@@ -847,6 +848,7 @@ dns64_adjust_a(int id, struct module_qstate* super, struct module_qstate* qstate
 			return;
 		memset(super->return_msg, 0, sizeof(*super->return_msg));
 		super->return_msg->qinfo = super->qinfo;
+		allocated_return_msg = 1;
 	}
 
 	rep = qstate->return_msg->rep;
@@ -859,11 +861,14 @@ dns64_adjust_a(int id, struct module_qstate* super, struct module_qstate* qstate
 		rep->serve_expired_norec_ttl,
 		rep->an_numrrsets, rep->ns_numrrsets, rep->ar_numrrsets,
 		rep->rrset_count, rep->security, LDNS_EDE_NONE);
-	if(!cp)
+	if(!cp) {
+		if(allocated_return_msg) super->return_msg = NULL;
 		return;
+	}
 
 	/* allocate ub_key structures special or not */
 	if(!reply_info_alloc_rrset_keys(cp, NULL, super->region)) {
+		if(allocated_return_msg) super->return_msg = NULL;
 		return;
 	}
 
@@ -878,8 +883,10 @@ dns64_adjust_a(int id, struct module_qstate* super, struct module_qstate* qstate
 		if(i<rep->an_numrrsets && fk->rk.type == htons(LDNS_RR_TYPE_A)) {
 			/* also sets dk->entry.hash */
 			dns64_synth_aaaa_data(fk, fd, dk, &dd, super->region, dns64_env);
-			if(!dd)
+			if(!dd) {
+				if(allocated_return_msg) super->return_msg = NULL;
 				return;
+			}
 			/* Delete negative AAAA record from cache stored by
 			 * the iterator module */
 			rrset_cache_remove(super->env->rrset_cache, dk->rk.dname, 
@@ -896,15 +903,19 @@ dns64_adjust_a(int id, struct module_qstate* super, struct module_qstate* qstate
 			dk->rk.dname = (uint8_t*)regional_alloc_init(super->region,
 				fk->rk.dname, fk->rk.dname_len);
 
-			if(!dk->rk.dname)
+			if(!dk->rk.dname) {
+				if(allocated_return_msg) super->return_msg = NULL;
 				return;
+			}
 
 			s = packed_rrset_sizeof(fd);
 			dd = (struct packed_rrset_data*)regional_alloc_init(
 				super->region, fd, s);
 
-			if(!dd)
+			if(!dd) {
+				if(allocated_return_msg) super->return_msg = NULL;
 				return;
+			}
 		}
 
 		packed_rrset_ptr_fixup(dd);
@@ -1015,7 +1026,8 @@ dns64_inform_super(struct module_qstate* qstate, int id,
 	}
 
 	/* Store the generated response in cache. */
-	if ( (!super_dq || !super_dq->started_no_cache_store) &&
+	if ( super->return_msg && super->return_msg->rep &&
+		(!super_dq || !super_dq->started_no_cache_store) &&
 		!super->is_subnet_answer &&
 		!dns_cache_store(super->env, &super->qinfo, super->return_msg->rep,
 		0, super->prefetch_leeway, 0, NULL, super->query_flags,

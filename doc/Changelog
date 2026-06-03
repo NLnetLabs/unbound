@@ -33,6 +33,11 @@
 	  on the input, and changes verbosity on the log of failure in
 	  rrset to string.  Thanks to Qifan Zhang, Palo Alto Networks,
 	  for the report.
+	- Fix that dns64 cleans up the allocated message if the adjust
+	  routines fail, and checks if there is a reply before cache
+	  store, also unbound checks if A and AAAA are malformed
+	  for auth-zones. Thanks to Qifan Zhang, Palo Alto Networks,
+	  for the report.
 
 3 June 2026: Yorgos
 	- Fix const as reported by newest compiler warnings.
