@@ -25,6 +25,9 @@
 	  for the report.
 	- Fix fast_reload for when a ZONEMD lookup is in progress.
 	  Thanks to Qifan Zhang, Palo Alto Networks, for the report.
+	- Fix that validation canonicalization of domain names
+	  in rdata checks for buffer bounds. Thanks to Qifan Zhang,
+	  Palo Alto Networks, for the report.
 
 3 June 2026: Yorgos
 	- Fix const as reported by newest compiler warnings.

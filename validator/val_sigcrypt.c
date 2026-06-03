@@ -1083,6 +1083,18 @@ insert_can_owner(sldns_buffer* buf, struct ub_packed_rrset_key* k,
 	}
 }
 
+/** lowercase a wire dname but never step past end */
+static void
+canon_dname_tolower(uint8_t* d, uint8_t* end)
+{
+	uint8_t lab;
+	while(d < end && (lab = *d) != 0) {
+		if((size_t)lab+1 > (size_t)(end-d)) return; /* malformed */
+		for(d++; lab; lab--, d++)
+			*d = (uint8_t)tolower((unsigned char)*d);
+	}
+}
+
 /**
  * Canonicalize Rdata in buffer.
  * @param buf: buffer at position just after the rdata.
@@ -1094,6 +1106,7 @@ canonicalize_rdata(sldns_buffer* buf, struct ub_packed_rrset_key* rrset,
 	size_t len)
 {
 	uint8_t* datstart = sldns_buffer_current(buf)-len+2;
+	uint8_t* datend = sldns_buffer_current(buf);
 	switch(ntohs(rrset->rk.type)) {
 		case LDNS_RR_TYPE_NXT: 
 		case LDNS_RR_TYPE_NS:
@@ -1106,15 +1119,15 @@ canonicalize_rdata(sldns_buffer* buf, struct ub_packed_rrset_key* rrset,
 		case LDNS_RR_TYPE_PTR:
 		case LDNS_RR_TYPE_DNAME:
 			/* type only has a single argument, the name */
-			query_dname_tolower(datstart);
+			canon_dname_tolower(datstart, datend);
 			return;
 		case LDNS_RR_TYPE_MINFO:
 		case LDNS_RR_TYPE_RP:
 		case LDNS_RR_TYPE_SOA:
 			/* two names after another */
-			query_dname_tolower(datstart);
-			query_dname_tolower(datstart + 
-				dname_valid(datstart, len-2));
+			canon_dname_tolower(datstart, datend);
+			canon_dname_tolower(datstart +
+				dname_valid(datstart, len-2), datend);
 			return;
 		case LDNS_RR_TYPE_RT:
 		case LDNS_RR_TYPE_AFSDB:
@@ -1124,7 +1137,7 @@ canonicalize_rdata(sldns_buffer* buf, struct ub_packed_rrset_key* rrset,
 			if(len < 2+2+1) /* rdlen, skiplen, 1byteroot */
 				return;
 			datstart += 2;
-			query_dname_tolower(datstart);
+			canon_dname_tolower(datstart, datend);
 			return;
 		case LDNS_RR_TYPE_SIG:
 		/* downcase the RRSIG, compat with BIND (kept it from SIG) */
@@ -1133,16 +1146,16 @@ canonicalize_rdata(sldns_buffer* buf, struct ub_packed_rrset_key* rrset,
 			if(len < 2+18+1)
 				return;
 			datstart += 18;
-			query_dname_tolower(datstart);
+			canon_dname_tolower(datstart, datend);
 			return;
 		case LDNS_RR_TYPE_PX:
 			/* skip, then two names after another */
 			if(len < 2+2+1) 
 				return;
 			datstart += 2;
-			query_dname_tolower(datstart);
-			query_dname_tolower(datstart + 
-				dname_valid(datstart, len-2-2));
+			canon_dname_tolower(datstart, datend);
+			canon_dname_tolower(datstart +
+				dname_valid(datstart, len-2-2), datend);
 			return;
 		case LDNS_RR_TYPE_NAPTR:
 			if(len < 2+4)
@@ -1163,14 +1176,14 @@ canonicalize_rdata(sldns_buffer* buf, struct ub_packed_rrset_key* rrset,
 			datstart += (size_t)datstart[0]+1;
 			if(len < 1)	/* check name is at least 1 byte*/
 				return;
-			query_dname_tolower(datstart);
+			canon_dname_tolower(datstart, datend);
 			return;
 		case LDNS_RR_TYPE_SRV:
 			/* skip fixed part */
 			if(len < 2+6+1)
 				return;
 			datstart += 6;
-			query_dname_tolower(datstart);
+			canon_dname_tolower(datstart, datend);
 			return;
 
 		/* do not canonicalize NSEC rdata name, compat with 
@@ -1294,7 +1307,8 @@ rrset_canonical(struct regional* region, sldns_buffer* buf,
 	sldns_buffer_clear(buf);
 	sldns_buffer_write(buf, sig, siglen);
 	/* canonicalize signer name */
-	query_dname_tolower(sldns_buffer_begin(buf)+18); 
+	canon_dname_tolower(sldns_buffer_begin(buf)+18,
+		sldns_buffer_current(buf));
 	RBTREE_FOR(walk, struct canon_rr*, (*sortree)) {
 		/* see if there is enough space left in the buffer */
 		if(sldns_buffer_remaining(buf) < can_owner_len + 2 + 2 + 4
