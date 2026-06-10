@@ -1,5 +1,6 @@
 10 June 2026: Wouter
 	- Fix pythonmod script read for numeric overflow.
+	- Fix warnings with gcc in compat/inet_pton.c.
 
 9 June 2026: Wouter
 	- Fix unit test for ecs to check for malloc success.
