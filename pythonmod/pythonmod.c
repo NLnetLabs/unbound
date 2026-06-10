@@ -491,6 +491,12 @@ int pythonmod_init(struct module_env* env, int id)
       /* print the error to logs too, run it again */
       fseek(script_py, 0, SEEK_END);
       flen = (size_t)ftell(script_py);
+#ifdef SIZE_MAX
+      if(flen > SIZE_MAX-2) {
+		log_err("script file too large");
+		goto fail_close_file;
+      }
+#endif
       fstr = malloc(flen+1);
       if(!fstr) {
 		log_err("malloc failure to print parse error");
