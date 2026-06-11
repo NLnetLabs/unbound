@@ -4772,7 +4772,7 @@ doq_ssl_server_setup(SSL_CTX* ctx, struct doq_conn* conn)
 	SSL_set_app_data(ssl, conn);
 #endif
 	SSL_set_accept_state(ssl);
-#ifdef USE_NGTCP2_CRYPTO_OSSL
+#ifdef HAVE_SSL_SET_QUIC_TLS_EARLY_DATA_ENABLED
 	SSL_set_quic_tls_early_data_enabled(ssl, 1);
 #else
 	SSL_set_quic_early_data_enabled(ssl, 1);

@@ -688,6 +688,10 @@
 /* Define to 1 if you have the `SSL_set1_host' function. */
 #undef HAVE_SSL_SET1_HOST
 
+/* Define to 1 if you have the `SSL_set_quic_tls_early_data_enabled' function.
+   */
+#undef HAVE_SSL_SET_QUIC_TLS_EARLY_DATA_ENABLED
+
 /* Define to 1 if you have the <stdarg.h> header file. */
 #undef HAVE_STDARG_H
 

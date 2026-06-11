@@ -1715,6 +1715,7 @@ if test x_$withval = x_yes -o x_$withval != x_no; then
     BAKLIBS="$LIBS"
     LIBS="-lssl $LIBS"
     AC_CHECK_FUNCS([SSL_is_quic], [], [AC_MSG_ERROR([No QUIC support detected in OpenSSL. Need OpenSSL version with QUIC support to enable DNS over QUIC with libngtcp2.])])
+    AC_CHECK_FUNCS([SSL_set_quic_tls_early_data_enabled])
     LIBS="$BAKLIBS"
 
     AC_CHECK_TYPES([struct ngtcp2_version_cid, ngtcp2_encryption_level],,,[AC_INCLUDES_DEFAULT

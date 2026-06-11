@@ -2098,7 +2098,7 @@ early_data_setup_session(struct doq_client_data* data)
 		SSL_SESSION_free(session);
 		return 0;
 	}
-#ifdef USE_NGTCP2_CRYPTO_OSSL
+#ifdef HAVE_SSL_SET_QUIC_TLS_EARLY_DATA_ENABLED
 	SSL_set_quic_tls_early_data_enabled(data->ssl, 1);
 #else
 	SSL_set_quic_early_data_enabled(data->ssl, 1);
