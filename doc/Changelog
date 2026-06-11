@@ -4,6 +4,7 @@
 	  SSL_set_quic_early_data_enabled, so the correct one is used.
 	- Fix for #1306: configure checks if the ngtcp2_crypto_ossl
 	  header file is available, and prints an error otherwise.
+	- Fix #1437: Fix compile with OpenSSL 4.0.1.
 
 10 June 2026: Wouter
 	- Fix pythonmod script read for numeric overflow.

@@ -3756,7 +3756,33 @@ setup_comm_ssl(struct comm_point* cp, struct outside_network* outnet,
 		(void)SSL_set_tlsext_host_name(cp->ssl, host);
 	}
 #endif
-#ifdef HAVE_SSL_SET1_HOST
+#ifdef HAVE_SSL_SET1_DNSNAME
+	if((SSL_CTX_get_verify_mode(outnet->sslctx)&SSL_VERIFY_PEER)) {
+		/* because we set SSL_VERIFY_PEER, in netevent in
+		 * ssl_handshake, it'll check if the certificate
+		 * verification has succeeded */
+		/* SSL_VERIFY_PEER is set on the sslctx */
+		/* and the certificates to verify with are loaded into
+		 * it with SSL_load_verify_locations or
+		 * SSL_CTX_set_default_verify_paths */
+		/* setting the hostname makes openssl verify the
+		 * host name in the x509 certificate in the
+		 * SSL connection*/
+		struct sockaddr_storage tmpaddr;
+		socklen_t tmpaddrlen = (socklen_t)sizeof(tmpaddr);
+		if(ipstrtoaddr(host, UNBOUND_DNS_PORT, &tmpaddr, &tmpaddrlen)) {
+			if(!SSL_set1_ipaddr(cp->ssl, host)) {
+				log_err("SSL_set1_ipaddr failed");
+				return 0;
+			}
+		} else {
+			if(!SSL_set1_dnsname(cp->ssl, host)) {
+				log_err("SSL_set1_dnsname failed");
+				return 0;
+			}
+		}
+	}
+#elif defined(HAVE_SSL_SET1_HOST)
 	if((SSL_CTX_get_verify_mode(outnet->sslctx)&SSL_VERIFY_PEER)) {
 		/* because we set SSL_VERIFY_PEER, in netevent in
 		 * ssl_handshake, it'll check if the certificate

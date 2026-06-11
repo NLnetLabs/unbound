@@ -21090,6 +21090,24 @@ then :
   printf "%s\n" "#define HAVE_SSL_GET0_PEERNAME 1" >>confdefs.h
 
 fi
+ac_fn_c_check_func "$LINENO" "SSL_set1_dnsname" "ac_cv_func_SSL_set1_dnsname"
+if test "x$ac_cv_func_SSL_set1_dnsname" = xyes
+then :
+  printf "%s\n" "#define HAVE_SSL_SET1_DNSNAME 1" >>confdefs.h
+
+fi
+ac_fn_c_check_func "$LINENO" "X509_get_key_usage" "ac_cv_func_X509_get_key_usage"
+if test "x$ac_cv_func_X509_get_key_usage" = xyes
+then :
+  printf "%s\n" "#define HAVE_X509_GET_KEY_USAGE 1" >>confdefs.h
+
+fi
+ac_fn_c_check_func "$LINENO" "ASN1_STRING_get0_data" "ac_cv_func_ASN1_STRING_get0_data"
+if test "x$ac_cv_func_ASN1_STRING_get0_data" = xyes
+then :
+  printf "%s\n" "#define HAVE_ASN1_STRING_GET0_DATA 1" >>confdefs.h
+
+fi
 ac_fn_c_check_func "$LINENO" "X509_VERIFY_PARAM_set1_host" "ac_cv_func_X509_VERIFY_PARAM_set1_host"
 if test "x$ac_cv_func_X509_VERIFY_PARAM_set1_host" = xyes
 then :
@@ -21133,6 +21151,54 @@ then :
 
 fi
 
+ac_fn_c_check_func "$LINENO" "X509_NAME_get_text_by_NID" "ac_cv_func_X509_NAME_get_text_by_NID"
+if test "x$ac_cv_func_X509_NAME_get_text_by_NID" = xyes
+then :
+  printf "%s\n" "#define HAVE_X509_NAME_GET_TEXT_BY_NID 1" >>confdefs.h
+
+fi
+
+if test $ac_cv_func_X509_NAME_get_text_by_NID = yes; then
+
+
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking if X509_NAME_get_text_by_NID is deprecated" >&5
+printf %s "checking if X509_NAME_get_text_by_NID is deprecated... " >&6; }
+cache=`echo X509_NAME_get_text_by_NID | sed 'y%.=/+-%___p_%'`
+if eval test \${cv_cc_deprecated_$cache+y}
+then :
+  printf %s "(cached) " >&6
+else $as_nop
+
+echo '
+#include "openssl/x509.h"
+' >conftest.c
+echo 'void f(void){
+		(void)X509_NAME_get_text_by_NID(NULL, 0, NULL, 0); }' >>conftest.c
+if test -z "`$CC $CPPFLAGS $CFLAGS -c conftest.c 2>&1 | grep -e deprecated -e unavailable`"; then
+eval "cv_cc_deprecated_$cache=no"
+else
+eval "cv_cc_deprecated_$cache=yes"
+fi
+rm -f conftest conftest.o conftest.c
+
+fi
+
+if eval "test \"`echo '$cv_cc_deprecated_'$cache`\" = yes"; then
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+printf "%s\n" "yes" >&6; }
+
+printf "%s\n" "#define DEPRECATED_X509_NAME_GET_TEXT_BY_NID 1" >>confdefs.h
+
+:
+
+else
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
+printf "%s\n" "no" >&6; }
+:
+
+fi
+
+fi
 LIBS="$BAKLIBS"
 
 ac_fn_check_decl "$LINENO" "SSL_COMP_get_compression_methods" "ac_cv_have_decl_SSL_COMP_get_compression_methods" "

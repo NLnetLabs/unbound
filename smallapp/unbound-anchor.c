@@ -1708,17 +1708,115 @@ static unsigned long
 get_usage_of_ex(X509* cert)
 {
 	unsigned long val = 0;
+#ifdef HAVE_X509_GET_KEY_USAGE
+	val = X509_get_key_usage(cert);
+	if (val == UINT32_MAX)
+		return 0;
+#else
 	ASN1_BIT_STRING* s;
 	if((s=X509_get_ext_d2i(cert, NID_key_usage, NULL, NULL))) {
-		if(s->length > 0) {
-			val = s->data[0];
-			if(s->length > 1)
-				val |= s->data[1] << 8;
+#  ifdef HAVE_ASN1_STRING_GET0_DATA
+		const unsigned char *data = ASN1_STRING_get0_data(s);
+#  else
+		const unsigned char *data = ASN1_STRING_data(s);
+#  endif
+		int len = ASN1_STRING_length(s);
+		if(len > 0) {
+			val = data[0];
+			if(len > 1)
+				val |= data[1] << 8;
 		}
 		ASN1_BIT_STRING_free(s);
 	}
+#endif
 	return val;
 }
+
+#if !defined(HAVE_X509_NAME_GET_TEXT_BY_NID) || defined(DEPRECATED_X509_NAME_GET_TEXT_BY_NID)
+/** print verbose output about name extension data. */
+static void
+print_name_ext(
+#if OPENSSL_VERSION_NUMBER >= 0x40000000
+	const
+#endif
+	X509_NAME* nm, int nid, const char* str)
+{
+	int lastpos = -1;
+	for(;;) {
+#if OPENSSL_VERSION_NUMBER >= 0x40000000
+		const
+#endif
+		X509_NAME_ENTRY* ne;
+#if OPENSSL_VERSION_NUMBER >= 0x40000000
+		const
+#endif
+		ASN1_STRING *asn;
+		const unsigned char *data;
+		char buf[1024];
+
+		lastpos = X509_NAME_get_index_by_NID(nm, nid, lastpos);
+		if(lastpos == -1 || lastpos == -2)
+			break;
+		ne = X509_NAME_get_entry(nm, lastpos);
+		if(!ne) continue;
+		asn = X509_NAME_ENTRY_get_data(ne);
+		if(!asn) continue;
+#  ifdef HAVE_ASN1_STRING_GET0_DATA
+		data = ASN1_STRING_get0_data(asn);
+#  else
+		data = ASN1_STRING_data(asn);
+#  endif
+		if(!data) continue;
+		if(ASN1_STRING_length(asn) > (int)sizeof(buf)-1) continue;
+		memcpy(buf, data, ASN1_STRING_length(asn));
+		buf[ASN1_STRING_length(asn)]=0;
+		printf("%s: %s\n", str, buf);
+	}
+}
+#endif /* X509_NAME_GET_TEXT_BY_NID */
+
+#if !defined(HAVE_X509_NAME_GET_TEXT_BY_NID) || defined(DEPRECATED_X509_NAME_GET_TEXT_BY_NID)
+/** see if the valid emailaddr is present. */
+static int
+has_valid_emailaddr(
+#if OPENSSL_VERSION_NUMBER >= 0x40000000
+	const
+#endif
+	X509_NAME* nm, const char* p7signer)
+{
+	int lastpos = -1;
+	for(;;) {
+#if OPENSSL_VERSION_NUMBER >= 0x40000000
+		const
+#endif
+		X509_NAME_ENTRY* ne;
+#if OPENSSL_VERSION_NUMBER >= 0x40000000
+		const
+#endif
+		ASN1_STRING *asn;
+		const unsigned char *data;
+
+		lastpos = X509_NAME_get_index_by_NID(nm,
+			NID_pkcs9_emailAddress, lastpos);
+		if(lastpos == -1 || lastpos == -2)
+			break;
+		ne = X509_NAME_get_entry(nm, lastpos);
+		if(!ne) continue;
+		asn = X509_NAME_ENTRY_get_data(ne);
+		if(!asn) continue;
+#  ifdef HAVE_ASN1_STRING_GET0_DATA
+		data = ASN1_STRING_get0_data(asn);
+#  else
+		data = ASN1_STRING_data(asn);
+#  endif
+		if(!data) continue;
+		if(ASN1_STRING_length(asn) == (int)strlen(p7signer) &&
+			strncmp((char*)data, p7signer, strlen(p7signer)) == 0)
+			return 1; /* match */
+	}
+	return 0;
+}
+#endif /* X509_NAME_GET_TEXT_BY_NID */
 
 /** get valid signers from the list of signers in the signature */
 static STACK_OF(X509)*
@@ -1739,6 +1837,9 @@ get_valid_signers(PKCS7* p7, const char* p7signer)
 		return NULL;
 	}
 	for(i=0; i<sk_X509_num(signers); i++) {
+#if OPENSSL_VERSION_NUMBER >= 0x40000000
+		const
+#endif
 		X509_NAME* nm = X509_get_subject_name(
 			sk_X509_value(signers, i));
 		char buf[1024];
@@ -1751,17 +1852,29 @@ get_valid_signers(PKCS7* p7, const char* p7signer)
 				(int)sizeof(buf));
 			printf("signer %d: Subject: %s\n", i,
 				nmline?nmline:"no subject");
+#if !defined(HAVE_X509_NAME_GET_TEXT_BY_NID) || defined(DEPRECATED_X509_NAME_GET_TEXT_BY_NID)
+			if(verb >= 3) {
+				print_name_ext(nm, NID_commonName,
+					"commonName");
+				print_name_ext(nm, NID_pkcs9_emailAddress,
+					"emailAddress");
+			}
+#else
 			if(verb >= 3 && X509_NAME_get_text_by_NID(nm,
 				NID_commonName, buf, (int)sizeof(buf)))
 				printf("commonName: %s\n", buf);
 			if(verb >= 3 && X509_NAME_get_text_by_NID(nm,
 				NID_pkcs9_emailAddress, buf, (int)sizeof(buf)))
 				printf("emailAddress: %s\n", buf);
+#endif
 		}
 		if(verb) {
 			int ku_loc = X509_get_ext_by_NID(
 				sk_X509_value(signers, i), NID_key_usage, -1);
 			if(verb >= 3 && ku_loc >= 0) {
+#if OPENSSL_VERSION_NUMBER >= 0x40000000
+				const
+#endif
 				X509_EXTENSION *ex = X509_get_ext(
 					sk_X509_value(signers, i), ku_loc);
 				if(ex) {
@@ -1775,6 +1888,12 @@ get_valid_signers(PKCS7* p7, const char* p7signer)
 			/* there is no name to check, return all records */
 			if(verb) printf("did not check commonName of signer\n");
 		} else {
+#if !defined(HAVE_X509_NAME_GET_TEXT_BY_NID) || defined(DEPRECATED_X509_NAME_GET_TEXT_BY_NID)
+			if(!has_valid_emailaddr(nm, p7signer)) {
+				if(verb) printf("removed cert with wrong name\n");
+				continue; /* wrong name, skip it */
+			}
+#else
 			if(!X509_NAME_get_text_by_NID(nm,
 				NID_pkcs9_emailAddress,
 				buf, (int)sizeof(buf))) {
@@ -1785,6 +1904,7 @@ get_valid_signers(PKCS7* p7, const char* p7signer)
 				if(verb) printf("removed cert with wrong name\n");
 				continue; /* wrong name, skip it */
 			}
+#endif
 		}
 
 		/* check that the key usage allows digital signatures

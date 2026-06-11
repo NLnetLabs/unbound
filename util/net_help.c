@@ -1446,6 +1446,8 @@ void* listen_sslctx_create(const char* key, const char* pem,
 		SSL_CTX_set_alpn_select_cb(ctx, doh_alpn_select_cb, NULL);
 #endif
 	}
+#else /* HAVE_SSL_CTX_SET_ALPN_SELECT_CB */
+	(void)is_dot; (void)is_doh;
 #endif /* HAVE_SSL_CTX_SET_ALPN_SELECT_CB */
 	return ctx;
 #else
@@ -1705,6 +1707,10 @@ int check_auth_name_for_ssl(char* auth_name)
 /** set the authname on an SSL structure, SSL* ssl */
 int set_auth_name_on_ssl(void* ssl, char* auth_name, int use_sni)
 {
+#ifdef HAVE_SSL_SET1_DNSNAME
+	struct sockaddr_storage tmpaddr;
+	socklen_t tmpaddrlen = (socklen_t)sizeof(tmpaddr);
+#endif
 	if(!auth_name) return 1;
 #ifdef HAVE_SSL
 	if(use_sni) {
@@ -1714,7 +1720,20 @@ int set_auth_name_on_ssl(void* ssl, char* auth_name, int use_sni)
 	(void)ssl;
 	(void)use_sni;
 #endif
-#ifdef HAVE_SSL_SET1_HOST
+#ifdef HAVE_SSL_SET1_DNSNAME
+	SSL_set_verify(ssl, SSL_VERIFY_PEER, NULL);
+	if(ipstrtoaddr(auth_name, UNBOUND_DNS_PORT, &tmpaddr, &tmpaddrlen)) {
+		if(!SSL_set1_ipaddr(ssl, auth_name)) {
+			log_err("SSL_set1_ipaddr failed");
+			return 0;
+		}
+	} else {
+		if(!SSL_set1_dnsname(ssl, auth_name)) {
+			log_err("SSL_set1_dnsname failed");
+			return 0;
+		}
+	}
+#elif defined(HAVE_SSL_SET1_HOST)
 	SSL_set_verify(ssl, SSL_VERIFY_PEER, NULL);
 	/* setting the hostname makes openssl verify the
 	 * host name in the x509 certificate in the

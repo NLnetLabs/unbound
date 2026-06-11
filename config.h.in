@@ -31,6 +31,9 @@
 /* Whether daemon is deprecated */
 #undef DEPRECATED_DAEMON
 
+/* Whether X509_NAME_get_text_by_NID is deprecated */
+#undef DEPRECATED_X509_NAME_GET_TEXT_BY_NID
+
 /* Deprecate RSA 1024 bit length, makes that an unsupported key */
 #undef DEPRECATE_RSA_1024
 
@@ -59,6 +62,9 @@
 
 /* Define to 1 if you have the <arpa/inet.h> header file. */
 #undef HAVE_ARPA_INET_H
+
+/* Define to 1 if you have the `ASN1_STRING_get0_data' function. */
+#undef HAVE_ASN1_STRING_GET0_DATA
 
 /* Whether the C compiler accepts the "fallthrough" attribute */
 #undef HAVE_ATTR_FALLTHROUGH
@@ -689,6 +695,9 @@
 /* Define to 1 if you have the `SSL_is_quic' function. */
 #undef HAVE_SSL_IS_QUIC
 
+/* Define to 1 if you have the `SSL_set1_dnsname' function. */
+#undef HAVE_SSL_SET1_DNSNAME
+
 /* Define to 1 if you have the `SSL_set1_host' function. */
 #undef HAVE_SSL_SET1_HOST
 
@@ -859,6 +868,12 @@
 
 /* Define to 1 if you have the <ws2tcpip.h> header file. */
 #undef HAVE_WS2TCPIP_H
+
+/* Define to 1 if you have the `X509_get_key_usage' function. */
+#undef HAVE_X509_GET_KEY_USAGE
+
+/* Define to 1 if you have the `X509_NAME_get_text_by_NID' function. */
+#undef HAVE_X509_NAME_GET_TEXT_BY_NID
 
 /* Define to 1 if you have the `X509_VERIFY_PARAM_set1_host' function. */
 #undef HAVE_X509_VERIFY_PARAM_SET1_HOST
