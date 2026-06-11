@@ -1273,7 +1273,7 @@ daemon_delete(struct daemon* daemon)
 #  if HAVE_DECL_SSL_COMP_GET_COMPRESSION_METHODS && HAVE_DECL_SK_SSL_COMP_POP_FREE
 #    ifndef S_SPLINT_S
 #      if OPENSSL_VERSION_NUMBER < 0x10100000
-	sk_SSL_COMP_pop_free(comp_meth, (void(*)())CRYPTO_free);
+	sk_SSL_COMP_pop_free(comp_meth, (void(*)(SSL_COMP*))CRYPTO_free);
 #      endif
 #    endif
 #  endif
