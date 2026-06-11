@@ -22639,6 +22639,24 @@ then :
 
 printf "%s\n" "#define USE_NGTCP2_CRYPTO_OSSL 1" >>confdefs.h
 
+	    ac_fn_check_decl "$LINENO" "ngtcp2_crypto_ossl_ctx_new" "ac_cv_have_decl_ngtcp2_crypto_ossl_ctx_new" "$ac_includes_default
+	    #include <ngtcp2/ngtcp2_crypto_ossl.h>
+
+" "$ac_c_undeclared_builtin_options" "CFLAGS"
+if test "x$ac_cv_have_decl_ngtcp2_crypto_ossl_ctx_new" = xyes
+then :
+  ac_have_decl=1
+else $as_nop
+  ac_have_decl=0
+fi
+printf "%s\n" "#define HAVE_DECL_NGTCP2_CRYPTO_OSSL_CTX_NEW $ac_have_decl" >>confdefs.h
+if test $ac_have_decl = 1
+then :
+
+else $as_nop
+  as_fn_error $? "No declaration of ngtcp2_crypto_ossl_ctx_new in the ngtcp2_crypto_ossl header file. Perhaps the ngtcp2_crypto_ossl devel header files need to be installed." "$LINENO" 5
+fi
+
 
 else $as_nop
 

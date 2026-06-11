@@ -1704,6 +1704,9 @@ if test x_$withval = x_yes -o x_$withval != x_no; then
     AC_CHECK_LIB([ngtcp2_crypto_ossl], [ngtcp2_crypto_encrypt_cb], [
 	LIBS="$LIBS -lngtcp2_crypto_ossl"
 	AC_DEFINE(USE_NGTCP2_CRYPTO_OSSL, 1, [Define this to use ngtcp2_crypto_ossl.])
+	    AC_CHECK_DECLS([ngtcp2_crypto_ossl_ctx_new], [], [AC_MSG_ERROR([No declaration of ngtcp2_crypto_ossl_ctx_new in the ngtcp2_crypto_ossl header file. Perhaps the ngtcp2_crypto_ossl devel header files need to be installed.])], [AC_INCLUDES_DEFAULT
+	    #include <ngtcp2/ngtcp2_crypto_ossl.h>
+	    ])
     ], [
         AC_CHECK_LIB([ngtcp2_crypto_openssl], [ngtcp2_crypto_encrypt_cb], [ LIBS="$LIBS -lngtcp2_crypto_openssl" ], [
             AC_CHECK_LIB([ngtcp2_crypto_quictls], [ngtcp2_crypto_encrypt_cb], [ LIBS="$LIBS -lngtcp2_crypto_quictls" ])
