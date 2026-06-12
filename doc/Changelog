@@ -1,3 +1,8 @@
+12 June 2026: Wouter
+	- Fix that for auth-zone and rpz zones the allow-notify
+	  addresses and netblocks are available from start, and
+	  fix the probe step skip.
+
 11 June 2026: Wouter
 	- Fix for #1306: configure detects specifically the call to
 	  SSL_set_quic_tls_early_data_enabled and

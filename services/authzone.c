@@ -106,6 +106,9 @@ static void xfr_probe_send_or_end(struct auth_xfer* xfr,
  * or transfer task if nothing to probe, or false if already in progress */
 static int xfr_start_probe(struct auth_xfer* xfr, struct module_env* env,
 	struct auth_master* spec);
+/** copy the master addresses from the task_probe lookups to the allow_notify
+ * list of masters */
+static void probe_copy_masters_for_allow_notify(struct auth_xfer* xfr);
 /** delete xfer structure (not its tree entry) */
 void auth_xfer_delete(struct auth_xfer* xfr);
 
@@ -2213,6 +2216,10 @@ auth_zones_cfg(struct auth_zones* az, struct config_auth* c)
 			lock_rw_unlock(&z->lock);
 			return 0;
 		}
+		/* Pick up allow notify entries, early. This works for
+		 * addresses and netblocks. */
+		if(!x->allow_notify_list)
+			probe_copy_masters_for_allow_notify(x);
 		lock_basic_unlock(&x->lock);
 	}
 
@@ -6961,8 +6968,8 @@ xfr_start_probe(struct auth_xfer* xfr, struct module_env* env,
 		if(!have_probe_targets(xfr->task_probe->masters) &&
 			xfr->task_probe->masters != NULL)
 			xfr->task_probe->only_lookup = 1;
-		if(!(xfr->task_probe->only_lookup &&
-			xfr->task_probe->masters != NULL)) {
+		if(!xfr->task_probe->only_lookup &&
+			!have_probe_targets(xfr->task_probe->masters)) {
 			/* useless to pick up task_probe, no masters to
 			 * probe. Instead attempt to pick up task transfer */
 			if(xfr->task_transfer->worker == NULL) {
