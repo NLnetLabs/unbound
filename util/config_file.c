@@ -46,6 +46,7 @@
 #ifdef HAVE_TIME_H
 #include <time.h>
 #endif
+#include <limits.h>
 #include "util/log.h"
 #include "util/configyyrename.h"
 #include "util/config_file.h"
@@ -533,7 +534,11 @@ probe_maxrto(int useful_server_top_timeout) {
 int config_apply_max_rtt(int max_rtt)
 {
 	USEFUL_SERVER_TOP_TIMEOUT = max_rtt;
-	BLACKLIST_PENALTY = max_rtt*4;
+	BLACKLIST_PENALTY =
+#ifdef INT_MAX
+		(max_rtt > INT_MAX/4) ? INT_MAX :
+#endif
+		max_rtt*4;
 	PROBE_MAXRTO = probe_maxrto(max_rtt);
 	return max_rtt;
 }
