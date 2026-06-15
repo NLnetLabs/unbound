@@ -49,6 +49,9 @@
 	  exec of the hook. The ipsecmod hook, if a script, has to
 	  start now with a line like `#!/bin/sh`. Thanks to Qifan
 	  Zhang, Palo Alto Networks, for the report.
+	- Fix that dns64 bypasses rpz-passthru rule during
+	  synthesis. This restricted more than necessary. Thanks to
+	  Qifan Zhang, Palo Alto Networks, for the report.
 
 12 June 2026: Wouter
 	- Fix that for auth-zone and rpz zones the allow-notify

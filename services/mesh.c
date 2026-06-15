@@ -1275,6 +1275,9 @@ int mesh_add_sub(struct module_qstate* qstate, struct query_info* qinfo,
 			log_err("mesh_attach_sub: out of memory");
 			return 0;
 		}
+		/* inherit RPZ passthru from the parent so respip on the sub
+		 * sees the same client-IP/qname PASSTHRU decision */
+		(*sub)->s.rpz_passthru = qstate->rpz_passthru;
 #ifdef UNBOUND_DEBUG
 		n =
 #else

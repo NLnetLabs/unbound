@@ -660,6 +660,7 @@ handle_event_moddone(struct module_qstate* qstate, int id)
 
 	/* Store the response in cache. */
 	if( (!iq || !iq->started_no_cache_store) &&
+		!qstate->rpz_applied && !qstate->rpz_passthru &&
 		!qstate->is_subnet_answer &&
 		qstate->return_msg &&
 		qstate->return_msg->rep &&
@@ -1016,6 +1017,18 @@ dns64_inform_super(struct module_qstate* qstate, int id,
 	/* Use return code from A query in response to client. */
 	if (super->return_rcode != LDNS_RCODE_NOERROR)
 		super->return_rcode = qstate->return_rcode;
+	/* RPZ applied to the subquery need to then change (not cache)
+	 * the super query. With the super query not cached, it is
+	 * going to run the state machine modules on incoming queries,
+	 * that fetch the subquery (cache) response, and modify it
+	 * according to the rpz policy. That makes the synthesized
+	 * super query also adjusted by rpz policies. But loses cache
+	 * hits. Even though the subquery likely is answered from cache,
+	 * internally in its state machine process. */
+	if(qstate->rpz_applied)
+		super->rpz_applied = 1;
+	if(qstate->rpz_passthru)
+		super->rpz_passthru = 1;
 
 	/* Since the super qstate has a new response, its errinf is removed. */
 	super->errinf = NULL;
@@ -1031,6 +1044,7 @@ dns64_inform_super(struct module_qstate* qstate, int id,
 	/* Store the generated response in cache. */
 	if ( super->return_msg && super->return_msg->rep &&
 		(!super_dq || !super_dq->started_no_cache_store) &&
+		!super->rpz_applied && !super->rpz_passthru &&
 		!super->is_subnet_answer &&
 		!dns_cache_store(super->env, &super->qinfo, super->return_msg->rep,
 		0, super->prefetch_leeway, 0, NULL, super->query_flags,

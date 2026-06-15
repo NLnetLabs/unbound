@@ -714,7 +714,8 @@ apply_respip_action(struct worker* worker, const struct query_info* qinfo,
 	struct respip_client_info* cinfo, struct reply_info* rep,
 	struct sockaddr_storage* addr, socklen_t addrlen,
 	struct ub_packed_rrset_key** alias_rrset,
-	struct reply_info** encode_repp, struct auth_zones* az)
+	struct reply_info** encode_repp, struct auth_zones* az,
+	int* rpz_passthru)
 {
 	struct respip_action_info actinfo = {0, 0, 0, 0, NULL, 0, NULL};
 	actinfo.action = respip_none;
@@ -725,7 +726,7 @@ apply_respip_action(struct worker* worker, const struct query_info* qinfo,
 		return 1;
 
 	if(!respip_rewrite_reply(qinfo, cinfo, rep, encode_repp, &actinfo,
-		alias_rrset, 0, worker->scratchpad, az, NULL,
+		alias_rrset, 0, worker->scratchpad, az, rpz_passthru,
 		worker->env.views, worker->env.respip_set))
 		return 0;
 
@@ -772,7 +773,7 @@ answer_from_cache(struct worker* worker, struct query_info* qinfo,
 	int* is_secure_answer, struct ub_packed_rrset_key** alias_rrset,
 	struct reply_info** partial_repp,
 	struct reply_info* rep, uint16_t id, uint16_t flags,
-	struct comm_reply* repinfo, struct edns_data* edns)
+	struct comm_reply* repinfo, struct edns_data* edns, int* rpz_passthru)
 {
 	time_t timenow = *worker->env.now;
 	uint16_t udpsize = edns->udp_size;
@@ -882,7 +883,7 @@ answer_from_cache(struct worker* worker, struct query_info* qinfo,
 	if((worker->daemon->use_response_ip || worker->daemon->use_rpz) &&
 		!partial_rep && !apply_respip_action(worker, qinfo, cinfo, rep,
 		&repinfo->client_addr, repinfo->client_addrlen, alias_rrset,
-		&encode_rep, worker->env.auth_zones)) {
+		&encode_rep, worker->env.auth_zones, rpz_passthru)) {
 		goto bail_out;
 	} else if(partial_rep &&
 		!respip_merge_cname(partial_rep, qinfo, rep, cinfo,
@@ -1982,7 +1983,7 @@ lookup_cache:
 				&alias_rrset, &partial_rep, rep,
 				*(uint16_t*)(void *)sldns_buffer_begin(c->buffer),
 				sldns_buffer_read_u16_at(c->buffer, 2), repinfo,
-				&edns)) {
+				&edns, &rpz_passthru)) {
 				/* prefetch it if the prefetch TTL expired.
 				 * Note that if there is more than one pass
 				 * its qname must be that used for cache
