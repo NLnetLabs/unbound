@@ -4025,6 +4025,31 @@ fallback activates to fetch from the upstream instead of the SERVFAIL.
     If the file does not exist or is empty, Unbound will attempt to fetch zone
     data (eg. from the primary servers).
 
+
+@@UAHL@unbound.conf.auth@max-transfer-size@@: *<number>*
+    Number of bytes size of the maximum zone transfer size.
+    Larger transfers, over AXFR, IXFR and HTTP, are not allowed.
+    A plain number is in bytes, append 'k', 'm' or 'g' for kilobytes, megabytes
+    or gigabytes (1024*1024 bytes in a megabyte).
+    The value ``0`` disables the feature.
+
+    Only consider for untrusted/misbehaving primaries that could hog resources
+    and bring down the resolver.
+
+    Default: 0
+
+
+@@UAHL@unbound.conf.auth@max-transfer-time@@: *<msec>*
+    Maximum time in milliseconds that a zone transfer is allowed to take from
+    the start.
+    The value ``0`` disables the feature.
+
+    Only consider for untrusted/misbehaving primaries that could hog resources
+    and bring down the resolver.
+
+    Default: 0
+
+
 .. _unbound.conf.view:
 
 View Options
@@ -5204,6 +5229,31 @@ answer queries with that content.
 
     If no tags are specified the policies from this section will be applied for
     all clients.
+
+
+@@UAHL@unbound.conf.rpz@max-transfer-size@@: *<number>*
+    Number of bytes size of the maximum zone transfer size.
+    Larger transfers, over AXFR, IXFR and HTTP, are not allowed.
+    A plain number is in bytes, append 'k', 'm' or 'g' for kilobytes, megabytes
+    or gigabytes (1024*1024 bytes in a megabyte).
+    The value ``0`` disables the feature.
+
+    Only consider for untrusted/misbehaving primaries that could hog resources
+    and bring down the resolver.
+
+    Default: 0
+
+
+@@UAHL@unbound.conf.rpz@max-transfer-time@@: *<msec>*
+    Maximum time in milliseconds that a zone transfer is allowed to take from
+    the start.
+    The value ``0`` disables the feature.
+
+    Only consider for untrusted/misbehaving primaries that could hog resources
+    and bring down the resolver.
+
+    Default: 0
+
 
 Memory Control Example
 ----------------------

@@ -5461,6 +5461,23 @@ xfr_masterlist_equal(struct auth_master* list1, struct auth_master* list2)
 	return 0;
 }
 
+/** See if configuration has changed. */
+static int
+xfr_config_equal(struct auth_xfer* xfr1, struct auth_xfer* xfr2)
+{
+	if(xfr1 == NULL && xfr2 == NULL)
+		return 1;
+	if(xfr1 == NULL && xfr2 != NULL)
+		return 0;
+	if(xfr1 != NULL && xfr2 == NULL)
+		return 0;
+	if(xfr1->max_transfer_size != xfr2->max_transfer_size)
+		return 0;
+	if(xfr1->max_transfer_time != xfr2->max_transfer_time)
+		return 0;
+	return 1;
+}
+
 /** See if the list of masters has changed. */
 static int
 xfr_masters_equal(struct auth_xfer* xfr1, struct auth_xfer* xfr2)
@@ -5572,6 +5589,7 @@ auth_zones_check_changes(struct fast_reload_thread* fr,
 			 */
 			if(have_old != have_new || old_serial != new_serial
 				|| !xfr_masters_equal(old_xfr, new_xfr)
+				|| !xfr_config_equal(old_xfr, new_xfr)
 				|| old_z->zonemd_callback_env != NULL) {
 				/* The zone has been changed. */
 				if(!fr_add_auth_zone_change(fr, old_z, new_z,
@@ -7701,6 +7719,9 @@ auth_xfr_pickup_config(struct auth_xfer* loadxfr, struct auth_xfer* xfr)
 	log_assert(loadxfr->namelen == xfr->namelen);
 	log_assert(loadxfr->namelabs == xfr->namelabs);
 	log_assert(loadxfr->dclass == xfr->dclass);
+
+	xfr->max_transfer_size = loadxfr->max_transfer_size;
+	xfr->max_transfer_time =  loadxfr->max_transfer_time;
 
 	/* The lists can be swapped in, the other xfr struct will be deleted
 	 * afterwards. */

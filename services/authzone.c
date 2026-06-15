@@ -55,6 +55,7 @@
 #include "util/log.h"
 #include "util/module.h"
 #include "util/random.h"
+#include "util/timeval_func.h"
 #include "services/cache/dns.h"
 #include "services/outside_network.h"
 #include "services/listen_dnsport.h"
@@ -2145,6 +2146,9 @@ auth_zones_cfg(struct auth_zones* az, struct config_auth* c)
 		}
 		return 0;
 	}
+	/* Populate the xfer related options early since we may create one now */
+	z->max_transfer_size = c->max_transfer_size;
+	z->max_transfer_time = c->max_transfer_time;
 	if(c->masters || c->urls) {
 		if(!(x=auth_zones_find_or_add_xfer(az, z))) {
 			lock_rw_unlock(&az->lock);
@@ -2327,6 +2331,7 @@ auth_chunks_delete(struct auth_transfer* at)
 	}
 	at->chunks_first = NULL;
 	at->chunks_last = NULL;
+	at->chunks_total = 0;
 }
 
 /** free master addr list */
@@ -5592,6 +5597,7 @@ xfr_transfer_init_fetch(struct auth_xfer* xfr, struct module_env* env)
         t.tv_sec = timeout/1000;
         t.tv_usec = (timeout%1000)*1000;
 #endif
+	xfr->task_transfer->start_time = *env->now_tv;
 
 	if(master->http) {
 		/* perform http fetch */
@@ -6146,6 +6152,7 @@ xfer_link_data(sldns_buffer* pkt, struct auth_xfer* xfr)
 	if(xfr->task_transfer->chunks_last)
 		xfr->task_transfer->chunks_last->next = e;
 	xfr->task_transfer->chunks_last = e;
+	xfr->task_transfer->chunks_total += e->len;
 	return 1;
 }
 
@@ -6241,6 +6248,15 @@ auth_xfer_transfer_timer_callback(void* arg)
 	xfr_transfer_nexttarget_or_end(xfr, env);
 }
 
+/** return the time taken by the transfer */
+static int
+auth_xfer_transfer_time_taken(struct auth_xfer* xfr, struct module_env* env)
+{
+	struct timeval delta;
+	timeval_subtract(&delta, env->now_tv, &xfr->task_transfer->start_time);
+	return ((int)delta.tv_sec)*1000 + ((int)delta.tv_usec)/1000;
+}
+
 /** callback for task_transfer tcp connections */
 int
 auth_xfer_transfer_tcp_callback(struct comm_point* c, void* arg, int err,
@@ -6307,12 +6323,31 @@ auth_xfer_transfer_tcp_callback(struct comm_point* c, void* arg, int err,
 			xfr->task_transfer->master->host);
 		goto failed;
 	}
+	if(xfr->max_transfer_size > 0 &&
+		xfr->task_transfer->chunks_total > xfr->max_transfer_size) {
+		char zname[LDNS_MAX_DOMAINLEN];
+		dname_str(xfr->name, zname);
+		log_err("auth zone %s transfer from %s exceeded %u bytes, aborting",
+			zname, xfr->task_transfer->master->host,
+			(unsigned)xfr->max_transfer_size);
+		goto failed;
+	}
 	/* if the transfer is done now, disconnect and process the list */
 	if(transferdone) {
 		comm_point_delete(xfr->task_transfer->cp);
 		xfr->task_transfer->cp = NULL;
 		process_list_end_transfer(xfr, env);
 		return 0;
+	}
+
+	if(xfr->max_transfer_time > 0 &&
+		auth_xfer_transfer_time_taken(xfr, env) > xfr->max_transfer_time) {
+		char zname[LDNS_MAX_DOMAINLEN];
+		dname_str(xfr->name, zname);
+		log_err("auth zone %s transfer from %s exceeded %u msec total running time, aborting",
+			zname, xfr->task_transfer->master->host,
+			(unsigned)xfr->max_transfer_time);
+		goto failed;
 	}
 
 	/* if we want to read more messages, setup the commpoint to read
@@ -6370,6 +6405,16 @@ auth_xfer_transfer_http_callback(struct comm_point* c, void* arg, int err,
 				xfr->task_transfer->master->host);
 			goto failed;
 		}
+		if(xfr->max_transfer_size > 0 &&
+			xfr->task_transfer->chunks_total > xfr->max_transfer_size) {
+			char zname[LDNS_MAX_DOMAINLEN];
+			dname_str(xfr->name, zname);
+			log_err("auth zone %s http %s/%s exceeded %u bytes, aborting",
+				zname, xfr->task_transfer->master->host,
+				xfr->task_transfer->master->file,
+				(unsigned)xfr->max_transfer_size);
+			goto failed;
+		}
 	}
 	/* if the transfer is done now, disconnect and process the list */
 	if(err == NETEVENT_DONE) {
@@ -6379,6 +6424,17 @@ auth_xfer_transfer_http_callback(struct comm_point* c, void* arg, int err,
 		xfr->task_transfer->cp = NULL;
 		process_list_end_transfer(xfr, env);
 		return 0;
+	}
+
+	if(xfr->max_transfer_time > 0 &&
+		auth_xfer_transfer_time_taken(xfr, env) > xfr->max_transfer_time) {
+		char zname[LDNS_MAX_DOMAINLEN];
+		dname_str(xfr->name, zname);
+		log_err("auth zone %s transfer http %s/%s exceeded %u msec total running time, aborting",
+			zname, xfr->task_transfer->master->host,
+			xfr->task_transfer->master->file,
+			(unsigned)xfr->max_transfer_time);
+		goto failed;
 	}
 
 	/* if we want to read more messages, setup the commpoint to read
@@ -7172,6 +7228,8 @@ auth_xfer_new(struct auth_zone* z)
 	xfr->namelen = z->namelen;
 	xfr->namelabs = z->namelabs;
 	xfr->dclass = z->dclass;
+	xfr->max_transfer_size = z->max_transfer_size;
+	xfr->max_transfer_time = z->max_transfer_time;
 
 	xfr->task_nextprobe = (struct auth_nextprobe*)calloc(1,
 		sizeof(struct auth_nextprobe));

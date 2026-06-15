@@ -153,6 +153,10 @@ struct auth_zone {
 	struct auth_zone* rpz_az_next;
 	/** previous auth zone containing RPZ data, or NULL */
 	struct auth_zone* rpz_az_prev;
+	/** The maximum auth zone transfer size, in bytes. */
+	size_t max_transfer_size;
+	/** The maximum auth zone transfer time taken, in msec. */
+	int max_transfer_time;
 };
 
 /**
@@ -283,6 +287,11 @@ struct auth_xfer {
 	 * this is renewed every SOA probe and transfer.  On zone load
 	 * from zonefile it is also set (with probe set soon to check) */
 	time_t lease_time;
+
+	/** The maximum auth zone transfer size, in bytes. */
+	size_t max_transfer_size;
+	/** The maximum auth zone transfer time taken, in msec. */
+	int max_transfer_time;
 };
 
 /**
@@ -379,6 +388,10 @@ struct auth_transfer {
 	struct auth_chunk* chunks_first;
 	/** last element in chunks list (to append new data at the end) */
 	struct auth_chunk* chunks_last;
+	/** running total of bytes held in chunks_first..chunks_last */
+	size_t chunks_total;
+	/** start time of the transfer */
+	struct timeval start_time;
 
 	/** list of upstream masters for this zone, from config */
 	struct auth_master* masters;

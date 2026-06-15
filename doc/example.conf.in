@@ -1287,6 +1287,9 @@ remote-control:
 #	zonemd-check: no
 #	zonemd-reject-absence: no
 #	zonefile: "example.org.zone"
+#	max-transfer-size: 0
+#	max-transfer-time: 0
+
 
 # Views
 # Create named views. Name must be unique.
@@ -1453,3 +1456,5 @@ remote-control:
 #     rpz-signal-nxdomain-ra: no
 #     for-downstream: no
 #     tags: "example"
+#     max-transfer-size: 0
+#     max-transfer-time: 0

@@ -216,6 +216,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_LOG_DESTADDR VAR_CACHEDB_CHECK_WHEN_SERVE_EXPIRED
 %token VAR_COOKIE_SECRET_FILE VAR_ITER_SCRUB_NS VAR_ITER_SCRUB_CNAME
 %token VAR_ITER_SCRUB_RRSIG
+%token VAR_MAX_TRANSFER_SIZE VAR_MAX_TRANSFER_TIME
 %token VAR_MAX_GLOBAL_QUOTA VAR_HARDEN_UNVERIFIED_GLUE VAR_LOG_TIME_ISO
 %token VAR_ITER_SCRUB_PROMISCUOUS VAR_LOG_THREAD_ID
 
@@ -459,6 +460,8 @@ authstart: VAR_AUTH_ZONE
 			s->zonemd_check = 0;
 			s->zonemd_reject_absence = 0;
 			s->isrpz = 0;
+			s->max_transfer_size = 0;
+			s->max_transfer_time = 0;
 		} else {
 			yyerror("out of memory");
 		}
@@ -468,7 +471,8 @@ contents_auth: contents_auth content_auth
 	| ;
 content_auth: auth_name | auth_zonefile | auth_master | auth_url |
 	auth_for_downstream | auth_for_upstream | auth_fallback_enabled |
-	auth_allow_notify | auth_zonemd_check | auth_zonemd_reject_absence
+	auth_allow_notify | auth_zonemd_check | auth_zonemd_reject_absence |
+	auth_max_transfer_size | auth_max_transfer_time
 	;
 
 rpz_tag: VAR_TAGS STRING_ARG
@@ -556,6 +560,8 @@ rpzstart: VAR_RPZ
 			s->for_upstream = 0;
 			s->fallback_enabled = 0;
 			s->isrpz = 1;
+			s->max_transfer_size = 0;
+			s->max_transfer_time = 0;
 		} else {
 			yyerror("out of memory");
 		}
@@ -565,7 +571,8 @@ contents_rpz: contents_rpz content_rpz
 	| ;
 content_rpz: auth_name | auth_zonefile | rpz_tag | auth_master | auth_url |
 	   auth_allow_notify | rpz_action_override | rpz_cname_override |
-	   rpz_log | rpz_log_name | rpz_signal_nxdomain_ra | auth_for_downstream
+	   rpz_log | rpz_log_name | rpz_signal_nxdomain_ra | auth_for_downstream |
+	   auth_max_transfer_size | auth_max_transfer_time
 	;
 server_num_threads: VAR_NUM_THREADS STRING_ARG
 	{
@@ -3338,6 +3345,23 @@ auth_fallback_enabled: VAR_FALLBACK_ENABLED STRING_ARG
 			yyerror("expected yes or no.");
 		else cfg_parser->cfg->auths->fallback_enabled =
 			(strcmp($2, "yes")==0);
+		free($2);
+	}
+	;
+auth_max_transfer_size: VAR_MAX_TRANSFER_SIZE STRING_ARG
+	{
+		OUTYY(("P(max-transfer-size:%s)\n", $2));
+		if(!cfg_parse_memsize($2, &cfg_parser->cfg->auths->max_transfer_size))
+			yyerror("memory size expected");
+		free($2);
+	}
+	;
+auth_max_transfer_time: VAR_MAX_TRANSFER_TIME STRING_ARG
+	{
+		OUTYY(("P(max-transfer-time:%s)\n", $2));
+		if(atoi($2) == 0 && strcmp($2, "0") != 0)
+			yyerror("number expected");
+		else cfg_parser->cfg->auths->max_transfer_time = atoi($2);
 		free($2);
 	}
 	;
