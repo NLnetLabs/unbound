@@ -408,6 +408,8 @@ shorten_rrset(sldns_buffer* pkt, struct rrset_parse* rrset, int count)
 	struct rr_parse* rr = rrset->rr_first, *prev = NULL;
 	if(!rr)
 		return;
+	if(count < 1)
+		return; /* cannot leave a still-linked rrset_parse with rr_count == 0 */
 	for(i=0; i<count; i++) {
 		prev = rr;
 		rr = rr->next;

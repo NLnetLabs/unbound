@@ -4265,8 +4265,8 @@ server_cookie_secret_file: VAR_COOKIE_SECRET_FILE STRING_ARG
 server_iter_scrub_ns: VAR_ITER_SCRUB_NS STRING_ARG
 	{
 		OUTYY(("P(server_iter_scrub_ns:%s)\n", $2));
-		if(atoi($2) == 0 && strcmp($2, "0") != 0)
-			yyerror("number expected");
+		if(atoi($2) < 1)
+			yyerror("number >= 1 expected");
 		else cfg_parser->cfg->iter_scrub_ns = atoi($2);
 		free($2);
 	}

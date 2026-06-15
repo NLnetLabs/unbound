@@ -14,6 +14,9 @@
 	- Fix buffer overflow when configured with lower than
 	  default size and http transfer. Thanks to Qifan Zhang,
 	  Palo Alto Networks, for the report.
+	- Fix that misconfigured `iter-scrub-ns: 0` causes request
+	  failures. Thanks to Qifan Zhang, Palo Alto Networks,
+	  for the report.
 
 12 June 2026: Wouter
 	- Fix that for auth-zone and rpz zones the allow-notify

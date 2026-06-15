@@ -776,7 +776,7 @@ int config_set_option(struct config_file* cfg, const char* opt,
 	else S_YNO("ede:", ede)
 	else S_YNO("ede-serve-expired:", ede_serve_expired)
 	else S_YNO("dns-error-reporting:", dns_error_reporting)
-	else S_NUMBER_OR_ZERO("iter-scrub-ns:", iter_scrub_ns)
+	else S_NUMBER_NONZERO("iter-scrub-ns:", iter_scrub_ns)
 	else S_NUMBER_OR_ZERO("iter-scrub-cname:", iter_scrub_cname)
 	else S_NUMBER_OR_ZERO("iter-scrub-rrsig:", iter_scrub_rrsig)
 	else S_YNO("iter-scrub-promiscuous:", iter_scrub_promiscuous)
