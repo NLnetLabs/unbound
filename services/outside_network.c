@@ -3911,7 +3911,8 @@ outnet_comm_point_for_http(struct outside_network* outnet,
 		/* outnet_tcp_connect has closed fd on error for us */
 		return 0;
 	}
-	cp = comm_point_create_http_out(outnet->base, 65552, cb, cb_arg,
+	cp = comm_point_create_http_out(outnet->base,
+		sldns_buffer_capacity(outnet->udp_buff), cb, cb_arg,
 		outnet->udp_buff);
 	if(!cp) {
 		log_err("malloc failure");

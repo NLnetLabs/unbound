@@ -5036,6 +5036,14 @@ http_chunked_segment(struct comm_point* c)
 		c->http_stored = 0;
 		sldns_buffer_skip(c->buffer, (ssize_t)c->tcp_byte_count);
 		sldns_buffer_clear(c->http_temp);
+		if(sldns_buffer_remaining(c->buffer) >
+			sldns_buffer_capacity(c->http_temp)) {
+			verbose(VERB_OPS, "http chunked: surplus %d exceeds "
+				"temp buffer %d", (int)sldns_buffer_remaining(
+				c->buffer), (int)sldns_buffer_capacity(
+				c->http_temp));
+			return 0;
+		}
 		sldns_buffer_write(c->http_temp,
 			sldns_buffer_current(c->buffer),
 			sldns_buffer_remaining(c->buffer));
