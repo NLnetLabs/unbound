@@ -44,6 +44,11 @@
 	  entries in a sliding window. It did not surpass RRSIG
 	  expiry. Thanks to Qifan Zhang, Palo Alto Networks, for
 	  the report.
+	- Fix misconfigured ipsecmod hook causing path name
+	  similarity with other file. The ipsecmod is changed for
+	  exec of the hook. The ipsecmod hook, if a script, has to
+	  start now with a line like `#!/bin/sh`. Thanks to Qifan
+	  Zhang, Palo Alto Networks, for the report.
 
 12 June 2026: Wouter
 	- Fix that for auth-zone and rpz zones the allow-notify
