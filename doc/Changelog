@@ -8,6 +8,9 @@
 	  transfers, to stop increasing memory usage, for rpz
 	  zones. Thanks to Qifan Zhang, Palo Alto Networks, for
 	  the report.
+	- Fix assertion failure for long HTTP header that fills
+	  buffer. Thanks to Qifan Zhang, Palo Alto Networks, for
+	  the report.
 
 12 June 2026: Wouter
 	- Fix that for auth-zone and rpz zones the allow-notify

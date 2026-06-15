@@ -5366,6 +5366,13 @@ comm_point_http_handle_read(int fd, struct comm_point* c)
 		if(c->http_in_headers || c->http_in_chunk_headers) {
 			/* if header is done, process the header */
 			if(!http_header_done(c->buffer)) {
+				if(sldns_buffer_limit(c->buffer) ==
+					sldns_buffer_capacity(c->buffer)) {
+					verbose(VERB_OPS, "http header line "
+						"exceeds %d bytes, transfer "
+						"failed", (int)sldns_buffer_capacity(c->buffer));
+					return 0;
+				}
 				/* copy remaining data to front of buffer
 				 * and set rest for writing into it */
 				http_moveover_buffer(c->buffer);
