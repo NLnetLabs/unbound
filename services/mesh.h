@@ -342,11 +342,14 @@ void mesh_new_client(struct mesh_area* mesh, struct query_info* qinfo,
  * @param cb_arg: callback user arg.
  * @param rpz_passthru: if true, the rpz passthru was previously found and
  * 	further rpz processing is stopped.
+ * @param unique_info: if nonnull, unique info is passed back to be used
+ *	for the callback remove call. It does not need to be deallocated.
  * @return 0 on error.
  */
 int mesh_new_callback(struct mesh_area* mesh, struct query_info* qinfo,
 	uint16_t qflags, struct edns_data* edns, struct sldns_buffer* buf, 
-	uint16_t qid, mesh_cb_func_type cb, void* cb_arg, int rpz_passthru);
+	uint16_t qid, mesh_cb_func_type cb, void* cb_arg, int rpz_passthru,
+	void** unique_info);
 
 /**
  * New prefetch message. Create new query state if needed.
@@ -544,6 +547,23 @@ struct mesh_state* mesh_area_find(struct mesh_area* mesh,
 	uint16_t qflags, int prime, int valrec);
 
 /**
+ * Find a unique mesh state in the mesh area. Pass relevant flags.
+ *
+ * @param mesh: the mesh area to look in.
+ * @param cinfo: if non-NULL client specific info that may affect IP-based
+ * 	actions that apply to the query result.
+ * @param qinfo: what query
+ * @param qflags: if RD / CD bit is set or not.
+ * @param prime: if it is a priming query.
+ * @param valrec: if it is a validation-recursion query.
+ * @param unique_info: the unique info for the state. NULL can be passed.
+ * @return: mesh state or NULL if not found.
+ */
+struct mesh_state* mesh_area_find_unique(struct mesh_area* mesh,
+	struct respip_client_info* cinfo, struct query_info* qinfo,
+	uint16_t qflags, int prime, int valrec, void* unique_info);
+
+/**
  * Setup attachment super/sub relation between super and sub mesh state.
  * The relation must not be present when calling the function.
  * Does not update stat items in mesh_area.
@@ -736,8 +756,9 @@ void mesh_respond_serve_expired(struct mesh_state* mstate);
  * @param qflags: flags from client query.
  * @param cb: callback function.
  * @param cb_arg: callback user arg.
+ * @param unique_info: if not NULL, used to find a unique state for removal.
  */
 void mesh_remove_callback(struct mesh_area* mesh, struct query_info* qinfo,
-	uint16_t qflags, mesh_cb_func_type cb, void* cb_arg);
+	uint16_t qflags, mesh_cb_func_type cb, void* cb_arg, void* unique_info);
 
 #endif /* SERVICES_MESH_H */

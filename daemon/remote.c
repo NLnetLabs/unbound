@@ -7612,7 +7612,8 @@ auth_zone_zonemd_stop_lookup(struct auth_zone* z, struct mesh_area* mesh)
 	qinfo.local_alias = NULL;
 
 	mesh_remove_callback(mesh, &qinfo, qflags,
-		&auth_zonemd_dnskey_lookup_callback, z);
+		&auth_zonemd_dnskey_lookup_callback, z,
+		z->zonemd_callback_unique_info);
 }
 
 /** Pick up the auth zone locks. */

@@ -17,6 +17,10 @@
 	- Fix that misconfigured `iter-scrub-ns: 0` causes request
 	  failures. Thanks to Qifan Zhang, Palo Alto Networks,
 	  for the report.
+	- Fix that fast_reload when a zonemd verification lookup
+	  it in progress with subnet loaded, deregisters the
+	  callback. Thanks to Qifan Zhang, Palo Alto Networks,
+	  for the report.
 
 12 June 2026: Wouter
 	- Fix that for auth-zone and rpz zones the allow-notify

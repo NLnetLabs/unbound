@@ -662,7 +662,8 @@ servfail_mem:
 int
 mesh_new_callback(struct mesh_area* mesh, struct query_info* qinfo,
 	uint16_t qflags, struct edns_data* edns, sldns_buffer* buf,
-	uint16_t qid, mesh_cb_func_type cb, void* cb_arg, int rpz_passthru)
+	uint16_t qid, mesh_cb_func_type cb, void* cb_arg, int rpz_passthru,
+	void** unique_info)
 {
 	struct mesh_state* s = NULL;
 	int unique = unique_mesh_state(edns->opt_list_in, mesh->env);
@@ -751,6 +752,8 @@ mesh_new_callback(struct mesh_area* mesh, struct query_info* qinfo,
 		mesh->num_reply_states ++;
 	}
 	mesh->num_reply_addrs++;
+	if(unique_info)
+		*unique_info = s->unique;
 	if(added)
 		mesh_run(mesh, s, module_event_new, NULL);
 	return 1;
@@ -1969,6 +1972,25 @@ struct mesh_state* mesh_area_find(struct mesh_area* mesh,
 	return result;
 }
 
+struct mesh_state* mesh_area_find_unique(struct mesh_area* mesh,
+	struct respip_client_info* cinfo, struct query_info* qinfo,
+	uint16_t qflags, int prime, int valrec, void* unique_info)
+{
+	struct mesh_state key;
+	struct mesh_state* result;
+
+	key.node.key = &key;
+	key.s.is_priming = prime;
+	key.s.is_valrec = valrec;
+	key.s.qinfo = *qinfo;
+	key.s.query_flags = qflags;
+	key.unique = (struct mesh_state*)unique_info;
+	key.s.client_info = cinfo;
+
+	result = (struct mesh_state*)rbtree_search(&mesh->all, &key);
+	return result;
+}
+
 /** remove mesh state callback */
 int mesh_state_del_cb(struct mesh_state* s, mesh_cb_func_type cb, void* cb_arg)
 {
@@ -2700,13 +2722,30 @@ int mesh_jostle_exceeded(struct mesh_area* mesh)
 }
 
 void mesh_remove_callback(struct mesh_area* mesh, struct query_info* qinfo,
-	uint16_t qflags, mesh_cb_func_type cb, void* cb_arg)
+	uint16_t qflags, mesh_cb_func_type cb, void* cb_arg, void* unique_info)
 {
 	struct mesh_state* s = NULL;
 	s = mesh_area_find(mesh, NULL, qinfo, qflags&(BIT_RD|BIT_CD), 0, 0);
-	if(!s) return;
-	if(!mesh_state_del_cb(s, cb, cb_arg)) return;
+	if(s && mesh_state_del_cb(s, cb, cb_arg))
+		goto removed;
+	if(unique_info) {
+		s = mesh_area_find_unique(mesh, NULL, qinfo,
+			qflags&(BIT_RD|BIT_CD), 0, 0, unique_info);
+		if(s && mesh_state_del_cb(s, cb, cb_arg))
+			goto removed;
+	}
+	/* mesh_area_find builds key.unique=NULL and cannot match a state
+	 * created with mesh_state_make_unique (e.g. subnetcache sets
+	 * env->unique_mesh). Fall back to a linear scan; cb+cb_arg is an
+	 * exact key (mesh_state_del_cb compares both).
+	 * This works for both lookups for zonemd and for hostname authzone. */
+	RBTREE_FOR(s, struct mesh_state*, &mesh->all) {
+		if(s->cb_list && mesh_state_del_cb(s, cb, cb_arg))
+			goto removed;
+	}
+	return;
 
+removed:
 	/* It was in the list and removed. */
 	log_assert(mesh->num_reply_addrs > 0);
 	mesh->num_reply_addrs--;

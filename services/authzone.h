@@ -144,6 +144,8 @@ struct auth_zone {
 	struct module_env* zonemd_callback_env;
 	/** for the zonemd callback, the type of data looked up */
 	uint16_t zonemd_callback_qtype;
+	/** for the zonemd callback, the unique info */
+	void* zonemd_callback_unique_info;
 	/** zone has been deleted */
 	int zone_deleted;
 	/** deletelist pointer, unused normally except during delete */
@@ -344,6 +346,8 @@ struct auth_probe {
 
 	/** for the hostname lookups, which master is current */
 	struct auth_master* lookup_target;
+	/** for the lookup, the callback unique info */
+	void* lookup_unique_info;
 	/** are we looking up A or AAAA, first A, then AAAA (if ip6 enabled) */
 	int lookup_aaaa;
 	/** we only want to do lookups for making config work (for notify),
@@ -402,6 +406,8 @@ struct auth_transfer {
 
 	/** for the hostname lookups, which master is current */
 	struct auth_master* lookup_target;
+	/** for the lookup, the callback unique info */
+	void* lookup_unique_info;
 	/** are we looking up A or AAAA, first A, then AAAA (if ip6 enabled) */
 	int lookup_aaaa;
 
