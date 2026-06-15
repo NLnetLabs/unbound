@@ -5130,6 +5130,10 @@ answer queries with that content.
     because it may not have that when retrieving that data, instead use a plain
     IP address to avoid a circular dependency on retrieving that IP address.
 
+    Every number of IXFR transfers, a full AXFR is performed.
+    This is to consolidate the rpz memory, that would otherwise grow.
+    The fixed value is after 5 IXFR transfers.
+
 
 @@UAHL@unbound.conf.rpz@master@@: *<IP address or host name>*
     Alternate syntax for :ref:`primary<unbound.conf.rpz.primary>`.

@@ -292,6 +292,10 @@ struct auth_xfer {
 	size_t max_transfer_size;
 	/** The maximum auth zone transfer time taken, in msec. */
 	int max_transfer_time;
+	/** the zone is an rpz zone */
+	int is_rpz;
+	/** the number of IXFRs since the last full transfer. */
+	int num_ixfrs;
 };
 
 /**

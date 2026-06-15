@@ -96,6 +96,8 @@
 /** number of timeouts before we fallback from IXFR to AXFR,
  * because some versions of servers (eg. dnsmasq) drop IXFR packets. */
 #define NUM_TIMEOUTS_FALLBACK_IXFR 3
+/** number of IXFRs before an AXFR is performed, to consolidate RPZ memory. */
+#define NUM_IXFR_BEFORE_AXFR 5
 
 /** pick up nextprobe task to start waiting to perform transfer actions */
 static void xfr_set_timeout(struct auth_xfer* xfr, struct module_env* env,
@@ -2087,6 +2089,7 @@ auth_xfer_setup(struct auth_zone* z, struct auth_xfer* x)
 	if(!xfr_find_soa(z, x)) {
 		return 1;
 	}
+	x->is_rpz = (z->rpz!=NULL);
 	/* nothing for probe, nextprobe and transfer tasks */
 	return 1;
 }
@@ -4317,7 +4320,7 @@ xfr_create_ixfr_packet(struct auth_xfer* xfr, sldns_buffer* buf, uint16_t id,
 {
 	struct query_info qinfo;
 	uint32_t serial;
-	int have_zone;
+	int have_zone, get_full = 0;
 	have_zone = xfr->have_zone;
 	serial = xfr->serial;
 
@@ -4330,7 +4333,18 @@ xfr_create_ixfr_packet(struct auth_xfer* xfr, sldns_buffer* buf, uint16_t id,
 	xfr->task_transfer->on_ixfr_is_axfr = 0;
 	xfr->task_transfer->on_ixfr = 1;
 	qinfo.qtype = LDNS_RR_TYPE_IXFR;
-	if(!have_zone || xfr->task_transfer->ixfr_fail || !master->ixfr) {
+	if(xfr->num_ixfrs >= NUM_IXFR_BEFORE_AXFR && xfr->is_rpz) {
+		/* For the RPZ, an IXFR is going to grow regions, and a
+		 * full transfer, zonefile read, AXFR and HTTP clear the
+		 * region, but IXFR does not. That memory keeps growing,
+		 * and getting a full transfer with AXFR here resets that.
+		 * The rpz->client_set->region, rpz->ns_set->region and
+		 * rpz->respip_set->region need to be reset, they are for
+		 * rpz-client-ip, rpz-nsip and rpz-ip. */
+		get_full = 1;
+	}
+	if(!have_zone || xfr->task_transfer->ixfr_fail || !master->ixfr
+		|| get_full) {
 		qinfo.qtype = LDNS_RR_TYPE_AXFR;
 		xfr->task_transfer->ixfr_fail = 0;
 		xfr->task_transfer->on_ixfr = 0;
@@ -4955,6 +4969,8 @@ apply_ixfr(struct auth_xfer* xfr, struct auth_zone* z,
 	int delmode = 0;
 	int softfail = 0;
 
+	xfr->num_ixfrs++;
+
 	/* start RR iterator over chunklist of packets */
 	chunk_rrlist_start(xfr, &rr_chunk, &rr_num, &rr_pos);
 	while(!chunk_rrlist_end(rr_chunk, rr_num)) {
@@ -5100,6 +5116,7 @@ apply_axfr(struct auth_xfer* xfr, struct auth_zone* z,
 	xfr->have_zone = 0;
 	xfr->serial = 0;
 	xfr->soa_zone_acquired = 0;
+	xfr->num_ixfrs = 0;
 
 	/* insert all RRs in to the zone */
 	/* insert the SOA only once, skip the last one */
@@ -5202,6 +5219,7 @@ apply_http(struct auth_xfer* xfr, struct auth_zone* z,
 	xfr->have_zone = 0;
 	xfr->serial = 0;
 	xfr->soa_zone_acquired = 0;
+	xfr->num_ixfrs = 0;
 
 	chunk = xfr->task_transfer->chunks_first;
 	chunk_pos = 0;
@@ -5414,6 +5432,7 @@ xfr_process_chunk_list(struct auth_xfer* xfr, struct module_env* env,
 	}
 	z->soa_zone_acquired = *env->now;
 	xfr->soa_zone_acquired = *env->now;
+	xfr->is_rpz = (z->rpz!=NULL);
 
 	/* release xfr lock while verifying zonemd because it may have
 	 * to spawn lookups in the state machines */

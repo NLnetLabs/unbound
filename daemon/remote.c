@@ -3233,6 +3233,7 @@ do_auth_zone_reload(RES* ssl, struct worker* worker, char* arg)
 	z->zone_expired = 0;
 	if(xfr) {
 		xfr->zone_expired = 0;
+		xfr->num_ixfrs = 0;
 		if(!xfr_find_soa(z, xfr)) {
 			if(z->data.count == 0) {
 				lock_rw_unlock(&z->lock);
