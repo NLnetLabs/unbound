@@ -209,6 +209,12 @@ rrset_cache_update(struct rrset_cache* r, struct rrset_ref* ref,
 	int equal = 0;
 	log_assert(ref->id != 0 && k->id != 0);
 	log_assert(k->rk.dname != NULL);
+	if((k->rk.flags&PACKED_RRSET_0TTL_GRACE) !=0) {
+		log_nametypeclass(VERB_ALGO, "rrset store of PACKED_RRSET_0TTL_GRACE rrset skipped", k->rk.dname, rrset_type, ntohs(k->rk.rrset_class));
+		return 0; /* Do not store 0TTL items after apply of
+			the grace ttl amount.
+			This means the ref was not changed by the call. */
+	}
 	/* looks up item with a readlock - no editing! */
 	if((e=slabhash_lookup(&r->table, h, k, 0)) != 0) {
 		/* return id and key as they will be used in the cache

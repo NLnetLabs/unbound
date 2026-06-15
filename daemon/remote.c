@@ -2299,6 +2299,9 @@ zone_del_rrset(struct lruhash_entry* e, void* arg)
 			(struct packed_rrset_data*)e->data;
 		if(d->ttl > inf->expired) {
 			d->ttl = inf->expired;
+			if(d->ttl_add > inf->expired)
+				d->ttl_add = inf->expired; /* for 0TTL rrsets,
+					means that d->ttl_add <= d->ttl */
 			inf->num_rrsets++;
 		}
 	}

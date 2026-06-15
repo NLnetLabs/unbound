@@ -40,6 +40,10 @@
 	- Fix log of an aliased qname, to not use freed region
 	  memory. Thanks to Qifan Zhang, Palo Alto Networks, for
 	  the report.
+	- Fix DNAME synthesis from cache that keeps use of 0TTL
+	  entries in a sliding window. It did not surpass RRSIG
+	  expiry. Thanks to Qifan Zhang, Palo Alto Networks, for
+	  the report.
 
 12 June 2026: Wouter
 	- Fix that for auth-zone and rpz zones the allow-notify
