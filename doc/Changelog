@@ -34,6 +34,9 @@
 	- Fix integer overflow for very high values of
 	  `sock-queue-timeout`. Thanks to Qifan Zhang, Palo Alto
 	  Networks, for the report.
+	- Fix that fast_reload does not terminate the server for
+	  errors in config, for key files. Thanks to Qifan Zhang,
+	  Palo Alto Networks, for the report.
 
 12 June 2026: Wouter
 	- Fix that for auth-zone and rpz zones the allow-notify

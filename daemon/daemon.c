@@ -216,7 +216,8 @@ setup_listen_sslctx(void** ctx, int is_dot, int is_doh,
 		(cfg->tls_session_ticket_keys.first &&
 		cfg->tls_session_ticket_keys.first->str[0] != 0),
 		is_dot, is_doh, cfg->tls_protocols))) {
-		fatal_exit("could not set up listen SSL_CTX");
+		log_err("could not set up listen SSL_CTX");
+		*ctx = NULL;
 	}
 }
 #endif /* HAVE_SSL */
@@ -258,7 +259,8 @@ void* daemon_setup_listen_quic_sslctx(struct daemon* daemon,
 		pem += strlen(chroot);
 
 	if(!(ctx = quic_sslctx_create(key, pem, NULL))) {
-		fatal_exit("could not set up quic SSL_CTX");
+		log_err("could not set up quic SSL_CTX");
+		return NULL;
 	}
 	return ctx;
 }
@@ -276,8 +278,10 @@ void* daemon_setup_connect_dot_sslctx(struct daemon* daemon,
 		bundle += strlen(chroot);
 
 	if(!(ctx = connect_sslctx_create(NULL, NULL, bundle,
-		cfg->tls_win_cert)))
-		fatal_exit("could not set up connect SSL_CTX");
+		cfg->tls_win_cert))) {
+		log_err("could not set up connect SSL_CTX");
+		return NULL;
+	}
 	return ctx;
 }
 #endif /* HAVE_SSL */
@@ -307,16 +311,22 @@ daemon_setup_sslctxs(struct daemon* daemon, struct config_file* cfg)
 		}
 		daemon->listen_dot_sslctx = daemon_setup_listen_dot_sslctx(
 			daemon, cfg);
+		if(!daemon->listen_dot_sslctx)
+			fatal_exit("Could not set up listen dot sslctx");
 #ifdef HAVE_NGHTTP2_NGHTTP2_H
 		if(cfg_has_https(cfg)) {
 			daemon->listen_doh_sslctx =
 				daemon_setup_listen_doh_sslctx(daemon, cfg);
+			if(!daemon->listen_doh_sslctx)
+				fatal_exit("Could not set up listen doh sslctx");
 		}
 #endif
 #ifdef HAVE_NGTCP2
 		if(cfg_has_quic(cfg)) {
 			daemon->listen_quic_sslctx =
 				daemon_setup_listen_quic_sslctx(daemon, cfg);
+			if(!daemon->listen_quic_sslctx)
+				fatal_exit("Could not set up listen quic sslctx");
 		}
 #endif /* HAVE_NGTCP2 */
 
@@ -349,6 +359,8 @@ daemon_setup_sslctxs(struct daemon* daemon, struct config_file* cfg)
 	}
 	daemon->connect_dot_sslctx = daemon_setup_connect_dot_sslctx(
 		daemon, cfg);
+	if(!daemon->connect_dot_sslctx)
+		fatal_exit("could not setup connect dot sslctx");
 #else /* HAVE_SSL */
 	(void)daemon;(void)cfg;
 #endif /* HAVE_SSL */

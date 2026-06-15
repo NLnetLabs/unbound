@@ -671,7 +671,9 @@ lz_enter_rr_str(struct local_zones* zones, const char* rr)
 	z = local_zones_lookup(zones, rr_name, len, labs, rr_class, rr_type, 1);
 	if(!z) {
 		lock_rw_unlock(&zones->lock);
-		fatal_exit("internal error: no zone for rr %s", rr);
+		log_err("internal error: no zone for rr %s", rr);
+		free(rr_name);
+		return 0;
 	}
 	lock_rw_wrlock(&z->lock);
 	lock_rw_unlock(&zones->lock);

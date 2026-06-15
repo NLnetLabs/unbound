@@ -2185,7 +2185,12 @@ auth_zones_cfg(struct auth_zones* az, struct config_auth* c)
 	z->zonemd_reject_absence = c->zonemd_reject_absence;
 	if(c->isrpz && !z->rpz){
 		if(!(z->rpz = rpz_create(c))){
-			fatal_exit("Could not setup RPZ zones");
+			log_err("Could not setup RPZ zones");
+			if(x) {
+				lock_basic_unlock(&x->lock);
+			}
+			lock_rw_unlock(&z->lock);
+			lock_rw_unlock(&az->rpz_lock);
 			return 0;
 		}
 		lock_protect(&z->lock, &z->rpz->local_zones, sizeof(*z->rpz));

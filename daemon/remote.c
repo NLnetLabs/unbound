@@ -5664,6 +5664,8 @@ ct_create_sslctxs(struct fast_reload_construct* ct,
 		/* Leave listen ctxs and file str at NULL */
 		ct->connect_dot_sslctx = daemon_setup_connect_dot_sslctx(
 			daemon, newcfg);
+		if(!ct->connect_dot_sslctx)
+			return 0;
 		return 1;
 	}
 
@@ -5673,20 +5675,28 @@ ct_create_sslctxs(struct fast_reload_construct* ct,
 		pem += strlen(chroot);
 
 	ct->listen_dot_sslctx = daemon_setup_listen_dot_sslctx(daemon, newcfg);
+	if(!ct->listen_dot_sslctx)
+		return 0;
 #ifdef HAVE_NGHTTP2_NGHTTP2_H
 	if(cfg_has_https(newcfg)) {
 		ct->listen_doh_sslctx = daemon_setup_listen_doh_sslctx(
 			daemon, newcfg);
+		if(!ct->listen_doh_sslctx)
+			return 0;
 	}
 #endif
 #ifdef HAVE_NGTCP2
 	if(cfg_has_quic(newcfg)) {
 		ct->listen_quic_sslctx = daemon_setup_listen_quic_sslctx(
 			daemon, newcfg);
+		if(!ct->listen_quic_sslctx)
+			return 0;
 	}
 #endif /* HAVE_NGTCP2 */
 	ct->connect_dot_sslctx = daemon_setup_connect_dot_sslctx(daemon,
 		newcfg);
+	if(!ct->connect_dot_sslctx)
+		return 0;
 
 	/* Store mtime and names */
 	ct->ssl_service_key = strdup(newcfg->ssl_service_key);
