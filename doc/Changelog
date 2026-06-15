@@ -21,6 +21,10 @@
 	  it in progress with subnet loaded, deregisters the
 	  callback. Thanks to Qifan Zhang, Palo Alto Networks,
 	  for the report.
+	- Fix for fast_reload that removes an auth zone while its
+	  lookups are in progress, for a primary name. Also after the
+	  change, it no longer picks up the old results. Thanks to
+	  Qifan Zhang, Palo Alto Networks, for the report.
 
 12 June 2026: Wouter
 	- Fix that for auth-zone and rpz zones the allow-notify

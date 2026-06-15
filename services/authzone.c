@@ -5482,6 +5482,32 @@ xfr_process_chunk_list(struct auth_xfer* xfr, struct module_env* env,
 	return 1;
 }
 
+/** Stop lookup using callback */
+static void
+xfr_stop_lookup(struct auth_master** lookup_target, void* lookup_unique_info,
+	int lookup_aaaa, uint16_t dclass, struct mesh_area* mesh,
+	mesh_cb_func_type cb, void* cb_arg)
+{
+	struct query_info qinfo;
+	uint8_t dname[LDNS_MAX_DOMAINLEN+1];
+	if(!*lookup_target) return;
+	qinfo.qname_len = sizeof(dname);
+	if(sldns_str2wire_dname_buf((*lookup_target)->host, dname,
+		&qinfo.qname_len) != 0) {
+		*lookup_target = NULL;
+		return;
+	}
+	qinfo.qname = dname;
+	qinfo.qclass = dclass;
+	qinfo.qtype = lookup_aaaa ? LDNS_RR_TYPE_AAAA : LDNS_RR_TYPE_A;
+	qinfo.local_alias = NULL;
+	log_query_info(VERB_ALGO, "removing xfr callback", &qinfo);
+
+	mesh_remove_callback(mesh, &qinfo, BIT_RD, cb, cb_arg,
+		lookup_unique_info);
+	*lookup_target = NULL;
+}
+
 /** disown task_transfer.  caller must hold xfr.lock */
 static void
 xfr_transfer_disown(struct auth_xfer* xfr)
@@ -5492,6 +5518,12 @@ xfr_transfer_disown(struct auth_xfer* xfr)
 	/* remove the commpoint */
 	comm_point_delete(xfr->task_transfer->cp);
 	xfr->task_transfer->cp = NULL;
+	if(xfr->task_transfer->env)
+		xfr_stop_lookup(&xfr->task_transfer->lookup_target,
+			xfr->task_transfer->lookup_unique_info,
+			xfr->task_transfer->lookup_aaaa, xfr->dclass,
+			xfr->task_transfer->env->mesh,
+			&auth_xfer_transfer_lookup_callback, xfr);
 	/* we don't own this item anymore */
 	xfr->task_transfer->worker = NULL;
 	xfr->task_transfer->env = NULL;
@@ -5787,6 +5819,26 @@ xfr_master_add_addrs(struct auth_master* m, struct ub_packed_rrset_key* rrset,
 	}
 }
 
+/** check if the lookup target name equals the found answer name. */
+static int
+xfer_target_equals_answer_name(struct auth_master* lookup_target,
+	struct ub_packed_rrset_key* answer)
+{
+	uint8_t qname[LDNS_MAX_DOMAINLEN+1];
+	size_t qname_len;
+	if(!lookup_target) return 0;
+	if(!answer) return 0;
+	qname_len = sizeof(qname);
+	if(sldns_str2wire_dname_buf(lookup_target->host, qname, &qname_len)
+		!= 0) {
+		verbose(VERB_ALGO, "xfer_target_equals_answer_name: could not parse auth host name");
+		return 0;
+	}
+	if(query_dname_compare(answer->rk.dname, qname) == 0)
+		return 1;
+	return 0;
+}
+
 /** callback for task_transfer lookup of host name, of A or AAAA */
 void auth_xfer_transfer_lookup_callback(void* arg, int rcode, sldns_buffer* buf,
 	enum sec_status ATTR_UNUSED(sec), char* ATTR_UNUSED(why_bogus),
@@ -5817,21 +5869,28 @@ void auth_xfer_transfer_lookup_callback(void* arg, int rcode, sldns_buffer* buf,
 			/* parsed successfully */
 			struct ub_packed_rrset_key* answer =
 				reply_find_answer_rrset(&rq, rep);
-			if(answer) {
+			if(answer && xfer_target_equals_answer_name(
+				xfr->task_transfer->lookup_target, answer)) {
 				xfr_master_add_addrs(xfr->task_transfer->
 					lookup_target, answer, wanted_qtype);
+			} else if(answer) {
+				if(verbosity >= VERB_ALGO) {
+					char zname[LDNS_MAX_DOMAINLEN];
+					dname_str(xfr->name, zname);
+					verbose(VERB_ALGO, "auth zone %s host %s type %s transfer lookup has mismatch in answer name", zname, ((xfr->task_transfer->lookup_target && xfr->task_transfer->lookup_target->host) ? xfr->task_transfer->lookup_target->host : "null"), (xfr->task_transfer->lookup_aaaa?"AAAA":"A"));
+				}
 			} else {
 				if(verbosity >= VERB_ALGO) {
 					char zname[LDNS_MAX_DOMAINLEN];
 					dname_str(xfr->name, zname);
-					verbose(VERB_ALGO, "auth zone %s host %s type %s transfer lookup has nodata", zname, xfr->task_transfer->lookup_target->host, (xfr->task_transfer->lookup_aaaa?"AAAA":"A"));
+					verbose(VERB_ALGO, "auth zone %s host %s type %s transfer lookup has nodata", zname, ((xfr->task_transfer->lookup_target && xfr->task_transfer->lookup_target->host) ? xfr->task_transfer->lookup_target->host : "null"), (xfr->task_transfer->lookup_aaaa?"AAAA":"A"));
 				}
 			}
 		} else {
 			if(verbosity >= VERB_ALGO) {
 				char zname[LDNS_MAX_DOMAINLEN];
 				dname_str(xfr->name, zname);
-				verbose(VERB_ALGO, "auth zone %s host %s type %s transfer lookup has no answer", zname, xfr->task_transfer->lookup_target->host, (xfr->task_transfer->lookup_aaaa?"AAAA":"A"));
+				verbose(VERB_ALGO, "auth zone %s host %s type %s transfer lookup has no answer", zname, ((xfr->task_transfer->lookup_target && xfr->task_transfer->lookup_target->host) ? xfr->task_transfer->lookup_target->host : "null"), (xfr->task_transfer->lookup_aaaa?"AAAA":"A"));
 			}
 		}
 		regional_free_all(temp);
@@ -5839,10 +5898,11 @@ void auth_xfer_transfer_lookup_callback(void* arg, int rcode, sldns_buffer* buf,
 		if(verbosity >= VERB_ALGO) {
 			char zname[LDNS_MAX_DOMAINLEN];
 			dname_str(xfr->name, zname);
-			verbose(VERB_ALGO, "auth zone %s host %s type %s transfer lookup failed", zname, xfr->task_transfer->lookup_target->host, (xfr->task_transfer->lookup_aaaa?"AAAA":"A"));
+			verbose(VERB_ALGO, "auth zone %s host %s type %s transfer lookup failed", zname, ((xfr->task_transfer->lookup_target && xfr->task_transfer->lookup_target->host) ? xfr->task_transfer->lookup_target->host : "null"), (xfr->task_transfer->lookup_aaaa?"AAAA":"A"));
 		}
 	}
-	if(xfr->task_transfer->lookup_target->list &&
+	if(xfr->task_transfer->lookup_target &&
+		xfr->task_transfer->lookup_target->list &&
 		xfr->task_transfer->lookup_target == xfr_transfer_current_master(xfr))
 		xfr->task_transfer->scan_addr = xfr->task_transfer->lookup_target->list;
 
@@ -6499,6 +6559,12 @@ xfr_probe_disown(struct auth_xfer* xfr)
 	/* remove the commpoint */
 	comm_point_delete(xfr->task_probe->cp);
 	xfr->task_probe->cp = NULL;
+	if(xfr->task_probe->env)
+		xfr_stop_lookup(&xfr->task_probe->lookup_target,
+			xfr->task_probe->lookup_unique_info,
+			xfr->task_probe->lookup_aaaa, xfr->dclass,
+			xfr->task_probe->env->mesh,
+			&auth_xfer_probe_lookup_callback, xfr);
 	/* we don't own this item anymore */
 	xfr->task_probe->worker = NULL;
 	xfr->task_probe->env = NULL;
@@ -6953,21 +7019,28 @@ void auth_xfer_probe_lookup_callback(void* arg, int rcode, sldns_buffer* buf,
 			/* parsed successfully */
 			struct ub_packed_rrset_key* answer =
 				reply_find_answer_rrset(&rq, rep);
-			if(answer) {
+			if(answer && xfer_target_equals_answer_name(
+				xfr->task_probe->lookup_target, answer)) {
 				xfr_master_add_addrs(xfr->task_probe->
 					lookup_target, answer, wanted_qtype);
+			} else if(answer) {
+				if(verbosity >= VERB_ALGO) {
+					char zname[LDNS_MAX_DOMAINLEN];
+					dname_str(xfr->name, zname);
+					verbose(VERB_ALGO, "auth zone %s host %s type %s probe lookup has mismatch in answer name", zname, ((xfr->task_probe->lookup_target && xfr->task_probe->lookup_target->host) ? xfr->task_probe->lookup_target->host : "null"), (xfr->task_probe->lookup_aaaa?"AAAA":"A"));
+				}
 			} else {
 				if(verbosity >= VERB_ALGO) {
 					char zname[LDNS_MAX_DOMAINLEN];
 					dname_str(xfr->name, zname);
-					verbose(VERB_ALGO, "auth zone %s host %s type %s probe lookup has nodata", zname, xfr->task_probe->lookup_target->host, (xfr->task_probe->lookup_aaaa?"AAAA":"A"));
+					verbose(VERB_ALGO, "auth zone %s host %s type %s probe lookup has nodata", zname, ((xfr->task_probe->lookup_target && xfr->task_probe->lookup_target->host) ? xfr->task_probe->lookup_target->host : "null"), (xfr->task_probe->lookup_aaaa?"AAAA":"A"));
 				}
 			}
 		} else {
 			if(verbosity >= VERB_ALGO) {
 				char zname[LDNS_MAX_DOMAINLEN];
 				dname_str(xfr->name, zname);
-				verbose(VERB_ALGO, "auth zone %s host %s type %s probe lookup has no address", zname, xfr->task_probe->lookup_target->host, (xfr->task_probe->lookup_aaaa?"AAAA":"A"));
+				verbose(VERB_ALGO, "auth zone %s host %s type %s probe lookup has no address", zname, ((xfr->task_probe->lookup_target && xfr->task_probe->lookup_target->host) ? xfr->task_probe->lookup_target->host : "null"), (xfr->task_probe->lookup_aaaa?"AAAA":"A"));
 			}
 		}
 		regional_free_all(temp);
@@ -6975,10 +7048,11 @@ void auth_xfer_probe_lookup_callback(void* arg, int rcode, sldns_buffer* buf,
 		if(verbosity >= VERB_ALGO) {
 			char zname[LDNS_MAX_DOMAINLEN];
 			dname_str(xfr->name, zname);
-			verbose(VERB_ALGO, "auth zone %s host %s type %s probe lookup failed", zname, xfr->task_probe->lookup_target->host, (xfr->task_probe->lookup_aaaa?"AAAA":"A"));
+			verbose(VERB_ALGO, "auth zone %s host %s type %s probe lookup failed", zname, ((xfr->task_probe->lookup_target && xfr->task_probe->lookup_target->host) ? xfr->task_probe->lookup_target->host : "null"), (xfr->task_probe->lookup_aaaa?"AAAA":"A"));
 		}
 	}
-	if(xfr->task_probe->lookup_target->list &&
+	if(xfr->task_probe->lookup_target &&
+		xfr->task_probe->lookup_target->list &&
 		xfr->task_probe->lookup_target == xfr_probe_current_master(xfr))
 		xfr->task_probe->scan_addr = xfr->task_probe->lookup_target->list;
 
