@@ -27,6 +27,10 @@
 	  Qifan Zhang, Palo Alto Networks, for the report.
 	- Fix integer overflow in infra-cache-max-rtt calculation.
 	  Thanks to Qifan Zhang, Palo Alto Networks, for the report.
+	- Fix erroneous DNS error report values after bogus AAAA
+	  query caused error information that was not cleared by
+	  a successful A subquery. Thanks to Qifan Zhang, Palo Alto
+	  Networks, for the report.
 
 12 June 2026: Wouter
 	- Fix that for auth-zone and rpz zones the allow-notify

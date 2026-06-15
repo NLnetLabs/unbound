@@ -1017,6 +1017,9 @@ dns64_inform_super(struct module_qstate* qstate, int id,
 	if (super->return_rcode != LDNS_RCODE_NOERROR)
 		super->return_rcode = qstate->return_rcode;
 
+	/* Since the super qstate has a new response, its errinf is removed. */
+	super->errinf = NULL;
+
 	/* Generate a response suitable for the original query. */
 	if (qstate->qinfo.qtype == LDNS_RR_TYPE_A) {
 		dns64_adjust_a(id, super, qstate);

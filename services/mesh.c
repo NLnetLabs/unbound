@@ -1793,7 +1793,8 @@ void mesh_query_done(struct mesh_state* mstate)
 		}
 	}
 
-	if(mstate->reply_list && mstate->s.env->cfg->dns_error_reporting)
+	if(mstate->reply_list && mstate->s.env->cfg->dns_error_reporting
+		&& (!rep || rep->security != sec_status_secure))
 		dns_error_reporting(&mstate->s, rep);
 
 	for(r = mstate->reply_list; r; r = r->next) {
