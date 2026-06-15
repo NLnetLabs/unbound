@@ -1511,7 +1511,7 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 		if (worker->stats.max_query_time_us < wait_queue_time)
 			worker->stats.max_query_time_us = wait_queue_time;
 		if(wait_queue_time >
-			(long long)(worker->env.cfg->sock_queue_timeout * 1000000)) {
+			(long long)worker->env.cfg->sock_queue_timeout * 1000000) {
 			/* count and drop queries that were sitting in the socket queue too long */
 			worker->stats.num_queries_timed_out++;
 			return 0;
