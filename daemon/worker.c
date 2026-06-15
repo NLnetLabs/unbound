@@ -1494,6 +1494,8 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 	struct reply_info* partial_rep = NULL;
 	struct query_info* lookup_qinfo = &qinfo;
 	struct query_info qinfo_tmp; /* placeholder for lookup_qinfo */
+	uint8_t* alias_orig_qname = NULL; /* original qname for logs, if
+		a local_alias is used to change the qname. */
 	struct respip_client_info* cinfo = NULL, cinfo_tmp;
 	struct timeval wait_time;
 	struct check_request_result check_result = {0,0};
@@ -1928,6 +1930,11 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 	/* If we've found a local alias, replace the qname with the alias
 	 * target before resolving it. */
 	if(qinfo.local_alias) {
+		if(qinfo.local_alias->rrset &&
+			qinfo.local_alias->rrset->rk.dname)
+			/* Store the original qname, used for logs, since
+			 * local_alias can be removed by region_free_all. */
+			alias_orig_qname = qinfo.local_alias->rrset->rk.dname;
 		if(!local_alias_shallow_copy_qname(qinfo.local_alias, &qinfo.qname,
 			&qinfo.qname_len)) {
 			regional_free_all(worker->scratchpad);
@@ -2093,11 +2100,10 @@ send_reply_rc:
 	{
 		struct timeval tv;
 		memset(&tv, 0, sizeof(tv));
-		if(qinfo.local_alias && qinfo.local_alias->rrset &&
-			qinfo.local_alias->rrset->rk.dname) {
+		if(alias_orig_qname) {
 			/* log original qname, before the local alias was
 			 * used to resolve that CNAME to something else */
-			qinfo.qname = qinfo.local_alias->rrset->rk.dname;
+			qinfo.qname = alias_orig_qname;
 			log_reply_info(NO_VERBOSE, &qinfo,
 				&repinfo->client_addr, repinfo->client_addrlen,
 				tv, 1, c->buffer,
