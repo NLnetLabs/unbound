@@ -41,6 +41,7 @@
 #include "config.h"
 #include "services/localzone.h"
 #include "sldns/str2wire.h"
+#include "sldns/wire2str.h"
 #include "util/regional.h"
 #include "util/config_file.h"
 #include "util/data/dname.h"
@@ -356,6 +357,22 @@ rr_is_duplicate(struct packed_rrset_data* pd, uint8_t* rdata, size_t rdata_len)
 	return 0;
 }
 
+/** see if rdata is duplicate */
+static int
+rr_is_duplicate_wol(struct packed_rrset_data* d, uint8_t* rdata_wol, size_t len)
+{
+	size_t i, rdatawl_len = len+2;
+	uint16_t len16 = htons(len);
+	for(i=0; i<d->count + d->rrsig_count; i++) {
+		if(d->rr_len[i] != rdatawl_len)
+			continue;
+		if(memcmp(d->rr_data[i], &len16, 2) == 0 &&
+		   memcmp(d->rr_data[i]+2, rdata_wol, len) == 0)
+			return 1;
+	}
+	return 0;
+}
+
 /** new local_rrset */
 static struct local_rrset*
 new_local_rrset(struct regional* region, struct local_data* node,
@@ -391,6 +408,49 @@ new_local_rrset(struct regional* region, struct local_data* node,
 	rrset->rrset->rk.type = htons(rrtype);
 	rrset->rrset->rk.rrset_class = htons(rrclass);
 	return rrset;
+}
+
+/** insert RR into RRset data structure; Wastes a couple of bytes */
+int
+rrset_insert_rr_wol(struct regional* region, struct packed_rrset_data* pd,
+	uint8_t* rdata_wol, size_t rdata_len, time_t ttl)
+{
+	size_t* oldlen = pd->rr_len;
+	time_t* oldttl = pd->rr_ttl;
+	uint8_t** olddata = pd->rr_data;
+
+	/* add RR to rrset */
+	if(pd->count > LOCALZONE_RRSET_COUNT_MAX) {
+		log_warn("RRset has more than %d records, record ignored",
+			LOCALZONE_RRSET_COUNT_MAX);
+		return 1;
+	}
+	pd->count++;
+	pd->rr_len = regional_alloc(region, sizeof(*pd->rr_len)*pd->count);
+	pd->rr_ttl = regional_alloc(region, sizeof(*pd->rr_ttl)*pd->count);
+	pd->rr_data = regional_alloc(region, sizeof(*pd->rr_data)*pd->count);
+	if(!pd->rr_len || !pd->rr_ttl || !pd->rr_data) {
+		log_err("out of memory");
+		return 0;
+	}
+	if(pd->count > 1) {
+		memcpy(pd->rr_len+1, oldlen,
+			sizeof(*pd->rr_len)*(pd->count-1));
+		memcpy(pd->rr_ttl+1, oldttl,
+			sizeof(*pd->rr_ttl)*(pd->count-1));
+		memcpy(pd->rr_data+1, olddata,
+			sizeof(*pd->rr_data)*(pd->count-1));
+	}
+	pd->rr_len[0] = rdata_len+2;
+	pd->rr_ttl[0] = ttl;
+	pd->rr_data[0] = regional_alloc(region, rdata_len+2);
+	if(!pd->rr_data[0]) {
+		log_err("out of memory");
+		return 0;
+	}
+	sldns_write_uint16(pd->rr_data[0], rdata_len);
+	memmove(pd->rr_data[0]+2, rdata_wol, rdata_len);
+	return 1;
 }
 
 /** insert RR into RRset data structure; Wastes a couple of bytes */
@@ -509,6 +569,48 @@ lz_find_create_node(struct local_zone* z, uint8_t* nm, size_t nmlen,
  * the TTL and the SOA.MINIMUM) is also created and marked for usage with
  * negative answers and to avoid allocations during those answers. */
 static int
+lz_mark_soa_for_zone_wol(struct local_zone* z, struct ub_packed_rrset_key* soa_rrset,
+	uint8_t* rdata_wol, size_t rdata_len, time_t ttl)
+{
+	struct packed_rrset_data* pd = (struct packed_rrset_data*)
+		regional_alloc_zero(z->region, sizeof(*pd));
+	struct ub_packed_rrset_key* rrset_negative = (struct ub_packed_rrset_key*)
+		regional_alloc_zero(z->region, sizeof(*rrset_negative));
+	time_t minimum;
+	if(!rrset_negative||!pd) {
+		log_err("out of memory");
+		return 0;
+	}
+	/* Mark the original SOA record and then continue with the negative one. */
+	z->soa = soa_rrset;
+	rrset_negative->entry.key = rrset_negative;
+	pd->trust = rrset_trust_prim_noglue;
+	pd->security = sec_status_insecure;
+	rrset_negative->entry.data = pd;
+	rrset_negative->rk.dname = soa_rrset->rk.dname;
+	rrset_negative->rk.dname_len = soa_rrset->rk.dname_len;
+	rrset_negative->rk.type = soa_rrset->rk.type;
+	rrset_negative->rk.rrset_class = soa_rrset->rk.rrset_class;
+	if(!rrset_insert_rr_wol(z->region, pd, rdata_wol, rdata_len, ttl))
+		return 0;
+	/* last 4 bytes are minimum ttl in network format */
+	if(pd->count == 0 || pd->rr_len[0] < 2+4)
+		return 0;
+	minimum = (time_t)sldns_read_uint32(pd->rr_data[0]+(pd->rr_len[0]-4));
+	minimum = ttl<minimum?ttl:minimum;
+	pd->ttl = minimum;
+	pd->rr_ttl[0] = minimum;
+
+	z->soa_negative = rrset_negative;
+	return 1;
+}
+
+/* Mark the SOA record for the zone. This only marks the SOA rrset; the data
+ * for the RR is entered later on local_zone_enter_rr() as with the other
+ * records. An artificial soa_negative record with a modified TTL (minimum of
+ * the TTL and the SOA.MINIMUM) is also created and marked for usage with
+ * negative answers and to avoid allocations during those answers. */
+static int
 lz_mark_soa_for_zone(struct local_zone* z, struct ub_packed_rrset_key* soa_rrset,
 	uint8_t* rdata, size_t rdata_len, time_t ttl, const char* rrstr)
 {
@@ -543,6 +645,96 @@ lz_mark_soa_for_zone(struct local_zone* z, struct ub_packed_rrset_key* soa_rrset
 
 	z->soa_negative = rrset_negative;
 	return 1;
+}
+
+/**
+ * Convert dname, type, class, ttl, rdata to an rr string.
+ * rdata without prefixed length. returned string is malloced.
+ */
+char* dname_rdata_to_str(uint8_t* dname, size_t dnamelen, uint16_t rrtype,
+	uint16_t rrclass, uint32_t ttl, uint8_t* rdata, size_t rdata_len)
+{
+	char buf[65536], t[32], c[32], d[1024], result[65536+32+32+1024+1024];
+	buf[0]=0; buf[sizeof(buf)-1]=0;
+	d[0]=0; d[sizeof(d)-1]=0;
+	(void)sldns_wire2str_rdata_buf(rdata, rdata_len, buf, sizeof(buf),
+		rrtype);
+	(void)sldns_wire2str_type_buf(rrtype, t, sizeof(t));
+	(void)sldns_wire2str_class_buf(rrclass, c, sizeof(c));
+	if(dname)
+		(void)sldns_wire2str_dname_buf(dname, dnamelen, d, sizeof(d));
+	snprintf(result, sizeof(result), "%s%s%u %s %s %s",
+		dname, (dname?" ":""), (unsigned)ttl, c, t, d);
+	return strdup(result);
+}
+
+int
+local_zone_enter_rr_wol(struct local_zone* z, uint8_t* nm, size_t nmlen,
+	int nmlabs, uint16_t rrtype, uint16_t rrclass, time_t ttl,
+	uint8_t* rdata_wol, size_t rdata_len)
+{
+	struct local_data* node;
+	struct local_rrset* rrset;
+	struct packed_rrset_data* pd;
+
+	if(!lz_find_create_node(z, nm, nmlen, nmlabs, &node)) {
+		return 0;
+	}
+	log_assert(node);
+
+	/* Reject it if we would end up having CNAME and other data (including
+	 * another CNAME) for a redirect zone. */
+	if((z->type == local_zone_redirect ||
+		z->type == local_zone_inform_redirect) && node->rrsets) {
+		const char* othertype = NULL;
+		if (rrtype == LDNS_RR_TYPE_CNAME)
+			othertype = "other";
+		else if (node->rrsets->rrset->rk.type ==
+			 htons(LDNS_RR_TYPE_CNAME)) {
+			othertype = "CNAME";
+		}
+		if(othertype) {
+			char* rrstr = dname_rdata_to_str(nm, nmlen, rrtype,
+				rrclass, ttl, rdata_wol, rdata_len);
+			log_err("local-data '%s' in redirect zone must not "
+				"coexist with %s local-data", (rrstr?rrstr:"<out of memory>"), othertype);
+			free(rrstr);
+			return 0;
+		}
+	}
+	rrset = local_data_find_type(node, rrtype, 0);
+	if(!rrset) {
+		rrset = new_local_rrset(z->region, node, rrtype, rrclass);
+		if(!rrset)
+			return 0;
+		if(query_dname_compare(node->name, z->name) == 0) {
+			if(rrtype == LDNS_RR_TYPE_NSEC)
+			  rrset->rrset->rk.flags = PACKED_RRSET_NSEC_AT_APEX;
+			if(rrtype == LDNS_RR_TYPE_SOA &&
+				!lz_mark_soa_for_zone_wol(z, rrset->rrset, rdata_wol, rdata_len, ttl))
+				return 0;
+		}
+	}
+	pd = (struct packed_rrset_data*)rrset->rrset->entry.data;
+	log_assert(rrset && pd);
+
+	/* check for duplicate RR */
+	if(rr_is_duplicate_wol(pd, rdata_wol, rdata_len)) {
+		char* rrstr = dname_rdata_to_str(nm, nmlen, rrtype,
+			rrclass, ttl, rdata_wol, rdata_len);
+		verbose(VERB_ALGO, "ignoring duplicate RR: %s", (rrstr?rrstr:"<out of memory>"));
+		free(rrstr);
+		return 1;
+	}
+	if(pd->count > LOCALZONE_RRSET_COUNT_MAX) {
+		char* rrstr = dname_rdata_to_str(nm, nmlen, rrtype,
+			rrclass, ttl, rdata_wol, rdata_len);
+		log_warn("RRset %s has more than %d records, record ignored",
+			(rrstr?rrstr:"<out of memory>"), LOCALZONE_RRSET_COUNT_MAX);
+		free(rrstr);
+		return 1;
+	}
+	return rrset_insert_rr_wol(z->region, pd, rdata_wol, rdata_len, ttl);
 }
 
 int
@@ -2039,7 +2231,7 @@ set_kiddo_parents(struct local_zone* z, struct local_zone* match,
 
 struct local_zone* local_zones_add_zone(struct local_zones* zones,
 	uint8_t* name, size_t len, int labs, uint16_t dclass,
-	enum localzone_type tp)
+	enum localzone_type tp, int* duplicate)
 {
 	int exact;
 	/* create */
@@ -2047,6 +2239,7 @@ struct local_zone* local_zones_add_zone(struct local_zones* zones,
 	struct local_zone* z = local_zone_create(name, len, labs, tp, dclass);
 	if(!z) {
 		free(name);
+		if(duplicate) *duplicate = 0;
 		return NULL;
 	}
 	lock_rw_wrlock(&z->lock);
@@ -2060,8 +2253,14 @@ struct local_zone* local_zones_add_zone(struct local_zones* zones,
 	if(exact||!rbtree_insert(&zones->ztree, &z->node)) {
 		/* duplicate entry! */
 		lock_rw_unlock(&z->lock);
+		if(duplicate) {
+			*duplicate = 1;
+			z->name = NULL; /* Do not delete the name in
+				local_zone_delete. */
+		}
 		local_zone_delete(z);
-		log_err("internal: duplicate entry in local_zones_add_zone");
+		if(duplicate == NULL)
+			log_err("internal: duplicate entry in local_zones_add_zone");
 		return NULL;
 	}
 
@@ -2105,7 +2304,7 @@ local_zones_add_RR(struct local_zones* zones, const char* rr)
 	z = local_zones_lookup(zones, rr_name, len, labs, rr_class, rr_type);
 	if(!z) {
 		z = local_zones_add_zone(zones, rr_name, len, labs, rr_class,
-			local_zone_transparent);
+			local_zone_transparent, NULL);
 		if(!z) {
 			lock_rw_unlock(&zones->lock);
 			return 0;
