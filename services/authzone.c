@@ -1188,6 +1188,15 @@ az_insert_rr(struct auth_zone* z, uint8_t* rr, size_t rr_len,
 		log_err("malformed AAAA record");
 		return 0;
 	}
+	if(!dname_subdomain_c(dname, z->name)) {
+		char nm[LDNS_MAX_DOMAINLEN], zn[LDNS_MAX_DOMAINLEN];
+		dname_str(dname, nm);
+		dname_str(z->name, zn);
+		verbose(VERB_ALGO, "auth-zone %s: dropping out-of-zone RR "
+			"%s", zn, nm);
+		if(duplicate) *duplicate=1; /* treat as bad insert */
+		return 1;
+	}
 	if(!(node=az_domain_find_or_create(z, dname, dname_len))) {
 		log_err("cannot create domain");
 		return 0;

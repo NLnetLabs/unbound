@@ -11,6 +11,10 @@
 	- Fix that a half-written trust anchor file does not crash
 	  the server at runtime. It unlinks a wrong file from the list.
 	  Thanks to Qifan Zhang, Palo Alto Networks, for the report.
+	- Fix that auth-zone, and RPZ zones, do not allow out-of-zone
+	  records. These are records that are not under the zone apex.
+	  The out-of-zone records are dropped from the zone contents.
+	  Thanks to Qifan Zhang, Palo Alto Networks, for the report.
 
 15 June 2026: Wouter
 	- Fix to add `max-transfer-size` and `max-transfer-time` that
