@@ -32,7 +32,10 @@
 	  list does not crash later. The newly created RRset is
 	  linked after creation has succeeded. Thanks to Qifan Zhang,
 	  Palo Alto Networks, for the report.
-
+	- Fix that dnscrypt configuration does not crash, due to
+	  inconsistency between secret and public keys. Also
+	  duplicate files are skipped. Thanks to Qifan Zhang, Palo
+	  Alto Networks, for the report.
 
 15 June 2026: Wouter
 	- Fix to add `max-transfer-size` and `max-transfer-time` that
