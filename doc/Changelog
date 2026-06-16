@@ -24,6 +24,10 @@
 	- Fix that after malloc failure a half-built local_alias does
 	  not crash the server. Thanks to Qifan Zhang, Palo Alto
 	  Networks, for the report.
+	- Fix that for a zonefile only zone, if that file does not
+	  exist on server start, the server continues to start with
+	  a warning log message. Thanks to Qifan Zhang, Palo Alto
+	  Networks, for the report.
 
 15 June 2026: Wouter
 	- Fix to add `max-transfer-size` and `max-transfer-time` that

@@ -1629,10 +1629,16 @@ auth_zone_read_zonefile(struct auth_zone* z, struct config_file* cfg)
 	in = fopen(zfilename, "r");
 	if(!in) {
 		char* n = sldns_wire2str_dname(z->name, z->namelen);
-		if(z->zone_is_slave && errno == ENOENT) {
-			/* we fetch the zone contents later, no file yet */
-			verbose(VERB_ALGO, "no zonefile %s for %s",
-				zfilename, n?n:"error");
+		if(errno == ENOENT) {
+			/* For a secondary, fetch the zone contents later, no
+			 * file yet. For a primary, no way to fetch the zone,
+			 * so warn. */
+			if(z->zone_is_slave)
+				verbose(VERB_ALGO, "no zonefile %s for %s",
+					zfilename, n?n:"error");
+			else
+				log_warn("no zonefile %s for %s",
+					zfilename, n?n:"error");
 			free(n);
 			return 1;
 		}
