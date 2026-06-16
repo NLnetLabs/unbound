@@ -8,6 +8,9 @@
 	  are written in unknown format, that the zone read allows
 	  such unknown format SVCB records. Thanks to Qifan Zhang,
 	  Palo Alto Networks, for the report.
+	- Fix that a half-written trust anchor file does not crash
+	  the server at runtime. It unlinks a wrong file from the list.
+	  Thanks to Qifan Zhang, Palo Alto Networks, for the report.
 
 15 June 2026: Wouter
 	- Fix to add `max-transfer-size` and `max-transfer-time` that

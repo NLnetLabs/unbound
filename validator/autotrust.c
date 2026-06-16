@@ -401,6 +401,15 @@ autr_rrset_delete(struct ub_packed_rrset_key* r)
 	}
 }
 
+/** delete autotrust key data */
+static void
+autr_ta_delete(struct autr_ta* ta)
+{
+	if(!ta) return;
+	free(ta->rr);
+	free(ta);
+}
+
 void autr_point_delete(struct trust_anchor* tp)
 {
 	if(!tp)
@@ -414,8 +423,7 @@ void autr_point_delete(struct trust_anchor* tp)
 		struct autr_ta* p = tp->autr->keys, *np;
 		while(p) {
 			np = p->next;
-			free(p->rr);
-			free(p);
+			autr_ta_delete(p);
 			p = np;
 		}
 		free(tp->autr->file);
@@ -459,8 +467,7 @@ add_trustanchor_frm_rr(struct val_anchors* anchors, uint8_t* rr, size_t rr_len,
 		return NULL;
 	*tp = find_add_tp(anchors, rr, rr_len, dname_len);
 	if(!*tp) {
-		free(ta->rr);
-		free(ta);
+		autr_ta_delete(ta);
 		return NULL;
 	}
 	/* add ta to tp */
@@ -551,6 +558,10 @@ load_trustanchor(struct val_anchors* anchors, char* str, const char* fname,
 		return NULL;
 	lock_basic_lock(&tp->lock);
 	if(!parse_comments(str, ta, header_seen)) {
+		/* ta was already linked into the list of keys, unlink it */
+		log_assert(tp->autr->keys == ta);
+		tp->autr->keys = ta->next;
+		autr_ta_delete(ta);
 		lock_basic_unlock(&tp->lock);
 		return NULL;
 	}
@@ -859,12 +870,13 @@ parse_id(struct val_anchors* anchors, char* line)
  * @param anchor: the anchor as result value or previously returned anchor
  * 	value to read the variable lines into.
  * @param header_seen: if a header ';;id: example.com.' was seen.
+ * @param nm: file name.
  * @return: 0 no match, -1 failed syntax error, +1 success line read.
  * 	+2 revoked trust anchor file.
  */
 static int
 parse_var_line(char* line, struct val_anchors* anchors, 
-	struct trust_anchor** anchor, int* header_seen)
+	struct trust_anchor** anchor, int* header_seen, const char* nm)
 {
 	struct trust_anchor* tp = *anchor;
 	int r = 0;
@@ -872,7 +884,14 @@ parse_var_line(char* line, struct val_anchors* anchors,
 		*header_seen = 1;
 		*anchor = parse_id(anchors, line+6);
 		if(!*anchor) return -1;
-		else return 1;
+		if(*anchor && !(*anchor)->autr->file) {
+			(*anchor)->autr->file = strdup(nm);
+			if(!(*anchor)->autr->file) {
+				log_err("malloc failure");
+				return -1;
+			}
+		}
+		if(*anchor) return 1;
 	} else if(strncmp(line, ";;REVOKED", 9) == 0) {
 		if(tp) {
 			log_err("REVOKED statement must be at start of file");
@@ -1023,7 +1042,7 @@ int autr_read_file(struct val_anchors* anchors, const char* nm)
         }
         verbose(VERB_ALGO, "reading autotrust anchor file %s", nm);
         while ( (r=read_multiline(line, sizeof(line), fd, &line_nr)) != 0) {
-		if(r == -1 || (r = parse_var_line(line, anchors, &tp, &header_seen)) == -1) {
+		if(r == -1 || (r = parse_var_line(line, anchors, &tp, &header_seen, nm)) == -1) {
 			log_err("could not parse auto-trust-anchor-file "
 				"%s line %d", nm, line_nr);
 			fclose(fd);
@@ -1209,6 +1228,11 @@ void autr_write_file(struct module_env* env, struct trust_anchor* tp)
 #endif
 	char tempf[2048];
 	log_assert(tp->autr);
+	if(!fname) {
+		log_err("autotrust: trust point has no backing file, "
+			"skipping write");
+		return;
+	}
 	if(!env) {
 		log_err("autr_write_file: Module environment is NULL.");
 		return;
@@ -2007,8 +2031,7 @@ autr_cleanup_keys(struct trust_anchor* tp)
 			!= LDNS_RR_TYPE_DNSKEY) {
 			struct autr_ta* np = p->next;
 			/* remove */
-			free(p->rr);
-			free(p);
+			autr_ta_delete(p);
 			/* snip and go to next item */
 			*prevp = np;
 			p = np;
@@ -2333,7 +2356,7 @@ autr_debug_print_tp(struct trust_anchor* tp)
 	if(tp->dnskey_rrset) {
 		log_packed_rrset(NO_VERBOSE, "DNSKEY:", tp->dnskey_rrset);
 	}
-	log_info("file %s", tp->autr->file);
+	log_info("file %s", (tp->autr->file?tp->autr->file:"null"));
 	(void)autr_ctime_r(&tp->autr->last_queried, buf);
 	if(buf[0]) buf[strlen(buf)-1]=0; /* remove newline */
 	log_info("last_queried: %u %s", (unsigned)tp->autr->last_queried, buf);
