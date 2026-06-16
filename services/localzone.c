@@ -431,6 +431,10 @@ rrset_insert_rr(struct regional* region, struct packed_rrset_data* pd,
 	pd->rr_ttl = regional_alloc(region, sizeof(*pd->rr_ttl)*pd->count);
 	pd->rr_data = regional_alloc(region, sizeof(*pd->rr_data)*pd->count);
 	if(!pd->rr_len || !pd->rr_ttl || !pd->rr_data) {
+		pd->count--;
+		pd->rr_len = oldlen;
+		pd->rr_ttl = oldttl;
+		pd->rr_data = olddata;
 		log_err("out of memory");
 		return 0;
 	}
@@ -446,6 +450,10 @@ rrset_insert_rr(struct regional* region, struct packed_rrset_data* pd,
 	pd->rr_ttl[0] = ttl;
 	pd->rr_data[0] = regional_alloc_init(region, rdata, rdata_len);
 	if(!pd->rr_data[0]) {
+		pd->count--;
+		pd->rr_len = oldlen;
+		pd->rr_ttl = oldttl;
+		pd->rr_data = olddata;
 		log_err("out of memory");
 		return 0;
 	}
