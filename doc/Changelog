@@ -1,3 +1,10 @@
+16 June 2026: Wouter
+	- Fix to disallow $INCLUDE for secondary zones. Start up
+	  of server continues if a secondary zone fails to load.
+	  Failed loads clear the zone data, so there is no partial
+	  zone. Thanks to Qifan Zhang, Palo Alto Networks, for
+	  the report.
+
 15 June 2026: Wouter
 	- Fix to add `max-transfer-size` and `max-transfer-time` that
 	  limit auth-zone and rpz transfer amount and time taken.

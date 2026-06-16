@@ -3225,6 +3225,7 @@ do_auth_zone_reload(RES* ssl, struct worker* worker, char* arg)
 		return;
 	}
 	if(!auth_zone_read_zonefile(z, worker->env.cfg)) {
+		auth_zone_clear_data(z);
 		lock_rw_unlock(&z->lock);
 		if(xfr) {
 			lock_basic_unlock(&xfr->lock);

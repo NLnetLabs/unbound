@@ -1518,6 +1518,11 @@ az_parse_file(struct auth_zone* z, FILE* in, uint8_t* rr, size_t rrbuflen,
 					  "exceeded", fname, state->lineno);
 					return 0;
 				}
+				/* A $INCLUDE is not expected for a secondary zone. */
+				if(z->zone_is_slave) {
+					log_err("%s:%d $INCLUDE not allowed for secondary zone", fname, state->lineno);
+					return 0;
+				}
 				/* skip spaces */
 				while(*incfile == ' ' || *incfile == '\t')
 					incfile++;
@@ -1581,6 +1586,16 @@ az_parse_file(struct auth_zone* z, FILE* in, uint8_t* rr, size_t rrbuflen,
 		}
 	}
 	return 1;
+}
+
+void auth_zone_clear_data(struct auth_zone* z)
+{
+	/* clear the data tree */
+	traverse_postorder(&z->data, auth_data_del, NULL);
+	rbtree_init(&z->data, &auth_data_cmp);
+	/* clear the RPZ policies */
+	if(z->rpz)
+		rpz_clear(z->rpz);
 }
 
 int
@@ -1811,9 +1826,11 @@ auth_zones_read_zones(struct auth_zones* az, struct config_file* cfg,
 	RBTREE_FOR(z, struct auth_zone*, &az->ztree) {
 		lock_rw_wrlock(&z->lock);
 		if(!auth_zone_read_zonefile(z, cfg)) {
+			/* For both secondary and primary zones, not fatal.
+			 * This keeps the server up. */
+			auth_zone_clear_data(z);
 			lock_rw_unlock(&z->lock);
-			lock_rw_unlock(&az->lock);
-			return 0;
+			continue;
 		}
 		if(z->zonefile && z->zonefile[0]!=0 && env)
 			zonemd_offline_verify(z, env, mods);
@@ -5111,13 +5128,7 @@ apply_axfr(struct auth_xfer* xfr, struct auth_zone* z,
 	size_t rr_counter = 0;
 	int have_end_soa = 0;
 
-	/* clear the data tree */
-	traverse_postorder(&z->data, auth_data_del, NULL);
-	rbtree_init(&z->data, &auth_data_cmp);
-	/* clear the RPZ policies */
-	if(z->rpz)
-		rpz_clear(z->rpz);
-
+	auth_zone_clear_data(z);
 	xfr->have_zone = 0;
 	xfr->serial = 0;
 	xfr->soa_zone_acquired = 0;
@@ -5214,13 +5225,7 @@ apply_http(struct auth_xfer* xfr, struct auth_zone* z,
 		return 0;
 	}
 
-	/* clear the data tree */
-	traverse_postorder(&z->data, auth_data_del, NULL);
-	rbtree_init(&z->data, &auth_data_cmp);
-	/* clear the RPZ policies */
-	if(z->rpz)
-		rpz_clear(z->rpz);
-
+	auth_zone_clear_data(z);
 	xfr->have_zone = 0;
 	xfr->serial = 0;
 	xfr->soa_zone_acquired = 0;
@@ -5405,6 +5410,7 @@ xfr_process_chunk_list(struct auth_xfer* xfr, struct module_env* env,
 	/* apply data */
 	if(xfr->task_transfer->master->http) {
 		if(!apply_http(xfr, z, env->scratch_buffer)) {
+			auth_zone_clear_data(z);
 			lock_rw_unlock(&z->lock);
 			verbose(VERB_ALGO, "http from %s: could not store data",
 				xfr->task_transfer->master->host);
@@ -5413,6 +5419,7 @@ xfr_process_chunk_list(struct auth_xfer* xfr, struct module_env* env,
 	} else if(xfr->task_transfer->on_ixfr &&
 		!xfr->task_transfer->on_ixfr_is_axfr) {
 		if(!apply_ixfr(xfr, z, env->scratch_buffer)) {
+			auth_zone_clear_data(z);
 			lock_rw_unlock(&z->lock);
 			verbose(VERB_ALGO, "xfr from %s: could not store IXFR"
 				" data", xfr->task_transfer->master->host);
@@ -5421,6 +5428,7 @@ xfr_process_chunk_list(struct auth_xfer* xfr, struct module_env* env,
 		}
 	} else {
 		if(!apply_axfr(xfr, z, env->scratch_buffer)) {
+			auth_zone_clear_data(z);
 			lock_rw_unlock(&z->lock);
 			verbose(VERB_ALGO, "xfr from %s: could not store AXFR"
 				" data", xfr->task_transfer->master->host);
