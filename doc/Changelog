@@ -4,6 +4,10 @@
 	  Failed loads clear the zone data, so there is no partial
 	  zone. Thanks to Qifan Zhang, Palo Alto Networks, for
 	  the report.
+	- Fix that when SVCB records cannot be written out, and
+	  are written in unknown format, that the zone read allows
+	  such unknown format SVCB records. Thanks to Qifan Zhang,
+	  Palo Alto Networks, for the report.
 
 15 June 2026: Wouter
 	- Fix to add `max-transfer-size` and `max-transfer-time` that
