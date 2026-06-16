@@ -571,6 +571,8 @@ ub_ctx_async(struct ub_ctx* ctx, int dothread)
 int 
 ub_poll(struct ub_ctx* ctx)
 {
+	if(!ctx || ctx->event_base)
+		return UB_INITFAIL;
 	/* no need to hold lock while testing for readability. */
 	return tube_poll(ctx->rr_pipe);
 }
@@ -578,6 +580,8 @@ ub_poll(struct ub_ctx* ctx)
 int 
 ub_fd(struct ub_ctx* ctx)
 {
+	if(!ctx || ctx->event_base)
+		return -1;
 	return tube_read_fd(ctx->rr_pipe);
 }
 
@@ -672,6 +676,8 @@ ub_process(struct ub_ctx* ctx)
 	int r;
 	uint8_t* msg;
 	uint32_t len;
+	if(!ctx || ctx->event_base)
+		return UB_INITFAIL;
 	while(1) {
 		msg = NULL;
 		lock_basic_lock(&ctx->rrpipe_lock);
@@ -700,6 +706,8 @@ ub_wait(struct ub_ctx* ctx)
 	int r;
 	uint8_t* msg;
 	uint32_t len;
+	if(!ctx || ctx->event_base)
+		return UB_INITFAIL;
 	/* this is basically the same loop as _process(), but with changes.
 	 * holds the rrpipe lock and waits with tube_wait */
 	while(1) {
@@ -837,6 +845,8 @@ ub_resolve_async(struct ub_ctx* ctx, const char* name, int rrtype,
 	struct ctx_query* q;
 	uint8_t* msg = NULL;
 	uint32_t len = 0;
+	if(!ctx || ctx->event_base)
+		return UB_INITFAIL;
 
 	if(async_id)
 		*async_id = 0;
