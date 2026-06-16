@@ -1687,7 +1687,11 @@ az_parse_include(zone_parser_t *parser, const char *file,
 {
 	struct az_parse_state* state = (struct az_parse_state*)user_data;
 	(void)parser;
-	(void)state;
+	if(state->z->zone_is_slave) {
+		/* A $INCLUDE is not expected for a secondary zone. */
+		log_err("$INCLUDE not allowed for secondary zone");
+		return ZONE_SEMANTIC_ERROR;
+	}
 	verbose(6, "zone parse descended into include file %s (full path %s)",
 		file, path);
 	return 0;
