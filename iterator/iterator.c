@@ -1486,6 +1486,7 @@ processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
 		verbose(VERB_ALGO, "no-cache set, going to the network");
 		qstate->no_cache_lookup = 1;
 		qstate->no_cache_store = 1;
+		qstate->fwd_stub_no_cache = 1;
 		msg = NULL;
 	} else if(qstate->blacklist) {
 		/* if cache, or anything else, was blacklisted then

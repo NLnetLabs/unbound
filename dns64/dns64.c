@@ -664,6 +664,7 @@ handle_event_moddone(struct module_qstate* qstate, int id)
 		!qstate->is_subnet_answer &&
 		qstate->return_msg &&
 		qstate->return_msg->rep &&
+		!qstate->fwd_stub_no_cache &&
 		!dns_cache_store(
 			qstate->env, &qstate->qinfo, qstate->return_msg->rep,
 			0, qstate->prefetch_leeway, 0, NULL,
@@ -725,8 +726,15 @@ dns64_operate(struct module_qstate* qstate, enum module_ev event, int id,
 	}
 	if(qstate->ext_state[id] == module_finished) {
 		iq = (struct dns64_qstate*)qstate->minfo[id];
-		if(iq && iq->state != DNS64_INTERNAL_QUERY)
-			qstate->no_cache_store = iq->started_no_cache_store;
+		if(iq && iq->state != DNS64_INTERNAL_QUERY) {
+			if(qstate->fwd_stub_no_cache) {
+				/* If the forward/stub has no cache, then
+				 * continue with the query with no cache. */
+				qstate->no_cache_store = qstate->fwd_stub_no_cache;
+			} else {
+				qstate->no_cache_store = iq->started_no_cache_store;
+			}
+		}
 	}
 }
 
@@ -1040,10 +1048,14 @@ dns64_inform_super(struct module_qstate* qstate, int id,
 		log_assert(qstate->qinfo.qtype == LDNS_RR_TYPE_PTR);
 		dns64_adjust_ptr(qstate, super);
 	}
+	/* If the sub-query has no cache store, then also the super query. */
+	if(qstate->fwd_stub_no_cache)
+		super->fwd_stub_no_cache = 1;
 
 	/* Store the generated response in cache. */
 	if ( super->return_msg && super->return_msg->rep &&
 		(!super_dq || !super_dq->started_no_cache_store) &&
+		!qstate->fwd_stub_no_cache &&
 		!super->rpz_applied && !super->rpz_passthru &&
 		!super->is_subnet_answer &&
 		!dns_cache_store(super->env, &super->qinfo, super->return_msg->rep,

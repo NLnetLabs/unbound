@@ -707,6 +707,10 @@ struct module_qstate {
 	 * suitable for caching (briefly) the error response. Set by the
 	 * iterator when no_cache_store is enabled, and there is an error. */
 	int error_response_cache;
+	/** if the iterator sees that the forward/stub has no_cache set.
+	 * to signal to calling modules that their setting of no_cache for
+	 * other reasons, has to take into account the fwd/stub no_cache. */
+	int fwd_stub_no_cache;
 
 	/**
 	 * Attributes of clients that share the qstate that may affect IP-based

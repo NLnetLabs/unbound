@@ -15,6 +15,9 @@
 	  records. These are records that are not under the zone apex.
 	  The out-of-zone records are dropped from the zone contents.
 	  Thanks to Qifan Zhang, Palo Alto Networks, for the report.
+	- Fix that dns64 does not ignore the `forward-no-cache` and
+	  `stub-no-cache` options. Thanks to Qifan Zhang, Palo Alto
+	  Networks, for the report.
 
 15 June 2026: Wouter
 	- Fix to add `max-transfer-size` and `max-transfer-time` that
