@@ -904,8 +904,8 @@ rpz_report_rrset_error(const char* msg, uint8_t* rr, size_t rr_len) {
 
 /* from localzone.c; difference is we don't have a dname */
 static struct local_rrset*
-rpz_clientip_new_rrset(struct regional* region,
-	struct clientip_synthesized_rr* raddr, uint16_t rrtype, uint16_t rrclass)
+rpz_clientip_new_rrset(struct regional* region, uint16_t rrtype,
+	uint16_t rrclass)
 {
 	struct packed_rrset_data* pd;
 	struct local_rrset* rrset = (struct local_rrset*)
@@ -914,8 +914,6 @@ rpz_clientip_new_rrset(struct regional* region,
 		log_err("out of memory");
 		return NULL;
 	}
-	rrset->next = raddr->data;
-	raddr->data = rrset;
 	rrset->rrset = (struct ub_packed_rrset_key*)
 		regional_alloc_zero(region, sizeof(*rrset->rrset));
 	if(rrset->rrset == NULL) {
@@ -954,12 +952,18 @@ rpz_clientip_enter_rr(struct regional* region, struct clientip_synthesized_rr* r
 		return 0;
 	}
 
-	rrset = rpz_clientip_new_rrset(region, raddr, rrtype, rrclass);
-	if(raddr->data == NULL) {
+	rrset = rpz_clientip_new_rrset(region, rrtype, rrclass);
+	if(rrset == NULL) {
 		return 0;
 	}
 
-	return rrset_insert_rr(region, rrset->rrset->entry.data, rdata, rdata_len, ttl, "");
+	if(!rrset_insert_rr(region, rrset->rrset->entry.data, rdata, rdata_len, ttl, ""))
+		return 0;
+
+	/* Link in now that the allocations have succeeded. */
+	rrset->next = raddr->data;
+	raddr->data = rrset;
+	return 1;
 }
 
 static int
@@ -982,7 +986,6 @@ rpz_clientip_insert_trigger_rr(struct clientip_synthesized_rrset* set, struct so
 	lock_rw_wrlock(&node->lock);
 	lock_rw_unlock(&set->lock);
 
-	node->action = a;
 	if(a == RPZ_LOCAL_DATA_ACTION) {
 		if(!rpz_clientip_enter_rr(set->region, node, rrtype,
 			rrclass, ttl, rdata, rdata_len)) {
@@ -992,6 +995,7 @@ rpz_clientip_insert_trigger_rr(struct clientip_synthesized_rrset* set, struct so
 		}
 
 	}
+	node->action = a;
 
 	lock_rw_unlock(&node->lock);
 

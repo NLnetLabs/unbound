@@ -28,6 +28,11 @@
 	  exist on server start, the server continues to start with
 	  a warning log message. Thanks to Qifan Zhang, Palo Alto
 	  Networks, for the report.
+	- Fix that after malloc failure in RPZ load a half built
+	  list does not crash later. The newly created RRset is
+	  linked after creation has succeeded. Thanks to Qifan Zhang,
+	  Palo Alto Networks, for the report.
+
 
 15 June 2026: Wouter
 	- Fix to add `max-transfer-size` and `max-transfer-time` that
