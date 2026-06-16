@@ -36,6 +36,8 @@
 	  inconsistency between secret and public keys. Also
 	  duplicate files are skipped. Thanks to Qifan Zhang, Palo
 	  Alto Networks, for the report.
+	- Fix locking in libunbound ub_ctx_set_event call.
+	  Thanks to Qifan Zhang, Palo Alto Networks, for the report.
 
 15 June 2026: Wouter
 	- Fix to add `max-transfer-size` and `max-transfer-time` that

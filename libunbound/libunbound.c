@@ -1467,8 +1467,15 @@ ub_ctx_set_event(struct ub_ctx* ctx, struct event_base* base) {
 	
 	lock_basic_lock(&ctx->cfglock);
 	/* destroy the current worker - safe to pass in NULL */
+
+	/* Unlock the cfglock during libworker_delete_event, since it
+	 * calls context_release_alloc, that wants to lock cfglock again.
+	 * Since the event base is used from one thread, the one that
+	 * called this function, it is safe to do so. */
+	lock_basic_unlock(&ctx->cfglock);
 	libworker_delete_event(ctx->event_worker);
 	ctx->event_worker = NULL;
+	lock_basic_lock(&ctx->cfglock);
 	new_base = ub_libevent_event_base(base);
 	if (new_base)
 		ctx->event_base = new_base;	
