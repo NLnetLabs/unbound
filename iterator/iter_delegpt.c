@@ -664,8 +664,6 @@ int delegpt_add_ns_mlc(struct delegpt* dp, uint8_t* name, uint8_t lame,
 		free(ns);
 		return 0;
 	}
-	ns->next = dp->nslist;
-	dp->nslist = ns;
 	ns->cache_lookup_count = 0;
 	ns->resolved = 0;
 	ns->got4 = 0;
@@ -684,6 +682,8 @@ int delegpt_add_ns_mlc(struct delegpt* dp, uint8_t* name, uint8_t lame,
 	} else {
 		ns->tls_auth_name = NULL;
 	}
+	ns->next = dp->nslist;
+	dp->nslist = ns;
 	return 1;
 }
 
@@ -709,11 +709,7 @@ int delegpt_add_addr_mlc(struct delegpt* dp, struct sockaddr_storage* addr,
 	a = (struct delegpt_addr*)malloc(sizeof(struct delegpt_addr));
 	if(!a)
 		return 0;
-	a->next_target = dp->target_list;
-	dp->target_list = a;
 	a->next_result = 0;
-	a->next_usable = dp->usable_list;
-	dp->usable_list = a;
 	memcpy(&a->addr, addr, addrlen);
 	a->addrlen = addrlen;
 	a->attempts = 0;
@@ -729,6 +725,10 @@ int delegpt_add_addr_mlc(struct delegpt* dp, struct sockaddr_storage* addr,
 	} else {
 		a->tls_auth_name = NULL;
 	}
+	a->next_target = dp->target_list;
+	dp->target_list = a;
+	a->next_usable = dp->usable_list;
+	dp->usable_list = a;
 	return 1;
 }
 

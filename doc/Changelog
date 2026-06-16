@@ -44,6 +44,9 @@
 	- Fix for neater solution to clear log thread id after
 	  worker init failure. Thanks to Qifan Zhang, Palo Alto
 	  Networks, for the report.
+	- Fix incorrect cleanup after an allocation failure for
+	  a delegation point. Thanks to Qifan Zhang, Palo Alto
+	  Networks, for the report.
 
 15 June 2026: Wouter
 	- Fix to add `max-transfer-size` and `max-transfer-time` that
