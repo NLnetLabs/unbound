@@ -5850,7 +5850,8 @@ xfr_master_add_addrs(struct auth_master* m, struct ub_packed_rrset_key* rrset,
 /** check if the lookup target name equals the found answer name. */
 static int
 xfer_target_equals_answer_name(struct auth_master* lookup_target,
-	struct ub_packed_rrset_key* answer)
+	struct ub_packed_rrset_key* answer, struct query_info* rq,
+	struct reply_info* rep)
 {
 	uint8_t qname[LDNS_MAX_DOMAINLEN+1];
 	size_t qname_len;
@@ -5863,6 +5864,10 @@ xfer_target_equals_answer_name(struct auth_master* lookup_target,
 		return 0;
 	}
 	if(query_dname_compare(answer->rk.dname, qname) == 0)
+		return 1;
+	/* It could be a CNAME. */
+	if(reply_find_rrset_section_an(rep, qname, qname_len,
+		LDNS_RR_TYPE_CNAME, rq->qclass))
 		return 1;
 	return 0;
 }
@@ -5898,7 +5903,8 @@ void auth_xfer_transfer_lookup_callback(void* arg, int rcode, sldns_buffer* buf,
 			struct ub_packed_rrset_key* answer =
 				reply_find_answer_rrset(&rq, rep);
 			if(answer && xfer_target_equals_answer_name(
-				xfr->task_transfer->lookup_target, answer)) {
+				xfr->task_transfer->lookup_target, answer,
+				&rq, rep)) {
 				xfr_master_add_addrs(xfr->task_transfer->
 					lookup_target, answer, wanted_qtype);
 			} else if(answer) {
@@ -7048,7 +7054,8 @@ void auth_xfer_probe_lookup_callback(void* arg, int rcode, sldns_buffer* buf,
 			struct ub_packed_rrset_key* answer =
 				reply_find_answer_rrset(&rq, rep);
 			if(answer && xfer_target_equals_answer_name(
-				xfr->task_probe->lookup_target, answer)) {
+				xfr->task_probe->lookup_target, answer,
+				&rq, rep)) {
 				xfr_master_add_addrs(xfr->task_probe->
 					lookup_target, answer, wanted_qtype);
 			} else if(answer) {

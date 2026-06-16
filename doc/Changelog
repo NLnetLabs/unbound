@@ -60,6 +60,8 @@
 	  localzone processing, during RPZ qname trigger processing,
 	  the RRset retains its previous data correcly. Thanks to
 	  Qifan Zhang, Palo Alto Networks, for the report.
+	- Fix for #1462: Fix that auth primary host name lookup
+	  allows CNAMEs.
 
 15 June 2026: Wouter
 	- Fix to add `max-transfer-size` and `max-transfer-time` that
