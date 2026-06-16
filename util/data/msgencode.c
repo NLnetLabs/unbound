@@ -1129,9 +1129,11 @@ extended_error_encode(sldns_buffer* buf, uint16_t rcode,
 	sldns_buffer_write(buf, &flags, sizeof(uint16_t));
 	sldns_buffer_write(buf, &flags, sizeof(uint16_t));
 	if(qinfo) {
-		const uint8_t* qname = qinfo->local_alias ?
+		const uint8_t* qname =
+			(qinfo->local_alias && qinfo->local_alias->rrset) ?
 			qinfo->local_alias->rrset->rk.dname : qinfo->qname;
-		size_t qname_len = qinfo->local_alias ?
+		size_t qname_len =
+			(qinfo->local_alias && qinfo->local_alias->rrset) ?
 			qinfo->local_alias->rrset->rk.dname_len :
 			qinfo->qname_len;
 		if(sldns_buffer_current(buf) == qname)

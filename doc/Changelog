@@ -47,6 +47,9 @@
 	- Fix incorrect cleanup after an allocation failure for
 	  a delegation point. Thanks to Qifan Zhang, Palo Alto
 	  Networks, for the report.
+	- Fix that after malloc failure in find_tag_datas, the
+	  local_alias is cleaned up. Thanks to Qifan Zhang, Palo
+	  Alto Networks, for the report.
 
 15 June 2026: Wouter
 	- Fix to add `max-transfer-size` and `max-transfer-time` that

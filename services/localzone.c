@@ -1502,8 +1502,10 @@ find_tag_datas(struct query_info* qinfo, struct config_strlist* list,
 			return 0; /* out of memory */
 		qinfo->local_alias->rrset =
 			regional_alloc_init(temp, r, sizeof(*r));
-		if(!qinfo->local_alias->rrset)
+		if(!qinfo->local_alias->rrset) {
+			qinfo->local_alias = NULL;
 			return 0; /* out of memory */
+		}
 	}
 	return result;
 }
