@@ -1569,13 +1569,17 @@ local_data_answer(struct local_zone* z, struct module_env* env,
 			return 0; /* out of memory */
 		qinfo->local_alias->rrset = regional_alloc_init(
 			temp, lr->rrset, sizeof(*lr->rrset));
-		if(!qinfo->local_alias->rrset)
+		if(!qinfo->local_alias->rrset) {
+			qinfo->local_alias = NULL;
 			return 0; /* out of memory */
+		}
 		qinfo->local_alias->rrset->rk.dname = qinfo->qname;
 		qinfo->local_alias->rrset->rk.dname_len = qinfo->qname_len;
 		get_cname_target(lr->rrset, &ctarget, &ctargetlen);
-		if(!ctargetlen)
+		if(!ctargetlen) {
+			qinfo->local_alias = NULL;
 			return 0; /* invalid cname */
+		}
 		if(dname_is_wild(ctarget)) {
 			/* synthesize cname target */
 			struct packed_rrset_data* d, *lr_d;
@@ -1604,8 +1608,10 @@ local_data_answer(struct local_zone* z, struct module_env* env,
 				sizeof(struct packed_rrset_data) + sizeof(size_t) +
 				sizeof(uint8_t*) + sizeof(time_t) + sizeof(uint16_t)
 				+ newtargetlen);
-			if(!d)
+			if(!d) {
+				qinfo->local_alias = NULL;
 				return 0; /* out of memory */
+			}
 			lr_d = (struct packed_rrset_data*)lr->rrset->entry.data;
 			qinfo->local_alias->rrset->entry.data = d;
 			d->ttl = lr_d->rr_ttl[0]; /* RFC6672-like behavior:

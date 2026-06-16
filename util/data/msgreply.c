@@ -1506,8 +1506,12 @@ struct edns_option* edns_opt_list_find(struct edns_option* list, uint16_t code)
 int local_alias_shallow_copy_qname(struct local_rrset* local_alias, uint8_t** qname,
 	size_t* qname_len)
 {
-	struct ub_packed_rrset_key* rrset = local_alias->rrset;
-	struct packed_rrset_data* d = rrset->entry.data;
+	struct ub_packed_rrset_key* rrset;
+	struct packed_rrset_data* d;
+	rrset = local_alias->rrset;
+	if(!rrset) return 0;
+	d = rrset->entry.data;
+	if(!d) return 0;
 
 	/* Sanity check: our current implementation only supports
 	    * a single CNAME RRset as a local alias. */

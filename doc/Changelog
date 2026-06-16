@@ -21,6 +21,9 @@
 	- Fix that a signed wildcard NSEC, is checked before use,
 	  so it does not allow insecure DS proofs inappropriately.
 	  Thanks to Qifan Zhang, Palo Alto Networks, for the report.
+	- Fix that after malloc failure a half-built local_alias does
+	  not crash the server. Thanks to Qifan Zhang, Palo Alto
+	  Networks, for the report.
 
 15 June 2026: Wouter
 	- Fix to add `max-transfer-size` and `max-transfer-time` that
