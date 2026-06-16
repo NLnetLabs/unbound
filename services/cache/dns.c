@@ -584,8 +584,11 @@ dns_cache_find_delegation(struct module_env* env, uint8_t* qname,
 			return NULL;
 		}
 	}
-	if(!delegpt_rrset_add_ns(dp, region, nskey, 0))
+	if(!delegpt_rrset_add_ns(dp, region, nskey, 0)) {
+		lock_rw_unlock(&nskey->entry.lock);
 		log_err("find_delegation: addns out of memory");
+		return NULL;
+	}
 	lock_rw_unlock(&nskey->entry.lock); /* first unlock before next lookup*/
 	/* find and add DS/NSEC (if any) */
 	if(msg)

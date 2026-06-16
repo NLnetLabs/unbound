@@ -118,10 +118,10 @@ delegpt_add_ns(struct delegpt* dp, struct regional* region, uint8_t* name,
 		sizeof(struct delegpt_ns));
 	if(!ns)
 		return 0;
-	ns->next = dp->nslist;
 	ns->namelen = len;
-	dp->nslist = ns;
 	ns->name = regional_alloc_init(region, name, ns->namelen);
+	if(!ns->name)
+		return 0;
 	ns->cache_lookup_count = 0;
 	ns->resolved = 0;
 	ns->got4 = 0;
@@ -137,7 +137,9 @@ delegpt_add_ns(struct delegpt* dp, struct regional* region, uint8_t* name,
 	} else {
 		ns->tls_auth_name = NULL;
 	}
-	return ns->name != 0;
+	ns->next = dp->nslist;
+	dp->nslist = ns;
+	return 1;
 }
 
 struct delegpt_ns*
@@ -223,11 +225,7 @@ delegpt_add_addr(struct delegpt* dp, struct regional* region,
 		sizeof(struct delegpt_addr));
 	if(!a)
 		return 0;
-	a->next_target = dp->target_list;
-	dp->target_list = a;
 	a->next_result = 0;
-	a->next_usable = dp->usable_list;
-	dp->usable_list = a;
 	memcpy(&a->addr, addr, addrlen);
 	a->addrlen = addrlen;
 	a->attempts = 0;
@@ -241,6 +239,10 @@ delegpt_add_addr(struct delegpt* dp, struct regional* region,
 	} else {
 		a->tls_auth_name = NULL;
 	}
+	a->next_target = dp->target_list;
+	dp->target_list = a;
+	a->next_usable = dp->usable_list;
+	dp->usable_list = a;
 	return 1;
 }
 
