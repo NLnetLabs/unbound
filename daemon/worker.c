@@ -2534,6 +2534,8 @@ worker_delete(struct worker* worker)
 	/* don't touch worker->alloc, as it's maintained in daemon */
 	regional_destroy(worker->env.scratch);
 	regional_destroy(worker->scratchpad);
+	/* The thread id can reference this worker's id value, so clear it. */
+	log_thread_set(NULL);
 	free(worker);
 }
 

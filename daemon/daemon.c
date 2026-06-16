@@ -954,7 +954,6 @@ thread_start(void* arg)
 #endif
 	if(!worker_init(worker, worker->daemon->cfg,
 			worker->daemon->ports[port_num], 0)) {
-		log_thread_set(NULL);
 		fatal_exit("Could not initialize thread");
 	}
 
@@ -1119,7 +1118,6 @@ daemon_fork(struct daemon* daemon)
 #if defined(HAVE_EV_LOOP) || defined(HAVE_EV_DEFAULT_LOOP)
 	/* in libev the first inited base gets signals */
 	if(!worker_init(daemon->workers[0], daemon->cfg, daemon->ports[0], 1)) {
-		log_thread_set(NULL);
 		fatal_exit("Could not initialize main thread");
 	}
 #endif
@@ -1135,7 +1133,6 @@ daemon_fork(struct daemon* daemon)
 #if !(defined(HAVE_EV_LOOP) || defined(HAVE_EV_DEFAULT_LOOP))
 	/* libevent has the last inited base get signals (or any base) */
 	if(!worker_init(daemon->workers[0], daemon->cfg, daemon->ports[0], 1)) {
-		log_thread_set(NULL);
 		fatal_exit("Could not initialize main thread");
 	}
 #endif
@@ -1181,7 +1178,6 @@ daemon_cleanup(struct daemon* daemon)
 	/* before stopping main worker, handle signals ourselves, so we
 	   don't die on multiple reload signals for example. */
 	signal_handling_record();
-	log_thread_set(NULL);
 	/* clean up caches because
 	 * a) RRset IDs will be recycled after a reload, causing collisions
 	 * b) validation config can change, thus rrset, msg, keycache clear

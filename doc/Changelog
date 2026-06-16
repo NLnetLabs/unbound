@@ -41,6 +41,9 @@
 	- Fix that libunbound pipe functions fail with error after
 	  an event base is set. Thanks to Qifan Zhang, Palo Alto
 	  Networks, for the report.
+	- Fix for neater solution to clear log thread id after
+	  worker init failure. Thanks to Qifan Zhang, Palo Alto
+	  Networks, for the report.
 
 15 June 2026: Wouter
 	- Fix to add `max-transfer-size` and `max-transfer-time` that
