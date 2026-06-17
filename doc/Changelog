@@ -7,6 +7,10 @@
 	- Fix that unbound-checkconf checks if an auth-zone download
 	  can overwrite another file, by filename collision.
 	  Thanks to Qifan Zhang, Palo Alto Networks, for the report.
+	- Fix that malloc failure in auth-zone insert rr does
+	  not create an empty node and does not cause an infinite
+	  loop. Thanks to Qifan Zhang, Palo Alto Networks, for
+	  the report.
 
 16 June 2026: Wouter
 	- Fix to disallow $INCLUDE for secondary zones. Start up

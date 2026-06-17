@@ -1204,6 +1204,10 @@ az_insert_rr(struct auth_zone* z, uint8_t* rr, size_t rr_len,
 	if(!az_domain_add_rr(node, rr_type, rr_ttl, rdata, rdatalen,
 		duplicate)) {
 		log_err("cannot add RR to domain");
+		if(node->rrsets == NULL) {
+			(void)rbtree_delete(&z->data, node);
+			auth_data_delete(node);
+		}
 		return 0;
 	}
 	if(z->rpz) {
@@ -2703,7 +2707,7 @@ az_empty_nonterminal(struct auth_zone* z, struct query_info* qinfo,
 	while(next && (rbnode_type*)next != RBTREE_NULL && next->rrsets == NULL) {
 		/* the next name has empty rrsets, is an empty nonterminal
 		 * itself, see if there exists something below it */
-		next = (struct auth_data*)rbtree_next(&node->node);
+		next = (struct auth_data*)rbtree_next(&next->node);
 	}
 	if((rbnode_type*)next == RBTREE_NULL || !next) {
 		/* there is no next node, so something below it cannot
