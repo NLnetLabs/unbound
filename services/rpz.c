@@ -814,8 +814,9 @@ rpz_insert_nsdname_trigger(struct rpz* r, uint8_t* dname, size_t dnamelen,
 	uint8_t* dname_stripped = NULL;
 	size_t dnamelen_stripped = 0;
 
-	rpz_strip_nsdname_suffix(dname, dnamelen, &dname_stripped,
-		&dnamelen_stripped);
+	if(!rpz_strip_nsdname_suffix(dname, dnamelen, &dname_stripped,
+		&dnamelen_stripped))
+		return;
 	if(a == RPZ_INVALID_ACTION) {
 		verbose(VERB_ALGO, "rpz: skipping invalid action");
 		free(dname_stripped);
