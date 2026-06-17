@@ -16006,6 +16006,13 @@ then :
   printf "%s\n" "#define HAVE_GLOB_H 1" >>confdefs.h
 
 fi
+ac_fn_c_check_header_compile "$LINENO" "fnmatch.h" "ac_cv_header_fnmatch_h" "$ac_includes_default
+"
+if test "x$ac_cv_header_fnmatch_h" = xyes
+then :
+  printf "%s\n" "#define HAVE_FNMATCH_H 1" >>confdefs.h
+
+fi
 ac_fn_c_check_header_compile "$LINENO" "grp.h" "ac_cv_header_grp_h" "$ac_includes_default
 "
 if test "x$ac_cv_header_grp_h" = xyes
@@ -23847,6 +23854,12 @@ ac_fn_c_check_func "$LINENO" "glob" "ac_cv_func_glob"
 if test "x$ac_cv_func_glob" = xyes
 then :
   printf "%s\n" "#define HAVE_GLOB 1" >>confdefs.h
+
+fi
+ac_fn_c_check_func "$LINENO" "fnmatch" "ac_cv_func_fnmatch"
+if test "x$ac_cv_func_fnmatch" = xyes
+then :
+  printf "%s\n" "#define HAVE_FNMATCH 1" >>confdefs.h
 
 fi
 ac_fn_c_check_func "$LINENO" "initgroups" "ac_cv_func_initgroups"

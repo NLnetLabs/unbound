@@ -299,6 +299,12 @@
 /* Define to 1 if you have the `FIPS_mode' function. */
 #undef HAVE_FIPS_MODE
 
+/* Define to 1 if you have the `fnmatch' function. */
+#undef HAVE_FNMATCH
+
+/* Define to 1 if you have the <fnmatch.h> header file. */
+#undef HAVE_FNMATCH_H
+
 /* Define to 1 if you have the `fork' function. */
 #undef HAVE_FORK
 
