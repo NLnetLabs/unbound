@@ -721,13 +721,22 @@ rpz_insert_local_zones_trigger(struct local_zones* lz, uint8_t* dname,
 		char* rrstr = sldns_wire2str_rr(rr, rr_len);
 		if(rrstr == NULL) {
 			log_err("malloc error while inserting rpz nsdname trigger");
-			free(dname);
+			if(!newzone)
+				free(dname);
 			lock_rw_unlock(&lz->lock);
 			return;
 		}
 		lock_rw_wrlock(&z->lock);
-		local_zone_enter_rr(z, dname, dnamelen, dnamelabs, rrtype,
-				    rrclass, ttl, rdata, rdata_len, rrstr);
+		if(!local_zone_enter_rr(z, dname, dnamelen, dnamelabs, rrtype,
+				    rrclass, ttl, rdata, rdata_len, rrstr)) {
+			log_err("rpz: could not enter local-data: %s", rrstr);
+			if(!newzone)
+				free(dname);
+			lock_rw_unlock(&z->lock);
+			lock_rw_unlock(&lz->lock);
+			free(rrstr);
+			return;
+		}
 		lock_rw_unlock(&z->lock);
 		free(rrstr);
 	}

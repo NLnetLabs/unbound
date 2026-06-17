@@ -386,8 +386,6 @@ new_local_rrset(struct regional* region, struct local_data* node,
 		log_err("out of memory");
 		return NULL;
 	}
-	rrset->next = node->rrsets;
-	node->rrsets = rrset;
 	rrset->rrset = (struct ub_packed_rrset_key*)
 		regional_alloc_zero(region, sizeof(*rrset->rrset));
 	if(!rrset->rrset) {
@@ -408,6 +406,8 @@ new_local_rrset(struct regional* region, struct local_data* node,
 	rrset->rrset->rk.dname_len = node->namelen;
 	rrset->rrset->rk.type = htons(rrtype);
 	rrset->rrset->rk.rrset_class = htons(rrclass);
+	rrset->next = node->rrsets;
+	node->rrsets = rrset;
 	return rrset;
 }
 
