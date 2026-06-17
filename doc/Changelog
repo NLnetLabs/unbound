@@ -23,6 +23,9 @@
 	  partial RRset, and logs an error on failure, and cleans
 	  up the dname allocation. Thanks to Qifan Zhang, Palo Alto
 	  Networks, for the report.
+	- Fix that malloc failure in doq connection setup, does
+	  not crash in doq connection delete later. Thanks to Qifan
+	  Zhang, Palo Alto Networks, for the report.
 
 16 June 2026: Wouter
 	- Fix to disallow $INCLUDE for secondary zones. Start up

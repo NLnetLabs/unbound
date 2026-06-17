@@ -3626,7 +3626,8 @@ doq_conn_delete(struct doq_conn* conn, struct doq_table* table)
 	lock_rw_unlock(&conn->table->conid_lock);
 	/* Remove the app data from ngtcp2 before SSL_free of conn->ssl,
 	 * because the ngtcp2 conn is deleted. */
-	SSL_set_app_data(conn->ssl, NULL);
+	if(conn->ssl)
+		SSL_set_app_data(conn->ssl, NULL);
 	if(conn->stream_tree.count != 0) {
 		traverse_postorder(&conn->stream_tree, stream_tree_del, table);
 	}
