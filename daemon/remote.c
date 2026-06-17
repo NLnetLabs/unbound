@@ -6673,9 +6673,12 @@ fr_reload_config(struct fast_reload_thread* fr, struct config_file* newcfg,
 	}
 #ifdef USE_DNSTAP
 	if(env->cfg->dnstap) {
-		if(!fr->fr_nopause)
-			dt_apply_cfg(daemon->dtenv, env->cfg);
-		else dt_apply_logcfg(daemon->dtenv, env->cfg);
+		if(!fr->fr_nopause) {
+			if(!dt_apply_cfg(daemon->dtenv, env->cfg))
+				log_warn("fast_reload: dnstap identity/version metadata not updated due to allocation failure");
+		} else {
+			dt_apply_logcfg(daemon->dtenv, env->cfg);
+		}
 	}
 #endif
 	fr_adjust_cache(env, ct->oldcfg);
