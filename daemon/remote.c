@@ -7766,6 +7766,16 @@ fr_worker_auth_add(struct worker* worker, struct fast_reload_auth_change* item,
 		/* The xfr item needs to be created. The auth zones lock
 		 * is held to make this possible. */
 		xfr = auth_xfer_create(worker->env.auth_zones, item->new_z);
+		if(!xfr) {
+			log_err("out of memory in fr_worker_auth_add");
+			lock_rw_unlock(&item->new_z->lock);
+			lock_rw_unlock(&worker->env.auth_zones->lock);
+			lock_rw_unlock(&worker->daemon->fast_reload_thread->old_auth_zones->lock);
+			if(loadxfr) {
+				lock_basic_unlock(&loadxfr->lock);
+			}
+			return;
+		}
 		auth_xfr_pickup_config(loadxfr, xfr);
 		/* Serial information is copied into the xfr struct. */
 		if(!xfr_find_soa(item->new_z, xfr)) {
@@ -7835,6 +7845,17 @@ fr_worker_auth_cha(struct worker* worker, struct fast_reload_auth_change* item)
 	} else if(loadxfr && !xfr) {
 		/* Create the xfr. */
 		xfr = auth_xfer_create(worker->env.auth_zones, item->new_z);
+		if(!xfr) {
+			log_err("out of memory in fr_worker_auth_cha");
+			lock_rw_unlock(&item->new_z->lock);
+			lock_rw_unlock(&item->old_z->lock);
+			lock_rw_unlock(&worker->daemon->fast_reload_thread->old_auth_zones->lock);
+			lock_rw_unlock(&worker->env.auth_zones->lock);
+			if(loadxfr) {
+				lock_basic_unlock(&loadxfr->lock);
+			}
+			return;
+		}
 		auth_xfr_pickup_config(loadxfr, xfr);
 		item->new_z->zone_is_slave = 1;
 	}
