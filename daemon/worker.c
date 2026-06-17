@@ -501,7 +501,9 @@ worker_handle_control_cmd(struct tube* ATTR_UNUSED(tube), uint8_t* msg,
 		return;
 	}
 	if(len != sizeof(uint32_t)) {
-		fatal_exit("bad control msg length %d", (int)len);
+		verbose(VERB_ALGO, "bad control msg length %d", (int)len);
+		free(msg);
+		return;
 	}
 	cmd = sldns_read_uint32(msg);
 	free(msg);
