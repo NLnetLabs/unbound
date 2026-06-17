@@ -1991,8 +1991,9 @@ rpz_synthesize_nodata(struct rpz* ATTR_UNUSED(r), struct module_qstate* ms,
 					     0, /* total */
 					     sec_status_insecure,
 					     LDNS_EDE_NONE);
-	if(msg->rep)
-		msg->rep->authoritative = 1;
+	if(!msg->rep)
+		return NULL;
+	msg->rep->authoritative = 1;
 	if(!rpz_add_soa(msg->rep, ms, az))
 		return NULL;
 	return msg;
@@ -2022,8 +2023,9 @@ rpz_synthesize_nxdomain(struct rpz* r, struct module_qstate* ms,
 					     0, /* total */
 					     sec_status_insecure,
 					     LDNS_EDE_NONE);
-	if(msg->rep)
-		msg->rep->authoritative = 1;
+	if(!msg->rep)
+		return NULL;
+	msg->rep->authoritative = 1;
 	if(!rpz_add_soa(msg->rep, ms, az))
 		return NULL;
 	return msg;

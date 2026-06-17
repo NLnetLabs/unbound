@@ -45,6 +45,9 @@
 	- Fix to check the return value of auth_xfer_create
 	  during fast_reload auth-zone add and change processing.
 	  Thanks to Qifan Zhang, Palo Alto Networks, for the report.
+	- Fix to check for malloc failure in rpz response create,
+	  for nodata and nxdomain, so it does not crash later.
+	  Thanks to Qifan Zhang, Palo Alto Networks, for the report.
 
 16 June 2026: Wouter
 	- Fix to disallow $INCLUDE for secondary zones. Start up
