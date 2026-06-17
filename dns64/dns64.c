@@ -955,8 +955,10 @@ dns64_adjust_ptr(struct module_qstate* qstate, struct module_qstate* super)
         return;
     super->return_msg->qinfo = super->qinfo;
     if (!(super->return_msg->rep = reply_info_copy(qstate->return_msg->rep,
-                    NULL, super->region)))
+                    NULL, super->region))) {
+	super->return_msg = NULL;
         return;
+    }
 
     /*
      * Adjust the domain name of the answer RR set so that it matches the

@@ -14,6 +14,10 @@
 	- Fix that unbound-control auth_zone_reload stops the
 	  server answering from the zone after a failure to read.
 	  Thanks to Qifan Zhang, Palo Alto Networks, for the report.
+	- Fix that malloc failure in dns64_inform_super does
+	  not set up a half-built reply for cache store, that could
+	  lead to a crash. Thanks to Qifan Zhang, Palo Alto Networks,
+	  for the report.
 
 16 June 2026: Wouter
 	- Fix to disallow $INCLUDE for secondary zones. Start up
