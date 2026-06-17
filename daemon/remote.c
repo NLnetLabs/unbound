@@ -3225,6 +3225,9 @@ do_auth_zone_reload(RES* ssl, struct worker* worker, char* arg)
 		return;
 	}
 	if(!auth_zone_read_zonefile(z, worker->env.cfg)) {
+		/* The old tree was already cleared. Do not answer from the
+		 * failed load. */
+		z->zone_expired = 1;
 		auth_zone_clear_data(z);
 		lock_rw_unlock(&z->lock);
 		if(xfr) {

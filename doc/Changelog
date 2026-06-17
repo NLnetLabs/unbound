@@ -11,6 +11,9 @@
 	  not create an empty node and does not cause an infinite
 	  loop. Thanks to Qifan Zhang, Palo Alto Networks, for
 	  the report.
+	- Fix that unbound-control auth_zone_reload stops the
+	  server answering from the zone after a failure to read.
+	  Thanks to Qifan Zhang, Palo Alto Networks, for the report.
 
 16 June 2026: Wouter
 	- Fix to disallow $INCLUDE for secondary zones. Start up
