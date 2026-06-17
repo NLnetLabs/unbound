@@ -39,6 +39,9 @@
 	- Fix that malloc failure for rpz_strip_nsdname is
 	  checked and handled, so that it does not crash later.
 	  Thanks to Qifan Zhang, Palo Alto Networks, for the report.
+	- Fix that malloc failure during edns subnet addrtree
+	  insert is checked, so it does not crash later. Thanks to
+	  Qifan Zhang, Palo Alto Networks, for the report.
 
 16 June 2026: Wouter
 	- Fix to disallow $INCLUDE for secondary zones. Start up
