@@ -211,6 +211,7 @@ rrset_cache_update(struct rrset_cache* r, struct rrset_ref* ref,
 	log_assert(k->rk.dname != NULL);
 	if((k->rk.flags&PACKED_RRSET_0TTL_GRACE) !=0) {
 		log_nametypeclass(VERB_ALGO, "rrset store of PACKED_RRSET_0TTL_GRACE rrset skipped", k->rk.dname, rrset_type, ntohs(k->rk.rrset_class));
+		ub_packed_rrset_parsedelete(k, alloc);
 		return 0; /* Do not store 0TTL items after apply of
 			the grace ttl amount.
 			This means the ref was not changed by the call. */

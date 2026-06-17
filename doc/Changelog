@@ -64,6 +64,9 @@
 	  is necessary. Thanks to Qifan Zhang, Palo Alto Networks,
 	  for the report.
 
+17 June 2026: Yorgos
+	- Fix memory leak on DNAME 0TTL records.
+
 16 June 2026: Wouter
 	- Fix to disallow $INCLUDE for secondary zones. Start up
 	  of server continues if a secondary zone fails to load.
