@@ -29,6 +29,13 @@
 	- Fix that malloc failure for ngtcp2_conn_server_new
 	  cleans up reference that older ngtcp2 versions can leave.
 	  Thanks to Qifan Zhang, Palo Alto Networks, for the report.
+	- Fix that on malloc failure during accept of TCP, the
+	  socket is not left to cause a read event loop. It uses
+	  slow-accept to delay accepting new connections, if
+	  that fails it drops the new connections. When the tcp
+	  connection usage is full, it waits for 50msec, to allow
+	  existing queries to be resolved. Thanks to Qifan Zhang,
+	  Palo Alto Networks, for the report.
 
 16 June 2026: Wouter
 	- Fix to disallow $INCLUDE for secondary zones. Start up

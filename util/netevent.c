@@ -2985,6 +2985,62 @@ void comm_base_handle_slow_accept(int ATTR_UNUSED(fd),
 	}
 }
 
+/** out of resources in the accept path: pause all listening for
+ * NETEVENT_SLOW_ACCEPT_TIME and re-arm via comm_base_handle_slow_accept.
+ *
+ * If the routine fails, the socket is accepted and then closed, draining it
+ * from the waiting list of connections to be accepted.
+ * @param c: the comm point that is a listening socket.
+ * @param msec: if 0: uses the slow accept time. Otherwise, sets the time
+ *		to wait.
+ */
+static void
+comm_point_slow_accept(struct comm_point* c, int msec)
+{
+	struct comm_base* b = c->ev->base;
+	struct timeval tv;
+	struct ub_event* slowev;
+	if(!b->stop_accept)
+		return;
+	if(b->eb->slow_accept_enabled)
+		return;
+	/* Allocate the event */
+	slowev = ub_event_new(b->eb->base, -1, UB_EV_TIMEOUT,
+		comm_base_handle_slow_accept, b);
+	if(!slowev) {
+		/* The slow accept was not enabled yet, to handle
+		 * the allocation failure, instead drain the incoming
+		 * connection. */
+		int new_fd = accept(c->fd, NULL, NULL);
+		if(new_fd != -1) {
+			verbose(VERB_ALGO, "slow accept: event_new failed, "
+				"drop connection");
+			sock_close(new_fd);
+		}
+		return;
+	}
+	ub_comm_base_now(b);
+	if(b->eb->last_slow_log+SLOW_LOG_TIME <= b->eb->secs) {
+		b->eb->last_slow_log = b->eb->secs;
+		verbose(VERB_OPS, "out of resources on accept, "
+			"slow down accept for %d msec",
+			NETEVENT_SLOW_ACCEPT_TIME);
+	}
+	b->eb->slow_accept_enabled = 1;
+	fptr_ok(fptr_whitelist_stop_accept(b->stop_accept));
+	(*b->stop_accept)(b->cb_arg);
+	/* set timeout, no mallocs */
+	if(msec == 0)
+		msec = NETEVENT_SLOW_ACCEPT_TIME;
+	tv.tv_sec = msec/1000;
+	tv.tv_usec = (msec%1000)*1000;
+	b->eb->slow_accept = slowev;
+	if(ub_event_add(b->eb->slow_accept, &tv) != 0) {
+		/* we do not want to log here,
+		 * error: "event_add failed." */
+	}
+}
+
 int comm_point_perform_accept(struct comm_point* c,
 	struct sockaddr_storage* addr, socklen_t* addrlen)
 {
@@ -3018,6 +3074,14 @@ int comm_point_perform_accept(struct comm_point* c,
 			if(c->ev->base->stop_accept) {
 				struct comm_base* b = c->ev->base;
 				struct timeval tv;
+				struct ub_event* slowev = ub_event_new(
+					b->eb->base, -1, UB_EV_TIMEOUT,
+					comm_base_handle_slow_accept, b);
+				if(!slowev) {
+					verbose(VERB_ALGO, "slow accept: "
+						"event_new failed");
+					return -1;
+				}
 				verbose(VERB_ALGO, "out of file descriptors: "
 					"slow accept");
 				ub_comm_base_now(b);
@@ -3037,15 +3101,8 @@ int comm_point_perform_accept(struct comm_point* c,
 				/* set timeout, no mallocs */
 				tv.tv_sec = NETEVENT_SLOW_ACCEPT_TIME/1000;
 				tv.tv_usec = (NETEVENT_SLOW_ACCEPT_TIME%1000)*1000;
-				b->eb->slow_accept = ub_event_new(b->eb->base,
-					-1, UB_EV_TIMEOUT,
-					comm_base_handle_slow_accept, b);
-				if(b->eb->slow_accept == NULL) {
-					/* we do not want to log here, because
-					 * that would spam the logfiles.
-					 * error: "event_base_set failed." */
-				}
-				else if(ub_event_add(b->eb->slow_accept, &tv)
+				b->eb->slow_accept = slowev;
+				if(ub_event_add(b->eb->slow_accept, &tv)
 					!= 0) {
 					/* we do not want to log here,
 					 * error: "event_add failed." */
@@ -3226,6 +3283,13 @@ comm_point_tcp_accept_callback(int fd, short event, void* arg)
 	/* find free tcp handler. */
 	if(!c->tcp_free) {
 		log_warn("accepted too many tcp, connections full");
+		/* Wait for a short moment (say 50msec) so that other
+		 * TCP connections can complete. Or timeout, at the busy
+		 * timeout of about 200msec. That stops this routine from
+		 * spinning endlessly, and gives time to complete the other
+		 * requests. But it is not as slow as the 2000msec wait
+		 * time for when the kernel is out of buffers. */
+		comm_point_slow_accept(c, NETEVENT_SLOW_ACCEPT_QUEUE_TIME);
 		return;
 	}
 	/* accept incoming connection. */
@@ -3247,6 +3311,7 @@ comm_point_tcp_accept_callback(int fd, short event, void* arg)
 		if(!c_hdl->h2_session ||
 			!http2_session_server_create(c_hdl->h2_session)) {
 			log_warn("failed to create nghttp2");
+			comm_point_slow_accept(c, 0);
 			return;
 		}
 		if(!c_hdl->h2_session ||
@@ -3254,6 +3319,7 @@ comm_point_tcp_accept_callback(int fd, short event, void* arg)
 			log_warn("failed to submit http2 settings");
 			if(c_hdl->h2_session)
 				http2_session_server_delete(c_hdl->h2_session);
+			comm_point_slow_accept(c, 0);
 			return;
 		}
 		if(!c->ssl) {
@@ -3270,11 +3336,12 @@ comm_point_tcp_accept_callback(int fd, short event, void* arg)
 			comm_point_tcp_handle_callback, c_hdl);
 	}
 	if(!c_hdl->ev->ev) {
-		log_warn("could not ub_event_new, dropped tcp");
+		log_warn("could not ub_event_new, for new tcp");
 #ifdef HAVE_NGHTTP2
 		if(c_hdl->type == comm_http && c_hdl->h2_session)
 			http2_session_server_delete(c_hdl->h2_session);
 #endif
+		comm_point_slow_accept(c, 0);
 		return;
 	}
 	log_assert(fd != -1);
