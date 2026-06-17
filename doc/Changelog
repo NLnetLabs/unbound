@@ -55,6 +55,9 @@
 	  so the internal messaging stays correct. Also it does
 	  not exit the server if stats pipe communication fails.
 	  Thanks to Qifan Zhang, Palo Alto Networks, for the report.
+	- Fix that fast_reload does not terminate the server
+	  on config read failure after malloc failure. Thanks to
+	  Qifan Zhang, Palo Alto Networks, for the report.
 
 16 June 2026: Wouter
 	- Fix to disallow $INCLUDE for secondary zones. Start up
