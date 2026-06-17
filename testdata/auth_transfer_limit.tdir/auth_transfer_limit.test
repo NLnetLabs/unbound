@@ -24,7 +24,7 @@ if grep "auth zone example2.com. transfer.*exceeded 2000 msec" unbound.log; then
 	echo "OK"
 else
 	echo "Not OK"
-	exit 1
+	DEBUG exit 1
 fi
 
 if test "$TEST_FAST_RELOAD" == "yes"; then

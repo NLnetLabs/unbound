@@ -1,3 +1,9 @@
+17 June 2026: Wouter
+	- Fix that after fast_reload the disown of the auth zone
+	  transfer task cleans the chunk list. Also fix the
+	  auth_transfer_limit test to use a forwarder for each type
+	  of failure, so the one is not blocked by the other waiting.
+
 16 June 2026: Wouter
 	- Fix to disallow $INCLUDE for secondary zones. Start up
 	  of server continues if a secondary zone fails to load.

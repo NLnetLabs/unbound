@@ -5540,6 +5540,8 @@ xfr_stop_lookup(struct auth_master** lookup_target, void* lookup_unique_info,
 static void
 xfr_transfer_disown(struct auth_xfer* xfr)
 {
+	/* remove data chunks */
+	auth_chunks_delete(xfr->task_transfer);
 	/* remove timer (from this worker's event base) */
 	comm_timer_delete(xfr->task_transfer->timer);
 	xfr->task_transfer->timer = NULL;
