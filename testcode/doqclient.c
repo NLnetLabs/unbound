@@ -1137,8 +1137,11 @@ static struct ngtcp2_conn* conn_client_setup(struct doq_client_data* data)
 		client_chosen_version, &cbs, &settings, &params,
 		NULL, /* ngtcp2_mem allocator, use default */
 		data /* callback argument */);
-	if(!conn) fatal_exit("could not ngtcp2_conn_client_new: %s",
-		ngtcp2_strerror(rv));
+	if(rv!=0) {
+		conn = NULL;
+		fatal_exit("could not ngtcp2_conn_client_new: %s",
+			ngtcp2_strerror(rv));
+	}
 	data->cc_algo = settings.cc_algo;
 	return conn;
 }

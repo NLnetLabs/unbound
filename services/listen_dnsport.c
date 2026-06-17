@@ -4881,6 +4881,7 @@ doq_conn_setup(struct doq_conn* conn, uint8_t* scid, size_t scidlen,
 	rv = ngtcp2_conn_server_new(&conn->conn, &scid_cid, &sv_scid, &path,
 		conn->version, &callbacks, &settings, &params, NULL, conn);
 	if(rv != 0) {
+		conn->conn = NULL;
 		lock_rw_unlock(&conn->table->conid_lock);
 		log_err("ngtcp2_conn_server_new failed: %s",
 			ngtcp2_strerror(rv));
