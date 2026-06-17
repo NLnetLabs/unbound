@@ -94,7 +94,7 @@ struct config_parser_state* cfg_parser = 0;
 static void init_outgoing_availports(int* array, int num);
 
 /** init cookie with random data */
-static void init_cookie_secret(uint8_t* cookie_secret, size_t cookie_secret_len);
+static int init_cookie_secret(struct config_file* cfg);
 
 struct config_file*
 config_create(void)
@@ -390,8 +390,7 @@ config_create(void)
 #endif
 	cfg->do_answer_cookie = 0;
 	memset(cfg->cookie_secret, 0, sizeof(cfg->cookie_secret));
-	cfg->cookie_secret_len = 16;
-	init_cookie_secret(cfg->cookie_secret, cfg->cookie_secret_len);
+	cfg->cookie_secret_len = 0; /* not set yet */
 	cfg->cookie_secret_file = NULL;
 #ifdef USE_CACHEDB
 	if(!(cfg->cachedb_backend = strdup("testframe"))) goto error_exit;
@@ -1577,6 +1576,8 @@ config_read(struct config_file* cfg, const char* filename, const char* chroot)
 		}
 		globfree(&g);
 		config_auto_slab_values(cfg);
+		if(!init_cookie_secret(cfg))
+			return 0;
 		return 1;
 	}
 #endif /* HAVE_GLOB */
@@ -1601,6 +1602,8 @@ config_read(struct config_file* cfg, const char* filename, const char* chroot)
 	}
 
 	config_auto_slab_values(cfg);
+	if(!init_cookie_secret(cfg))
+		return 0;
 	return 1;
 }
 
@@ -1875,18 +1878,33 @@ config_delete(struct config_file* cfg)
 	free(cfg);
 }
 
-static void
-init_cookie_secret(uint8_t* cookie_secret, size_t cookie_secret_len)
+static int
+init_cookie_secret(struct config_file* cfg)
 {
-	struct ub_randstate *rand = ub_initstate(NULL);
+	struct ub_randstate* rand;
+	size_t cookie_secret_len;
+	uint8_t* cookie_secret;
+	if(!cfg->do_answer_cookie)
+		return 1;
+	if(cfg->cookie_secret_file && cfg->cookie_secret_file[0])
+		return 1;
+	if(cfg->cookie_secret_len != 0)
+		return 1;
 
-	if (!rand)
-		fatal_exit("could not init random generator");
+	rand = ub_initstate(NULL);
+	if(!rand) {
+		log_err("init_cookie_secret: could not init random generator");
+		return 0;
+	}
+	cfg->cookie_secret_len = 16;
+	cookie_secret_len = cfg->cookie_secret_len;
+	cookie_secret = cfg->cookie_secret;
 	while (cookie_secret_len) {
 		*cookie_secret++ = (uint8_t)ub_random(rand);
 		cookie_secret_len--;
 	}
 	ub_randfree(rand);
+	return 1;
 }
 
 static void
