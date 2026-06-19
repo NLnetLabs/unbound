@@ -2,6 +2,7 @@
 	- Fix for #1457: fix thread setname for thread start of
 	  dnstap, and fast_reload.
 	- Fix to update github ci actions/checkout to v7.
+	- Fix warning about file_string_matches in unbound-checkconf.
 
 17 June 2026: Wouter
 	- Fix that after fast_reload the disown of the auth zone

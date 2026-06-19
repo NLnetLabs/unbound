@@ -731,6 +731,7 @@ check_modules_exist(const char* module_conf)
 	}
 }
 
+#ifdef USE_IPSECMOD
 /** Compare filename with string, true if it matches the name. */
 static int
 file_string_matches(char* str, char* fname, struct config_file* cfg)
@@ -748,6 +749,7 @@ file_string_matches(char* str, char* fname, struct config_file* cfg)
 	free(f);
 	return 0;
 }
+#endif /* USE_IPSECMOD */
 
 /** Compare filename with list of files, true if list contains the name. */
 static int
