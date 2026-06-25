@@ -197,6 +197,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_FORWARD_NO_CACHE VAR_STUB_NO_CACHE VAR_LOG_SERVFAIL VAR_DENY_ANY
 %token VAR_UNKNOWN_SERVER_TIME_LIMIT VAR_LOG_TAG_QUERYREPLY
 %token VAR_DISCARD_TIMEOUT VAR_WAIT_LIMIT VAR_WAIT_LIMIT_COOKIE
+%token VAR_CLIENT_WAIT_TIMEOUT
 %token VAR_WAIT_LIMIT_NETBLOCK VAR_WAIT_LIMIT_COOKIE_NETBLOCK
 %token VAR_STREAM_WAIT_SIZE VAR_TLS_CIPHERS VAR_TLS_CIPHERSUITES VAR_TLS_USE_SNI
 %token VAR_TLS_PROTOCOLS
@@ -361,7 +362,8 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_log_destaddr | server_cookie_secret_file |
 	server_iter_scrub_ns | server_iter_scrub_cname | server_max_global_quota |
 	server_iter_scrub_rrsig |
-	server_harden_unverified_glue | server_log_time_iso | server_iter_scrub_promiscuous
+	server_harden_unverified_glue | server_log_time_iso | server_iter_scrub_promiscuous |
+	server_client_wait_timeout
 	;
 stub_clause: stubstart contents_stub
 	{
@@ -2498,6 +2500,13 @@ server_discard_timeout: VAR_DISCARD_TIMEOUT STRING_ARG
 	{
 		OUTYY(("P(server_discard_timeout:%s)\n", $2));
 		cfg_parser->cfg->discard_timeout = atoi($2);
+		free($2);
+	}
+	;
+server_client_wait_timeout: VAR_CLIENT_WAIT_TIMEOUT STRING_ARG
+	{
+		OUTYY(("P(server_client_wait_timeout:%s)\n", $2));
+		cfg_parser->cfg->client_wait_timeout = atoi($2);
 		free($2);
 	}
 	;

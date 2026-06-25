@@ -554,6 +554,9 @@ struct config_file {
 	/** Wait time to drop recursion replies */
 	int discard_timeout;
 
+	/** client wait timeout in ms (0 = disabled) */
+	int client_wait_timeout;
+
 	/** Wait limit for number of replies per IP address */
 	int wait_limit;
 

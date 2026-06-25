@@ -210,6 +210,11 @@ server:
 	# msec before recursion replies are dropped. The work item continues.
 	# discard-timeout: 1900
 
+	# msec before a waiting client is answered with SERVFAIL and EDE 22
+	# (No Reachable Authority); recursion continues in the background to warm
+	# the cache. Default is 0 (disabled, opt-in).
+	# client-wait-timeout: 0
+
 	# Max number of replies waiting for recursion per IP address.
 	# wait-limit: 1000
 

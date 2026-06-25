@@ -615,6 +615,22 @@ Default: 1900
 .UNINDENT
 .INDENT 0.0
 .TP
+.B client\-wait\-timeout: \fI<msec>\fP 
+The wait time in msec before a client query that is still waiting for
+recursion is answered with SERVFAIL and Extended DNS Error code 22
+(No Reachable Authority).
+Recursion continues in the background so the cache is populated for
+subsequent identical queries.
+The EDE code is only attached when \fBede:\fR is enabled.
+If both this and
+\fI\%serve\-expired\-client\-timeout\fP
+are set, whichever timer fires first answers and the other becomes a no\-op.
+The value \fB0\fP disables it.
+.sp
+Default: 0
+.UNINDENT
+.INDENT 0.0
+.TP
 .B wait\-limit: \fI<number>\fP 
 The number of replies that can wait for recursion, for an IP address.
 This makes a ratelimit per IP address of waiting replies for recursion.

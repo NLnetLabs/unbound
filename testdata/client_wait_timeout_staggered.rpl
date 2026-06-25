@@ -1,0 +1,90 @@
+; config options
+server:
+	module-config: "iterator"
+	qname-minimisation: "no"
+	minimal-responses: no
+	client-wait-timeout: 2000
+	ede: yes
+
+stub-zone:
+	name: "example.com"
+	stub-addr: 1.2.3.4
+CONFIG_END
+
+SCENARIO_BEGIN Test client-wait-timeout per-reply fairness on a merged state
+
+; The stub answers NS referrals but never the A query, so the upstream A query
+; stays outstanding and both clients keep waiting on one merged mesh state.
+RANGE_BEGIN 0 100
+	ADDRESS 1.2.3.4
+	ENTRY_BEGIN
+		MATCH opcode qtype qname
+		ADJUST copy_id
+		REPLY QR NOERROR
+		SECTION QUESTION
+			example.com. IN NS
+		SECTION ANSWER
+			example.com. IN NS ns.example.com.
+		SECTION ADDITIONAL
+			ns.example.com. IN A 1.2.3.4
+	ENTRY_END
+RANGE_END
+
+; t=0: client A queries. Its deadline is start_time(0) + 2000ms = 2.0s.
+STEP 1 QUERY ADDRESS 127.0.0.1
+ENTRY_BEGIN
+	REPLY RD DO
+	SECTION QUESTION
+		example.com. IN A
+ENTRY_END
+
+; t=1.0s: well within A's 2s window; nothing fires.
+STEP 10 TIME_PASSES ELAPSE 1
+
+; t=1.0s: client B queries the SAME qname/qtype, merging onto A's state.
+; B's deadline is start_time(1.0) + 2000ms = 3.0s. A's earlier 2.0s timer stands.
+STEP 11 QUERY ADDRESS 127.0.0.2
+ENTRY_BEGIN
+	REPLY RD DO
+	SECTION QUESTION
+		example.com. IN A
+ENTRY_END
+
+; t=2.5s: A's 2.0s deadline has passed (aged 2.5s >= 2000ms) so A is SERVFAILed,
+; but B (aged only 1.5s) is NOT; the timer is rescheduled to B's 3.0s deadline.
+STEP 20 TIME_PASSES ELAPSE 1.5
+
+; Only client A (127.0.0.1) gets SERVFAIL+EDE22 at this point.
+STEP 30 CHECK_ANSWER ADDRESS 127.0.0.1
+ENTRY_BEGIN
+	MATCH all ede=22
+	REPLY QR RD RA DO SERVFAIL
+	SECTION QUESTION
+		example.com. IN A
+ENTRY_END
+
+; t=3.5s: B's 3.0s deadline has now passed (aged 2.5s >= 2000ms) so B is SERVFAILed.
+STEP 40 TIME_PASSES ELAPSE 1
+
+; Client B (127.0.0.2) gets its own SERVFAIL+EDE22, at its own later deadline.
+STEP 50 CHECK_ANSWER ADDRESS 127.0.0.2
+ENTRY_BEGIN
+	MATCH all ede=22
+	REPLY QR RD RA DO SERVFAIL
+	SECTION QUESTION
+		example.com. IN A
+ENTRY_END
+
+; Reply to the outstanding upstream A query so the scenario ends cleanly.
+STEP 60 REPLY
+ENTRY_BEGIN
+	MATCH opcode qtype qname
+	ADJUST copy_id
+	REPLY QR AA NOERROR
+	SECTION QUESTION
+		example.com. IN A
+	SECTION ANSWER
+		example.com. 3600 IN A 1.2.3.4
+ENTRY_END
+
+SCENARIO_END

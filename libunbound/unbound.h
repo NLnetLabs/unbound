@@ -853,6 +853,8 @@ struct ub_server_stats {
 	long long qquic;
 	/** number of queries removed due to discard-timeout */
 	long long num_queries_discard_timeout;
+	/** number of queries SERVFAILed due to client-wait-timeout */
+	long long num_queries_client_wait_timeout;
 	/** number of queries removed due to replyaddr limit */
 	long long num_queries_replyaddr_limit;
 	/** number of queries removed due to wait-limit */

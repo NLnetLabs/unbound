@@ -1134,6 +1134,19 @@ morechecks(struct config_file* cfg)
 	if(cfg->remote_control_enable)
 		controlinterfacechecks(cfg);
 
+	if(cfg->client_wait_timeout < 0)
+		fatal_exit("client-wait-timeout must be 0 or greater");
+	if(cfg->client_wait_timeout > 0 && cfg->serve_expired &&
+		cfg->serve_expired_client_timeout > 0 &&
+		cfg->client_wait_timeout < cfg->serve_expired_client_timeout) {
+		fprintf(stderr, "unbound-checkconf: warning: client-wait-timeout "
+			"(%d ms) is less than serve-expired-client-timeout (%d ms); "
+			"client-wait-timeout will fire first, making "
+			"serve-expired-client-timeout ineffective for first-time "
+			"queries\n", cfg->client_wait_timeout,
+			cfg->serve_expired_client_timeout);
+	}
+
 	donotquerylocalhostcheck(cfg);
 	localzonechecks(cfg);
 	view_and_respipchecks(cfg);

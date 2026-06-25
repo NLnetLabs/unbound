@@ -141,6 +141,8 @@ struct mesh_area {
 	size_t rpz_action[UB_STATS_RPZ_ACTION_NUM];
 	/** stats, number of queries removed due to discard-timeout */
 	size_t num_queries_discard_timeout;
+	/** stats, number of queries SERVFAILed due to client-wait-timeout */
+	size_t num_queries_client_wait_timeout;
 	/** stats, number of queries removed due to replyaddr limit */
 	size_t num_queries_replyaddr_limit;
 	/** stats, number of queries removed due to wait-limit */
@@ -271,6 +273,8 @@ typedef void (*mesh_cb_func_type)(void* cb_arg, int rcode, struct sldns_buffer*,
 struct mesh_cb {
 	/** next in list */
 	struct mesh_cb* next;
+	/** the time when the callback was attached */
+	struct timeval start_time;
 	/** edns data from query */
 	struct edns_data edns;
 	/** id of query, in network byteorder. */
@@ -760,5 +764,11 @@ void mesh_respond_serve_expired(struct mesh_state* mstate);
  */
 void mesh_remove_callback(struct mesh_area* mesh, struct query_info* qinfo,
 	uint16_t qflags, mesh_cb_func_type cb, void* cb_arg, void* unique_info);
+
+/**
+ * Timer callback for client-wait-timeout: SERVFAILs aged replies.
+ * @param arg: the mesh_state* that owns this timer.
+ */
+void mesh_client_wait_callback(void* arg);
 
 #endif /* SERVICES_MESH_H */
