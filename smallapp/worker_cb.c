@@ -43,6 +43,7 @@
 #include "config.h"
 #include "libunbound/context.h"
 #include "libunbound/worker.h"
+#include "libunbound/remote.h"
 #include "util/fptr_wlist.h"
 #include "util/log.h"
 #include "services/mesh.h"

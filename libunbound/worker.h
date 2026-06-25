@@ -177,13 +177,4 @@ void worker_start_accept(void* arg);
 /** stop accept callback handler */
 void worker_stop_accept(void* arg);
 
-/** handle remote control accept callbacks */
-int remote_accept_callback(struct comm_point*, void*, int, struct comm_reply*);
-
-/** handle remote control data callbacks */
-int remote_control_callback(struct comm_point*, void*, int, struct comm_reply*);
-
-/** routine to printout option values over SSL */
-void  remote_get_opt_ssl(char* line, void* arg);
-
 #endif /* LIBUNBOUND_WORKER_H */
