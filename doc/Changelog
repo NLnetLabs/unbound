@@ -1,3 +1,8 @@
+24 June 2026: Wouter
+	- Merge #1465 from dag-erling: Add libunbound/remote.h. Add
+	  a shared header containing prototypes for functions that
+	  both ends of a remote control connection need to implement.
+
 19 June 2026: Wouter
 	- Fix for #1457: fix thread setname for thread start of
 	  dnstap, and fast_reload.
