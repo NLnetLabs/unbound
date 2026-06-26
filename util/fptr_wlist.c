@@ -72,6 +72,7 @@
 #include "libunbound/libworker.h"
 #include "libunbound/context.h"
 #include "libunbound/worker.h"
+#include "libunbound/authload.h"
 #include "util/tube.h"
 #include "util/config_file.h"
 #include "daemon/remote.h"
@@ -191,6 +192,7 @@ fptr_whitelist_event(void (*fptr)(int, short, void *))
 	else if(fptr == &comm_point_doq_callback) return 1;
 #endif
 	else if(fptr == &fast_reload_service_cb) return 1;
+	else if(fptr == &worker_auth_load_service_cb) return 1;
 #ifdef USE_DNSTAP
 	else if(fptr == &dtio_output_cb) return 1;
 	else if(fptr == &dtio_cmd_cb) return 1;

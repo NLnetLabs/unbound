@@ -72,6 +72,12 @@ struct auth_load_thread {
 	int commpair[2];
 	/** if the thread has to quit */
 	int need_to_quit;
+	/** the event that listens on the worker to commpair,
+	 * it receives content from the auth load thread. */
+	void* service_event;
+	/** if the event that listens on the worker has
+	 * been added to the comm base. */
+	int service_event_is_added;
 
 	/** the worker that the auth load is connected to */
 	struct worker* worker;
@@ -87,7 +93,7 @@ enum auth_load_task_type {
 	AUTH_LOAD_TASK_TRANSFER,
 	AUTH_LOAD_TASK_ZONEFILE_READ,
 	AUTH_LOAD_TASK_ZONEFILE_WRITE,
-	AUTH_LOAD_TASK_CHUNKS
+	AUTH_LOAD_TASK_HTTPCHUNKS
 };
 
 /**

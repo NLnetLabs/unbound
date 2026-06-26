@@ -6336,6 +6336,20 @@ process_list_end_transfer(struct auth_xfer* xfr, struct module_env* env)
 	xfr_transfer_nexttarget_or_end(xfr, env);
 }
 
+void xfr_process_load_end_transfer(struct auth_xfer* xfr, uint8_t status)
+{
+	if(status) {
+		/* it worked! */
+		/* we fetched the zone, move to wait task */
+		xfr_transfer_disown(xfr);
+
+		lock_basic_unlock(&xfr->lock);
+		return;
+	}
+	/* The transfer failed */
+	lock_basic_unlock(&xfr->lock);
+}
+
 /** callback for the task_transfer timer */
 void
 auth_xfer_transfer_timer_callback(void* arg)
