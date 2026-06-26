@@ -125,7 +125,7 @@ services/localzone.c services/mesh.c services/modstack.c services/view.c \
 services/rpz.c util/rfc_1982.c \
 services/outbound_list.c services/outside_network.c util/alloc.c \
 util/config_file.c util/configlexer.c util/configparser.c \
-util/shm_side/shm_main.c services/authzone.c \
+util/shm_side/shm_main.c services/authzone.c services/authload.c \
 util/fptr_wlist.c util/locks.c util/log.c util/mini_event.c util/module.c \
 util/netevent.c util/net_help.c util/random.c util/rbtree.c util/regional.c \
 util/rtt.c util/siphash.c util/edns.c util/storage/dnstree.c util/storage/lookup3.c \
@@ -152,7 +152,8 @@ autotrust.lo val_anchor.lo rpz.lo rfc_1982.lo proxy_protocol.lo \
 validator.lo val_kcache.lo val_kentry.lo val_neg.lo val_nsec3.lo val_nsec.lo \
 val_secalgo.lo val_sigcrypt.lo val_utils.lo dns64.lo $(CACHEDB_OBJ) authzone.lo \
 $(SUBNET_OBJ) $(PYTHONMOD_OBJ) $(CHECKLOCK_OBJ) $(DNSTAP_OBJ) $(DNSCRYPT_OBJ) \
-$(IPSECMOD_OBJ) $(IPSET_OBJ) $(DYNLIBMOD_OBJ) respip.lo timeval_func.lo
+$(IPSECMOD_OBJ) $(IPSET_OBJ) $(DYNLIBMOD_OBJ) respip.lo timeval_func.lo \
+authload.lo
 COMMON_OBJ_WITHOUT_UB_EVENT=$(COMMON_OBJ_WITHOUT_NETCALL) netevent.lo listen_dnsport.lo \
 outside_network.lo
 COMMON_OBJ=$(COMMON_OBJ_WITHOUT_UB_EVENT) ub_event.lo
@@ -721,6 +722,7 @@ depend:
 ipset.lo ipset.o: $(srcdir)/ipset/ipset.c
 doqclient.lo doqclient.o: $(srcdir)/testcode/doqclient.c
 unitdoq.lo unitdoq.o: $(srcdir)/testcode/unitdoq.c
+authload.lo authload.o: $(srcdir)/services/authload.c
 
 # Dependencies
 dns.lo dns.o: $(srcdir)/services/cache/dns.c config.h $(srcdir)/iterator/iter_delegpt.h $(srcdir)/util/log.h \
