@@ -1104,6 +1104,12 @@ morechecks(struct config_file* cfg)
 		&& strcmp(cfg->module_conf, "ipset iterator") != 0
 		&& strcmp(cfg->module_conf, "ipset respip iterator") != 0
 #endif
+#ifdef USE_NFTSET
+		&& strcmp(cfg->module_conf, "validator nftset iterator") != 0
+		&& strcmp(cfg->module_conf, "validator nftset respip iterator") != 0
+		&& strcmp(cfg->module_conf, "nftset iterator") != 0
+		&& strcmp(cfg->module_conf, "nftset respip iterator") != 0
+#endif
 		) {
 		fatal_exit("module conf '%s' is not known to work",
 			cfg->module_conf);

@@ -591,8 +591,12 @@ redis-expire-records{COLON}	{ YDVAR(1, VAR_CACHEDB_REDISEXPIRERECORDS) }
 redis-logical-db{COLON}			{ YDVAR(1, VAR_CACHEDB_REDISLOGICALDB) }
 redis-replica-logical-db{COLON}		{ YDVAR(1, VAR_CACHEDB_REDISREPLICALOGICALDB) }
 ipset{COLON}			{ YDVAR(0, VAR_IPSET) }
+nftset{COLON}			{ YDVAR(0, VAR_NFTSET) }
 name-v4{COLON}			{ YDVAR(1, VAR_IPSET_NAME_V4) }
 name-v6{COLON}			{ YDVAR(1, VAR_IPSET_NAME_V6) }
+family{COLON}			{ YDVAR(1, VAR_IPSET_FAMILY) }
+table{COLON}			{ YDVAR(1, VAR_IPSET_TABLE) }
+set{COLON}			{ YDVAR(3, VAR_IPSET_SET) }
 udp-upstream-without-downstream{COLON} { YDVAR(1, VAR_UDP_UPSTREAM_WITHOUT_DOWNSTREAM) }
 tcp-connection-limit{COLON}	{ YDVAR(2, VAR_TCP_CONNECTION_LIMIT) }
 answer-cookie{COLON}		{ YDVAR(1, VAR_ANSWER_COOKIE ) }
