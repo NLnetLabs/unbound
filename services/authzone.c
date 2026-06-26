@@ -60,6 +60,7 @@
 #include "services/outside_network.h"
 #include "services/listen_dnsport.h"
 #include "services/mesh.h"
+#include "services/authload.h"
 #include "sldns/rrdef.h"
 #include "sldns/pkthdr.h"
 #include "sldns/sbuffer.h"
@@ -6282,7 +6283,14 @@ static void
 process_list_end_transfer(struct auth_xfer* xfr, struct module_env* env)
 {
 	int ixfr_fail = 0;
-	if(xfr_process_chunk_list(xfr, env, &ixfr_fail)) {
+	if(1 /* auth load enabled: max-auth-load-threads > 0 */ ) {
+		/* Create auth load thread task to process the data. */
+		if(auth_load_add_task_xfr(xfr, env->worker)) {
+			/* Task is created, wait for it to be done. The worker
+			 * is signalled with the result. */
+			return;
+		}
+	} else if(xfr_process_chunk_list(xfr, env, &ixfr_fail)) {
 		/* it worked! */
 		auth_chunks_delete(xfr->task_transfer);
 
