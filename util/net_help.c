@@ -58,6 +58,9 @@
 #include "sldns/wire2str.h"
 #include "sldns/str2wire.h"
 #include <fcntl.h>
+#ifdef HAVE_POLL_H
+#include <poll.h>
+#endif
 #ifdef HAVE_OPENSSL_SSL_H
 #include <openssl/ssl.h>
 #include <openssl/evp.h>
@@ -91,6 +94,9 @@ int RRSET_ROUNDROBIN = 1;
 
 /** log tag queries with name instead of 'info' for filtering */
 int LOG_TAG_QUERYREPLY = 0;
+
+/** What number of loop iterations is too much for sock poll retries */
+#define SOCK_POLL_LOOP_MAX 200
 
 #ifdef HAVE_SSL
 static struct tls_session_ticket_key {
@@ -2082,4 +2088,358 @@ hex_pton(const char* src, uint8_t* target, size_t targsize)
 		src += 2;
 	}
 	return t-target;
+}
+
+int
+sock_poll_timeout(int fd, int timeout, int pollin, int pollout, int* event)
+{
+	int loopcount = 0;
+	/* Loop if the system call returns an errno to do so, like EINTR. */
+	log_assert(pollin || pollout);
+	while(1) {
+		struct pollfd p, *fds;
+		int nfds, ret;
+		if(++loopcount > SOCK_POLL_LOOP_MAX) {
+			log_err("sock_poll_timeout: loop");
+			if(event)
+				*event = 0;
+			return 0;
+		}
+		if(fd == -1) {
+			fds = NULL;
+			nfds = 0;
+		} else {
+			fds = &p;
+			nfds = 1;
+			memset(&p, 0, sizeof(p));
+			p.fd = fd;
+#ifndef USE_WINSOCK
+			p.events = POLLERR
+				| POLLHUP
+				;
+#endif
+			if(pollin)
+				p.events |= POLLIN;
+			if(pollout)
+				p.events |= POLLOUT;
+		}
+#ifndef USE_WINSOCK
+		ret = poll(fds, nfds, timeout);
+#else
+		if(fds == NULL) {
+			Sleep(timeout);
+			ret = 0;
+		} else {
+			ret = WSAPoll(fds, nfds, timeout);
+		}
+#endif
+		if(ret == -1) {
+#ifndef USE_WINSOCK
+			if(
+				errno == EINTR || errno == EAGAIN
+#  ifdef EWOULDBLOCK
+				|| errno == EWOULDBLOCK
+#  endif
+			) continue; /* Try again. */
+#endif
+			/* For WSAPoll we only get errors here:
+			 * o WSAENETDOWN
+			 * o WSAEFAULT
+			 * o WSAEINVAL
+			 * o WSAENOBUFS
+			 */
+			log_err("poll: %s", sock_strerror(errno));
+			if(event)
+				*event = 0;
+			return 0;
+		} else if(ret == 0) {
+			/* Timeout */
+			if(event)
+				*event = 0;
+			return 1;
+		}
+		break;
+	}
+	if(event)
+		*event = 1;
+	return 1;
+}
+
+int
+create_socketpair(int* pair, struct ub_randstate* rand)
+{
+#ifndef USE_WINSOCK
+	if(socketpair(AF_UNIX, SOCK_STREAM, 0, pair) == -1) {
+		log_err("socketpair: %s", strerror(errno));
+		return 0;
+	}
+	(void)rand;
+#else
+	struct sockaddr_in addr, baddr, accaddr, connaddr;
+	socklen_t baddrlen, accaddrlen, connaddrlen;
+	uint8_t localhost[] = {127, 0, 0, 1};
+	uint8_t nonce[16], recvnonce[16];
+	size_t i;
+	int lst, pollin_event, bcount, loopcount;
+	int connect_poll_timeout = 200; /* msec to wait for connection */
+	ssize_t ret;
+	pair[0] = -1;
+	pair[1] = -1;
+	for(i=0; i<sizeof(nonce); i++) {
+		nonce[i] = ub_random_max(rand, 256);
+	}
+	lst = socket(AF_INET, SOCK_STREAM, 0);
+	if(lst == -1) {
+		log_err("create_socketpair: socket: %s", sock_strerror(errno));
+		return 0;
+	}
+	memset(&addr, 0, sizeof(addr));
+	addr.sin_family = AF_INET;
+	addr.sin_port = 0;
+	memcpy(&addr.sin_addr, localhost, 4);
+	if(bind(lst, (struct sockaddr*)&addr, (socklen_t)sizeof(addr))
+		== -1) {
+		log_err("create socketpair: bind: %s", sock_strerror(errno));
+		sock_close(lst);
+		return 0;
+	}
+	if(listen(lst, 12) == -1) {
+		log_err("create socketpair: listen: %s", sock_strerror(errno));
+		sock_close(lst);
+		return 0;
+	}
+
+	pair[1] = socket(AF_INET, SOCK_STREAM, 0);
+	if(pair[1] == -1) {
+		log_err("create socketpair: socket: %s", sock_strerror(errno));
+		sock_close(lst);
+		return 0;
+	}
+	baddrlen = (socklen_t)sizeof(baddr);
+	if(getsockname(lst, (struct sockaddr*)&baddr, &baddrlen) == -1) {
+		log_err("create socketpair: getsockname: %s",
+			sock_strerror(errno));
+		sock_close(lst);
+		sock_close(pair[1]);
+		pair[1] = -1;
+		return 0;
+	}
+	if(baddrlen > (socklen_t)sizeof(baddr)) {
+		log_err("create socketpair: getsockname returned addr too big");
+		sock_close(lst);
+		sock_close(pair[1]);
+		pair[1] = -1;
+		return 0;
+	}
+	/* the socket is blocking */
+	if(connect(pair[1], (struct sockaddr*)&baddr, baddrlen) == -1) {
+		log_err("create socketpair: connect: %s",
+			sock_strerror(errno));
+		sock_close(lst);
+		sock_close(pair[1]);
+		pair[1] = -1;
+		return 0;
+	}
+	if(!sock_poll_timeout(lst, connect_poll_timeout, 1, 0, &pollin_event)) {
+		log_err("create socketpair: poll for accept failed: %s",
+			sock_strerror(errno));
+		sock_close(lst);
+		sock_close(pair[1]);
+		pair[1] = -1;
+		return 0;
+	}
+	if(!pollin_event) {
+		log_err("create socketpair: poll timeout for accept");
+		sock_close(lst);
+		sock_close(pair[1]);
+		pair[1] = -1;
+		return 0;
+	}
+	accaddrlen = (socklen_t)sizeof(accaddr);
+	pair[0] = accept(lst, (struct sockaddr*)&accaddr, &accaddrlen);
+	if(pair[0] == -1) {
+		log_err("create socketpair: accept: %s", sock_strerror(errno));
+		sock_close(lst);
+		sock_close(pair[1]);
+		pair[1] = -1;
+		return 0;
+	}
+	if(accaddrlen > (socklen_t)sizeof(accaddr)) {
+		log_err("create socketpair: accept returned addr too big");
+		sock_close(lst);
+		sock_close(pair[0]);
+		sock_close(pair[1]);
+		pair[0] = -1;
+		pair[1] = -1;
+		return 0;
+	}
+	if(accaddr.sin_family != AF_INET ||
+	   memcmp(localhost, &accaddr.sin_addr, 4) != 0) {
+		log_err("create socketpair: accept from wrong address");
+		sock_close(lst);
+		sock_close(pair[0]);
+		sock_close(pair[1]);
+		pair[0] = -1;
+		pair[1] = -1;
+		return 0;
+	}
+	connaddrlen = (socklen_t)sizeof(connaddr);
+	if(getsockname(pair[1], (struct sockaddr*)&connaddr, &connaddrlen)
+		== -1) {
+		log_err("create socketpair: getsockname connectedaddr: %s",
+			sock_strerror(errno));
+		sock_close(lst);
+		sock_close(pair[0]);
+		sock_close(pair[1]);
+		pair[0] = -1;
+		pair[1] = -1;
+		return 0;
+	}
+	if(connaddrlen > (socklen_t)sizeof(connaddr)) {
+		log_err("create socketpair: getsockname connectedaddr returned addr too big");
+		sock_close(lst);
+		sock_close(pair[0]);
+		sock_close(pair[1]);
+		pair[0] = -1;
+		pair[1] = -1;
+		return 0;
+	}
+	if(connaddr.sin_family != AF_INET ||
+	   memcmp(localhost, &connaddr.sin_addr, 4) != 0) {
+		log_err("create socketpair: getsockname connectedaddr returned wrong address");
+		sock_close(lst);
+		sock_close(pair[0]);
+		sock_close(pair[1]);
+		pair[0] = -1;
+		pair[1] = -1;
+		return 0;
+	}
+	if(accaddr.sin_port != connaddr.sin_port) {
+		log_err("create socketpair: accept from wrong port");
+		sock_close(lst);
+		sock_close(pair[0]);
+		sock_close(pair[1]);
+		pair[0] = -1;
+		pair[1] = -1;
+		return 0;
+	}
+	sock_close(lst);
+
+	loopcount = 0;
+	bcount = 0;
+	while(1) {
+		if(++loopcount > SOCK_POLL_LOOP_MAX) {
+			log_err("create socketpair: send failed due to loop");
+			sock_close(pair[0]);
+			sock_close(pair[1]);
+			pair[0] = -1;
+			pair[1] = -1;
+			return 0;
+		}
+		ret = send(pair[1], (void*)(nonce+bcount),
+			sizeof(nonce)-bcount, 0);
+		if(ret == -1) {
+			if(
+#ifndef USE_WINSOCK
+				errno == EINTR || errno == EAGAIN
+#  ifdef EWOULDBLOCK
+				|| errno == EWOULDBLOCK
+#  endif
+#else
+				WSAGetLastError() == WSAEINTR ||
+				WSAGetLastError() == WSAEINPROGRESS ||
+				WSAGetLastError() == WSAEWOULDBLOCK
+#endif
+				)
+				continue; /* Try again. */
+			log_err("create socketpair: send: %s", sock_strerror(errno));
+			sock_close(pair[0]);
+			sock_close(pair[1]);
+			pair[0] = -1;
+			pair[1] = -1;
+			return 0;
+		} else if(ret+(ssize_t)bcount != sizeof(nonce)) {
+			bcount += ret;
+			if((size_t)bcount < sizeof(nonce))
+				continue;
+		}
+		break;
+	}
+
+	if(!sock_poll_timeout(pair[0], connect_poll_timeout, 1, 0, &pollin_event)) {
+		log_err("create socketpair: poll failed: %s",
+			sock_strerror(errno));
+		sock_close(pair[0]);
+		sock_close(pair[1]);
+		pair[0] = -1;
+		pair[1] = -1;
+		return 0;
+	}
+	if(!pollin_event) {
+		log_err("create socketpair: poll timeout for recv");
+		sock_close(pair[0]);
+		sock_close(pair[1]);
+		pair[0] = -1;
+		pair[1] = -1;
+		return 0;
+	}
+
+	loopcount = 0;
+	bcount = 0;
+	while(1) {
+		if(++loopcount > SOCK_POLL_LOOP_MAX) {
+			log_err("create socketpair: recv failed due to loop");
+			sock_close(pair[0]);
+			sock_close(pair[1]);
+			pair[0] = -1;
+			pair[1] = -1;
+			return 0;
+		}
+		ret = recv(pair[0], (void*)(recvnonce+bcount),
+			sizeof(nonce)-bcount, 0);
+		if(ret == -1) {
+			if(
+#ifndef USE_WINSOCK
+				errno == EINTR || errno == EAGAIN
+#  ifdef EWOULDBLOCK
+				|| errno == EWOULDBLOCK
+#  endif
+#else
+				WSAGetLastError() == WSAEINTR ||
+				WSAGetLastError() == WSAEINPROGRESS ||
+				WSAGetLastError() == WSAEWOULDBLOCK
+#endif
+				)
+				continue; /* Try again. */
+			log_err("create socketpair: recv: %s", sock_strerror(errno));
+			sock_close(pair[0]);
+			sock_close(pair[1]);
+			pair[0] = -1;
+			pair[1] = -1;
+			return 0;
+		} else if(ret == 0) {
+			log_err("create socketpair: stream closed");
+			sock_close(pair[0]);
+			sock_close(pair[1]);
+			pair[0] = -1;
+			pair[1] = -1;
+			return 0;
+		} else if(ret+(ssize_t)bcount != sizeof(nonce)) {
+			bcount += ret;
+			if((size_t)bcount < sizeof(nonce))
+				continue;
+		}
+		break;
+	}
+
+	if(memcmp(nonce, recvnonce, sizeof(nonce)) != 0) {
+		log_err("create socketpair: recv wrong nonce");
+		sock_close(pair[0]);
+		sock_close(pair[1]);
+		pair[0] = -1;
+		pair[1] = -1;
+		return 0;
+	}
+#endif
+	return 1;
 }
