@@ -2383,6 +2383,8 @@ worker_init(struct worker* worker, struct config_file *cfg,
 		worker_stat_timer_cb, worker);
 	if(!worker->stat_timer) {
 		log_err("could not create statistics timer");
+		worker_delete(worker);
+		return 0;
 	}
 
 	/* we use the msg_buffer_size as a good estimate for what the
