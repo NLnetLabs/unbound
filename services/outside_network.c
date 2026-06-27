@@ -997,6 +997,23 @@ waiting_tcp_callback(struct waiting_tcp* w, struct comm_point* c, int error,
 	}
 }
 
+#ifdef USE_DNSTAP
+/** get the local source address and port of socket fd, for dnstap.
+ * On failure, out is zeroed; the resulting AF_UNSPEC family
+ * makes dt_msg_fill_net() omit the query_address and query_port instead
+ * of reporting incorrect data. */
+static void
+dt_get_local_addr(int fd, struct sockaddr_storage* out)
+{
+	socklen_t len = (socklen_t)sizeof(*out);
+	if(getsockname(fd, (struct sockaddr*)out, &len) != 0) {
+		/* TODO confirm if this failure can really ever happen */
+		log_err("dnstap: getsockname failed: %s", sock_strerror(errno));
+		memset(out, 0, sizeof(*out));
+	}
+}
+#endif /* USE_DNSTAP */
+
 /** see if buffers can be used to service TCP queries */
 static void
 use_free_buffer(struct outside_network* outnet)
@@ -1065,9 +1082,11 @@ use_free_buffer(struct outside_network* outnet)
 			(outnet->dtenv->log_resolver_query_messages ||
 			outnet->dtenv->log_forwarder_query_messages)) {
 			sldns_buffer tmp;
+			struct sockaddr_storage local_addr;
 			sldns_buffer_init_frm_data(&tmp, w->pkt, w->pkt_len);
+			dt_get_local_addr(pend_tcp->c->fd, &local_addr);
 			dt_msg_send_outside_query(outnet->dtenv, &w->sq->addr,
-				&pend_tcp->pi->addr, comm_tcp, NULL, w->sq->zone,
+				&local_addr, comm_tcp, NULL, w->sq->zone,
 				w->sq->zonelen, &tmp);
 		}
 #endif
@@ -1703,8 +1722,8 @@ static int setup_if(struct port_if* pif, const char* addrstr,
 	if(!pif->avail_ports)
 		return 0;
 #endif
-	if(!ipstrtoaddr(addrstr, UNBOUND_DNS_PORT, &pif->addr, &pif->addrlen) &&
-	   !netblockstrtoaddr(addrstr, UNBOUND_DNS_PORT,
+	if(!ipstrtoaddr(addrstr, 0, &pif->addr, &pif->addrlen) &&
+	   !netblockstrtoaddr(addrstr, 0,
 			      &pif->addr, &pif->addrlen, &pif->pfxlen))
 		return 0;
 #ifdef INT_MAX
@@ -2094,10 +2113,12 @@ udp_sockport(struct sockaddr_storage* addr, socklen_t addrlen, int pfxlen,
 			(struct sockaddr*)&sa, addrlen, 1, inuse, &noproto,
 			0, 0, 0, NULL, 0, freebind, 0, dscp);
 	} else {
-		struct sockaddr_in* sa = (struct sockaddr_in*)addr;
-		sa->sin_port = (in_port_t)htons((uint16_t)port);
-		fd = create_udp_sock(AF_INET, SOCK_DGRAM, 
-			(struct sockaddr*)addr, addrlen, 1, inuse, &noproto,
+		/* Bind from a copy so setting the per-query source port does
+		 * not mutate the shared interface template. */
+		struct sockaddr_in sa = *(struct sockaddr_in*)addr;
+		sa.sin_port = (in_port_t)htons((uint16_t)port);
+		fd = create_udp_sock(AF_INET, SOCK_DGRAM,
+			(struct sockaddr*)&sa, addrlen, 1, inuse, &noproto,
 			0, 0, 0, NULL, 0, 0, 0, dscp);
 	}
 	return fd;
@@ -2315,19 +2336,17 @@ randomize_and_send_udp(struct pending* pend, sldns_buffer* packet, int timeout)
 	comm_timer_set(pend->timer, &tv);
 
 #ifdef USE_DNSTAP
-	/*
-	 * sending src (local service)/dst (upstream) addresses over DNSTAP
-	 * There are no chances to get the src (local service) addr if unbound
-	 * is not configured with specific outgoing IP-addresses. So we will
-	 * pass 0.0.0.0 (::) to argument for
-	 * dt_msg_send_outside_query()/dt_msg_send_outside_response() calls.
-	 */
+	/* sending src (local service)/dst (upstream) addresses over DNSTAP;
+	 * read the real source from the socket, as the interface template
+	 * lacks the kernel-chosen source port */
 	if(outnet->dtenv &&
 	   (outnet->dtenv->log_resolver_query_messages ||
 		outnet->dtenv->log_forwarder_query_messages)) {
-			log_addr(VERB_ALGO, "from local addr", &pend->pc->pif->addr, pend->pc->pif->addrlen);
+			struct sockaddr_storage local_addr;
+			dt_get_local_addr(pend->pc->cp->fd, &local_addr);
+			log_addr(VERB_ALGO, "from local addr", &local_addr, (socklen_t)sizeof(local_addr));
 			log_addr(VERB_ALGO, "request to upstream", &pend->addr, pend->addrlen);
-			dt_msg_send_outside_query(outnet->dtenv, &pend->addr, &pend->pc->pif->addr, comm_udp, NULL,
+			dt_msg_send_outside_query(outnet->dtenv, &pend->addr, &local_addr, comm_udp, NULL,
 				pend->sq->zone, pend->sq->zonelen, packet);
 	}
 #endif
@@ -2605,9 +2624,11 @@ pending_tcp_query(struct serviced_query* sq, sldns_buffer* packet,
 		    sq->outnet->dtenv->log_forwarder_query_messages)) {
 			/* use w->pkt, because it has the ID value */
 			sldns_buffer tmp;
+			struct sockaddr_storage local_addr;
 			sldns_buffer_init_frm_data(&tmp, w->pkt, w->pkt_len);
+			dt_get_local_addr(pend->c->fd, &local_addr);
 			dt_msg_send_outside_query(sq->outnet->dtenv, &sq->addr,
-				&pend->pi->addr, comm_tcp, NULL, sq->zone,
+				&local_addr, comm_tcp, NULL, sq->zone,
 				sq->zonelen, &tmp);
 		}
 #endif
@@ -3177,10 +3198,13 @@ serviced_tcp_callback(struct comm_point* c, void* arg, int error,
 	if(error==NETEVENT_NOERROR && pi && sq->outnet->dtenv &&
 	   (sq->outnet->dtenv->log_resolver_response_messages ||
 	    sq->outnet->dtenv->log_forwarder_response_messages)) {
+		struct sockaddr_storage local_addr;
+		dt_get_local_addr(c->fd, &local_addr);
 		log_addr(VERB_ALGO, "response from upstream", &sq->addr, sq->addrlen);
-		log_addr(VERB_ALGO, "to local addr", &pi->addr, pi->addrlen);
+		log_addr(VERB_ALGO, "to local addr", &local_addr,
+			(socklen_t)sizeof(local_addr));
 		dt_msg_send_outside_response(sq->outnet->dtenv, &sq->addr,
-			&pi->addr, c->type, c->ssl, sq->zone, sq->zonelen, sq->qbuf,
+			&local_addr, c->type, c->ssl, sq->zone, sq->zonelen, sq->qbuf,
 			sq->qbuflen, &sq->last_sent_time, sq->outnet->now_tv,
 			c->buffer);
 	}
@@ -3390,11 +3414,13 @@ serviced_udp_callback(struct comm_point* c, void* arg, int error,
 	if(error == NETEVENT_NOERROR && outnet->dtenv && p->pc &&
 		(outnet->dtenv->log_resolver_response_messages ||
 		outnet->dtenv->log_forwarder_response_messages)) {
+		struct sockaddr_storage local_addr;
+		dt_get_local_addr(c->fd, &local_addr);
 		log_addr(VERB_ALGO, "response from upstream", &sq->addr, sq->addrlen);
-		log_addr(VERB_ALGO, "to local addr", &p->pc->pif->addr,
-			p->pc->pif->addrlen);
+		log_addr(VERB_ALGO, "to local addr", &local_addr,
+			(socklen_t)sizeof(local_addr));
 		dt_msg_send_outside_response(outnet->dtenv, &sq->addr,
-			&p->pc->pif->addr, c->type, c->ssl, sq->zone, sq->zonelen,
+			&local_addr, c->type, c->ssl, sq->zone, sq->zonelen,
 			sq->qbuf, sq->qbuflen, &sq->last_sent_time,
 			sq->outnet->now_tv, c->buffer);
 	}
@@ -3698,10 +3724,11 @@ fd_for_dest(struct outside_network* outnet, struct sockaddr_storage* to_addr,
 				(struct sockaddr*)&sa, addrlen, 1, &inuse, &noproto,
 				0, 0, 0, NULL, 0, freebind, 0, dscp);
 		} else {
-			struct sockaddr_in* sa = (struct sockaddr_in*)addr;
-			sa->sin_port = (in_port_t)htons((uint16_t)port);
+			/* Use the same local-copy pattern as udp_sockport(). */
+			struct sockaddr_in sa = *(struct sockaddr_in*)addr;
+			sa.sin_port = (in_port_t)htons((uint16_t)port);
 			fd = create_udp_sock(AF_INET, SOCK_DGRAM, 
-				(struct sockaddr*)addr, addrlen, 1, &inuse, &noproto,
+				(struct sockaddr*)&sa, addrlen, 1, &inuse, &noproto,
 				0, 0, 0, NULL, 0, freebind, 0, dscp);
 		}
 		if(fd != -1) {
