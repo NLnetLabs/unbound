@@ -1,3 +1,9 @@
+26 June 2026: Wouter
+	- Merge #1467: daemon: fix DEREF_AFTER_NULL.EX.COND on
+	  worker_init. This fixes error handling if the worker
+	  stat_timer allocation has an out of memory error. That
+	  makes the server not crash later, attempting to use it.
+
 24 June 2026: Wouter
 	- Merge #1465 from dag-erling: Add libunbound/remote.h. Add
 	  a shared header containing prototypes for functions that
