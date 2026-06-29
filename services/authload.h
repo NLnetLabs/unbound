@@ -50,6 +50,14 @@ struct module_env;
 struct auth_load_task;
 
 /**
+ * The types of notifications that the auth load thread sends around.
+ */
+enum auth_load_notification_type {
+	/** This is sent to make the auth load thread perform exit */
+	auth_load_notification_exit
+};
+
+/**
  * The auth load thread. The thread runs to load authority zone information
  * and RPZ information into memory. It loads into a copy. Then that is swapped
  * over to the running server. This keeps the server responsive while the
@@ -123,6 +131,9 @@ struct auth_load_task {
 	int on_ixfr;
 	/** Set if the transfer is an IXFR but we detected an AXFR contents */
 	int on_ixfr_is_axfr;
+
+	/** Set if the ixfr failed. (So that there can be backoff to AXFR). */
+	int ixfr_fail;
 
 	/** current serial (from SOA), if we have no zone, 0
 	 * This is for checking the IXFR result. */

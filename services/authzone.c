@@ -6277,6 +6277,57 @@ xfer_link_data(sldns_buffer* pkt, struct auth_xfer* xfr)
 	return 1;
 }
 
+/** task transfer, process the failure to process the zone transfer.
+ * It continues with the task transfer, possibly. */
+static void
+xfr_process_transfer_failed(struct auth_xfer* xfr, struct module_env* env,
+	int ixfr_fail)
+{
+	/* processing failed */
+	if(ixfr_fail) {
+		xfr->task_transfer->ixfr_fail = 1;
+	} else {
+		xfr_transfer_nextmaster(xfr);
+	}
+	xfr_transfer_nexttarget_or_end(xfr, env);
+}
+
+/** task transfer, process the success to process the zone transfer.
+ * It continues with the task probe, possibly, due to notify. Or nextprobe. */
+static void
+xfr_process_transfer_success(struct auth_xfer* xfr, struct module_env* env)
+{
+	/* we fetched the zone, move to wait task */
+	xfr_transfer_disown(xfr);
+
+	if(xfr->notify_received && (!xfr->notify_has_serial ||
+		(xfr->notify_has_serial &&
+		xfr_serial_means_update(xfr, xfr->notify_serial)))) {
+		uint32_t sr = xfr->notify_serial;
+		int has_sr = xfr->notify_has_serial;
+		/* we received a notify while probe/transfer was
+		 * in progress.  start a new probe and transfer */
+		xfr->notify_received = 0;
+		xfr->notify_has_serial = 0;
+		xfr->notify_serial = 0;
+		if(!xfr_start_probe(xfr, env, NULL)) {
+			/* if we couldn't start it, already in
+			 * progress; restore notify serial,
+			 * while xfr still locked */
+			xfr->notify_received = 1;
+			xfr->notify_has_serial = has_sr;
+			xfr->notify_serial = sr;
+			lock_basic_unlock(&xfr->lock);
+		}
+		return;
+	} else {
+		/* pick up the nextprobe task and wait (normail wait time) */
+		if(xfr->task_nextprobe->worker == NULL)
+			xfr_set_timeout(xfr, env, 0, 0);
+	}
+	lock_basic_unlock(&xfr->lock);
+}
+
 /** task transfer.  the list of data is complete. process it and if failed
  * move to next master, if succeeded, end the task transfer */
 static void
@@ -6288,66 +6339,31 @@ process_list_end_transfer(struct auth_xfer* xfr, struct module_env* env)
 		if(auth_load_add_task_xfr(xfr, env->worker)) {
 			/* Task is created, wait for it to be done. The worker
 			 * is signalled with the result. */
+			/* When it is done, the xfr_process_load_end_transfer
+			 * routine is called. */
 			return;
 		}
 	} else if(xfr_process_chunk_list(xfr, env, &ixfr_fail)) {
 		/* it worked! */
 		auth_chunks_delete(xfr->task_transfer);
-
-		/* we fetched the zone, move to wait task */
-		xfr_transfer_disown(xfr);
-
-		if(xfr->notify_received && (!xfr->notify_has_serial ||
-			(xfr->notify_has_serial && 
-			xfr_serial_means_update(xfr, xfr->notify_serial)))) {
-			uint32_t sr = xfr->notify_serial;
-			int has_sr = xfr->notify_has_serial;
-			/* we received a notify while probe/transfer was
-			 * in progress.  start a new probe and transfer */
-			xfr->notify_received = 0;
-			xfr->notify_has_serial = 0;
-			xfr->notify_serial = 0;
-			if(!xfr_start_probe(xfr, env, NULL)) {
-				/* if we couldn't start it, already in
-				 * progress; restore notify serial,
-				 * while xfr still locked */
-				xfr->notify_received = 1;
-				xfr->notify_has_serial = has_sr;
-				xfr->notify_serial = sr;
-				lock_basic_unlock(&xfr->lock);
-			}
-			return;
-		} else {
-			/* pick up the nextprobe task and wait (normail wait time) */
-			if(xfr->task_nextprobe->worker == NULL)
-				xfr_set_timeout(xfr, env, 0, 0);
-		}
-		lock_basic_unlock(&xfr->lock);
+		xfr_process_transfer_success(xfr, env);
 		return;
 	}
-	/* processing failed */
 	/* when done, delete data from list */
 	auth_chunks_delete(xfr->task_transfer);
-	if(ixfr_fail) {
-		xfr->task_transfer->ixfr_fail = 1;
-	} else {
-		xfr_transfer_nextmaster(xfr);
-	}
-	xfr_transfer_nexttarget_or_end(xfr, env);
+	xfr_process_transfer_failed(xfr, env, ixfr_fail);
 }
 
-void xfr_process_load_end_transfer(struct auth_xfer* xfr, uint8_t status)
+void xfr_process_load_end_transfer(struct auth_xfer* xfr,
+	struct module_env* env, uint8_t status, int ixfr_fail)
 {
 	if(status) {
 		/* it worked! */
-		/* we fetched the zone, move to wait task */
-		xfr_transfer_disown(xfr);
-
-		lock_basic_unlock(&xfr->lock);
+		xfr_process_transfer_success(xfr, env);
 		return;
 	}
 	/* The transfer failed */
-	lock_basic_unlock(&xfr->lock);
+	xfr_process_transfer_failed(xfr, env, ixfr_fail);
 }
 
 /** callback for the task_transfer timer */

@@ -51,6 +51,19 @@
 #include "util/log.h"
 #include "util/ub_event.h"
 
+/** Auth load notification to string, for descriptive purposes. */
+static const char*
+auth_load_notification_to_string(enum auth_load_notification_type status)
+{
+	switch(status) {
+	case auth_load_notification_exit:
+		return "auth_load_notification_exit";
+	default:
+		break;
+	}
+	return "unknown_auth_load_notification_value";
+}
+
 /** delete chunks */
 static void
 auth_chunk_list_delete(struct auth_chunk* first)
@@ -149,7 +162,58 @@ auth_load_task_create_xfr(struct auth_xfer* xfr, struct worker* worker)
 static int
 auth_load_thread_poll_for_quit(struct auth_load_thread* thr)
 {
-	(void)thr;
+	int inevent, loopexit = 0;
+	uint8_t cmd;
+	ssize_t ret;
+
+	if(thr->need_to_quit)
+		return 1;
+	/* Is there data? */
+	if(!sock_poll_timeout(thr->commpair[1], 0, 1, 0, &inevent)) {
+		log_err("auth_load_thread_poll_for_quit: poll failed");
+		return 0;
+	}
+	if(!inevent)
+		return 0;
+
+	/* Read the data */
+	while(1) {
+		if(++loopexit > 200) {
+			log_err("auth_load_thread_poll_for_quit: recv loops %s",
+				sock_strerror(errno));
+			return 0;
+		}
+		ret = recv(thr->commpair[1], ((char*)&cmd), sizeof(cmd), 0);
+		if(ret == -1) {
+			if(
+#ifndef USE_WINSOCK
+				errno == EINTR || errno == EAGAIN
+#  ifdef EWOULDBLOCK
+				|| errno == EWOULDBLOCK
+#  endif
+#else
+				WSAGetLastError() == WSAEINTR ||
+				WSAGetLastError() == WSAEINPROGRESS ||
+				WSAGetLastError() == WSAEWOULDBLOCK
+#endif
+				)
+				continue; /* Try again. */
+			log_err("auth_load_thread_poll_for_quit: recv: %s",
+				sock_strerror(errno));
+			return 0;
+		} else if(ret == 0) {
+			log_err("auth_load_thread_poll_for_quit: recv: EOF");
+			return 0;
+		}
+		break;
+	}
+	if(cmd == auth_load_notification_exit) {
+		thr->need_to_quit = 1;
+		verbose(VERB_ALGO, "auth load: exit notification received");
+		return 1;
+	}
+	log_err("auth_load_thread_poll_for_quit: unknown notification status "
+		"received: %d %s", cmd, auth_load_notification_to_string(cmd));
 	return 0;
 }
 
@@ -298,6 +362,8 @@ worker_auth_load_service_cb(int ATTR_UNUSED(fd), short ATTR_UNUSED(bits),
 	uint8_t recv_item;
 	ssize_t ret;
 	struct auth_xfer* xfr;
+	struct module_env* env;
+	int ixfr_fail;
 
 	log_assert(thr->commpair[0] >= 0);
 	ret = recv(thr->commpair[0], &recv_item, 1, 0);
@@ -316,7 +382,7 @@ worker_auth_load_service_cb(int ATTR_UNUSED(fd), short ATTR_UNUSED(bits),
 			return; /* Continue later. */
 #ifdef USE_WINSOCK
 		if(WSAGetLastError() == WSAEWOULDBLOCK) {
-			ub_winsock_tcp_wouldblock(fr->service_event,
+			ub_winsock_tcp_wouldblock(thr->service_event,
 				UB_EV_READ);
 			return; /* Continue later. */
 		}
@@ -347,8 +413,10 @@ worker_auth_load_service_cb(int ATTR_UNUSED(fd), short ATTR_UNUSED(bits),
 	}
 	lock_basic_lock(&xfr->lock);
 	lock_rw_unlock(&thr->task->worker->env.auth_zones->lock);
+	env = &thr->task->worker->env;
+	ixfr_fail = thr->task->ixfr_fail;
 	auth_load_thread_delete(thr);
-	xfr_process_load_end_transfer(xfr, recv_item);
+	xfr_process_load_end_transfer(xfr, env, recv_item, ixfr_fail);
 }
 
 /** Attach worker to the auth load thread. */

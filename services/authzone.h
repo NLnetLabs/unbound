@@ -858,6 +858,7 @@ int chunkline_count_parens(struct sldns_buffer* buf, size_t start);
 void auth_zone_clear_data(struct auth_zone* z);
 
 /** Handle the end of an auth load task. */
-void xfr_process_load_end_transfer(struct auth_xfer* xfr, uint8_t status);
+void xfr_process_load_end_transfer(struct auth_xfer* xfr,
+	struct module_env* env, uint8_t status, int ixfr_fail);
 
 #endif /* SERVICES_AUTHZONE_H */
