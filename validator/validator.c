@@ -1980,8 +1980,10 @@ processInit(struct module_qstate* qstate, struct val_qstate* vq,
 		/* trust anchor is an 'unsigned' trust anchor */
 		if(anchor && anchor->numDS == 0 && anchor->numDNSKEY == 0) {
 			vq->chase_reply->security = sec_status_insecure;
-			val_mark_insecure(vq->chase_reply, anchor->name, 
+			val_mark_insecure(vq->chase_reply, anchor->name,
 				qstate->env->rrset_cache, qstate->env);
+			update_reason_bogus(vq->chase_reply,
+				LDNS_EDE_NEGATIVE_TRUST_ANCHOR);
 			lock_basic_unlock(&anchor->lock);
 			/* go to finished state to cache this result */
 			vq->state = VAL_FINISHED_STATE;

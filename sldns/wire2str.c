@@ -234,6 +234,7 @@ static sldns_lookup_table sldns_edns_ede_codes_data[] = {
 	{ LDNS_EDE_BADPROXYPOLICY, "Unable to Conform to Policy" },
 	{ LDNS_EDE_SYNTHESIZED, "Synthesized Answer" },
 	{ LDNS_EDE_INVALID_QUERY_TYPE, "Invalid Query Type" },
+	{ LDNS_EDE_NEGATIVE_TRUST_ANCHOR, "Negative Trust Anchor" },
 	{ 0, NULL}
 };
 sldns_lookup_table* sldns_edns_ede_codes = sldns_edns_ede_codes_data;
