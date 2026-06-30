@@ -386,7 +386,7 @@ auth_data_delete(struct auth_data* n)
 }
 
 /** helper traverse to delete zones */
-static void
+void
 auth_data_del(rbnode_type* n, void* ATTR_UNUSED(arg))
 {
 	struct auth_data* z = (struct auth_data*)n->key;
@@ -4735,7 +4735,8 @@ chunkline_non_comment_RR(struct auth_chunk** chunk, size_t* chunk_pos,
  * failure and return a string in the scratch buffer (first RR string)
  * on failure. */
 static int
-http_zonefile_syntax_check(struct auth_xfer* xfr, sldns_buffer* buf)
+http_zonefile_syntax_check(uint8_t* name, size_t namelen, uint16_t dclass,
+	struct auth_chunk* chunk_list, struct sldns_buffer* buf)
 {
 	uint8_t rr[LDNS_RR_BUF_SIZE];
 	size_t rr_len, dname_len = 0;
@@ -4745,11 +4746,11 @@ http_zonefile_syntax_check(struct auth_xfer* xfr, sldns_buffer* buf)
 	int e;
 	memset(&pstate, 0, sizeof(pstate));
 	pstate.default_ttl = 3600;
-	if(xfr->namelen < sizeof(pstate.origin)) {
-		pstate.origin_len = xfr->namelen;
-		memmove(pstate.origin, xfr->name, xfr->namelen);
+	if(namelen < sizeof(pstate.origin)) {
+		pstate.origin_len = namelen;
+		memmove(pstate.origin, name, namelen);
 	}
-	chunk = xfr->task_transfer->chunks_first;
+	chunk = chunk_list;
 	chunk_pos = 0;
 	if(!chunkline_non_comment_RR(&chunk, &chunk_pos, buf, &pstate)) {
 		return 0;
@@ -4766,7 +4767,7 @@ http_zonefile_syntax_check(struct auth_xfer* xfr, sldns_buffer* buf)
 		return 0;
 	}
 	/* check that class is correct */
-	if(sldns_wirerr_get_class(rr, rr_len, dname_len) != xfr->dclass) {
+	if(sldns_wirerr_get_class(rr, rr_len, dname_len) != dclass) {
 		log_err("parse failure: first record in downloaded zonefile "
 			"from wrong RR class");
 		return 0;
@@ -4788,7 +4789,7 @@ chunklist_sum(struct auth_chunk* list)
 
 /** for http download, parse and add RR to zone */
 static int
-http_parse_add_rr(struct auth_xfer* xfr, struct auth_zone* z,
+http_parse_add_rr(const char* host, const char* file, struct auth_zone* z,
 	sldns_buffer* buf, struct sldns_file_parse_state* pstate)
 {
 	uint8_t rr[LDNS_RR_BUF_SIZE];
@@ -4802,9 +4803,7 @@ http_parse_add_rr(struct auth_xfer* xfr, struct auth_zone* z,
 		pstate->prev_rr_len?pstate->prev_rr:NULL, pstate->prev_rr_len);
 	if(e != 0) {
 		log_err("%s/%s parse failure RR[%d]: %s in '%s'",
-			xfr->task_transfer->master->host,
-			xfr->task_transfer->master->file,
-			LDNS_WIREPARSE_OFFSET(e),
+			host, file, LDNS_WIREPARSE_OFFSET(e),
 			sldns_get_errorstr_parse(LDNS_WIREPARSE_ERROR(e)),
 			line);
 		return 0;
@@ -5011,8 +5010,6 @@ apply_ixfr(struct auth_xfer* xfr, struct auth_zone* z,
 	int delmode = 0;
 	int softfail = 0;
 
-	xfr->num_ixfrs++;
-
 	/* start RR iterator over chunklist of packets */
 	chunk_rrlist_start(xfr, &rr_chunk, &rr_num, &rr_pos);
 	while(!chunk_rrlist_end(rr_chunk, rr_num)) {
@@ -5132,6 +5129,16 @@ apply_ixfr(struct auth_xfer* xfr, struct auth_zone* z,
 	return 1;
 }
 
+/** apply IXFR to zone in memory. z is locked. false on failure(mallocfail) */
+static int
+xfr_apply_ixfr(struct auth_xfer* xfr, struct auth_zone* z,
+	struct sldns_buffer* scratch_buffer)
+{
+	xfr->num_ixfrs++;
+
+	return apply_ixfr(xfr, z, scratch_buffer);
+}
+
 /** apply AXFR to zone in memory. z is locked. false on failure(mallocfail) */
 static int
 apply_axfr(struct auth_xfer* xfr, struct auth_zone* z,
@@ -5198,9 +5205,46 @@ apply_axfr(struct auth_xfer* xfr, struct auth_zone* z,
 	return 1;
 }
 
+void
+xfr_http_preview(const char* file, struct auth_chunk* chunk_list)
+{
+	if(verbosity >= VERB_ALGO)
+		verbose(VERB_ALGO, "http download %s of size %d",
+		file, (int)chunklist_sum(chunk_list));
+	if(chunk_list && verbosity >= VERB_ALGO) {
+		char preview[1024];
+		if(chunk_list->len+1 > sizeof(preview)) {
+			memmove(preview, chunk_list->data, sizeof(preview)-1);
+			preview[sizeof(preview)-1]=0;
+		} else {
+			memmove(preview, chunk_list->data, chunk_list->len);
+			preview[chunk_list->len]=0;
+		}
+		log_info("auth zone http downloaded content preview: %s",
+			preview);
+	}
+}
+
+int
+xfr_http_syntax_check(uint8_t* name, size_t namelen, uint16_t dclass,
+	const char* host, const char* file, struct auth_chunk* chunk_list,
+	struct sldns_buffer* scratch_buffer)
+{
+	/* perhaps a little syntax check before we try to apply the data? */
+	if(!http_zonefile_syntax_check(name, namelen, dclass, chunk_list,
+		scratch_buffer)) {
+		log_err("http download %s/%s does not contain a zonefile, "
+			"but got '%s'", host, file,
+			sldns_buffer_begin(scratch_buffer));
+		return 0;
+	}
+	return 1;
+}
+
 /** apply HTTP to zone in memory. z is locked. false on failure(mallocfail) */
-static int
-apply_http(struct auth_xfer* xfr, struct auth_zone* z,
+int
+xfr_apply_http(uint8_t* name, size_t namelen, const char* host,
+	const char* file, struct auth_chunk* chunk_list, struct auth_zone* z,
 	struct sldns_buffer* scratch_buffer)
 {
 	/* parse data in chunks */
@@ -5212,46 +5256,14 @@ apply_http(struct auth_xfer* xfr, struct auth_zone* z,
 	int ret;
 	memset(&pstate, 0, sizeof(pstate));
 	pstate.default_ttl = 3600;
-	if(xfr->namelen < sizeof(pstate.origin)) {
-		pstate.origin_len = xfr->namelen;
-		memmove(pstate.origin, xfr->name, xfr->namelen);
-	}
-
-	if(verbosity >= VERB_ALGO)
-		verbose(VERB_ALGO, "http download %s of size %d",
-		xfr->task_transfer->master->file,
-		(int)chunklist_sum(xfr->task_transfer->chunks_first));
-	if(xfr->task_transfer->chunks_first && verbosity >= VERB_ALGO) {
-		char preview[1024];
-		if(xfr->task_transfer->chunks_first->len+1 > sizeof(preview)) {
-			memmove(preview, xfr->task_transfer->chunks_first->data,
-				sizeof(preview)-1);
-			preview[sizeof(preview)-1]=0;
-		} else {
-			memmove(preview, xfr->task_transfer->chunks_first->data,
-				xfr->task_transfer->chunks_first->len);
-			preview[xfr->task_transfer->chunks_first->len]=0;
-		}
-		log_info("auth zone http downloaded content preview: %s",
-			preview);
-	}
-
-	/* perhaps a little syntax check before we try to apply the data? */
-	if(!http_zonefile_syntax_check(xfr, scratch_buffer)) {
-		log_err("http download %s/%s does not contain a zonefile, "
-			"but got '%s'", xfr->task_transfer->master->host,
-			xfr->task_transfer->master->file,
-			sldns_buffer_begin(scratch_buffer));
-		return 0;
+	if(namelen < sizeof(pstate.origin)) {
+		pstate.origin_len = namelen;
+		memmove(pstate.origin, name, namelen);
 	}
 
 	auth_zone_clear_data(z);
-	xfr->have_zone = 0;
-	xfr->serial = 0;
-	xfr->soa_zone_acquired = 0;
-	xfr->num_ixfrs = 0;
 
-	chunk = xfr->task_transfer->chunks_first;
+	chunk = chunk_list;
 	chunk_pos = 0;
 	pstate.lineno = 0;
 	while(chunkline_get_line_collated(&chunk, &chunk_pos, scratch_buffer)) {
@@ -5265,8 +5277,7 @@ apply_http(struct auth_xfer* xfr, struct auth_zone* z,
 		if((ret=http_parse_origin(scratch_buffer, &pstate))!=0) {
 			if(ret == 2) {
 				verbose(VERB_ALGO, "error parsing ORIGIN on line [%s:%d] %s",
-					xfr->task_transfer->master->file,
-					pstate.lineno,
+					file, pstate.lineno,
 					sldns_buffer_begin(scratch_buffer));
 				return 0;
 			}
@@ -5275,22 +5286,42 @@ apply_http(struct auth_xfer* xfr, struct auth_zone* z,
 		if((ret=http_parse_ttl(scratch_buffer, &pstate))!=0) {
 			if(ret == 2) {
 				verbose(VERB_ALGO, "error parsing TTL on line [%s:%d] %s",
-					xfr->task_transfer->master->file,
-					pstate.lineno,
+					file, pstate.lineno,
 					sldns_buffer_begin(scratch_buffer));
 				return 0;
 			}
 			continue; /* $TTL has been handled */
 		}
-		if(!http_parse_add_rr(xfr, z, scratch_buffer, &pstate)) {
+		if(!http_parse_add_rr(host, file, z, scratch_buffer, &pstate)) {
 			verbose(VERB_ALGO, "error parsing line [%s:%d] %s",
-				xfr->task_transfer->master->file,
-				pstate.lineno,
+				file, pstate.lineno,
 				sldns_buffer_begin(scratch_buffer));
 			return 0;
 		}
 	}
 	return 1;
+}
+
+/** apply HTTP to zone in memory. z is locked. false on failure(mallocfail) */
+static int
+apply_http(struct auth_xfer* xfr, struct auth_zone* z,
+	struct sldns_buffer* scratch_buffer)
+{
+	xfr_http_preview(xfr->task_transfer->master->file,
+		xfr->task_transfer->chunks_first);
+	if(!xfr_http_syntax_check(xfr->name, xfr->namelen, xfr->dclass,
+		xfr->task_transfer->master->host,
+		xfr->task_transfer->master->file,
+		xfr->task_transfer->chunks_first, scratch_buffer))
+		return 0;
+	xfr->have_zone = 0;
+	xfr->serial = 0;
+	xfr->soa_zone_acquired = 0;
+	xfr->num_ixfrs = 0;
+	return xfr_apply_http(xfr->name, xfr->namelen,
+		xfr->task_transfer->master->host,
+		xfr->task_transfer->master->file,
+		xfr->task_transfer->chunks_first, z, scratch_buffer);
 }
 
 /** write http chunks to zonefile to create downloaded file */
@@ -5438,7 +5469,7 @@ xfr_process_chunk_list(struct auth_xfer* xfr, struct module_env* env,
 		}
 	} else if(xfr->task_transfer->on_ixfr &&
 		!xfr->task_transfer->on_ixfr_is_axfr) {
-		if(!apply_ixfr(xfr, z, env->scratch_buffer)) {
+		if(!xfr_apply_ixfr(xfr, z, env->scratch_buffer)) {
 			auth_zone_clear_data(z);
 			lock_rw_unlock(&z->lock);
 			verbose(VERB_ALGO, "xfr from %s: could not store IXFR"
@@ -6357,6 +6388,44 @@ process_list_end_transfer(struct auth_xfer* xfr, struct module_env* env)
 void xfr_process_load_end_transfer(struct auth_xfer* xfr,
 	struct module_env* env, uint8_t status, int ixfr_fail)
 {
+	if(status) {
+		struct auth_zone* z = NULL;
+		lock_basic_unlock(&xfr->lock);
+		if(!xfr_process_reacquire_locks(xfr, env, &z)) {
+			/* the zone is gone, ignore xfr results */
+			lock_basic_unlock(&xfr->lock);
+			return;
+		}
+		/* holding xfr and z locks */
+
+		if(xfr->task_transfer->master->http) {
+			xfr->num_ixfrs = 0;
+		} else if(xfr->task_transfer->on_ixfr &&
+			!xfr->task_transfer->on_ixfr_is_axfr) {
+			xfr->num_ixfrs++;
+		} else {
+			/* AXFR */
+			xfr->num_ixfrs = 0;
+		}
+
+		xfr->zone_expired = 0;
+		z->zone_expired = 0;
+
+		xfr->have_zone = 0;
+		xfr->serial = 0;
+		if(!xfr_find_soa(z, xfr)) {
+			verbose(VERB_ALGO, "xfr from %s: no SOA in zone after update"
+				" (or malformed RR)", xfr->task_transfer->master->host);
+			status = 0;
+		}
+		if(status) {
+			z->soa_zone_acquired = *env->now;
+			xfr->soa_zone_acquired = *env->now;
+			xfr->is_rpz = (z->rpz!=NULL);
+		}
+		lock_rw_unlock(&z->lock);
+	}
+
 	if(status) {
 		/* it worked! */
 		xfr_process_transfer_success(xfr, env);

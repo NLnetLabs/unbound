@@ -857,8 +857,24 @@ int chunkline_count_parens(struct sldns_buffer* buf, size_t start);
 /** Clear data in auth zone */
 void auth_zone_clear_data(struct auth_zone* z);
 
+/** helper traverse to delete zones */
+void auth_data_del(rbnode_type* n, void* arg);
+
 /** Handle the end of an auth load task. */
 void xfr_process_load_end_transfer(struct auth_xfer* xfr,
 	struct module_env* env, uint8_t status, int ixfr_fail);
+
+/** Log preview of http transfer */
+void xfr_http_preview(const char* file, struct auth_chunk* chunk_list);
+
+/** Check syntax of first part of the http download */
+int xfr_http_syntax_check(uint8_t* name, size_t namelen, uint16_t dclass,
+	const char* host, const char* file, struct auth_chunk* chunk_list,
+	struct sldns_buffer* scratch_buffer);
+
+/** Apply http transfer to auth_zone */
+int xfr_apply_http(uint8_t* name, size_t namelen, const char* host,
+	const char* file, struct auth_chunk* chunk_list, struct auth_zone* z,
+	struct sldns_buffer* scratch_buffer);
 
 #endif /* SERVICES_AUTHZONE_H */

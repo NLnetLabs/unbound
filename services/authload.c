@@ -50,6 +50,7 @@
 #include "util/net_help.h"
 #include "util/log.h"
 #include "util/ub_event.h"
+#include "util/data/dname.h"
 
 /** Auth load notification to string, for descriptive purposes. */
 static const char*
@@ -273,12 +274,127 @@ auth_load_thread_signal_worker(struct auth_load_thread* thr, int status)
 	}
 }
 
+/** Create proxy auth zone structure, that is used to hold the data
+ * that is processed. */
+static struct auth_zone*
+auth_zone_create_proxy(uint8_t* nm, size_t nmlen, uint16_t dclass)
+{
+	struct auth_zone* z = (struct auth_zone*)calloc(1, sizeof(*z));
+	if(!z) {
+		return NULL;
+	}
+	z->node.key = z;
+	z->dclass = dclass;
+	z->namelen = nmlen;
+	z->namelabs = dname_count_labels(nm);
+	z->name = memdup(nm, nmlen);
+	if(!z->name) {
+		free(z);
+		return NULL;
+	}
+	rbtree_init(&z->data, &auth_data_cmp);
+	return z;
+}
+
+/** Delete proxy auth zone structure */
+static void
+auth_zone_delete_proxy(struct auth_zone* z)
+{
+	if(!z)
+		return;
+	traverse_postorder(&z->data, auth_data_del, NULL);
+	if(z->rpz)
+		rpz_delete(z->rpz);
+	free(z->name);
+	free(z);
+}
+
+/** Swap the final zone contents with the live zone */
+static void
+auth_load_swap_zone(struct auth_load_thread* thr, struct auth_zone* proxyz)
+{
+	rbtree_type data;
+	struct rpz* rpz;
+	struct auth_zone* z;
+	lock_rw_rdlock(&thr->task->worker->env.auth_zones->lock);
+	z = auth_zone_find(thr->task->worker->env.auth_zones,
+		thr->task->name, thr->task->namelen, thr->task->dclass);
+	if(!z) {
+		lock_rw_unlock(&thr->task->worker->env.auth_zones->lock);
+		verbose(VERB_ALGO, "auth zone missing after auth load.");
+		return;
+	}
+	lock_rw_wrlock(&z->lock);
+	lock_rw_unlock(&thr->task->worker->env.auth_zones->lock);
+
+	data = proxyz->data;
+	proxyz->data = z->data;
+	z->data = data;
+
+	rpz = proxyz->rpz;
+	proxyz->rpz = z->rpz;
+	z->rpz = rpz;
+
+	lock_rw_unlock(&z->lock);
+}
+
+/** Process http transfer */
+static int
+auth_load_process_http(struct auth_load_thread* thr)
+{
+	struct auth_load_task* task = thr->task;
+	struct sldns_buffer* scratch_buffer;
+	struct auth_zone* z;
+
+	scratch_buffer = sldns_buffer_new(sldns_buffer_capacity(
+		thr->task->worker->env.scratch_buffer));
+	if(!scratch_buffer) {
+		log_err("out of memory");
+		return 0;
+	}
+	z = auth_zone_create_proxy(task->name, task->namelen, task->dclass);
+	if(!z) {
+		log_err("out of memory");
+		sldns_buffer_free(scratch_buffer);
+		return 0;
+	}
+
+	xfr_http_preview(task->file, task->chunks_first);
+	if(!xfr_http_syntax_check(task->name, task->namelen, task->dclass,
+		task->host, task->file, task->chunks_first, scratch_buffer)) {
+		sldns_buffer_free(scratch_buffer);
+		auth_zone_delete_proxy(z);
+		return 0;
+	}
+	if(!xfr_apply_http(task->name, task->namelen, task->host, task->file,
+		task->chunks_first, z, scratch_buffer)) {
+		sldns_buffer_free(scratch_buffer);
+		auth_zone_delete_proxy(z);
+		return 0;
+	}
+	sldns_buffer_free(scratch_buffer);
+	if(z->rpz)
+		rpz_finish_config(z->rpz);
+
+	auth_load_swap_zone(thr, z);
+	auth_zone_delete_proxy(z);
+	return 1;
+}
+
 /** In the auth load thread, process the task */
 static int
 auth_load_thread_process(struct auth_load_thread* thr)
 {
-	(void)thr;
-	return 0;
+	struct auth_load_task* task = thr->task;
+
+	/* apply data */
+	if(task->on_http) {
+		if(!auth_load_process_http(thr))
+			return 0;
+	} else if(task->on_ixfr && !task->on_ixfr_is_axfr) {
+	} else {
+	}
+	return 1;
 }
 
 /** The auth load thread. The thread main function. */
