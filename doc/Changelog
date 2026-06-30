@@ -1,6 +1,7 @@
 30 June 2026: Wouter
 	- Fix #1469: dohclient: DoH POST missing content-length → :status
 	  400 from strict resolvers (Cloudflare, Mullvad).
+	- iana portlist updated.
 
 26 June 2026: Wouter
 	- Merge #1467: daemon: fix DEREF_AFTER_NULL.EX.COND on
