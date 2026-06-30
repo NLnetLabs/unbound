@@ -1603,6 +1603,8 @@ mesh_send_reply(struct mesh_state* m, int rcode, struct reply_info* rep,
 		 * validation paths may attach to a secure answer. */
 		if(m->s.env->cfg->ede && rep &&
 			(rep->security <= sec_status_bogus ||
+			(rep->security == sec_status_insecure &&
+			 rep->reason_bogus == LDNS_EDE_NEGATIVE_TRUST_ANCHOR) ||
 			rep->security == sec_status_secure_sentinel_fail)) {
 			mesh_find_and_attach_ede_and_reason(m, rep, r);
 		}
