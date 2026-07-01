@@ -593,7 +593,7 @@ auth_zone_set_fallback(struct auth_zone* z, char* fallbackstr)
 }
 
 /** create domain with the given name */
-static struct auth_data*
+struct auth_data*
 az_domain_create(struct auth_zone* z, uint8_t* nm, size_t nmlen)
 {
 	struct auth_data* n = (struct auth_data*)malloc(sizeof(*n));
@@ -4823,10 +4823,10 @@ http_parse_add_rr(const char* host, const char* file, struct auth_zone* z,
 /** RR list iterator, returns RRs from answer section one by one from the
  * dns packets in the chunklist */
 static void
-chunk_rrlist_start(struct auth_xfer* xfr, struct auth_chunk** rr_chunk,
+chunk_rrlist_start(struct auth_chunk* chunk_list, struct auth_chunk** rr_chunk,
 	int* rr_num, size_t* rr_pos)
 {
-	*rr_chunk = xfr->task_transfer->chunks_first;
+	*rr_chunk = chunk_list;
 	*rr_num = 0;
 	*rr_pos = 0;
 }
@@ -4993,9 +4993,9 @@ ixfr_start_serial(struct auth_chunk* rr_chunk, int rr_num, size_t rr_pos,
 }
 
 /** apply IXFR to zone in memory. z is locked. false on failure(mallocfail) */
-static int
-apply_ixfr(struct auth_xfer* xfr, struct auth_zone* z,
-	struct sldns_buffer* scratch_buffer)
+int
+xfr_apply_ixfr(struct auth_chunk* chunk_list, uint32_t xfr_serial,
+	struct auth_zone* z, struct sldns_buffer* scratch_buffer)
 {
 	struct auth_chunk* rr_chunk;
 	int rr_num;
@@ -5011,7 +5011,7 @@ apply_ixfr(struct auth_xfer* xfr, struct auth_zone* z,
 	int softfail = 0;
 
 	/* start RR iterator over chunklist of packets */
-	chunk_rrlist_start(xfr, &rr_chunk, &rr_num, &rr_pos);
+	chunk_rrlist_start(chunk_list, &rr_chunk, &rr_num, &rr_pos);
 	while(!chunk_rrlist_end(rr_chunk, rr_num)) {
 		if(!chunk_rrlist_get_current(rr_chunk, rr_num, rr_pos,
 			&rr_dname, &rr_type, &rr_class, &rr_ttl, &rr_rdlen,
@@ -5042,7 +5042,7 @@ apply_ixfr(struct auth_xfer* xfr, struct auth_zone* z,
 				if(!ixfr_start_serial(rr_chunk, rr_num, rr_pos,
 					rr_dname, rr_type, rr_class, rr_ttl,
 					rr_rdlen, rr_rdata, rr_nextpos,
-					transfer_serial, xfr->serial)) {
+					transfer_serial, xfr_serial)) {
 					return 0;
 				}
 			} else if(transfer_serial == serial) {
@@ -5063,7 +5063,8 @@ apply_ixfr(struct auth_xfer* xfr, struct auth_zone* z,
 					 *  SOA 3 followed by add
 					 *  SOA 3 end */
 					/* ended by SOA record */
-					xfr->serial = transfer_serial;
+					/* xfr->serial is set by xfr_find_soa
+					 * after this function. */
 					break;
 				}
 			}
@@ -5131,12 +5132,13 @@ apply_ixfr(struct auth_xfer* xfr, struct auth_zone* z,
 
 /** apply IXFR to zone in memory. z is locked. false on failure(mallocfail) */
 static int
-xfr_apply_ixfr(struct auth_xfer* xfr, struct auth_zone* z,
+apply_ixfr(struct auth_xfer* xfr, struct auth_zone* z,
 	struct sldns_buffer* scratch_buffer)
 {
 	xfr->num_ixfrs++;
 
-	return apply_ixfr(xfr, z, scratch_buffer);
+	return xfr_apply_ixfr(xfr->task_transfer->chunks_first, xfr->serial, z,
+		scratch_buffer);
 }
 
 /** apply AXFR to zone in memory. z is locked. false on failure(mallocfail) */
@@ -5164,7 +5166,8 @@ apply_axfr(struct auth_xfer* xfr, struct auth_zone* z,
 	/* insert all RRs in to the zone */
 	/* insert the SOA only once, skip the last one */
 	/* start RR iterator over chunklist of packets */
-	chunk_rrlist_start(xfr, &rr_chunk, &rr_num, &rr_pos);
+	chunk_rrlist_start(xfr->task_transfer->chunks_first, &rr_chunk,
+		&rr_num, &rr_pos);
 	while(!chunk_rrlist_end(rr_chunk, rr_num)) {
 		if(!chunk_rrlist_get_current(rr_chunk, rr_num, rr_pos,
 			&rr_dname, &rr_type, &rr_class, &rr_ttl, &rr_rdlen,
@@ -5469,7 +5472,7 @@ xfr_process_chunk_list(struct auth_xfer* xfr, struct module_env* env,
 		}
 	} else if(xfr->task_transfer->on_ixfr &&
 		!xfr->task_transfer->on_ixfr_is_axfr) {
-		if(!xfr_apply_ixfr(xfr, z, env->scratch_buffer)) {
+		if(!apply_ixfr(xfr, z, env->scratch_buffer)) {
 			auth_zone_clear_data(z);
 			lock_rw_unlock(&z->lock);
 			verbose(VERB_ALGO, "xfr from %s: could not store IXFR"

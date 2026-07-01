@@ -358,10 +358,20 @@ auth_load_process_http(struct auth_load_thread* thr)
 		sldns_buffer_free(scratch_buffer);
 		return 0;
 	}
+	if(auth_load_thread_poll_for_quit(thr)) {
+		sldns_buffer_free(scratch_buffer);
+		auth_zone_delete_proxy(z);
+		return 0;
+	}
 
 	xfr_http_preview(task->file, task->chunks_first);
 	if(!xfr_http_syntax_check(task->name, task->namelen, task->dclass,
 		task->host, task->file, task->chunks_first, scratch_buffer)) {
+		sldns_buffer_free(scratch_buffer);
+		auth_zone_delete_proxy(z);
+		return 0;
+	}
+	if(auth_load_thread_poll_for_quit(thr)) {
 		sldns_buffer_free(scratch_buffer);
 		auth_zone_delete_proxy(z);
 		return 0;
@@ -375,9 +385,140 @@ auth_load_process_http(struct auth_load_thread* thr)
 	sldns_buffer_free(scratch_buffer);
 	if(z->rpz)
 		rpz_finish_config(z->rpz);
+	if(auth_load_thread_poll_for_quit(thr)) {
+		sldns_buffer_free(scratch_buffer);
+		auth_zone_delete_proxy(z);
+		return 0;
+	}
 
 	auth_load_swap_zone(thr, z);
 	auth_zone_delete_proxy(z);
+	sldns_buffer_free(scratch_buffer);
+	return 1;
+}
+
+/** Copy RRset and append it to the domain, update last pointer. */
+static int
+rrset_append_copy(struct auth_data* domain, struct auth_rrset* rrset,
+	struct auth_rrset** last)
+{
+	struct auth_rrset* s = calloc(1, sizeof(*s));
+	if(!s)
+		return 0;
+	s->type = rrset->type;
+	s->data = (struct packed_rrset_data*)memdup(rrset->data,
+		packed_rrset_sizeof(rrset->data));
+	if(!s->data)
+		return 0;
+	packed_rrset_ptr_fixup(s->data);
+	if(!*last)
+		domain->rrsets = s;
+	else	(*last)->next = s;
+	*last = s;
+	return 1;
+}
+
+/** Copy the existing zone for modification */
+static int
+auth_load_copy_into_zone(struct auth_load_thread* thr, struct auth_zone* proxyz)
+{
+	int count = 0;
+	struct auth_zone* z;
+	struct auth_data* d;
+	lock_rw_rdlock(&thr->task->worker->env.auth_zones->lock);
+	z = auth_zone_find(thr->task->worker->env.auth_zones,
+		thr->task->name, thr->task->namelen, thr->task->dclass);
+	if(!z) {
+		lock_rw_unlock(&thr->task->worker->env.auth_zones->lock);
+		verbose(VERB_ALGO, "auth zone missing for copy for IXFR.");
+		return 0;
+	}
+	lock_rw_rdlock(&z->lock);
+	lock_rw_unlock(&thr->task->worker->env.auth_zones->lock);
+
+	/* Copy from z into proxyz. */
+	RBTREE_FOR(d, struct auth_data*, &z->data) {
+		struct auth_rrset* rrset, *last = NULL;
+		struct auth_data* proxy_d = az_domain_create(proxyz,
+			d->name, d->namelen);
+		if(!proxy_d) {
+			log_err("out of memory");
+			lock_rw_unlock(&z->lock);
+			return 0;
+		}
+		for(rrset = d->rrsets; rrset; rrset=rrset->next) {
+			if(!rrset_append_copy(proxy_d, rrset, &last)) {
+				log_err("out of memory");
+				lock_rw_unlock(&z->lock);
+				return 0;
+			}
+			if((count++)%10000 == 0) {
+				if(auth_load_thread_poll_for_quit(thr)) {
+					lock_rw_unlock(&z->lock);
+					return 0;
+				}
+			}
+		}
+		if((count++)%10000 == 0) {
+			if(auth_load_thread_poll_for_quit(thr)) {
+				lock_rw_unlock(&z->lock);
+				return 0;
+			}
+		}
+	}
+
+	lock_rw_unlock(&z->lock);
+	return 1;
+}
+
+/** Process ixfr transfer */
+static int
+auth_load_process_ixfr(struct auth_load_thread* thr)
+{
+	struct auth_load_task* task = thr->task;
+	struct sldns_buffer* scratch_buffer;
+	struct auth_zone* z;
+
+	scratch_buffer = sldns_buffer_new(sldns_buffer_capacity(
+		thr->task->worker->env.scratch_buffer));
+	if(!scratch_buffer) {
+		log_err("out of memory");
+		return 0;
+	}
+	z = auth_zone_create_proxy(task->name, task->namelen, task->dclass);
+	if(!z) {
+		log_err("out of memory");
+		sldns_buffer_free(scratch_buffer);
+		return 0;
+	}
+	if(auth_load_thread_poll_for_quit(thr)) {
+		sldns_buffer_free(scratch_buffer);
+		auth_zone_delete_proxy(z);
+		return 0;
+	}
+
+	/* Copy the existing zone for modification, that uses a read lock.
+	 * That then does not interrupt the service of threads. */
+	if(!auth_load_copy_into_zone(thr, z)) {
+		sldns_buffer_free(scratch_buffer);
+		auth_zone_delete_proxy(z);
+		return 0;
+	}
+	if(!xfr_apply_ixfr(task->chunks_first, task->serial, z,
+		scratch_buffer)) {
+		sldns_buffer_free(scratch_buffer);
+		auth_zone_delete_proxy(z);
+		return 0;
+	}
+	if(auth_load_thread_poll_for_quit(thr)) {
+		sldns_buffer_free(scratch_buffer);
+		auth_zone_delete_proxy(z);
+		return 0;
+	}
+
+	auth_load_swap_zone(thr, z);
+	auth_zone_delete_proxy(z);
+	sldns_buffer_free(scratch_buffer);
 	return 1;
 }
 
@@ -392,6 +533,8 @@ auth_load_thread_process(struct auth_load_thread* thr)
 		if(!auth_load_process_http(thr))
 			return 0;
 	} else if(task->on_ixfr && !task->on_ixfr_is_axfr) {
+		if(!auth_load_process_ixfr(thr))
+			return 0;
 	} else {
 	}
 	return 1;

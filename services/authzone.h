@@ -857,6 +857,10 @@ int chunkline_count_parens(struct sldns_buffer* buf, size_t start);
 /** Clear data in auth zone */
 void auth_zone_clear_data(struct auth_zone* z);
 
+/** create domain with the given name */
+struct auth_data* az_domain_create(struct auth_zone* z, uint8_t* nm,
+	size_t nmlen);
+
 /** helper traverse to delete zones */
 void auth_data_del(rbnode_type* n, void* arg);
 
@@ -876,5 +880,9 @@ int xfr_http_syntax_check(uint8_t* name, size_t namelen, uint16_t dclass,
 int xfr_apply_http(uint8_t* name, size_t namelen, const char* host,
 	const char* file, struct auth_chunk* chunk_list, struct auth_zone* z,
 	struct sldns_buffer* scratch_buffer);
+
+/** Apply IXFR transfer to auth_zone */
+int xfr_apply_ixfr(struct auth_chunk* chunk_list, uint32_t xfr_serial,
+	struct auth_zone* z, struct sldns_buffer* scratch_buffer);
 
 #endif /* SERVICES_AUTHZONE_H */
