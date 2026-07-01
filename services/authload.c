@@ -159,14 +159,15 @@ auth_load_task_create_xfr(struct auth_xfer* xfr, struct worker* worker)
 	return task;
 }
 
-/** See if there is a quit signal, true if so. */
-static int
+int
 auth_load_thread_poll_for_quit(struct auth_load_thread* thr)
 {
 	int inevent, loopexit = 0;
 	uint8_t cmd;
 	ssize_t ret;
 
+	if(!thr)
+		return 0;
 	if(thr->need_to_quit)
 		return 1;
 	/* Is there data? */
@@ -377,7 +378,7 @@ auth_load_process_http(struct auth_load_thread* thr)
 		return 0;
 	}
 	if(!xfr_apply_http(task->name, task->namelen, task->host, task->file,
-		task->chunks_first, z, scratch_buffer)) {
+		task->chunks_first, z, scratch_buffer, thr)) {
 		sldns_buffer_free(scratch_buffer);
 		auth_zone_delete_proxy(z);
 		return 0;
@@ -505,7 +506,7 @@ auth_load_process_ixfr(struct auth_load_thread* thr)
 		return 0;
 	}
 	if(!xfr_apply_ixfr(task->chunks_first, task->serial, z,
-		scratch_buffer)) {
+		scratch_buffer, thr)) {
 		sldns_buffer_free(scratch_buffer);
 		auth_zone_delete_proxy(z);
 		return 0;
@@ -548,7 +549,7 @@ auth_load_process_axfr(struct auth_load_thread* thr)
 		return 0;
 	}
 
-	if(!xfr_apply_axfr(task->chunks_first, z, scratch_buffer)) {
+	if(!xfr_apply_axfr(task->chunks_first, z, scratch_buffer, thr)) {
 		sldns_buffer_free(scratch_buffer);
 		auth_zone_delete_proxy(z);
 		return 0;

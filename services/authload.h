@@ -156,4 +156,7 @@ struct auth_load_task {
  */
 int auth_load_add_task_xfr(struct auth_xfer* xfr, struct worker* worker);
 
+/** See if there is a quit signal, true if so. */
+int auth_load_thread_poll_for_quit(struct auth_load_thread* thr);
+
 #endif /* SERVICES_AUTHLOAD_H */

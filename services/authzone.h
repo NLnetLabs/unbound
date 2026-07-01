@@ -65,6 +65,7 @@ struct auth_probe;
 struct auth_transfer;
 struct auth_master;
 struct auth_chunk;
+struct auth_load_thread;
 
 /**
  * Authoritative zones, shared.
@@ -879,14 +880,15 @@ int xfr_http_syntax_check(uint8_t* name, size_t namelen, uint16_t dclass,
 /** Apply http transfer to auth_zone */
 int xfr_apply_http(uint8_t* name, size_t namelen, const char* host,
 	const char* file, struct auth_chunk* chunk_list, struct auth_zone* z,
-	struct sldns_buffer* scratch_buffer);
+	struct sldns_buffer* scratch_buffer, struct auth_load_thread* thr);
 
 /** Apply IXFR transfer to auth_zone */
 int xfr_apply_ixfr(struct auth_chunk* chunk_list, uint32_t xfr_serial,
-	struct auth_zone* z, struct sldns_buffer* scratch_buffer);
+	struct auth_zone* z, struct sldns_buffer* scratch_buffer,
+	struct auth_load_thread* thr);
 
 /** Apply AXFR transfer to auth_zone */
 int xfr_apply_axfr(struct auth_chunk* chunk_list, struct auth_zone* z,
-	struct sldns_buffer* scratch_buffer);
+	struct sldns_buffer* scratch_buffer, struct auth_load_thread* thr);
 
 #endif /* SERVICES_AUTHZONE_H */

@@ -4995,7 +4995,8 @@ ixfr_start_serial(struct auth_chunk* rr_chunk, int rr_num, size_t rr_pos,
 /** apply IXFR to zone in memory. z is locked. false on failure(mallocfail) */
 int
 xfr_apply_ixfr(struct auth_chunk* chunk_list, uint32_t xfr_serial,
-	struct auth_zone* z, struct sldns_buffer* scratch_buffer)
+	struct auth_zone* z, struct sldns_buffer* scratch_buffer,
+	struct auth_load_thread* thr)
 {
 	struct auth_chunk* rr_chunk;
 	int rr_num;
@@ -5121,6 +5122,10 @@ xfr_apply_ixfr(struct auth_chunk* chunk_list, uint32_t xfr_serial,
 		}
 
 		rr_counter++;
+		if(thr && rr_counter % 10000 == 0) {
+			if(auth_load_thread_poll_for_quit(thr))
+				return 0;
+		}
 		chunk_rrlist_gonext(&rr_chunk, &rr_num, &rr_pos, rr_nextpos);
 	}
 	if(softfail) {
@@ -5138,13 +5143,13 @@ apply_ixfr(struct auth_xfer* xfr, struct auth_zone* z,
 	xfr->num_ixfrs++;
 
 	return xfr_apply_ixfr(xfr->task_transfer->chunks_first, xfr->serial, z,
-		scratch_buffer);
+		scratch_buffer, NULL);
 }
 
 /** apply AXFR to zone in memory. z is locked. false on failure(mallocfail) */
 int
 xfr_apply_axfr(struct auth_chunk* chunk_list, struct auth_zone* z,
-	struct sldns_buffer* scratch_buffer)
+	struct sldns_buffer* scratch_buffer, struct auth_load_thread* thr)
 {
 	struct auth_chunk* rr_chunk;
 	int rr_num;
@@ -5190,6 +5195,10 @@ xfr_apply_axfr(struct auth_chunk* chunk_list, struct auth_zone* z,
 		}
 
 		rr_counter++;
+		if(thr && rr_counter % 10000 == 0) {
+			if(auth_load_thread_poll_for_quit(thr))
+				return 0;
+		}
 		chunk_rrlist_gonext(&rr_chunk, &rr_num, &rr_pos, rr_nextpos);
 	}
 	if(!have_end_soa) {
@@ -5211,7 +5220,7 @@ apply_axfr(struct auth_xfer* xfr, struct auth_zone* z,
 	xfr->soa_zone_acquired = 0;
 	xfr->num_ixfrs = 0;
 	return xfr_apply_axfr(xfr->task_transfer->chunks_first, z,
-		scratch_buffer);
+		scratch_buffer, NULL);
 }
 
 void
@@ -5254,7 +5263,7 @@ xfr_http_syntax_check(uint8_t* name, size_t namelen, uint16_t dclass,
 int
 xfr_apply_http(uint8_t* name, size_t namelen, const char* host,
 	const char* file, struct auth_chunk* chunk_list, struct auth_zone* z,
-	struct sldns_buffer* scratch_buffer)
+	struct sldns_buffer* scratch_buffer, struct auth_load_thread* thr)
 {
 	/* parse data in chunks */
 	/* parse RR's and read into memory. ignore $INCLUDE from the
@@ -5279,6 +5288,10 @@ xfr_apply_http(uint8_t* name, size_t namelen, const char* host,
 		/* process this line */
 		pstate.lineno++;
 		chunkline_newline_removal(scratch_buffer);
+		if(thr && pstate.lineno % 10000 == 0) {
+			if(auth_load_thread_poll_for_quit(thr))
+				return 0;
+		}
 		if(chunkline_is_comment_line_or_empty(scratch_buffer)) {
 			continue;
 		}
@@ -5330,7 +5343,7 @@ apply_http(struct auth_xfer* xfr, struct auth_zone* z,
 	return xfr_apply_http(xfr->name, xfr->namelen,
 		xfr->task_transfer->master->host,
 		xfr->task_transfer->master->file,
-		xfr->task_transfer->chunks_first, z, scratch_buffer);
+		xfr->task_transfer->chunks_first, z, scratch_buffer, NULL);
 }
 
 /** write http chunks to zonefile to create downloaded file */
