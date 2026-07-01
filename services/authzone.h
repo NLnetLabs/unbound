@@ -885,4 +885,8 @@ int xfr_apply_http(uint8_t* name, size_t namelen, const char* host,
 int xfr_apply_ixfr(struct auth_chunk* chunk_list, uint32_t xfr_serial,
 	struct auth_zone* z, struct sldns_buffer* scratch_buffer);
 
+/** Apply AXFR transfer to auth_zone */
+int xfr_apply_axfr(struct auth_chunk* chunk_list, struct auth_zone* z,
+	struct sldns_buffer* scratch_buffer);
+
 #endif /* SERVICES_AUTHZONE_H */

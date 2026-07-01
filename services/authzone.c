@@ -5142,8 +5142,8 @@ apply_ixfr(struct auth_xfer* xfr, struct auth_zone* z,
 }
 
 /** apply AXFR to zone in memory. z is locked. false on failure(mallocfail) */
-static int
-apply_axfr(struct auth_xfer* xfr, struct auth_zone* z,
+int
+xfr_apply_axfr(struct auth_chunk* chunk_list, struct auth_zone* z,
 	struct sldns_buffer* scratch_buffer)
 {
 	struct auth_chunk* rr_chunk;
@@ -5152,22 +5152,16 @@ apply_axfr(struct auth_xfer* xfr, struct auth_zone* z,
 	uint8_t* rr_dname, *rr_rdata;
 	uint16_t rr_type, rr_class, rr_rdlen;
 	uint32_t rr_ttl;
-	uint32_t serial = 0;
 	size_t rr_nextpos;
 	size_t rr_counter = 0;
 	int have_end_soa = 0;
 
 	auth_zone_clear_data(z);
-	xfr->have_zone = 0;
-	xfr->serial = 0;
-	xfr->soa_zone_acquired = 0;
-	xfr->num_ixfrs = 0;
 
 	/* insert all RRs in to the zone */
 	/* insert the SOA only once, skip the last one */
 	/* start RR iterator over chunklist of packets */
-	chunk_rrlist_start(xfr->task_transfer->chunks_first, &rr_chunk,
-		&rr_num, &rr_pos);
+	chunk_rrlist_start(chunk_list, &rr_chunk, &rr_num, &rr_pos);
 	while(!chunk_rrlist_end(rr_chunk, rr_num)) {
 		if(!chunk_rrlist_get_current(rr_chunk, rr_num, rr_pos,
 			&rr_dname, &rr_type, &rr_class, &rr_ttl, &rr_rdlen,
@@ -5184,7 +5178,7 @@ apply_axfr(struct auth_xfer* xfr, struct auth_zone* z,
 				break;
 			}
 			if(rr_rdlen < 22) return 0; /* bad SOA rdlen */
-			serial = sldns_read_uint32(rr_rdata+rr_rdlen-20);
+			/* serial is at sldns_read_uint32(rr_rdata+rr_rdlen-20); */
 		}
 
 		/* add this RR */
@@ -5202,10 +5196,22 @@ apply_axfr(struct auth_xfer* xfr, struct auth_zone* z,
 		log_err("no end SOA record for AXFR");
 		return 0;
 	}
-
-	xfr->serial = serial;
-	xfr->have_zone = 1;
+	/* xfr->serial and xfr->have_zone are set by xfr_find_soa
+	 * after this function. */
 	return 1;
+}
+
+/** apply AXFR to zone in memory. z is locked. false on failure(mallocfail) */
+static int
+apply_axfr(struct auth_xfer* xfr, struct auth_zone* z,
+	struct sldns_buffer* scratch_buffer)
+{
+	xfr->have_zone = 0;
+	xfr->serial = 0;
+	xfr->soa_zone_acquired = 0;
+	xfr->num_ixfrs = 0;
+	return xfr_apply_axfr(xfr->task_transfer->chunks_first, z,
+		scratch_buffer);
 }
 
 void

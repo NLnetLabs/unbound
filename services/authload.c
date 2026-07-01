@@ -522,6 +522,50 @@ auth_load_process_ixfr(struct auth_load_thread* thr)
 	return 1;
 }
 
+/** Process axfr transfer */
+static int
+auth_load_process_axfr(struct auth_load_thread* thr)
+{
+	struct auth_load_task* task = thr->task;
+	struct sldns_buffer* scratch_buffer;
+	struct auth_zone* z;
+
+	scratch_buffer = sldns_buffer_new(sldns_buffer_capacity(
+		thr->task->worker->env.scratch_buffer));
+	if(!scratch_buffer) {
+		log_err("out of memory");
+		return 0;
+	}
+	z = auth_zone_create_proxy(task->name, task->namelen, task->dclass);
+	if(!z) {
+		log_err("out of memory");
+		sldns_buffer_free(scratch_buffer);
+		return 0;
+	}
+	if(auth_load_thread_poll_for_quit(thr)) {
+		sldns_buffer_free(scratch_buffer);
+		auth_zone_delete_proxy(z);
+		return 0;
+	}
+
+	if(!xfr_apply_axfr(task->chunks_first, z, scratch_buffer)) {
+		sldns_buffer_free(scratch_buffer);
+		auth_zone_delete_proxy(z);
+		return 0;
+	}
+	if(auth_load_thread_poll_for_quit(thr)) {
+		sldns_buffer_free(scratch_buffer);
+		auth_zone_delete_proxy(z);
+		return 0;
+	}
+
+	auth_load_swap_zone(thr, z);
+	auth_zone_delete_proxy(z);
+	sldns_buffer_free(scratch_buffer);
+	return 1;
+}
+
+
 /** In the auth load thread, process the task */
 static int
 auth_load_thread_process(struct auth_load_thread* thr)
@@ -536,6 +580,8 @@ auth_load_thread_process(struct auth_load_thread* thr)
 		if(!auth_load_process_ixfr(thr))
 			return 0;
 	} else {
+		if(!auth_load_process_axfr(thr))
+			return 0;
 	}
 	return 1;
 }
