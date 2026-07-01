@@ -867,7 +867,8 @@ void auth_data_del(rbnode_type* n, void* arg);
 
 /** Handle the end of an auth load task. */
 void xfr_process_load_end_transfer(struct auth_xfer* xfr,
-	struct module_env* env, uint8_t status, int ixfr_fail);
+	struct module_env* env, uint8_t status, int ixfr_fail,
+	struct auth_chunk* chunk_list);
 
 /** Log preview of http transfer */
 void xfr_http_preview(const char* file, struct auth_chunk* chunk_list);

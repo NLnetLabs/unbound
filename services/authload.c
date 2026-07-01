@@ -668,6 +668,7 @@ worker_auth_load_service_cb(int ATTR_UNUSED(fd), short ATTR_UNUSED(bits),
 	uint8_t recv_item;
 	ssize_t ret;
 	struct auth_xfer* xfr;
+	struct auth_chunk* chunk_list;
 	struct module_env* env;
 	int ixfr_fail;
 
@@ -721,8 +722,17 @@ worker_auth_load_service_cb(int ATTR_UNUSED(fd), short ATTR_UNUSED(bits),
 	lock_rw_unlock(&thr->task->worker->env.auth_zones->lock);
 	env = &thr->task->worker->env;
 	ixfr_fail = thr->task->ixfr_fail;
+	if(thr->task->on_http) {
+		chunk_list = thr->task->chunks_first;
+		thr->task->chunks_first = NULL;
+		thr->task->chunks_last = NULL;
+		thr->task->chunks_total = 0;
+	} else {
+		chunk_list = NULL;
+	}
 	auth_load_thread_delete(thr);
-	xfr_process_load_end_transfer(xfr, env, recv_item, ixfr_fail);
+	xfr_process_load_end_transfer(xfr, env, recv_item, ixfr_fail,
+		chunk_list);
 }
 
 /** Attach worker to the auth load thread. */

@@ -6407,46 +6407,116 @@ process_list_end_transfer(struct auth_xfer* xfr, struct module_env* env)
 	xfr_process_transfer_failed(xfr, env, ixfr_fail);
 }
 
-void xfr_process_load_end_transfer(struct auth_xfer* xfr,
-	struct module_env* env, uint8_t status, int ixfr_fail)
+/** deal with successful load end, starts holding xfr lock,
+ * ends holding xfr lock. */
+static int
+xfr_process_loaded_transfer(struct auth_xfer* xfr, struct module_env* env,
+	int* gone)
 {
-	if(status) {
-		struct auth_zone* z = NULL;
-		lock_basic_unlock(&xfr->lock);
-		if(!xfr_process_reacquire_locks(xfr, env, &z)) {
-			/* the zone is gone, ignore xfr results */
-			lock_basic_unlock(&xfr->lock);
-			return;
-		}
-		/* holding xfr and z locks */
+	struct auth_zone* z = NULL;
+	lock_basic_unlock(&xfr->lock);
+	if(!xfr_process_reacquire_locks(xfr, env, &z)) {
+		/* the zone is gone, ignore xfr results */
+		*gone = 1;
+		return 0;
+	}
+	/* holding xfr and z locks */
 
-		if(xfr->task_transfer->master->http) {
-			xfr->num_ixfrs = 0;
-		} else if(xfr->task_transfer->on_ixfr &&
-			!xfr->task_transfer->on_ixfr_is_axfr) {
-			xfr->num_ixfrs++;
-		} else {
-			/* AXFR */
-			xfr->num_ixfrs = 0;
-		}
-
-		xfr->zone_expired = 0;
-		z->zone_expired = 0;
-
+	if(xfr->task_transfer->master->http) {
+		xfr->num_ixfrs = 0;
 		xfr->have_zone = 0;
 		xfr->serial = 0;
-		if(!xfr_find_soa(z, xfr)) {
-			verbose(VERB_ALGO, "xfr from %s: no SOA in zone after update"
-				" (or malformed RR)", xfr->task_transfer->master->host);
-			status = 0;
-		}
-		if(status) {
-			z->soa_zone_acquired = *env->now;
-			xfr->soa_zone_acquired = *env->now;
-			xfr->is_rpz = (z->rpz!=NULL);
-		}
-		lock_rw_unlock(&z->lock);
+	} else if(xfr->task_transfer->on_ixfr &&
+		!xfr->task_transfer->on_ixfr_is_axfr) {
+		xfr->num_ixfrs++;
+	} else {
+		/* AXFR */
+		xfr->num_ixfrs = 0;
+		xfr->have_zone = 0;
+		xfr->serial = 0;
 	}
+
+	xfr->zone_expired = 0;
+	z->zone_expired = 0;
+	if(!xfr_find_soa(z, xfr)) {
+		verbose(VERB_ALGO, "xfr from %s: no SOA in zone after update"
+			" (or malformed RR)", xfr->task_transfer->master->host);
+		return 0;
+	}
+	z->soa_zone_acquired = *env->now;
+	xfr->soa_zone_acquired = *env->now;
+	xfr->is_rpz = (z->rpz!=NULL);
+
+	/* release xfr lock while verifying zonemd because it may have
+	 * to spawn lookups in the state machines */
+	lock_basic_unlock(&xfr->lock);
+	/* holding z lock */
+	auth_zone_verify_zonemd(z, env, &env->mesh->mods, NULL, 0, 0);
+	if(z->zone_expired) {
+		char zname[LDNS_MAX_DOMAINLEN];
+		/* ZONEMD must have failed */
+		/* reacquire locks, so we hold xfr lock on exit of routine,
+		 * and both xfr and z again after releasing xfr for potential
+		 * state machine mesh callbacks */
+		lock_rw_unlock(&z->lock);
+		if(!xfr_process_reacquire_locks(xfr, env, &z)) {
+			*gone = 1;
+			return 0;
+		}
+		dname_str(xfr->name, zname);
+		verbose(VERB_ALGO, "xfr from %s: ZONEMD failed for %s, transfer is failed", xfr->task_transfer->master->host, zname);
+		xfr->zone_expired = 1;
+		lock_rw_unlock(&z->lock);
+		return 0;
+	}
+	/* reacquire locks, so we hold xfr lock on exit of routine,
+	 * and both xfr and z again after releasing xfr for potential
+	 * state machine mesh callbacks */
+	lock_rw_unlock(&z->lock);
+	if(!xfr_process_reacquire_locks(xfr, env, &z)) {
+		*gone = 1;
+		return 0;
+	}
+	/* holding xfr and z locks */
+
+	if(xfr->have_zone)
+		xfr->lease_time = *env->now;
+	/* unlock */
+	lock_rw_unlock(&z->lock);
+
+	if(verbosity >= VERB_QUERY && xfr->have_zone) {
+		char zname[LDNS_MAX_DOMAINLEN];
+		dname_str(xfr->name, zname);
+		verbose(VERB_QUERY, "auth zone %s updated to serial %u", zname,
+			(unsigned)xfr->serial);
+	}
+	/* see if we need to write to a zonefile */
+	xfr_write_after_update(xfr, env);
+
+	return 1;
+}
+
+void xfr_process_load_end_transfer(struct auth_xfer* xfr,
+	struct module_env* env, uint8_t status, int ixfr_fail,
+	struct auth_chunk* chunk_list)
+{
+	/* Chunks are put here for the auth zone write for the http case. */
+	xfr->task_transfer->chunks_first = chunk_list;
+	if(status) {
+		int gone = 0;
+		if(!xfr_process_loaded_transfer(xfr, env, &gone)) {
+			status = 0;
+			if(gone) {
+				/* the zone is gone from the authzones. */
+				lock_basic_unlock(&xfr->lock);
+				auth_chunks_delete(xfr->task_transfer);
+				xfr->task_transfer->chunks_first = NULL;
+				return;
+			}
+		}
+	}
+	auth_chunks_delete(xfr->task_transfer);
+	xfr->task_transfer->chunks_first = NULL;
 
 	if(status) {
 		/* it worked! */
