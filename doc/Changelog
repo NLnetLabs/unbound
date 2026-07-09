@@ -1,6 +1,7 @@
 9 July 2026: Wouter
 	- Merge #1383 from jdek: Fix randomness generation on
 	  macOS/iOS under chroot.
+	- Fix unit test for malformed svcb for test on Windows.
 
 2 July 2026: Wouter
 	- Merge #1087: Overload `local_data_remove` to support removing
