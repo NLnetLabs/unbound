@@ -20,6 +20,8 @@
  * http://man.openbsd.org/getentropy.2
  */
 
+/* Modified to use SecRandomCopyBytes. It is from macOS 10.7 (2011) and
+ * iOS 2.0 (2008), and is the primary API for cryptographic random numbers. */
 #include <errno.h>
 #include <Security/SecRandom.h>
 
