@@ -115,8 +115,12 @@ ENTRY_BEGIN
 		ns.example.com. 30 IN A 1.2.3.4
 ENTRY_END
 
+; Let the client-wait timer (10s) fire on the now-empty reply list; it must
+; be a no-op (no client waiting, nothing may be sent) and delete itself.
+STEP 41 TIME_PASSES ELAPSE 10
+
 ; Reply to the outstanding query so the test doesn't fail with pending messages.
-STEP 41 REPLY
+STEP 50 REPLY
 ENTRY_BEGIN
 	MATCH opcode qtype qname
 	ADJUST copy_id
