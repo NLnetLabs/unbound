@@ -56,6 +56,10 @@ ENTRY_BEGIN
 		example.com. IN A
 ENTRY_END
 
+; Let the serve-expired client timer (10s) fire on the now-empty reply list;
+; it must send nothing (a spurious answer fails the scenario as unmatched).
+STEP 25 TIME_PASSES ELAPSE 10
+
 ; Reply to the outstanding upstream A query so the scenario ends cleanly
 STEP 30 REPLY
 ENTRY_BEGIN

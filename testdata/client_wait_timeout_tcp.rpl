@@ -30,8 +30,9 @@ RANGE_BEGIN 0 100
 	ENTRY_END
 RANGE_END
 
-; A TCP client query (MATCH TCP forces the incoming comm_point to comm_tcp,
-; exercising the tcp_req_info re-entrant send path in the timeout callback).
+; A TCP client query. Note testbound's fake comm_point has no tcp_req_info,
+; so this only exercises the comm_tcp buffer path of the timeout callback;
+; the tcp_req_info spool-buffer path needs a real daemon (stat_values.tdir).
 STEP 1 QUERY
 ENTRY_BEGIN
 	MATCH TCP
