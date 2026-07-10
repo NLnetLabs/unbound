@@ -2029,6 +2029,8 @@ mesh_client_wait_callback(void* arg)
 	struct mesh_reply* r;
 	struct mesh_cb** cprev;
 	struct mesh_cb* c;
+	struct mesh_cb* timed_out_cbs = NULL;
+	struct mesh_cb** ctail = &timed_out_cbs;
 
 	if(!qstate->client_wait_data || !qstate->client_wait_data->timer)
 		return;
@@ -2086,17 +2088,23 @@ mesh_client_wait_callback(void* arg)
 		}
 	}
 
-	/* cb_list (libunbound): plain SERVFAIL, no EDE (intentional asymmetry). */
+	/* cb_list (libunbound): plain SERVFAIL, no EDE (intentional asymmetry).
+	 * First unlink all aged entries onto a local list without invoking
+	 * anything: callbacks can re-enter the mesh at once (mesh_new_callback
+	 * prepends to cb_list, mesh_remove_callback unlinks), which would
+	 * invalidate a cached predecessor pointer mid-sweep. Same reason
+	 * mesh_query_done and mesh_serve_expired_callback drain from the list
+	 * head. The callbacks run below, after the per-state accounting and
+	 * the timer are settled. */
 	cprev = &mstate->cb_list;
 	c = mstate->cb_list;
 	while(c) {
+		struct mesh_cb* next = c->next;
 		if(age_ms(&now, &c->start_time) >= deadline_ms) {
-			struct mesh_cb* next = c->next;
 			*cprev = next;
-			mesh_do_callback(mstate, LDNS_RCODE_SERVFAIL, NULL, c,
-				&tv);
-			mesh->num_queries_client_wait_timeout++;
-			c = next;
+			c->next = NULL;
+			*ctail = c;
+			ctail = &c->next;
 		} else {
 			struct timeval d;
 			client_wait_deadline(&d, &c->start_time, deadline_ms);
@@ -2105,8 +2113,8 @@ mesh_client_wait_callback(void* arg)
 				have_next = 1;
 			}
 			cprev = &c->next;
-			c = c->next;
 		}
+		c = next;
 	}
 
 	/* Per-state accounting: a state stops being a reply state only when it
@@ -2134,6 +2142,15 @@ mesh_client_wait_callback(void* arg)
 	} else {
 		comm_timer_delete(qstate->client_wait_data->timer);
 		qstate->client_wait_data->timer = NULL;
+	}
+
+	/* Invoke the timed-out callbacks now that the state's accounting and
+	 * timer are consistent; a callback that re-enters mesh_new_callback
+	 * for this state re-arms the timer and re-counts the state cleanly. */
+	while((c = timed_out_cbs) != NULL) {
+		timed_out_cbs = c->next;
+		mesh_do_callback(mstate, LDNS_RCODE_SERVFAIL, NULL, c, &tv);
+		mesh->num_queries_client_wait_timeout++;
 	}
 }
 
