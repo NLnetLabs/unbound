@@ -106,6 +106,32 @@ else
 	exit 1
 fi
 
+# test client-wait-timeout warning (discard-timeout masks it)
+cat > tmpconf_cwt_discard.conf << 'EOF'
+server:
+	chroot: ""
+	directory: ""
+	pidfile: ""
+	username: ""
+	logfile: ""
+	discard-timeout: 1900
+	client-wait-timeout: 2500
+EOF
+echo $PRE/unbound-checkconf tmpconf_cwt_discard.conf
+$PRE/unbound-checkconf tmpconf_cwt_discard.conf > outfile 2>&1
+if test $? != 0; then
+	cat outfile
+	echo "wrong exit code, client-wait-timeout discard warning should not fail with error"
+	exit 1
+fi
+cat outfile
+if grep "discard-timeout" outfile; then
+	echo "OK"
+else
+	echo "Failed, should print discard-timeout warning"
+	exit 1
+fi
+
 # test client-wait-timeout positive value (accepted)
 cat > tmpconf_cwt_pos.conf << 'EOF'
 server:

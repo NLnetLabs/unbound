@@ -625,6 +625,10 @@ The EDE code is only attached when \fBede:\fR is enabled.
 If both this and
 \fI\%serve\-expired\-client\-timeout\fP
 are set, whichever timer fires first answers and the other becomes a no\-op.
+Keep the value smaller than
+\fI\%discard\-timeout\fP;
+UDP replies that arrive between the two timeouts are discarded before
+this timeout can answer, and those clients receive no response at all.
 The value \fB0\fP disables it.
 .sp
 Default: 0
