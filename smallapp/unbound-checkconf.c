@@ -1021,9 +1021,10 @@ morechecks(struct config_file* cfg)
 		cfg->client_wait_timeout < cfg->serve_expired_client_timeout) {
 		fprintf(stderr, "unbound-checkconf: warning: client-wait-timeout "
 			"(%d ms) is less than serve-expired-client-timeout (%d ms); "
-			"client-wait-timeout will fire first, making "
-			"serve-expired-client-timeout ineffective for first-time "
-			"queries\n", cfg->client_wait_timeout,
+			"client-wait-timeout fires first and answers SERVFAIL, "
+			"pre-empting the stale answers that "
+			"serve-expired-client-timeout would give\n",
+			cfg->client_wait_timeout,
 			cfg->serve_expired_client_timeout);
 	}
 	if(cfg->client_wait_timeout > 0 && cfg->discard_timeout > 0 &&
