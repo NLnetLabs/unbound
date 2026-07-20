@@ -1,6 +1,8 @@
 20 July 2026: Wouter
 	- Merge #1475 from petrvaganoff: ipsecmod: fix deref on null
 	  in ipsecmod-whitelist after OOM.
+	- Fix #1474: DoQ responses are never padded - pad-responses
+	  does not apply to comm_doq (RFC 9250 §5.4 MUST).
 
 9 July 2026: Wouter
 	- Merge #1383 from jdek: Fix randomness generation on
