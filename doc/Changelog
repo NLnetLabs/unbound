@@ -1,3 +1,7 @@
+20 July 2026: Wouter
+	- Merge #1475 from petrvaganoff: ipsecmod: fix deref on null
+	  in ipsecmod-whitelist after OOM.
+
 9 July 2026: Wouter
 	- Merge #1383 from jdek: Fix randomness generation on
 	  macOS/iOS under chroot.
