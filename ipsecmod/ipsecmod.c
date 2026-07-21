@@ -294,6 +294,10 @@ call_hook(struct module_qstate* qstate, struct ipsecmod_qstate* iq,
 
 	rrset_key = reply_find_answer_rrset(&qstate->return_msg->qinfo,
 		qstate->return_msg->rep);
+	if(!rrset_key) {
+		log_err("ipsecmod: could not find answer rrset for A/AAAA");
+		return 0;
+	}
 	/* Double check that the records are indeed A/AAAA.
 	 * This should never happen as this function is only executed for A/AAAA
 	 * queries but make sure we don't pass anything other than A/AAAA to the
@@ -475,6 +479,12 @@ ipsecmod_handle_query(struct module_qstate* qstate,
 			 * ipsecmod_max_ttl. */
 			rrset_key = reply_find_answer_rrset(&qstate->return_msg->qinfo,
 				qstate->return_msg->rep);
+			if(!rrset_key) {
+				log_err("ipsecmod: reply-find-answer failed");
+				errinf(qstate, "ipsecmod: reply-find-answer failed");
+				ipsecmod_error(qstate, id);
+				return;
+			}
 			rrset_data = (struct packed_rrset_data*)rrset_key->entry.data;
 			if(rrset_data->ttl > (time_t)qstate->env->cfg->ipsecmod_max_ttl) {
 				/* Update TTL for rrset to fixed value. */
