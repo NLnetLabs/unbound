@@ -2454,9 +2454,10 @@ apply_respip_action(struct module_qstate* qstate,
 
 	/* xxx_deny actions mean dropping the reply, unless the original reply
 	 * was redirected to response-ip data. */
-	if((actinfo->action == respip_deny ||
+	if(actinfo->action == respip_always_deny ||
+		((actinfo->action == respip_deny ||
 		actinfo->action == respip_inform_deny) &&
-		*encode_repp == rep)
+		*encode_repp == rep))
 		*encode_repp = NULL;
 
 	return 1;
@@ -2521,12 +2522,15 @@ mesh_serve_expired_callback(void* arg)
 			qstate->client_info, &actinfo, msg->rep, &alias_rrset, &encode_rep,
 			qstate->env->auth_zones)) {
 			return;
-		} else if(partial_rep &&
-			!respip_merge_cname(partial_rep, &qstate->qinfo, msg->rep,
+		} else if(partial_rep) {
+			if(!respip_merge_cname(partial_rep, &qstate->qinfo, msg->rep,
 			qstate->client_info, must_validate, &encode_rep, qstate->region,
 			qstate->env->auth_zones, qstate->env->views,
 			qstate->env->respip_set)) {
-			return;
+				return;
+			}
+			/* merge succeeded; final reply, no further alias pass */
+			partial_rep = NULL;
 		}
 		if(!encode_rep || alias_rrset) {
 			if(!encode_rep) {
@@ -2537,6 +2541,7 @@ mesh_serve_expired_callback(void* arg)
 				partial_rep = encode_rep;
 			}
 		}
+		msg->rep = encode_rep;
 		/* We've found a partial reply ending with an
 		* alias.  Replace the lookup qinfo for the
 		* alias target and lookup the cache again to
