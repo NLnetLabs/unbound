@@ -208,6 +208,7 @@ static void
 waiting_tcp_delete(struct waiting_tcp* w)
 {
 	if(!w) return;
+	free(w->tls_auth_name);
 	if(w->timer)
 		comm_timer_delete(w->timer);
 	free(w);
@@ -2540,7 +2541,16 @@ pending_tcp_query(struct serviced_query* sq, sldns_buffer* packet,
 	w->cb = callback;
 	w->cb_arg = callback_arg;
 	w->ssl_upstream = sq->ssl_upstream;
-	w->tls_auth_name = sq->tls_auth_name;
+	if(sq->tls_auth_name) {
+		w->tls_auth_name = strdup(sq->tls_auth_name);
+		if(!w->tls_auth_name) {
+			comm_timer_delete(w->timer);
+			free(w);
+			return NULL;
+		}
+	} else {
+		w->tls_auth_name = NULL;
+	}
 	w->timeout = timeout;
 	w->id_node.key = NULL;
 	w->write_wait_prev = NULL;
