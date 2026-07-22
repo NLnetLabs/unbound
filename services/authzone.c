@@ -7057,7 +7057,7 @@ void auth_xfer_probe_lookup_callback(void* arg, int rcode, sldns_buffer* buf,
 			char zname[LDNS_MAX_DOMAINLEN];
 			dname_str(xfr->name, zname);
 			verbose(VERB_OPS, "auth zone %s: primary %s address probe lookup is DNSSEC bogus: %s",
-				zname, xfr->task_transfer->lookup_target->host,
+				zname, xfr->task_probe->lookup_target->host,
 				(why_bogus?why_bogus:""));
 		}
 		/* fall through to next-lookup / next-master */
