@@ -1550,6 +1550,7 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 				return 0;
 			}
 			query_error(c->buffer, LDNS_RCODE_FORMERR, 0);
+			sldns_buffer_copy(c->dnscrypt_buffer, c->buffer);
 			return 1;
 		}
 		dname_str(qinfo.qname, buf);
@@ -1568,6 +1569,7 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 			query_error(c->buffer, LDNS_RCODE_SERVFAIL,
 				qinfo.qname_len);
 			worker->stats.num_query_dnscrypt_cleartext++;
+			sldns_buffer_copy(c->dnscrypt_buffer, c->buffer);
 			return 1;
 		}
 		worker->stats.num_query_dnscrypt_cert++;
@@ -1828,7 +1830,13 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 		server_stats_insquery(&worker->stats, c, qinfo.qtype,
 			qinfo.qclass, &edns, repinfo);
 	if(c->type != comm_udp)
+#ifdef USE_DNSCRYPT
+		edns.udp_size = (c->dnscrypt && repinfo->is_dnscrypted)
+			? sldns_buffer_capacity(c->buffer) - DNSCRYPT_REPLY_HEADER_SIZE
+			: 65535;
+#else
 		edns.udp_size = 65535; /* max size for TCP replies */
+#endif
 	if(qinfo.qclass == LDNS_RR_CLASS_CH && answer_chaos(worker, &qinfo,
 		&edns, repinfo, c->buffer)) {
 		regional_free_all(worker->scratchpad);
@@ -2112,7 +2120,7 @@ send_reply_rc:
 		}
 	}
 #ifdef USE_DNSCRYPT
-	if(!dnsc_handle_uncurved_request(repinfo)) {
+	if(!dnsc_handle_uncurved_request(repinfo, c->buffer)) {
 		return 0;
 	}
 #endif

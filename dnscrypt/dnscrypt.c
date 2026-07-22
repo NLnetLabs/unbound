@@ -474,10 +474,18 @@ dnscrypt_server_curve(const dnsccert *cert,
     uint8_t *const buf = sldns_buffer_begin(buffer);
     size_t len = sldns_buffer_limit(buffer);
 
+    if(len + DNSCRYPT_REPLY_HEADER_SIZE > sldns_buffer_capacity(buffer))
+	return -1;
+    sldns_buffer_clear(buffer);
+
     if(udp){
         if (max_len > max_reply_size)
             max_len = max_reply_size;
     }
+    if(max_len > sldns_buffer_capacity(buffer))
+	max_len = sldns_buffer_capacity(buffer);
+    if(max_len > 65535)
+	    max_len = 65535;
 
 
     memcpy(nonce, client_nonce, crypto_box_HALF_NONCEBYTES);
@@ -520,6 +528,7 @@ dnscrypt_server_curve(const dnsccert *cert,
                           DNSCRYPT_MAGIC_HEADER_LEN,
                           nonce,
                           crypto_box_NONCEBYTES);
+    sldns_buffer_flip(buffer);
     sldns_buffer_set_limit(buffer, len + DNSCRYPT_REPLY_HEADER_SIZE);
     return 0;
 }
@@ -912,12 +921,13 @@ dnsc_handle_curved_request(struct dnsc_env* dnscenv,
 }
 
 int
-dnsc_handle_uncurved_request(struct comm_reply *repinfo)
+dnsc_handle_uncurved_request(struct comm_reply *repinfo,
+	struct sldns_buffer* buffer)
 {
     if(!repinfo->c->dnscrypt) {
         return 1;
     }
-    sldns_buffer_copy(repinfo->c->dnscrypt_buffer, repinfo->c->buffer);
+    sldns_buffer_copy(repinfo->c->dnscrypt_buffer, buffer);
     if(!repinfo->is_dnscrypted) {
         return 1;
     }

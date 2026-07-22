@@ -6677,7 +6677,9 @@ comm_point_send_reply(struct comm_reply *repinfo)
 	log_assert(repinfo && repinfo->c);
 #ifdef USE_DNSCRYPT
 	buffer = repinfo->c->dnscrypt_buffer;
-	if(!dnsc_handle_uncurved_request(repinfo)) {
+	if(!dnsc_handle_uncurved_request(repinfo,
+		repinfo->c->tcp_req_info?
+		repinfo->c->tcp_req_info->spool_buffer:repinfo->c->buffer)) {
 		return;
 	}
 #else
