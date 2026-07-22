@@ -99,6 +99,7 @@
 	- Unit test for CVE-2026-56416.
 	- Fix error in log printout in fix for CVE-2026-50248, when the
 	  primary name is bogus.
+	- iana portlist update.
 
 21 July 2026: Wouter
 	- Merge #1476 from petrvaganoff: ipsecmod: fix possible deref
