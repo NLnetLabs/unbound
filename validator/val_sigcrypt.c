@@ -1666,6 +1666,13 @@ dnskey_verify_rrset_sig(struct regional* region, sldns_buffer* buf,
 			*reason_bogus = LDNS_EDE_DNSSEC_BOGUS;
 		return sec_status_bogus;
 	}
+	if((int)sig[2+3] < dname_signame_label_count(signer)) {
+		verbose(VERB_QUERY, "verify: RRSIG label count too low for signer");
+		*reason = "signature labelcount lower than signature signer";
+		if(reason_bogus)
+			*reason_bogus = LDNS_EDE_DNSSEC_BOGUS;
+		return sec_status_bogus;
+	}
 
 	/* original ttl, always ok */
 

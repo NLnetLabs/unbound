@@ -157,7 +157,7 @@ val_classify_response(uint16_t query_flags, struct query_info* origqinf,
 }
 
 /** Get signer name from RRSIG */
-static void
+void
 rrsig_get_signer(uint8_t* data, size_t len, uint8_t** sname, size_t* slen)
 {
 	/* RRSIG rdata is not allowed to be compressed, it is stored

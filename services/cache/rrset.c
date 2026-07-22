@@ -50,6 +50,7 @@
 #include "util/regional.h"
 #include "util/alloc.h"
 #include "util/net_help.h"
+#include "validator/val_utils.h"
 
 void
 rrset_markdel(void* key)
@@ -261,12 +262,43 @@ rrset_cache_update(struct rrset_cache* r, struct rrset_ref* ref,
 	return 0;
 }
 
+/** See if the name is a within signer authority */
+static int
+dname_subdomain_rrsig_signers(uint8_t* dname,
+	struct ub_packed_rrset_key* rrset)
+{
+	struct packed_rrset_data* d = (struct packed_rrset_data*)
+		rrset->entry.data;
+	size_t i;
+	if(!d || !d->rrsig_count)
+		return 0;
+	for(i=0; i<d->rrsig_count; i++) {
+		uint8_t* sname = NULL;
+		size_t slen = 0;
+		rrsig_get_signer(d->rr_data[d->count+i], d->rr_len[d->count+i],
+			&sname, &slen);
+		if(!sname || !slen)
+			return 0; /* malformed */
+		if(!dname_subdomain_c(dname, sname))
+			return 0; /* not a subdomain */
+	}
+	return 1;
+}
+
 void rrset_cache_update_wildcard(struct rrset_cache* rrset_cache, 
 	struct ub_packed_rrset_key* rrset, uint8_t* ce, size_t ce_len,
 	struct alloc_cache* alloc, time_t timenow)
 {
 	struct rrset_ref ref;
 	uint8_t wc_dname[LDNS_MAX_DOMAINLEN+3];
+
+	/* See if the RRSIG signer name allows this wildcard,
+	 * the new rrset should fall within the zone of the RRSIG signer(s). */
+	if(!dname_subdomain_rrsig_signers(ce, rrset)) {
+		verbose(VERB_ALGO, "wildcard canonical parent outside signer authority");
+		return;
+	}
+
 	rrset = packed_rrset_copy_alloc(rrset, alloc, timenow);
 	if(!rrset) {
 		log_err("malloc failure in rrset_cache_update_wildcard");

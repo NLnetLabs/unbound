@@ -1043,6 +1043,10 @@ validate_positive_response(struct module_env* env, struct val_env* ve,
 	uint8_t* wc = NULL;
 	size_t wl;
 	int wc_cached = 0;
+	int wc_to_cache = 0;
+	uint8_t* cache_wc = NULL;
+	size_t cache_wl = 0;
+	struct ub_packed_rrset_key* cache_s = NULL;
 	int wc_NSEC_ok = 0;
 	/* This is used to update the RRset cache, with the combination
 	 * of the dname expansion and this wildcard, for security status. */
@@ -1071,8 +1075,11 @@ validate_positive_response(struct module_env* env, struct val_env* ve,
 			return;
 		}
 		if(wc && !wc_cached && env->cfg->aggressive_nsec) {
-			rrset_cache_update_wildcard(env->rrset_cache, s, wc, wl,
-				env->alloc, *env->now);
+			/* Postpone cache adjust until proof has succeeded. */
+			wc_to_cache = 1;
+			cache_wc = wc;
+			cache_wl = wl;
+			cache_s = s;
 			wc_cached = 1;
 		}
 		if(wc) wc_rrset = s;
@@ -1136,6 +1143,10 @@ validate_positive_response(struct module_env* env, struct val_env* ve,
 			((struct packed_rrset_data*)wc_rrset->
 			entry.data)->security = sec_status_bogus;
 		return;
+	}
+	if(wc_to_cache) {
+		rrset_cache_update_wildcard(env->rrset_cache, cache_s,
+			cache_wc, cache_wl, env->alloc, *env->now);
 	}
 
 	verbose(VERB_ALGO, "Successfully validated positive response");
