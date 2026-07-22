@@ -2568,9 +2568,10 @@ mesh_serve_expired_callback(void* arg)
 		log_dns_msg("Serve expired lookup", &qstate->qinfo, msg->rep);
 
 	for(r = mstate->reply_list; r; r = r->next) {
-		struct timeval old;
-		timeval_subtract(&old, mstate->s.env->now_tv, &r->start_time);
-		if(mstate->s.env->cfg->discard_timeout != 0 &&
+		if(mesh_is_udp(r)) {
+		    struct timeval old;
+		    timeval_subtract(&old, mstate->s.env->now_tv, &r->start_time);
+		    if(mstate->s.env->cfg->discard_timeout != 0 &&
 			((int)old.tv_sec)*1000+((int)old.tv_usec)/1000 >
 			mstate->s.env->cfg->discard_timeout) {
 			/* Drop the reply, it is too old */
@@ -2590,8 +2591,11 @@ mesh_serve_expired_callback(void* arg)
 				doq_stream_remove_mesh_state(r->query_reply.doq_stream);
 			comm_point_drop_reply(&r->query_reply);
 			mstate->reply_list = reply_list;
+			log_assert(mstate->s.env->mesh->num_reply_addrs > 0);
+			mstate->s.env->mesh->num_reply_addrs--;
 			mstate->s.env->mesh->num_queries_discard_timeout++;
 			continue;
+		    }
 		}
 
 		i++;
