@@ -738,4 +738,8 @@ void mesh_respond_serve_expired(struct mesh_state* mstate);
 void mesh_remove_callback(struct mesh_area* mesh, struct query_info* qinfo,
 	uint16_t qflags, mesh_cb_func_type cb, void* cb_arg);
 
+/** Copy the client info to the query region. */
+struct respip_client_info* mesh_copy_client_info(struct regional* region,
+	struct respip_client_info* cinfo);
+
 #endif /* SERVICES_MESH_H */

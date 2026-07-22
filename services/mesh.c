@@ -933,8 +933,7 @@ cfg_region_strlist_copy(struct regional* region, struct config_strlist* list)
 	return result;
 }
 
-/** Copy the client info to the query region. */
-static struct respip_client_info*
+struct respip_client_info*
 mesh_copy_client_info(struct regional* region, struct respip_client_info* cinfo)
 {
 	size_t i;
@@ -977,6 +976,11 @@ mesh_copy_client_info(struct regional* region, struct respip_client_info* cinfo)
 		client_info->view = NULL;
 		client_info->view_name = regional_strdup(region,
 			cinfo->view->name);
+		if(!client_info->view_name)
+			return NULL;
+	} else if(cinfo->view_name) {
+		client_info->view_name = regional_strdup(region,
+			cinfo->view_name);
 		if(!client_info->view_name)
 			return NULL;
 	}
