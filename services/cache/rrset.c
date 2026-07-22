@@ -126,7 +126,8 @@ rrset_cache_touch(struct rrset_cache* r, struct ub_packed_rrset_key* key,
 
 /** see if rrset needs to be updated in the cache */
 static int
-need_to_update_rrset(void* nd, void* cd, time_t timenow, int equal, int ns)
+need_to_update_rrset(void* nd, void* cd, time_t timenow, int equal, int ns,
+	int a_aaaa)
 {
 	struct packed_rrset_data* newd = (struct packed_rrset_data*)nd;
 	struct packed_rrset_data* cached = (struct packed_rrset_data*)cd;
@@ -151,9 +152,13 @@ need_to_update_rrset(void* nd, void* cd, time_t timenow, int equal, int ns)
 			return 0;
 		/* ghost-domain: never let an NS overwrite extend lifetime
 		 * past the entry it replaces, regardless of trust. */
-		if(ns && !TTL_IS_EXPIRED(cached->ttl, timenow) &&
+		/* Also for A/AAAA and it is glue. */
+		if((ns ||
+			(a_aaaa && cached->trust==rrset_trust_add_noAA))
+			&& !TTL_IS_EXPIRED(cached->ttl, timenow) &&
 			newd->ttl > cached->ttl) {
 			size_t i;
+			if(a_aaaa) newd->trust=rrset_trust_add_noAA;
 			newd->ttl = cached->ttl;
 			for(i=0; i<(newd->count+newd->rrsig_count); i++)
 				if(newd->rr_ttl[i] > newd->ttl)
@@ -223,7 +228,8 @@ rrset_cache_update(struct rrset_cache* r, struct rrset_ref* ref,
 		equal = rrsetdata_equal((struct packed_rrset_data*)k->entry.
 			data, (struct packed_rrset_data*)e->data);
 		if(!need_to_update_rrset(k->entry.data, e->data, timenow,
-			equal, (rrset_type==LDNS_RR_TYPE_NS))) {
+			equal, (rrset_type==LDNS_RR_TYPE_NS),
+			(rrset_type==LDNS_RR_TYPE_A || rrset_type==LDNS_RR_TYPE_AAAA))) {
 			/* cache is superior, return that value */
 			lock_rw_unlock(&e->lock);
 			ub_packed_rrset_parsedelete(k, alloc);
