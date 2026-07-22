@@ -2470,8 +2470,7 @@ void mesh_state_remove_reply(struct mesh_area* mesh, struct mesh_state* m,
 	while(n) {
 		if(n->query_reply.c == cp
 			&& (!h2_stream || n->h2_stream == h2_stream)
-			&& (!doq_stream || n->query_reply.doq_stream == doq_stre
-am)) {
+			&& (!doq_stream || n->query_reply.doq_stream == doq_stream)) {
 			/* unlink it */
 			if(prev) prev->next = n->next;
 			else m->reply_list = n->next;
