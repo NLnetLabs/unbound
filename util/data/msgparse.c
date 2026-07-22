@@ -687,6 +687,9 @@ calc_size(sldns_buffer* pkt, uint16_t type, struct rr_parse* rr)
 			}
 			rdf++;
 		}
+		/* rdata ended before all _dname_count names were seen */
+		if(count != 0)
+			return 0; /* the rdata is too short. */
 	}
 	/* remaining rdata */
 	rr->size += pkt_len;
