@@ -42,7 +42,6 @@
 #ifdef HAVE_SYS_TYPES_H
 #  include <sys/types.h>
 #endif
-#include <sys/time.h>
 #include <limits.h>
 #ifdef USE_TCP_FASTOPEN
 #include <netinet/tcp.h>
@@ -3399,14 +3398,13 @@ doq_table_delete(struct doq_table* table)
 }
 
 struct doq_timer*
-doq_timer_find_time(struct doq_table* table, struct timeval* tv)
+doq_timer_find_time(struct doq_table* table, ngtcp2_tstamp ts)
 {
 	struct doq_timer key;
 	struct rbnode_type* node;
 	log_assert(table != NULL);
 	memset(&key, 0, sizeof(key));
-	key.time.tv_sec = tv->tv_sec;
-	key.time.tv_usec = tv->tv_usec;
+	key.time_mono = ts;
 	node = rbtree_search(table->timer_tree, &key);
 	if(node)
 		return (struct doq_timer*)node->key;
@@ -3454,7 +3452,7 @@ doq_timer_list_remove(struct doq_table* table, struct doq_timer* timer)
 	if(!timer->timer_in_list)
 		return;
 	/* The item in the rbtree has the list start and end. */
-	rb_timer = doq_timer_find_time(table, &timer->time);
+	rb_timer = doq_timer_find_time(table, timer->time_mono);
 	if(rb_timer) {
 		if(timer->setlist_prev)
 			timer->setlist_prev->setlist_next = timer->setlist_next;
@@ -3500,7 +3498,8 @@ doq_timer_unset(struct doq_table* table, struct doq_timer* timer)
 }
 
 void doq_timer_set(struct doq_table* table, struct doq_timer* timer,
-	struct doq_server_socket* worker_doq_socket, struct timeval* tv)
+	struct doq_server_socket* worker_doq_socket, struct timeval* tv,
+	ngtcp2_tstamp ts)
 {
 	struct doq_timer* rb_timer;
 	if(verbosity >= VERB_ALGO && timer->conn) {
@@ -3514,14 +3513,14 @@ void doq_timer_set(struct doq_table* table, struct doq_timer* timer,
 			(int)rel.tv_sec, (int)rel.tv_usec);
 	}
 	if(timer->timer_in_tree || timer->timer_in_list) {
-		if(timer->time.tv_sec == tv->tv_sec &&
-			timer->time.tv_usec == tv->tv_usec)
+		if(timer->time_mono == ts)
 			return; /* already set on that time */
 		doq_timer_unset(table, timer);
 	}
-	timer->time.tv_sec = tv->tv_sec;
-	timer->time.tv_usec = tv->tv_usec;
-	rb_timer = doq_timer_find_time(table, tv);
+	timer->time_real.tv_sec = tv->tv_sec;
+	timer->time_real.tv_usec = tv->tv_usec;
+	timer->time_mono = ts;
+	rb_timer = doq_timer_find_time(table, ts);
 	if(rb_timer) {
 		/* There is a timeout already with this value. Timer is
 		 * added to the setlist. */
@@ -3700,13 +3699,9 @@ int doq_timer_cmp(const void* key1, const void* key2)
 {
 	struct doq_timer* e = (struct doq_timer*)key1;
 	struct doq_timer* f = (struct doq_timer*)key2;
-	if(e->time.tv_sec < f->time.tv_sec)
+	if(e->time_mono < f->time_mono)
 		return -1;
-	if(e->time.tv_sec > f->time.tv_sec)
-		return 1;
-	if(e->time.tv_usec < f->time.tv_usec)
-		return -1;
-	if(e->time.tv_usec > f->time.tv_usec)
+	if(e->time_mono > f->time_mono)
 		return 1;
 	return 0;
 }
@@ -4254,12 +4249,11 @@ doq_submit_new_token(struct doq_conn* conn)
 	ngtcp2_ssize tokenlen;
 	int ret;
 	const ngtcp2_path* path = ngtcp2_conn_get_path(conn->conn);
-	ngtcp2_tstamp ts = doq_get_timestamp_nanosec();
 
 	tokenlen = ngtcp2_crypto_generate_regular_token(token,
 		conn->doq_socket->static_secret,
 		conn->doq_socket->static_secret_len, path->remote.addr,
-		path->remote.addrlen, ts);
+		path->remote.addrlen, doq_get_timestamp_nanosec());
 	if(tokenlen < 0) {
 		log_err("doq ngtcp2_crypto_generate_regular_token failed");
 		return 1;
@@ -5101,23 +5095,30 @@ doq_conn_clear_conids(struct doq_conn* conn)
 
 ngtcp2_tstamp doq_get_timestamp_nanosec(void)
 {
-#ifdef CLOCK_REALTIME
 	struct timespec tp;
 	memset(&tp, 0, sizeof(tp));
-	/* Get a nanosecond time, that can be compared with the event base. */
-	if(clock_gettime(CLOCK_REALTIME, &tp) == -1) {
-		log_err("clock_gettime failed: %s", strerror(errno));
+#ifdef CLOCK_BOOTTIME
+	if(clock_gettime(CLOCK_BOOTTIME, &tp) == -1) {
+#endif
+		if(clock_gettime(CLOCK_MONOTONIC, &tp) == -1) {
+			log_err("clock_gettime failed: %s", strerror(errno));
+		}
+#ifdef CLOCK_BOOTTIME
 	}
+#endif
 	return ((uint64_t)tp.tv_sec)*((uint64_t)1000000000) +
 		((uint64_t)tp.tv_nsec);
-#else
+}
+
+static struct timeval doq_get_timevalue(void)
+{
 	struct timeval tv;
+	memset(&tv, 0, sizeof(tv));
 	if(gettimeofday(&tv, NULL) < 0) {
 		log_err("gettimeofday failed: %s", strerror(errno));
+		memset(&tv, 0, sizeof(tv));
 	}
-	return ((uint64_t)tv.tv_sec)*((uint64_t)1000000000) +
-		((uint64_t)tv.tv_usec)*((uint64_t)1000);
-#endif /* CLOCK_REALTIME */
+	return tv;
 }
 
 /** doq start the closing period for the connection. */
@@ -5240,18 +5241,17 @@ doq_conn_recv(struct comm_point* c, struct doq_pkt_addr* paddr,
 	int* err_drop)
 {
 	int ret;
-	ngtcp2_tstamp ts;
 	struct ngtcp2_path path;
 	memset(&path, 0, sizeof(path));
 	path.remote.addr = (struct sockaddr*)&paddr->addr;
 	path.remote.addrlen = paddr->addrlen;
 	path.local.addr = (struct sockaddr*)&paddr->localaddr;
 	path.local.addrlen = paddr->localaddrlen;
-	ts = doq_get_timestamp_nanosec();
 
 	ret = ngtcp2_conn_read_pkt(conn->conn, &path, pi,
 		sldns_buffer_begin(c->doq_socket->pkt_buf),
-		sldns_buffer_limit(c->doq_socket->pkt_buf), ts);
+		sldns_buffer_limit(c->doq_socket->pkt_buf),
+		doq_get_timestamp_nanosec());
 	if(ret != 0) {
 		if(err_retry)
 			*err_retry = 0;
@@ -5339,7 +5339,6 @@ doq_conn_write_streams(struct comm_point* c, struct doq_conn* conn,
 {
 	struct doq_stream* stream = conn->stream_write_first;
 	ngtcp2_path_storage ps;
-	ngtcp2_tstamp ts = doq_get_timestamp_nanosec();
 	size_t num_packets = 0, max_packets = 65535;
 	ngtcp2_path_storage_zero(&ps);
 
@@ -5392,7 +5391,8 @@ doq_conn_write_streams(struct comm_point* c, struct doq_conn* conn,
 		ret = ngtcp2_conn_writev_stream(conn->conn, &ps.path, &pi,
 			sldns_buffer_begin(c->doq_socket->pkt_buf),
 			sldns_buffer_remaining(c->doq_socket->pkt_buf),
-			&ndatalen, flags, stream_id, datav, datav_count, ts);
+			&ndatalen, flags, stream_id, datav, datav_count,
+			doq_get_timestamp_nanosec());
 		if(ret < 0) {
 			if(ret == NGTCP2_ERR_WRITE_MORE) {
 				verbose(VERB_ALGO, "doq: write more, ndatalen %d", (int)ndatalen);
@@ -5464,7 +5464,8 @@ doq_conn_write_streams(struct comm_point* c, struct doq_conn* conn,
 		if(ret == 0) {
 			/* congestion limited */
 			doq_conn_write_disable(conn);
-			ngtcp2_conn_update_pkt_tx_time(conn->conn, ts);
+			ngtcp2_conn_update_pkt_tx_time(conn->conn,
+				doq_get_timestamp_nanosec());
 			return 1;
 		}
 		sldns_buffer_set_position(c->doq_socket->pkt_buf, ret);
@@ -5478,7 +5479,7 @@ doq_conn_write_streams(struct comm_point* c, struct doq_conn* conn,
 		if(stream)
 			stream = stream->write_next;
 	}
-	ngtcp2_conn_update_pkt_tx_time(conn->conn, ts);
+	ngtcp2_conn_update_pkt_tx_time(conn->conn, doq_get_timestamp_nanosec());
 	return 1;
 }
 
@@ -5555,32 +5556,35 @@ doq_table_pop_first(struct doq_table* table)
 }
 
 int
-doq_conn_check_timer(struct doq_conn* conn, struct timeval* tv)
+doq_conn_check_timer(struct doq_conn* conn, struct timeval* tv, ngtcp2_tstamp* ts)
 {
-	ngtcp2_tstamp expiry = ngtcp2_conn_get_expiry(conn->conn);
-	ngtcp2_tstamp now = doq_get_timestamp_nanosec();
+	ngtcp2_tstamp doq_expiry = ngtcp2_conn_get_expiry(conn->conn);
+	ngtcp2_tstamp doq_now = doq_get_timestamp_nanosec();
 	ngtcp2_tstamp t;
+	struct timeval now = doq_get_timevalue();
 
-	if(expiry <= now) {
+	if(doq_expiry <= doq_now || doq_expiry == UINT64_MAX) {
+		/* UINT64_MAX means there is no next expiry. */
 		/* The timer has already expired, add with zero timeout.
 		 * This should call the callback straight away. Calling it
 		 * from the event callbacks is cleaner than calling it here,
 		 * because then it is always called with the same locks and
 		 * so on. This routine only has the conn.lock. */
-		t = now;
+		t = doq_now;
+		memcpy(tv, &now, sizeof(*tv));
 	} else {
-		t = expiry;
+		t = doq_expiry;
+		memset(tv, 0, sizeof(*tv));
+		tv->tv_sec = (doq_expiry - doq_now) / NGTCP2_SECONDS;
+		tv->tv_usec = ((doq_expiry - doq_now) / NGTCP2_MICROSECONDS)%1000000;
+		timeval_add(tv, &now);
 	}
 
-	/* convert to timeval */
-	memset(tv, 0, sizeof(*tv));
-	tv->tv_sec = t / NGTCP2_SECONDS;
-	tv->tv_usec = (t / NGTCP2_MICROSECONDS)%1000000;
+	*ts = t;
 
 	/* If we already have a timer, is it the right value? */
 	if(conn->timer.timer_in_tree || conn->timer.timer_in_list) {
-		if(conn->timer.time.tv_sec == tv->tv_sec &&
-			conn->timer.time.tv_usec == tv->tv_usec)
+		if(conn->timer.time_mono == *ts)
 			return 0;
 	}
 	return 1;
@@ -5601,13 +5605,12 @@ doq_conn_log_line(struct doq_conn* conn, char* s)
 int
 doq_conn_handle_timeout(struct doq_conn* conn)
 {
-	ngtcp2_tstamp now = doq_get_timestamp_nanosec();
 	int rv;
 
 	if(verbosity >= VERB_ALGO)
 		doq_conn_log_line(conn, "timeout");
 
-	rv = ngtcp2_conn_handle_expiry(conn->conn, now);
+	rv = ngtcp2_conn_handle_expiry(conn->conn, doq_get_timestamp_nanosec());
 	if(rv != 0) {
 		verbose(VERB_ALGO, "ngtcp2_conn_handle_expiry failed: %s",
 			ngtcp2_strerror(rv));

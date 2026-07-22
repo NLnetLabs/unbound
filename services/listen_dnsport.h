@@ -538,8 +538,11 @@ void doq_table_delete(struct doq_table* table);
 struct doq_timer {
 	/** The rbnode in the tree sorted by timeout value. Key this struct. */
 	struct rbnode_type node;
+	/** The timeout value. Monotonic value used with ngtcp2.
+	 *  This time value is used for the tree operations. */
+	ngtcp2_tstamp time_mono;
 	/** The timeout value. Absolute time value. */
-	struct timeval time;
+	struct timeval time_real;
 	/** If the timer is in the time tree, with the node. */
 	int timer_in_tree;
 	/** If there are more timers with the exact same timeout value,
@@ -813,10 +816,12 @@ struct doq_conn* doq_table_pop_first(struct doq_table* table);
  * doq check if the timer for the conn needs to be changed.
  * @param conn: connection, caller must hold lock on it.
  * @param tv: time value, absolute time, returned.
+ * @param ts: time stamp, absolute time, returned.
  * @return true if timer needs to be set to tv, false if no change is needed
  * 	to the timer. The timer is already set to the right time in that case.
  */
-int doq_conn_check_timer(struct doq_conn* conn, struct timeval* tv);
+int doq_conn_check_timer(struct doq_conn* conn, struct timeval* tv,
+	ngtcp2_tstamp* ts);
 
 /** doq remove timer from tree */
 void doq_timer_tree_remove(struct doq_table* table, struct doq_timer* timer);
@@ -829,11 +834,12 @@ void doq_timer_unset(struct doq_table* table, struct doq_timer* timer);
 
 /** doq set the timer and add it. */
 void doq_timer_set(struct doq_table* table, struct doq_timer* timer,
-	struct doq_server_socket* worker_doq_socket, struct timeval* tv);
+	struct doq_server_socket* worker_doq_socket, struct timeval* tv,
+	ngtcp2_tstamp ts);
 
 /** doq find a timeout in the timer tree */
 struct doq_timer* doq_timer_find_time(struct doq_table* table,
-	struct timeval* tv);
+	ngtcp2_tstamp ts);
 
 /** doq handle timeout for a connection. Pass conn locked. Returns false for
  * deletion. */
@@ -851,6 +857,9 @@ int doq_table_quic_size_available(struct doq_table* table,
 
 /** doq get the quic size value */
 size_t doq_table_quic_size_get(struct doq_table* table);
+
+/** get a timestamp in nanoseconds */
+ngtcp2_tstamp doq_get_timestamp_nanosec(void);
 #endif /* HAVE_NGTCP2 */
 
 char* set_ip_dscp(int socket, int addrfamily, int ds);
@@ -866,8 +875,4 @@ void doq_client_event_cb(int fd, short event, void* arg);
 /** timer event callback for testcode/doqclient */
 void doq_client_timer_cb(int fd, short event, void* arg);
 
-#ifdef HAVE_NGTCP2
-/** get a timestamp in nanoseconds */
-ngtcp2_tstamp doq_get_timestamp_nanosec(void);
-#endif
 #endif /* LISTEN_DNSPORT_H */

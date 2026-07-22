@@ -1736,6 +1736,22 @@ if test x_$withval = x_yes -o x_$withval != x_no; then
 	AC_MSG_RESULT(no)
     ])
 
+    AC_CHECK_DECL([CLOCK_MONOTONIC]
+        , []
+        , [AC_MSG_ERROR([ngtcp2 for QUIC needs at least CLOCK_MONOTONIC on the system])]
+        , [AC_INCLUDES_DEFAULT
+#ifdef TIME_WITH_SYS_TIME
+# include <sys/time.h>
+# include <time.h>
+#else
+# ifdef HAVE_SYS_TIME_H
+#  include <sys/time.h>
+# else
+#  include <time.h>
+# endif
+#endif
+        ])
+
 fi
 
 # set static linking for uninstalled libraries if requested
