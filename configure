@@ -22923,6 +22923,29 @@ printf "%s\n" "no" >&6; }
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
 
+    ac_fn_check_decl "$LINENO" "CLOCK_MONOTONIC
+        " "ac_cv_have_decl_CLOCK_MONOTONIC_________" "$ac_includes_default
+#ifdef TIME_WITH_SYS_TIME
+# include <sys/time.h>
+# include <time.h>
+#else
+# ifdef HAVE_SYS_TIME_H
+#  include <sys/time.h>
+# else
+#  include <time.h>
+# endif
+#endif
+
+" "$ac_c_undeclared_builtin_options" "CFLAGS"
+if test "x$ac_cv_have_decl_CLOCK_MONOTONIC_________" = xyes
+then :
+
+
+else $as_nop
+  as_fn_error $? "ngtcp2 for QUIC needs at least CLOCK_MONOTONIC on the system" "$LINENO" 5
+
+fi
+
 fi
 
 # set static linking for uninstalled libraries if requested
