@@ -3964,7 +3964,8 @@ doq_stream_close(struct doq_conn* conn, struct doq_stream* stream,
 
 /** doq stream pick up answer data from buffer */
 static int
-doq_stream_pickup_answer(struct doq_stream* stream, struct sldns_buffer* buf)
+doq_stream_pickup_answer(struct doq_conn* conn, struct doq_stream* stream,
+	struct sldns_buffer* buf)
 {
 	stream->is_answer_available = 1;
 	if(stream->out) {
@@ -3974,6 +3975,11 @@ doq_stream_pickup_answer(struct doq_stream* stream, struct sldns_buffer* buf)
 	}
 	stream->nwrite = 0;
 	stream->outlen = sldns_buffer_limit(buf);
+	if(!doq_table_quic_size_available(conn->doq_socket->table,
+		conn->doq_socket->cfg, stream->outlen)) {
+		verbose(VERB_ALGO, "doq stream: no space for reply length");
+		return 0;
+	}
 	/* For quic the output bytes have to stay allocated and available,
 	 * for potential resends, until the remote end has acknowledged them.
 	 * This includes the tcplen start uint16_t, in outlen_wire. */
@@ -4000,7 +4006,7 @@ doq_stream_send_reply(struct doq_conn* conn, struct doq_stream* stream,
 	if(stream->out)
 		doq_table_quic_size_subtract(conn->doq_socket->table,
 			stream->outlen);
-	if(!doq_stream_pickup_answer(stream, buf))
+	if(!doq_stream_pickup_answer(conn, stream, buf))
 		return 0;
 	doq_table_quic_size_add(conn->doq_socket->table, stream->outlen);
 	doq_stream_on_write_list(conn, stream);
@@ -4011,11 +4017,17 @@ doq_stream_send_reply(struct doq_conn* conn, struct doq_stream* stream,
 /** doq stream data length has completed, allocations can be done. False on
  * allocation failure. */
 static int
-doq_stream_datalen_complete(struct doq_stream* stream, struct doq_table* table)
+doq_stream_datalen_complete(struct doq_conn* conn, struct doq_stream* stream,
+	struct doq_table* table)
 {
 	if(stream->inlen > 1024*1024) {
 		log_err("doq stream in length too large %d",
 			(int)stream->inlen);
+		return 0;
+	}
+	if(!doq_table_quic_size_available(table, conn->doq_socket->cfg,
+		stream->inlen)) {
+		verbose(VERB_ALGO, "doq stream: no space for query length");
 		return 0;
 	}
 	stream->in = calloc(1, stream->inlen);
@@ -4078,8 +4090,9 @@ doq_stream_data_complete(struct doq_conn* conn, struct doq_stream* stream)
 
 /** doq receive data for a stream, more bytes of the incoming data */
 static int
-doq_stream_recv_data(struct doq_stream* stream, const uint8_t* data,
-	size_t datalen, int* recv_done, struct doq_table* table)
+doq_stream_recv_data(struct doq_conn* conn, struct doq_stream* stream,
+	const uint8_t* data, size_t datalen, int* recv_done,
+	struct doq_table* table)
 {
 	int got_data = 0;
 	/* read the tcplength uint16_t at the start */
@@ -4100,7 +4113,7 @@ doq_stream_recv_data(struct doq_stream* stream, const uint8_t* data,
 		if(stream->nread == 2) {
 			/* the initial length value is completed */
 			stream->inlen = ntohs(tcplen);
-			if(!doq_stream_datalen_complete(stream, table))
+			if(!doq_stream_datalen_complete(conn, stream, table))
 				return 0;
 		} else {
 			/* store for later */
@@ -4316,8 +4329,7 @@ doq_stream_open_cb(ngtcp2_conn* ATTR_UNUSED(conn), int64_t stream_id,
 		verbose(VERB_ALGO, "doq: stream with this id already exists");
 		return 0;
 	}
-	if(stream_id != 0 && stream_id != 4 && /* allow one stream on a new connection */
-		!doq_table_quic_size_available(doq_conn->doq_socket->table,
+	if(!doq_table_quic_size_available(doq_conn->doq_socket->table,
 		doq_conn->doq_socket->cfg, sizeof(*stream)
 		+ 100 /* estimated query in */
 		+ 512 /* estimated response out */
@@ -4375,8 +4387,8 @@ doq_recv_stream_data_cb(ngtcp2_conn* ATTR_UNUSED(conn), uint32_t flags,
 		return 0;
 	}
 	if(datalen != 0) {
-		if(!doq_stream_recv_data(stream, data, datalen, &recv_done,
-			doq_conn->doq_socket->table))
+		if(!doq_stream_recv_data(doq_conn, stream, data, datalen,
+			&recv_done, doq_conn->doq_socket->table))
 			return NGTCP2_ERR_CALLBACK_FAILURE;
 	}
 	if((flags&NGTCP2_STREAM_DATA_FLAG_FIN)!=0) {
