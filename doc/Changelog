@@ -96,6 +96,7 @@
 	- Unit test for CVE-2026-50248.
 	- Unit test for CVE-2026-55717.
 	- Unit test for CVE-2026-55973.
+	- Unit test for CVE-2026-56416.
 
 21 July 2026: Wouter
 	- Merge #1476 from petrvaganoff: ipsecmod: fix possible deref
