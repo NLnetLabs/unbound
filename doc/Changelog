@@ -88,6 +88,7 @@
 	- Set the repository to 1.25.3, it continues with the previous
 	  changes.
 	- Unit test for CVE-2026-42955.
+	- Unit test for CVE-2026-44687.
 
 21 July 2026: Wouter
 	- Merge #1476 from petrvaganoff: ipsecmod: fix possible deref
