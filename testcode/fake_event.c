@@ -2021,6 +2021,15 @@ void http2_stream_remove_mesh_state(struct http2_stream* ATTR_UNUSED(h2_stream))
 {
 }
 
+void doq_stream_add_meshstate(struct doq_stream* ATTR_UNUSED(stream),
+	struct mesh_area* ATTR_UNUSED(mesh), struct mesh_state* ATTR_UNUSED(m))
+{
+}
+
+void doq_stream_remove_mesh_state(struct doq_stream* ATTR_UNUSED(stream))
+{
+}
+
 void fast_reload_service_cb(int ATTR_UNUSED(fd), short ATTR_UNUSED(event),
 	void* ATTR_UNUSED(arg))
 {

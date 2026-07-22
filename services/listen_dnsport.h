@@ -61,6 +61,8 @@ struct config_file;
 struct addrinfo;
 struct sldns_buffer;
 struct tcl_list;
+struct mesh_area;
+struct mesh_state;
 
 /**
  * Listening for queries structure.
@@ -692,6 +694,11 @@ struct doq_stream {
 	uint8_t* out;
 	/** if the stream is on the write list */
 	uint8_t on_write_list;
+	/** The mesh area and mesh state, set when this stream's query was
+	 * dispatched into the mesh; used to detach the reply on stream close */
+	struct mesh_area* mesh;
+	/** the mesh state for the query, is nonNULL when there is one. */
+	struct mesh_state* mesh_state;
 	/** the prev and next on the write list, if on the list */
 	struct doq_stream* write_prev, *write_next;
 };
@@ -794,7 +801,16 @@ int doq_stream_close(struct doq_conn* conn, struct doq_stream* stream,
 /** send reply for a connection */
 int doq_stream_send_reply(struct doq_conn* conn, struct doq_stream* stream,
 	struct sldns_buffer* buf);
+#endif /* HAVE_NGTCP2 */
 
+/** add mesh state to doq stream */
+void doq_stream_add_meshstate(struct doq_stream* stream,
+	struct mesh_area* mesh, struct mesh_state* m);
+
+/** remove mesh state from doq stream */
+void doq_stream_remove_mesh_state(struct doq_stream* stream);
+
+#ifdef HAVE_NGTCP2
 /** the connection has write interest, wants to write packets */
 void doq_conn_write_enable(struct doq_conn* conn);
 

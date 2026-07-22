@@ -2166,7 +2166,8 @@ void tcp_req_info_clear(struct tcp_req_info* req)
 	open = req->open_req_list;
 	while(open) {
 		nopen = open->next;
-		mesh_state_remove_reply(open->mesh, open->mesh_state, req->cp);
+		mesh_state_remove_reply(open->mesh, open->mesh_state, req->cp,
+			NULL);
 		free(open);
 		open = nopen;
 	}
@@ -3596,15 +3597,29 @@ doq_conn_create(struct comm_point* c, struct doq_pkt_addr* paddr,
 	return conn;
 }
 
+/** The arguments for doq stream tree del. */
+struct doq_stream_tree_del_args {
+	/** The doq table. */
+	struct doq_table* table;
+	/** The doq connection for the stream. */
+	struct doq_conn* conn;
+};
+
 /** delete stream tree node */
 static void
 stream_tree_del(rbnode_type* node, void* arg)
 {
-	struct doq_table* table = (struct doq_table*)arg;
+	struct doq_stream_tree_del_args* args = (struct doq_stream_tree_del_args*)arg;
+	struct doq_table* table = args->table;
 	struct doq_stream* stream;
 	if(!node)
 		return;
 	stream = (struct doq_stream*)node;
+	if(stream->mesh_state) {
+		mesh_state_remove_reply(stream->mesh, stream->mesh_state,
+			args->conn->doq_socket->cp, stream);
+		stream->mesh_state = NULL;
+	}
 	if(stream->in)
 		doq_table_quic_size_subtract(table, stream->inlen);
 	if(stream->out)
@@ -3626,7 +3641,11 @@ doq_conn_delete(struct doq_conn* conn, struct doq_table* table)
 	 * because the ngtcp2 conn is deleted. */
 	SSL_set_app_data(conn->ssl, NULL);
 	if(conn->stream_tree.count != 0) {
-		traverse_postorder(&conn->stream_tree, stream_tree_del, table);
+		struct doq_stream_tree_del_args args;
+		memset(&args, 0, sizeof(args));
+		args.table = table;
+		args.conn = conn;
+		traverse_postorder(&conn->stream_tree, stream_tree_del, &args);
 	}
 	free(conn->key.dcid);
 	SSL_free(conn->ssl);
@@ -3935,6 +3954,11 @@ doq_stream_close(struct doq_conn* conn, struct doq_stream* stream,
 	if(stream->is_closed)
 		return 1;
 	stream->is_closed = 1;
+	if(stream->mesh_state) {
+		mesh_state_remove_reply(stream->mesh, stream->mesh_state,
+			conn->doq_socket->cp, stream);
+		stream->mesh_state = NULL;
+	}
 	doq_stream_off_write_list(conn, stream);
 	if(send_shutdown) {
 		verbose(VERB_ALGO, "doq: shutdown stream_id %d with app_error_code %d",
@@ -4013,7 +4037,33 @@ doq_stream_send_reply(struct doq_conn* conn, struct doq_stream* stream,
 	doq_conn_write_enable(conn);
 	return 1;
 }
+#endif /* HAVE_NGTCP2 */
 
+void
+doq_stream_add_meshstate(struct doq_stream* stream,
+	struct mesh_area* mesh, struct mesh_state* m)
+{
+#ifdef HAVE_NGTCP2
+	stream->mesh = mesh;
+	stream->mesh_state = m;
+#else
+	(void)stream; (void)mesh; (void)m;
+#endif
+}
+
+void
+doq_stream_remove_mesh_state(struct doq_stream* stream)
+{
+#ifdef HAVE_NGTCP2
+	if(!stream)
+		return;
+	stream->mesh_state = NULL;
+#else
+	(void)stream;
+#endif
+}
+
+#ifdef HAVE_NGTCP2
 /** doq stream data length has completed, allocations can be done. False on
  * allocation failure. */
 static int
@@ -4074,6 +4124,7 @@ doq_stream_data_complete(struct doq_conn* conn, struct doq_stream* stream)
 		return 0;
 	}
 	c->repinfo.doq_streamid = stream->stream_id;
+	c->repinfo.doq_stream = stream;
 	conn->doq_socket->current_conn = conn;
 	fptr_ok(fptr_whitelist_comm_point(c->callback));
 	if( (*c->callback)(c, c->cb_arg, NETEVENT_NOERROR, &c->repinfo)) {

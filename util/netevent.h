@@ -187,6 +187,8 @@ struct comm_reply {
 	/** port number for doq */
 	int doq_srcport;
 #endif /* HAVE_NGTCP2 */
+	/** The doq stream to register mesh states to. */
+	struct doq_stream* doq_stream;
 };
 
 /**
