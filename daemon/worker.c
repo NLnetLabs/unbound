@@ -2233,23 +2233,16 @@ void worker_probe_timer_cb(void* arg)
 }
 
 struct worker*
-worker_create(struct daemon* daemon, int id, int* ports, int n)
+worker_create(struct daemon* daemon, int id)
 {
 	unsigned int seed;
 	struct worker* worker = (struct worker*)calloc(1,
 		sizeof(struct worker));
 	if(!worker)
 		return NULL;
-	worker->numports = n;
-	worker->ports = (int*)memdup(ports, sizeof(int)*n);
-	if(!worker->ports) {
-		free(worker);
-		return NULL;
-	}
 	worker->daemon = daemon;
 	worker->thread_num = id;
 	if(!(worker->cmd = tube_create())) {
-		free(worker->ports);
 		free(worker);
 		return NULL;
 	}
@@ -2257,7 +2250,6 @@ worker_create(struct daemon* daemon, int id, int* ports, int n)
 	if(!(worker->rndstate = ub_initstate(daemon->rand))) {
 		log_err("could not init random numbers.");
 		tube_delete(worker->cmd);
-		free(worker->ports);
 		free(worker);
 		return NULL;
 	}
@@ -2356,14 +2348,14 @@ worker_init(struct worker* worker, struct config_file *cfg,
 		cfg->out_ifs, cfg->num_out_ifs, cfg->do_ip4, cfg->do_ip6,
 		cfg->do_tcp?cfg->outgoing_num_tcp:0, cfg->ip_dscp,
 		worker->daemon->env->infra_cache, worker->rndstate,
-		cfg->use_caps_bits_for_id, worker->ports, worker->numports,
+		cfg->use_caps_bits_for_id,
 		cfg->unwanted_threshold, cfg->outgoing_tcp_mss,
 		&worker_alloc_cleanup, worker,
 		cfg->do_udp || cfg->udp_upstream_without_downstream,
 		worker->daemon->connect_dot_sslctx, cfg->delay_close,
 		cfg->tls_use_sni, dtenv, cfg->udp_connect,
 		cfg->max_reuse_tcp_queries, cfg->tcp_reuse_timeout,
-		cfg->tcp_auth_query_timeout);
+		cfg->tcp_auth_query_timeout, worker->daemon->shared_ports);
 	if(!worker->back) {
 		log_err("could not create outgoing sockets");
 		worker_delete(worker);
@@ -2514,7 +2506,6 @@ worker_delete(struct worker* worker)
 	tube_delete(worker->cmd);
 	comm_timer_delete(worker->stat_timer);
 	comm_timer_delete(worker->env.probe_timer);
-	free(worker->ports);
 	if(worker->thread_num == 0) {
 #ifdef UB_ON_WINDOWS
 		wsvc_desetup_worker(worker);
