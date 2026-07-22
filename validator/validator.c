@@ -517,6 +517,14 @@ generate_request(struct module_qstate* qstate, int id, uint8_t* name,
 		/* add our blacklist to the query blacklist */
 		sock_list_merge(&(*newq)->blacklist, (*newq)->region,
 			vq->chain_blacklist);
+		/* start its global quota counter where this one is. */
+		if(qstate->global_quota_reached >
+			(*newq)->global_quota_reached) {
+			(*newq)->global_quota_started =
+				qstate->global_quota_reached;
+			(*newq)->global_quota_reached =
+				qstate->global_quota_reached;
+		}
 	}
 	qstate->ext_state[id] = module_wait_subquery;
 	return 1;
@@ -3575,6 +3583,11 @@ val_inform_super(struct module_qstate* qstate, int id,
 	if(!vq) {
 		verbose(VERB_ALGO, "super: has no validator state");
 		return;
+	}
+	/* Pick up the global quota limit from the subquery. */
+	if(qstate->global_quota_reached > qstate->global_quota_started) {
+		super->global_quota_reached += qstate->global_quota_reached -
+			qstate->global_quota_started;
 	}
 	if(vq->wait_prime_ta) {
 		vq->wait_prime_ta = 0;
