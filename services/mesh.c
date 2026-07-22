@@ -1654,9 +1654,9 @@ static void dns_error_reporting(struct module_qstate* qstate,
 	opt = edns_opt_list_find(qstate->edns_opts_back_in,
 		LDNS_EDNS_REPORT_CHANNEL);
 	if(!opt) return;
-	agent_domain_len = opt->opt_len;
 	agent_domain = opt->opt_data;
-	if(dname_valid(agent_domain, agent_domain_len) < 3) {
+	agent_domain_len = dname_valid(agent_domain, opt->opt_len);
+	if(agent_domain_len < 3) {
 		/* The agent domain needs to be a valid dname that is not the
 		 * root; from RFC9567. */
 		return;

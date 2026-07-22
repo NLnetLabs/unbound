@@ -277,6 +277,8 @@ find_closest_of_type(struct module_env* env, uint8_t* qname, size_t qnamelen,
 
 		/* snip off front label */
 		lablen = *qname;
+		if(lablen == 0)
+			break;
 		qname += lablen + 1;
 		qnamelen -= lablen + 1;
 	}
