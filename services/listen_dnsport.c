@@ -4508,6 +4508,29 @@ doq_stream_reset_cb(ngtcp2_conn* ATTR_UNUSED(conn), int64_t stream_id,
 	return 0;
 }
 
+/** ngtcp2 extend_max_stream_data function */
+int doq_extend_max_stream_data_cb(ngtcp2_conn* ATTR_UNUSED(conn),
+	int64_t stream_id, uint64_t max_data, void* user_data,
+	void* ATTR_UNUSED(stream_user_data))
+{
+	struct doq_conn* doq_conn = (struct doq_conn*)user_data;
+	struct doq_stream* stream;
+	verbose(VERB_ALGO, "doq extend_max_stream_data stream id %d "
+		"max_data %d ", (int)stream_id, (int)max_data);
+	if(max_data == 0)
+		return 0;
+	stream = doq_stream_find(doq_conn, stream_id);
+	if(!stream) {
+		verbose(VERB_ALGO, "doq: unknown stream %d", (int)stream_id);
+		return 0;
+	}
+	if(!stream->is_answer_available)
+		return 0;
+	doq_stream_on_write_list(doq_conn, stream);
+	doq_conn_write_enable(doq_conn);
+	return 0;
+}
+
 /** ngtcp2 acked_stream_data_offset callback function */
 static int
 doq_acked_stream_data_offset_cb(ngtcp2_conn* ATTR_UNUSED(conn),
@@ -4882,6 +4905,7 @@ doq_conn_setup(struct doq_conn* conn, uint8_t* scid, size_t scidlen,
 	callbacks.stream_open = doq_stream_open_cb;
 	callbacks.stream_close = doq_stream_close_cb;
 	callbacks.stream_reset = doq_stream_reset_cb;
+	callbacks.extend_max_stream_data = doq_extend_max_stream_data_cb;
 	callbacks.acked_stream_data_offset = doq_acked_stream_data_offset_cb;
 	callbacks.recv_stream_data = doq_recv_stream_data_cb;
 
@@ -5470,26 +5494,20 @@ doq_conn_write_streams(struct comm_point* c, struct doq_conn* conn,
 				continue;
 			} else if(ret == NGTCP2_ERR_STREAM_DATA_BLOCKED) {
 				verbose(VERB_ALGO, "doq: ngtcp2_conn_writev_stream returned NGTCP2_ERR_STREAM_DATA_BLOCKED");
-#ifdef HAVE_NGTCP2_CCERR_DEFAULT
-				ngtcp2_ccerr_set_application_error(
-					&conn->ccerr, -1, NULL, 0);
-#else
-				ngtcp2_connection_close_error_set_application_error(&conn->last_error, -1, NULL, 0);
-#endif
-				if(err_drop)
-					*err_drop = 0;
-				if(!doq_conn_close_error(c, conn)) {
-					if(err_drop)
-						*err_drop = 1;
+				if(stream) {
+					doq_stream_off_write_list(conn, stream);
+					stream = stream->write_next;
+					continue;
+				} else {
+					break;
 				}
-				return 0;
 			} else if(ret == NGTCP2_ERR_STREAM_SHUT_WR) {
 				verbose(VERB_ALGO, "doq: ngtcp2_conn_writev_stream returned NGTCP2_ERR_STREAM_SHUT_WR");
 #ifdef HAVE_NGTCP2_CCERR_DEFAULT
 				ngtcp2_ccerr_set_application_error(
-					&conn->ccerr, -1, NULL, 0);
+					&conn->ccerr, DOQ_APP_ERROR_CODE, NULL, 0);
 #else
-				ngtcp2_connection_close_error_set_application_error(&conn->last_error, -1, NULL, 0);
+				ngtcp2_connection_close_error_set_application_error(&conn->last_error, DOQ_APP_ERROR_CODE, NULL, 0);
 #endif
 				if(err_drop)
 					*err_drop = 0;

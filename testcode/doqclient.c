@@ -1519,9 +1519,9 @@ doq_client_send_pkt(struct doq_client_data* data, uint32_t ecn, uint8_t* buf,
 		}
 		log_err("doq sendmsg: %s", strerror(errno));
 #ifdef HAVE_NGTCP2_CCERR_DEFAULT
-		ngtcp2_ccerr_set_application_error(&data->ccerr, -1, NULL, 0);
+		ngtcp2_ccerr_set_application_error(&data->ccerr, 1, NULL, 0);
 #else
-		ngtcp2_connection_close_error_set_application_error(&data->last_error, -1, NULL, 0);
+		ngtcp2_connection_close_error_set_application_error(&data->last_error, 1, NULL, 0);
 #endif
 		return 0;
 	}
