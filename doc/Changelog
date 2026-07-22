@@ -1,3 +1,93 @@
+22 July 2026: Wouter
+	- Release tag for 1.25.2, with the security commits:
+	- Fix CVE-2026-14586, Assertion in libngtcp2 when under pressure
+	  in high concurrency DNS-over-QUIC environments. Thanks to Kunta
+	  Chu, Kaihua Wang, and Jianjun Chen from Tsinghua University,
+	  for the report.
+	- Fix CVE-2026-32665, Remote DNS-over-QUIC denial of
+	  service due to `quic-size` budget bypass. Thanks to N0zoM1z0
+	  (https://github.com/N0zoM1z0) for the report. In addition, thanks to
+	  Kunta Chu, Kaihua Wang, and Jianjun Chen from Tsinghua University,
+	  for also reporting this issue. In addition, thanks to Qifan Zhang,
+	  Palo Alto Networks, for also reporting this issue. In addition,
+	  thanks to Xuanchao Xie, for also reporting this issue.
+	- Fix CVE-2026-40691, Packet of death for DNSCrypt over TCP. Thanks
+	  to Qifan Zhang, Palo Alto Networks, for the report. In addition,
+	  thanks to Trung Nguyen (@everping) of CyStack, for also reporting
+	  this issue.
+	- Fix CVE-2026-41637, Degradation of resolution service from
+	  improperly accounted client-terminated DNS-over-QUIC queries. Thanks
+	  to Qifan Zhang, Palo Alto Networks, for the report.
+	- Fix CVE-2026-42955, Extra fix for CVE-2026-40622 to also clamp
+	  the TTL of A/AAAA records disallowing a one-time 'ghost domain'
+	  delegation renewal via glue records. Thanks to Qifan Zhang, Palo
+	  Alto Networks, for the report.
+	- Fix CVE-2026-44621, Libunbound applications configured with
+	  'unwanted-reply-threshold' could eventually be abruptly
+	  terminated. Thanks to Qifan Zhang, Palo Alto Networks, for the
+	  report.
+	- Fix CVE-2026-44687, Off-by-one error in 'harden-below-nxdomain'
+	  logic can shadow a stub/forward zone by a legitimate parent's
+	  NXDOMAIN. Thanks to Qifan Zhang, Palo Alto Networks, for the report.
+	- Fix CVE-2026-44690, Cross-zone wildcard cache poisoning via
+	  RRSIG.labels manipulation. Thanks to Qifan Zhang, Palo Alto
+	  Networks, for the report.
+	- Fix CVE-2026-46582, A wildcard replay, as another piece of data,
+	  triggers poisoning in the serve expired reply path. Thanks to
+	  Qifan Zhang, Palo Alto Networks, for the report.
+	- Fix CVE-2026-50045, 'max-global-quota' reset by DNSSEC validation
+	  restarts. Thanks to Kunjie Shang, University of Science and
+	  Technology of China, for the report.
+	- Fix CVE-2026-50046, Possible heap use-after-free in an error path
+	  when a DoT forwarded query is jostled out. Thanks to Qifan Zhang,
+	  Palo Alto Networks, for the report.
+	- Fix CVE-2026-50243, 'response-ip'/'rpz' can rewrite BOGUS answers
+	  instead of returning SERVFAIL. Thanks to Qifan Zhang, Palo Alto
+	  Networks, for the report.
+	- Fix CVE-2026-50248, BOGUS configured primary hostname accepted for
+	  XFR in auth/rpz zones. Thanks to Qifan Zhang, Palo Alto Networks,
+	  for the report.
+	- Fix CVE-2026-50251, Attacker supplied `0.0.0.0`/`::` glue triggers
+	  defensive full-cache flush. Thanks to Qifan Zhang, Palo Alto
+	  Networks, for the report.
+	- Fix CVE-2026-50252, Possible cache poisoning attack by mapping
+	  source port population per thread. Thanks to Inbal Schussheim and
+	  Amit Klein, Hebrew University, for the report.
+	- Fix CVE-2026-52863, Memory corruption could lead to crash and
+	  denial of service. Thanks to Qifan Zhang, Palo Alto Networks,
+	  for the report.
+	- Fix CVE-2026-54478, DNS Cookie bypass when combined with
+	  proxy-protocol use. Thanks to Qifan Zhang, Palo Alto Networks,
+	  for the report.
+	- Fix CVE-2026-55708, Privacy/configuration issue when adding local
+	  data in views through 'unbound-control'. Thanks to Qifan Zhang,
+	  Palo Alto Networks, for the report.
+	- Fix CVE-2026-55717, 'serve-expired-client-timeout' and 'response-ip'
+	  CNAME redirect could lead to a crash. Thanks to Qifan Zhang, Palo
+	  Alto Networks, for the report. In addition, thanks to Xin Wang,
+	  Jiapeng Li, and Jiajia Liu, Northwestern Polytechnical University,
+	  for also reporting this issue.
+	- Fix CVE-2026-55973, 'dns-error-reporting: yes' leads to stack buffer
+	  overflow. Thanks to Qifan Zhang, Palo Alto Networks, for the report.
+	- Fix CVE-2026-55990, Packet of death for a DNSCrypt misconfigured
+	  Unbound. Thanks to Qifan Zhang, Palo Alto Networks, for the report.
+	- Fix CVE-2026-55991, Remote DNS-over-QUIC (DoQ) flow-control
+	  assertion failure in libngtcp2. Thanks to Qifan Zhang, Palo Alto
+	  Networks, for the report. In addition, thanks to Xuanchao Xie,
+	  for also reporting this issue.
+	- Fix CVE-2026-56416, Possible heap buffer overflow when validator
+	  canonicalizes RDATA that contains domain name. Thanks to Qifan
+	  Zhang, Palo Alto Networks, for the report.
+	- Fix CVE-2026-56444, Degradation of resolution service when
+	  'discard-timeout' and 'serve-expired-client-timeout' are combined in
+	  unusual configuration. Thanks to Qifan Zhang, Palo Alto Networks,
+	  for the report. In addition, thanks to Xin Wang, Jiapeng Li,
+	  and Jiajia Liu, Northwestern Polytechnical University, for also
+	  reporting this issue. In addition, thanks to Haruki Oyama (Waseda
+	  University), for also reporting this issue.
+	- Set the repository to 1.25.3, it continues with the previous
+	  changes.
+
 21 July 2026: Wouter
 	- Merge #1476 from petrvaganoff: ipsecmod: fix possible deref
 	  on null after reply_find_answer_rrset().
