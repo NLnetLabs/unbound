@@ -1627,6 +1627,20 @@ dnskey_verify_rrset_sig(struct regional* region, sldns_buffer* buf,
 			*reason_bogus = LDNS_EDE_DNSSEC_BOGUS;
 		return sec_status_bogus; /* signer name offtree */
 	}
+	/* NSEC3, the owner name must be the <base32hash>.signername */
+	if(ntohs(rrset->rk.type) == LDNS_RR_TYPE_NSEC3 &&
+		rrset->rk.dname_len > 0) {
+		uint8_t* dnameless = rrset->rk.dname;
+		size_t dnamelesslen = rrset->rk.dname_len;
+		dname_remove_label(&dnameless, &dnamelesslen);
+		if(query_dname_compare(dnameless, signer) != 0) {
+			verbose(VERB_QUERY, "verify: NSEC3 owner name is not b32.signer name");
+			*reason = "NSEC3 owner name is not b32.signer name";
+			if(reason_bogus)
+				*reason_bogus = LDNS_EDE_DNSSEC_BOGUS;
+			return sec_status_bogus; /* NSEC3 owner not b32.signer */
+		}
+	}
 	sigblock = (unsigned char*)signer+signer_len;
 	if(siglen < 2+18+signer_len+1) {
 		verbose(VERB_QUERY, "verify: too short, no signature data");

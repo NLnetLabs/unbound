@@ -2,6 +2,10 @@
 	- Updated credits for Xuanchao Xie in 22 july changelog.
 	- Merge #1478 from petrvaganoff: pythonmod: add check return
 	  value after ftell().
+	- Fix that for NSEC3 proofs the NSEC3 zone, as the b32.name is
+	  checked to be the same as the signer name. Also RRSIGs are
+	  not considered valid when an NSEC3 is not b32.signerzone.
+	  Thanks to Qifan Zhang, Palo Alto Networks, for the report.
 
 22 July 2026: Wouter
 	- Release tag for 1.25.2, with the security commits:
