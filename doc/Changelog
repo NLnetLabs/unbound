@@ -12,6 +12,9 @@
 	  not considered valid when an NSEC next owner name is not
 	  under the signer zone name. Thanks to Qifan Zhang, Palo
 	  Alto Networks, for the report.
+	- Fix mesh cycle detection for configuration with respip CNAME
+	  loop and tagged clients. Thanks to Qifan Zhang, Palo Alto
+	  Networks, for the report.
 
 22 July 2026: Wouter
 	- Release tag for 1.25.2, with the security commits:

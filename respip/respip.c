@@ -1164,8 +1164,10 @@ respip_operate(struct module_qstate* qstate, enum module_ev event, int id,
 				 * clients. */
 				qstate->is_drop = 1;
 			} else if(alias_rrset) {
-				if(!generate_cname_request(qstate, alias_rrset))
+				if(!generate_cname_request(qstate, alias_rrset)) {
+					errinf(qstate, "Could not generate CNAME request");
 					goto servfail;
+				}
 				next_state = module_wait_subquery;
 			}
 			qstate->return_msg->rep = new_rep;
@@ -1179,6 +1181,7 @@ respip_operate(struct module_qstate* qstate, enum module_ev event, int id,
   servfail:
 	qstate->return_rcode = LDNS_RCODE_SERVFAIL;
 	qstate->return_msg = NULL;
+	qstate->ext_state[id] = module_finished;
 }
 
 int
@@ -1275,6 +1278,7 @@ respip_inform_super(struct module_qstate* qstate, int id,
 	return;
 
   fail:
+	errinf(super, "CNAME lookup failed");
 	super->return_rcode = LDNS_RCODE_SERVFAIL;
 	super->return_msg = NULL;
 	return;

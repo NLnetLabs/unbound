@@ -5026,6 +5026,74 @@ fr_check_changed_cfg_str2list(struct config_str2list* cmp1,
 	}
 }
 
+/** fast reload thread, check if config str3list has changed. */
+#define FR_CHECK_CHANGED_CFG_STR3LIST(desc, var, buff) do {		\
+	fr_check_changed_cfg_str3list(cfg->var, newcfg->var, desc, buff,\
+		sizeof(buff));						\
+	} while(0);
+static void
+fr_check_changed_cfg_str3list(struct config_str3list* cmp1,
+	struct config_str3list* cmp2, const char* desc, char* str, size_t len)
+{
+	struct config_str3list* p1 = cmp1, *p2 = cmp2;
+	while(p1 && p2) {
+		if((!p1->str && p2->str) ||
+			(p1->str && !p2->str) ||
+			(p1->str && p2->str && strcmp(p1->str, p2->str) != 0)) {
+			/* The str3list is different. */
+			fr_add_incompatible_option(desc, str, len);
+			return;
+		}
+		if((!p1->str2 && p2->str2) ||
+			(p1->str2 && !p2->str2) ||
+			(p1->str2 && p2->str2 &&
+			strcmp(p1->str2, p2->str2) != 0)) {
+			/* The str3list is different. */
+			fr_add_incompatible_option(desc, str, len);
+			return;
+		}
+		if((!p1->str3 && p2->str3) ||
+			(p1->str3 && !p2->str3) ||
+			(p1->str3 && p2->str3 &&
+			strcmp(p1->str3, p2->str3) != 0)) {
+			/* The str3list is different. */
+			fr_add_incompatible_option(desc, str, len);
+			return;
+		}
+		p1 = p1->next;
+		p2 = p2->next;
+	}
+	if((!p1 && p2) || (p1 && !p2)) {
+		fr_add_incompatible_option(desc, str, len);
+	}
+}
+
+/** fast reload thread, check tag datas. */
+static int
+fr_check_tag_datas(struct fast_reload_thread* fr, struct config_file* newcfg)
+{
+	char changed_str[1024];
+	struct config_file* cfg = fr->worker->env.cfg;
+	changed_str[0]=0;
+
+	/* Check for tag_datas in acl_addr. */
+	FR_CHECK_CHANGED_CFG_STR3LIST("interface-tag-data", interface_tag_datas, changed_str);
+	FR_CHECK_CHANGED_CFG_STR3LIST("access-control-tag-data", acl_tag_datas, changed_str);
+
+	if(changed_str[0] != 0) {
+		if(fr->fr_drop_mesh)
+			return 1; /* already dropping queries */
+		fr->fr_drop_mesh = 1;
+		fr->worker->daemon->fast_reload_drop_mesh = fr->fr_drop_mesh;
+		if(!fr_output_printf(fr, "recursion referenced data has changed, with: '%s"
+			"', and the queries have to be dropped"
+			", setting '+d'\n", changed_str))
+			return 0;
+		fr_send_notification(fr, fast_reload_notification_printout);
+	}
+	return 1;
+}
+
 /** fast reload thread, check compatible config items */
 static int
 fr_check_compat_cfg(struct fast_reload_thread* fr, struct config_file* newcfg)
@@ -6908,6 +6976,10 @@ fr_load_config(struct fast_reload_thread* fr, struct timeval* time_read,
 
 	/* Check if the config can be loaded */
 	if(!fr_check_tag_defines(fr, newcfg)) {
+		config_delete(newcfg);
+		return 0;
+	}
+	if(!fr_check_tag_datas(fr, newcfg)) {
 		config_delete(newcfg);
 		return 0;
 	}

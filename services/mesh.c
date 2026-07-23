@@ -965,32 +965,9 @@ void mesh_report_reply(struct mesh_area* mesh, struct outbound_entry* e,
 	mesh_run(mesh, e->qstate->mesh_info, event, e);
 }
 
-/** copy strlist to region */
-static struct config_strlist*
-cfg_region_strlist_copy(struct regional* region, struct config_strlist* list)
-{
-	struct config_strlist* result = NULL, *last = NULL, *s = list;
-	while(s) {
-		struct config_strlist* n = regional_alloc_zero(region,
-			sizeof(*n));
-		if(!n)
-			return NULL;
-		n->str = regional_strdup(region, s->str);
-		if(!n->str)
-			return NULL;
-		if(last)
-			last->next = n;
-		else	result = n;
-		last = n;
-		s = s->next;
-	}
-	return result;
-}
-
 struct respip_client_info*
 mesh_copy_client_info(struct regional* region, struct respip_client_info* cinfo)
 {
-	size_t i;
 	struct respip_client_info* client_info;
 	client_info = regional_alloc_init(region, cinfo, sizeof(*cinfo));
 	if(!client_info)
@@ -1009,20 +986,13 @@ mesh_copy_client_info(struct regional* region, struct respip_client_info* cinfo)
 		if(!client_info->tag_actions)
 			return NULL;
 	}
-	if(cinfo->tag_datas) {
-		client_info->tag_datas = regional_alloc_zero(region,
-			sizeof(struct config_strlist*)*cinfo->tag_datas_size);
-		if(!client_info->tag_datas)
-			return NULL;
-		for(i=0; i<cinfo->tag_datas_size; i++) {
-			if(cinfo->tag_datas[i]) {
-				client_info->tag_datas[i] = cfg_region_strlist_copy(
-					region, cinfo->tag_datas[i]);
-				if(!client_info->tag_datas[i])
-					return NULL;
-			}
-		}
-	}
+	/* tag_datas is owned by the matched acl_addr in config_file; its
+	 * lifetime is until config reload, which tears down all mesh states
+	 * first. Keep the original pointer so client_info_compare()
+	 * can recognise two states from the same ACL entry. */
+	/* fast reload insists on dropping the queries when interface-tag-data
+	 * or access-control-tag-data are changed. */
+	/* client_info->tag_datas already copied by regional_alloc_init above */
 	if(cinfo->view) {
 		/* Do not copy the view pointer but store a name instead.
 		 * The name is looked up later when done, this means that
@@ -2306,8 +2276,29 @@ void mesh_run(struct mesh_area* mesh, struct mesh_state* mstate,
 	enum module_ev ev, struct outbound_entry* e)
 {
 	enum module_ext_state s;
+	int numrun = 0;
 	verbose(VERB_ALGO, "mesh_run: start");
 	while(mstate) {
+		if(numrun++ > MESH_MAX_RUN_ITER) {
+			/* These modules are too much to activate, stop them.*/
+			log_err("Too many module run iterations, deleting");
+			while(mstate) {
+				/* notify supers */
+				if(mstate->super_set.count > 0) {
+					verbose(VERB_ALGO, "notify supers of failure");
+					mstate->s.return_msg = NULL;
+					mstate->s.return_rcode = LDNS_RCODE_SERVFAIL;
+					mesh_walk_supers(mesh, mstate);
+				}
+				mesh_state_delete(&mstate->s);
+				if(mesh->run.count > 0) {
+					/* pop random element off the runnable tree */
+					mstate = (struct mesh_state*)mesh->run.root->key;
+					(void)rbtree_delete(&mesh->run, mstate);
+				} else mstate = NULL;
+			}
+			break;
+		}
 		/* run the module */
 		fptr_ok(fptr_whitelist_mod_operate(
 			mesh->mods.mod[mstate->s.curmod]->operate));

@@ -70,6 +70,13 @@ struct respip_client_info;
 #define MESH_MAX_ACTIVATION 10000
 
 /**
+ * Maximum number of mesh state run items. These are different modules
+ * activated during a mesh run. Any more is likely an infinite loop
+ * in the module. It is then terminated, and states are deleted.
+ */
+#define MESH_MAX_RUN_ITER 10000
+
+/**
  * Max number of references-to-references-to-references.. search size.
  * Any more is treated like 'too large', and the creation of a new
  * dependency is failed (so that no loops can be created).
