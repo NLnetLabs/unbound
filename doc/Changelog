@@ -1,5 +1,7 @@
 23 July 2026: Wouter
 	- Updated credits for Xuanchao Xie in 22 july changelog.
+	- Merge #1478 from petrvaganoff: pythonmod: add check return
+	  value after ftell().
 
 22 July 2026: Wouter
 	- Release tag for 1.25.2, with the security commits:
