@@ -1384,3 +1384,20 @@ int derive_cname_from_dname(struct ub_packed_rrset_key* cname,
 	memmove(out+prefix_len, dname_target, dname_target_len);
 	return 1;
 }
+
+int nsec_nextowner_subdomain(struct ub_packed_rrset_key* rrset, uint8_t* name)
+{
+	struct packed_rrset_data* d;
+	uint8_t* next;
+	size_t nextlen;
+	if(ntohs(rrset->rk.type) != LDNS_RR_TYPE_NSEC)
+		return 0;
+	d = (struct packed_rrset_data*)rrset->entry.data;
+	if(!d || d->count == 0)
+		return 0;
+	next = d->rr_data[0]+2;
+	nextlen = dname_valid(next, d->rr_len[0]-2);
+	if(nextlen == 0)
+		return 0; /* malformed */
+	return dname_subdomain_c(next, name);
+}

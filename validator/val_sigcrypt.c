@@ -1641,6 +1641,16 @@ dnskey_verify_rrset_sig(struct regional* region, sldns_buffer* buf,
 			return sec_status_bogus; /* NSEC3 owner not b32.signer */
 		}
 	}
+	/* NSEC, a next owner that is not under the signer is not allowed.*/
+	if(ntohs(rrset->rk.type) == LDNS_RR_TYPE_NSEC &&
+		!nsec_nextowner_subdomain(rrset, signer)) {
+		verbose(VERB_QUERY, "verify: NSEC next owner overreaches signer name");
+		*reason = "NSEC next owner overreaches signer name";
+		if(reason_bogus)
+			*reason_bogus = LDNS_EDE_DNSSEC_BOGUS;
+		return sec_status_bogus; /* nextowner overreaching */
+	}
+
 	sigblock = (unsigned char*)signer+signer_len;
 	if(siglen < 2+18+signer_len+1) {
 		verbose(VERB_QUERY, "verify: too short, no signature data");

@@ -452,4 +452,7 @@ int derive_cname_from_dname(struct ub_packed_rrset_key* cname,
 void rrsig_get_signer(uint8_t* data, size_t len, uint8_t** sname,
 	size_t* slen);
 
+/** See if the NSEC nextowner name is a subdomain of the name. */
+int nsec_nextowner_subdomain(struct ub_packed_rrset_key* rrset, uint8_t* name);
+
 #endif /* VALIDATOR_VAL_UTILS_H */
