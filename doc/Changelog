@@ -1,3 +1,6 @@
+23 July 2026: Wouter
+	- Updated credits for Xuanchao Xie in 22 july changelog.
+
 22 July 2026: Wouter
 	- Release tag for 1.25.2, with the security commits:
 	- Fix CVE-2026-14586, Assertion in libngtcp2 when under pressure
@@ -10,7 +13,9 @@
 	  Kunta Chu, Kaihua Wang, and Jianjun Chen from Tsinghua University,
 	  for also reporting this issue. In addition, thanks to Qifan Zhang,
 	  Palo Alto Networks, for also reporting this issue. In addition,
-	  thanks to Xuanchao Xie, for also reporting this issue.
+	  thanks to Xuanchao Xie, Lutong Chen, and Kaiping Xue of the
+	  University of Science and Technology of China (USTC), for also
+	  reporting this issue.
 	- Fix CVE-2026-40691, Packet of death for DNSCrypt over TCP. Thanks
 	  to Qifan Zhang, Palo Alto Networks, for the report. In addition,
 	  thanks to Trung Nguyen (@everping) of CyStack, for also reporting
@@ -74,7 +79,8 @@
 	- Fix CVE-2026-55991, Remote DNS-over-QUIC (DoQ) flow-control
 	  assertion failure in libngtcp2. Thanks to Qifan Zhang, Palo Alto
 	  Networks, for the report. In addition, thanks to Xuanchao Xie,
-	  for also reporting this issue.
+	  Lutong Chen, and Kaiping Xue of the University of Science and
+	  Technology of China (USTC), for also reporting this issue.
 	- Fix CVE-2026-56416, Possible heap buffer overflow when validator
 	  canonicalizes RDATA that contains domain name. Thanks to Qifan
 	  Zhang, Palo Alto Networks, for the report.
