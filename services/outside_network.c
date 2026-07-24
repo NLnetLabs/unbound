@@ -4154,16 +4154,21 @@ struct shared_ports* shared_ports_create(char** ifs, int num_ifs, int do_ip4,
 		return NULL;
 	}
 	lock_basic_init(&shp->lock);
-	lock_protect(&shp->lock, shp, sizeof(*shp));
+	lock_protect(&shp->lock, &shp->ip4_ifs, sizeof(shp->ip4_ifs));
+	lock_protect(&shp->lock, &shp->num_ip4, sizeof(shp->num_ip4));
+	lock_protect(&shp->lock, &shp->ip6_ifs, sizeof(shp->ip6_ifs));
+	lock_protect(&shp->lock, &shp->num_ip6, sizeof(shp->num_ip6));
 
 #ifndef DISABLE_EXPLICIT_PORT_RANDOMISATION
 	/* Allocate interfaces */
+	lock_basic_lock(&shp->lock);
 	if(!shared_ports_alloc_ifs(shp, ifs, num_ifs, do_ip4, do_ip6,
 		availports, numavailports)) {
 		log_err("malloc failed");
 		shared_ports_delete(shp);
 		return NULL;
 	}
+	lock_basic_unlock(&shp->lock);
 #else
 	(void)ifs; (void)num_ifs; (void)do_ip4; (void)do_ip6;
 	(void)availports; (void)numavailports;

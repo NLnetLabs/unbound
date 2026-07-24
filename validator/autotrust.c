@@ -884,13 +884,16 @@ parse_var_line(char* line, struct val_anchors* anchors,
 		*header_seen = 1;
 		*anchor = parse_id(anchors, line+6);
 		if(!*anchor) return -1;
+		lock_basic_lock(&(*anchor)->lock);
 		if(*anchor && !(*anchor)->autr->file) {
 			(*anchor)->autr->file = strdup(nm);
 			if(!(*anchor)->autr->file) {
+				lock_basic_unlock(&(*anchor)->lock);
 				log_err("malloc failure");
 				return -1;
 			}
 		}
+		lock_basic_unlock(&(*anchor)->lock);
 		if(*anchor) return 1;
 	} else if(strncmp(line, ";;REVOKED", 9) == 0) {
 		if(tp) {

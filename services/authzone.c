@@ -438,7 +438,12 @@ auth_zone_create(struct auth_zones* az, uint8_t* nm, size_t nmlen,
 	rbtree_init(&z->data, &auth_data_cmp);
 	lock_rw_init(&z->lock);
 	lock_protect(&z->lock, &z->name, sizeof(*z)-sizeof(rbnode_type)-
-			sizeof(&z->rpz_az_next)-sizeof(&z->rpz_az_prev));
+			sizeof(z->rpz_az_next)-sizeof(z->rpz_az_prev)-
+			sizeof(z->max_transfer_size)-sizeof(z->max_transfer_size));
+	lock_protect(&z->lock, &z->max_transfer_size,
+		sizeof(z->max_transfer_size));
+	lock_protect(&z->lock, &z->max_transfer_time,
+		sizeof(z->max_transfer_time));
 	lock_rw_wrlock(&z->lock);
 	/* z lock protects all, except rbtree itself and the rpz linked list
 	 * pointers, which are protected using az->lock */
