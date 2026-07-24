@@ -19,6 +19,8 @@
 	  parse of the header.
 	- Merge #1480 from petrvaganoff: authzone: fix memory leak in
 	  xfer_set_masters() error path.
+	- Fix unused variable warnings in shared_ports_fetch_random
+	  and shared_ports_return_port when compiled without threads.
 
 23 July 2026: Wouter
 	- Updated credits for Xuanchao Xie in 22 july changelog.

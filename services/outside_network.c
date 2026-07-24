@@ -4246,6 +4246,9 @@ int shared_ports_fetch_random(struct shared_ports* shp,
 	int portno = 0, my_port = 0;
 	if(!shpif)
 		return 0;
+#  ifdef THREADS_DISABLED
+	(void)shp;
+#  endif
 	lock_basic_lock(&shp->lock);
 	if(udp_connect) {
 		/* if we connect() we cannot reuse fds for a port. */
@@ -4303,6 +4306,9 @@ void shared_ports_return_port(struct shared_ports* shp,
 #ifndef DISABLE_EXPLICIT_PORT_RANDOMISATION
 	if(!shpif)
 		return;
+#  ifdef THREADS_DISABLED
+	(void)shp;
+#  endif
 	lock_basic_lock(&shp->lock);
 	log_assert(shpif->inuse > 0);
 	shpif->avail_ports[shpif->avail_total - shpif->inuse] = port;
