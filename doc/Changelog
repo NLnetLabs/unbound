@@ -21,6 +21,8 @@
 	  xfer_set_masters() error path.
 	- Fix unused variable warnings in shared_ports_fetch_random
 	  and shared_ports_return_port when compiled without threads.
+	- Fix to guard access to shared ports interface array during
+	  set up, for analyzer.
 
 23 July 2026: Wouter
 	- Updated credits for Xuanchao Xie in 22 july changelog.

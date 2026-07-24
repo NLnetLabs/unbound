@@ -4127,13 +4127,15 @@ static int shared_ports_alloc_ifs(struct shared_ports* shp, char** ifs,
 		size_t done_4 = 0, done_6 = 0;
 		int i;
 		for(i=0; i<num_ifs; i++) {
-			if(str_is_ip6(ifs[i]) && do_ip6) {
+			if(str_is_ip6(ifs[i]) && do_ip6 &&
+				done_6 < shp->num_ip6) {
 				if(!shared_ports_setup_if(&shp->ip6_ifs[done_6],
 					ifs[i], availports, numavailports))
 					return 0;
 				done_6++;
 			}
-			if(!str_is_ip6(ifs[i]) && do_ip4) {
+			if(!str_is_ip6(ifs[i]) && do_ip4 &&
+				done_4 < shp->num_ip4) {
 				if(!shared_ports_setup_if(&shp->ip4_ifs[done_4],
 					ifs[i], availports, numavailports))
 					return 0;
