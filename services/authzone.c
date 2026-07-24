@@ -7575,35 +7575,48 @@ xfer_set_masters(struct auth_master** list, struct config_auth* c,
 {
 	struct auth_master* m;
 	struct config_strlist* p;
+	struct auth_master** tail;
 	/* list points to the first, or next pointer for the new element */
 	while(*list) {
 		list = &( (*list)->next );
 	}
 	if(with_http)
 	  for(p = c->urls; p; p = p->next) {
+		tail = list;
 		m = auth_master_new(&list);
 		if(!m) return 0;
 		m->http = 1;
-		if(!parse_url(p->str, &m->host, &m->file, &m->port, &m->ssl))
+		if(!parse_url(p->str, &m->host, &m->file, &m->port, &m->ssl)) {
+			free(m->host);
+			free(m->file);
+			free(m);
+			*tail = NULL;
 			return 0;
+		}
 	}
 	for(p = c->masters; p; p = p->next) {
+		tail = list;
 		m = auth_master_new(&list);
 		if(!m) return 0;
 		m->ixfr = 1; /* this flag is not configurable */
 		m->host = strdup(p->str);
 		if(!m->host) {
 			log_err("malloc failure");
+			free(m);
+			*tail = NULL;
 			return 0;
 		}
 	}
 	for(p = c->allow_notify; p; p = p->next) {
+		tail = list;
 		m = auth_master_new(&list);
 		if(!m) return 0;
 		m->allow_notify = 1;
 		m->host = strdup(p->str);
 		if(!m->host) {
 			log_err("malloc failure");
+			free(m);
+			*tail = NULL;
 			return 0;
 		}
 	}
