@@ -23,6 +23,7 @@
 	  and shared_ports_return_port when compiled without threads.
 	- Fix to guard access to shared ports interface array during
 	  set up, for analyzer.
+	- Fix sign of comparison warning in shared ports setup.
 
 23 July 2026: Wouter
 	- Updated credits for Xuanchao Xie in 22 july changelog.
