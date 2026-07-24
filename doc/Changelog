@@ -24,7 +24,8 @@
 	- Fix to guard access to shared ports interface array during
 	  set up, for analyzer.
 	- Fix sign of comparison warning in shared ports setup.
-	- Fix to use tls-port after referral if tls-upstream is set.
+	- Fix #1481: Fix to use tls-port after referral if
+	  tls-upstream is set.
 
 23 July 2026: Wouter
 	- Updated credits for Xuanchao Xie in 22 july changelog.
