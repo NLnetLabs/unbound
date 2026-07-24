@@ -1308,6 +1308,9 @@ daemon_delete(struct daemon* daemon)
 #  if defined(HAVE_SSL) && defined(OPENSSL_THREADS) && !defined(THREADS_DISABLED)
 	ub_openssl_lock_delete();
 #  endif
+#ifdef HAVE_OPENSSL_CLEANUP
+	OPENSSL_cleanup();
+#endif
 #ifndef HAVE_ARC4RANDOM
 	_ARC4_LOCK_DESTROY();
 #endif

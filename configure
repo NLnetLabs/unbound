@@ -21093,6 +21093,12 @@ then :
   printf "%s\n" "#define HAVE_BIO_SET_CALLBACK_EX 1" >>confdefs.h
 
 fi
+ac_fn_c_check_func "$LINENO" "OPENSSL_cleanup" "ac_cv_func_OPENSSL_cleanup"
+if test "x$ac_cv_func_OPENSSL_cleanup" = xyes
+then :
+  printf "%s\n" "#define HAVE_OPENSSL_CLEANUP 1" >>confdefs.h
+
+fi
 
 
 # these check_funcs need -lssl

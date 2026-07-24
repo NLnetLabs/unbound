@@ -28,6 +28,7 @@
 	  tls-upstream is set.
 	- Merge #1479 from psumbera: Fix pthread detection on
 	  Solaris 11.4.
+	- Fix to call OPENSSL_cleanup on exit when that is defined.
 
 23 July 2026: Wouter
 	- Updated credits for Xuanchao Xie in 22 july changelog.

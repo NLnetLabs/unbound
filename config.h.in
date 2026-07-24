@@ -529,6 +529,9 @@
 /* Define to 1 if you have the <openssl/bn.h> header file. */
 #undef HAVE_OPENSSL_BN_H
 
+/* Define to 1 if you have the `OPENSSL_cleanup' function. */
+#undef HAVE_OPENSSL_CLEANUP
+
 /* Define to 1 if you have the `OPENSSL_config' function. */
 #undef HAVE_OPENSSL_CONFIG
 
