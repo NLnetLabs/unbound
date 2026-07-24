@@ -43,6 +43,7 @@
 #include "iterator/iter_utils.h"
 #include "validator/val_nsec.h"
 #include "validator/val_utils.h"
+#include "iterator/iter_utils.h"
 #include "services/cache/dns.h"
 #include "services/cache/rrset.h"
 #include "util/data/msgparse.h"
@@ -586,7 +587,8 @@ dns_cache_find_delegation(struct module_env* env, uint8_t* qname,
 			return NULL;
 		}
 	}
-	if(!delegpt_rrset_add_ns(dp, region, nskey, 0)) {
+	if(!delegpt_rrset_add_ns(dp, region, nskey, 0,
+		deleg_port_number(env))) {
 		lock_rw_unlock(&nskey->entry.lock);
 		log_err("find_delegation: addns out of memory");
 		return NULL;

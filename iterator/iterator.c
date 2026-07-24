@@ -3147,7 +3147,6 @@ find_NS(struct reply_info* rep, size_t from, size_t to)
 	return NULL;
 }
 
-
 /** 
  * Process the query response. All queries end up at this state first. This
  * process generally consists of analyzing the response and routing the
@@ -3474,7 +3473,8 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 			infra_ratelimit_dec(qstate->env->infra_cache,
 				old_dp->name, old_dp->namelen,
 				*qstate->env->now);
-		iq->dp = delegpt_from_message(iq->response, qstate->region);
+		iq->dp = delegpt_from_message(iq->response, qstate->region,
+			deleg_port_number(qstate->env));
 		if (qstate->env->cfg->qname_minimisation)
 			iq->minimisation_state = INIT_MINIMISE_STATE;
 		if(!iq->dp) {
@@ -3751,7 +3751,8 @@ prime_supers(struct module_qstate* qstate, int id, struct module_qstate* forq)
 	log_assert(qstate->is_priming || foriq->wait_priming_stub);
 	log_assert(qstate->return_rcode == LDNS_RCODE_NOERROR);
 	/* Convert our response to a delegation point */
-	dp = delegpt_from_message(qstate->return_msg, forq->region);
+	dp = delegpt_from_message(qstate->return_msg, forq->region,
+		deleg_port_number(forq->env));
 	if(!dp) {
 		/* if there is no convertible delegation point, then 
 		 * the ANSWER type was (presumably) a negative answer. */
@@ -3967,7 +3968,8 @@ processDSNSResponse(struct module_qstate* qstate, int id,
 
 	/* else, store as DP and continue at querytargets */
 	foriq->state = QUERYTARGETS_STATE;
-	foriq->dp = delegpt_from_message(qstate->return_msg, forq->region);
+	foriq->dp = delegpt_from_message(qstate->return_msg, forq->region,
+		deleg_port_number(forq->env));
 	if(!foriq->dp) {
 		log_err("out of memory in dsns dp alloc");
 		errinf(qstate, "malloc failure, in DS search");
