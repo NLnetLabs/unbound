@@ -7,6 +7,7 @@
 	  block_a_wdata and block_aaaa_wdata, that are like block_a
 	  and block_aaaa, and uses local-data if present.
 	- set code repository version to 1.26.0.
+	- Update generated man pages.
 
 23 July 2026: Wouter
 	- Updated credits for Xuanchao Xie in 22 july changelog.
