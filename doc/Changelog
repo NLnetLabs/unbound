@@ -17,6 +17,8 @@
 	- Fix to lock shared_ports structure during initialisation.
 	- Fix to lock anchor structure when file is set for it in
 	  parse of the header.
+	- Merge #1480 from petrvaganoff: authzone: fix memory leak in
+	  xfer_set_masters() error path.
 
 23 July 2026: Wouter
 	- Updated credits for Xuanchao Xie in 22 july changelog.
