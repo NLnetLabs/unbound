@@ -11,8 +11,8 @@ sinclude(dnscrypt/dnscrypt.m4)
 
 # must be numbers. ac_defun because of later processing
 m4_define([VERSION_MAJOR],[1])
-m4_define([VERSION_MINOR],[25])
-m4_define([VERSION_MICRO],[3])
+m4_define([VERSION_MINOR],[26])
+m4_define([VERSION_MICRO],[0])
 AC_INIT([unbound],m4_defn([VERSION_MAJOR]).m4_defn([VERSION_MINOR]).m4_defn([VERSION_MICRO]),[unbound-bugs@nlnetlabs.nl or https://github.com/NLnetLabs/unbound/issues],[unbound])
 AC_SUBST(UNBOUND_VERSION_MAJOR, [VERSION_MAJOR])
 AC_SUBST(UNBOUND_VERSION_MINOR, [VERSION_MINOR])
@@ -125,7 +125,7 @@ LIBUNBOUND_AGE=1
 # 1.25.0 had 9:36:1
 # 1.25.1 had 9:37:1
 # 1.25.2 had 9:38:1
-# 1.25.3 had 9:39:1
+# 1.26.0 had 9:39:1
 
 #   Current  -- the number of the binary API that we're implementing
 #   Revision -- which iteration of the implementation of the binary
