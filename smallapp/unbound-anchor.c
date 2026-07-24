@@ -1861,10 +1861,10 @@ get_valid_signers(PKCS7* p7, const char* p7signer)
 			}
 #else
 			if(verb >= 3 && X509_NAME_get_text_by_NID(nm,
-				NID_commonName, buf, (int)sizeof(buf)))
+				NID_commonName, buf, (int)sizeof(buf)) > 0)
 				printf("commonName: %s\n", buf);
 			if(verb >= 3 && X509_NAME_get_text_by_NID(nm,
-				NID_pkcs9_emailAddress, buf, (int)sizeof(buf)))
+				NID_pkcs9_emailAddress, buf, (int)sizeof(buf)) > 0)
 				printf("emailAddress: %s\n", buf);
 #endif
 		}
@@ -1890,18 +1890,18 @@ get_valid_signers(PKCS7* p7, const char* p7signer)
 		} else {
 #if !defined(HAVE_X509_NAME_GET_TEXT_BY_NID) || defined(DEPRECATED_X509_NAME_GET_TEXT_BY_NID)
 			if(!has_valid_emailaddr(nm, p7signer)) {
-				if(verb) printf("removed cert with wrong name\n");
+				if(verb) printf("removed cert with wrong emailaddress\n");
 				continue; /* wrong name, skip it */
 			}
 #else
-			if(!X509_NAME_get_text_by_NID(nm,
+			if(X509_NAME_get_text_by_NID(nm,
 				NID_pkcs9_emailAddress,
-				buf, (int)sizeof(buf))) {
-				if(verb) printf("removed cert with no name\n");
+				buf, (int)sizeof(buf)) <= 0) {
+				if(verb) printf("removed cert with no emailaddress\n");
 				continue; /* no name, no use */
 			}
 			if(strcmp(buf, p7signer) != 0) {
-				if(verb) printf("removed cert with wrong name\n");
+				if(verb) printf("removed cert with wrong emailaddress\n");
 				continue; /* wrong name, skip it */
 			}
 #endif

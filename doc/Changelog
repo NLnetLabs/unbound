@@ -8,6 +8,11 @@
 	  and block_aaaa, and uses local-data if present.
 	- set code repository version to 1.26.0.
 	- Update generated man pages.
+	- Fix to allow test fake sha1 on systems with possible sha1
+	  support.
+	- Fix to use sha256 for unbound-anchor unit test.
+	- Fix unbound-anchor check for return value of
+	  X509_NAME_get_text_by_NID of the emailaddress.
 
 23 July 2026: Wouter
 	- Updated credits for Xuanchao Xie in 22 july changelog.

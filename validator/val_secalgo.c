@@ -745,11 +745,9 @@ verify_canonrrset(sldns_buffer* buf, int algo, unsigned char* sigblock,
 	if((algo == LDNS_DSA || algo == LDNS_DSA_NSEC3) &&(fake_dsa||fake_sha1))
 		return sec_status_secure;
 #endif
-#ifndef USE_SHA1
 	if(fake_sha1 && (algo == LDNS_DSA || algo == LDNS_DSA_NSEC3 || algo == LDNS_RSASHA1 || algo == LDNS_RSASHA1_NSEC3))
 		return sec_status_secure;
-#endif
-	
+
 	if(!setup_key_digest(algo, &evp_key, &digest_type, key, keylen)) {
 		verbose(VERB_QUERY, "verify: failed to setup key");
 		*reason = "use of key for crypto failed";
