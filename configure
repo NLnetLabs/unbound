@@ -18415,7 +18415,31 @@ fi
 # correctly enabled
 
 case $host_os in
-        darwin* | hpux* | linux* | osf* | solaris*)
+        solaris*)
+        # Solaris 11.4 introduced XPG7 support and did away with the need for
+        # _REENTRANT.
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+#            undef _XOPEN_SOURCE
+#            include <sys/feature_tests.h>
+#            if _XOPEN_VERSION < 700
+             AX_PTHREAD_SOLARIS__REENTRANT
+#            endif
+
+_ACEOF
+if (eval "$ac_cpp conftest.$ac_ext") 2>&5 |
+  $EGREP "AX_PTHREAD_SOLARIS__REENTRANT" >/dev/null 2>&1
+then :
+  ax_pthread_check_macro="_REENTRANT"
+else $as_nop
+  ax_pthread_check_macro="--"
+fi
+rm -rf conftest*
+
+        ;;
+        darwin* | hpux* | linux* | osf*)
         ax_pthread_check_macro="_REENTRANT"
         ;;
 
