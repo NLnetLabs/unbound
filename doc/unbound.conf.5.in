@@ -2910,6 +2910,7 @@ The types are
 \fI\%inform_redirect\fP,
 \fI\%always_transparent\fP,
 \fI\%block_a\fP,
+\fI\%block_aaaa\fP,
 \fI\%always_refuse\fP,
 \fI\%always_nxdomain\fP,
 \fI\%always_null\fP,
@@ -3097,6 +3098,15 @@ ignores local data and resolves normally all query types excluding A.
 For A queries it unconditionally returns NODATA.
 Useful in cases when there is a need to explicitly force all apps to
 use IPv6 protocol and avoid any queries to IPv4.
+.UNINDENT
+.INDENT 7.0
+.TP
+.B block_aaaa 
+Like \fI\%transparent\fP or \fI\%block_a\fP, but
+ignores local data and resolves normally all query types excluding AAAA.
+For AAAA queries it unconditionally returns NODATA.
+Useful in cases when there is a need to explicitly force all apps to
+use IPv4 protocol and avoid any queries to IPv6.
 .UNINDENT
 .INDENT 7.0
 .TP
