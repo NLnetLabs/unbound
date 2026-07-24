@@ -2,6 +2,10 @@
 	- Merge #1433 from jisakiel: Add new static zone type
 	  block_aaaa to suppress AAAA queries.
 	- Unit test for block_a and block_aaaa.
+	- Fix #1477: respip + dns64: dns64 uses A records modified by
+	  respip instead of original A records. Adds local-zone types
+	  block_a_wdata and block_aaaa_wdata, that are like block_a
+	  and block_aaaa, and uses local-data if present.
 
 23 July 2026: Wouter
 	- Updated credits for Xuanchao Xie in 22 july changelog.

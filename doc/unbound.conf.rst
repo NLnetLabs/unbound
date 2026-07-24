@@ -2593,6 +2593,8 @@ These options are part of the ``server:`` section.
     :ref:`always_transparent<unbound.conf.local-zone.type.always_transparent>`,
     :ref:`block_a<unbound.conf.local-zone.type.block_a>`,
     :ref:`block_aaaa<unbound.conf.local-zone.type.block_aaaa>`,
+    :ref:`block_a_wdata<unbound.conf.local-zone.type.block_a_wdata>`,
+    :ref:`block_aaaa_wdata<unbound.conf.local-zone.type.block_aaaa_wdata>`,
     :ref:`always_refuse<unbound.conf.local-zone.type.always_refuse>`,
     :ref:`always_nxdomain<unbound.conf.local-zone.type.always_nxdomain>`,
     :ref:`always_null<unbound.conf.local-zone.type.always_null>`,
@@ -2749,6 +2751,18 @@ These options are part of the ``server:`` section.
         For AAAA queries it unconditionally returns NODATA.
         Useful in cases when there is a need to explicitly force all apps to
         use IPv4 protocol and avoid any queries to IPv6.
+
+    @@UAHL@unbound.conf.local-zone.type@block_a_wdata@@
+        Like :ref:`block_a<unbound.conf.local-zone.type.block_a>`, but
+        uses local data if present.
+        If there is local data that is returned, and it acts like transparent.
+        For A queries it returns NODATA.
+
+    @@UAHL@unbound.conf.local-zone.type@block_aaaa_wdata@@
+        Like :ref:`block_aaaa<unbound.conf.local-zone.type.block_aaaa>`, but
+        uses local data if present.
+        If there is local data that is returned, and it acts like transparent.
+        For AAAA queries it returns NODATA.
 
     @@UAHL@unbound.conf.local-zone.type@always_refuse@@
         Like :ref:`refuse<unbound.conf.local-zone.type.refuse>`, but ignores

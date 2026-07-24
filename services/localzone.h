@@ -95,6 +95,10 @@ enum localzone_type {
 	local_zone_block_a,
 	/** resolve normally, even when there is local data, but return NODATA for AAAA queries */
 	local_zone_block_aaaa,
+	/** resolve normally, use local data, else return NODATA for A queries */
+	local_zone_block_a_wdata,
+	/** resolve normally, use local data, else return NODATA for AAAA queries */
+	local_zone_block_aaaa_wdata,
 	/** answer with error, even when there is local data */	
 	local_zone_always_refuse,
 	/** answer with nxdomain, even when there is local data */

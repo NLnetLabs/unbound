@@ -2396,6 +2396,8 @@ server_local_zone: VAR_LOCAL_ZONE STRING_ARG STRING_ARG
 		   && strcmp($3, "always_transparent")!=0
 		   && strcmp($3, "block_a")!=0
 		   && strcmp($3, "block_aaaa")!=0
+		   && strcmp($3, "block_a_wdata")!=0
+		   && strcmp($3, "block_aaaa_wdata")!=0
 		   && strcmp($3, "always_refuse")!=0
 		   && strcmp($3, "always_nxdomain")!=0
 		   && strcmp($3, "always_nodata")!=0
@@ -2410,6 +2412,7 @@ server_local_zone: VAR_LOCAL_ZONE STRING_ARG STRING_ARG
 				"typetransparent, inform, inform_deny, "
 				"inform_redirect, always_transparent, "
 				"block_a, block_aaaa, "
+				"block_a_wdata, block_aaaa_wdata, "
 				"always_refuse, always_nxdomain, "
 				"always_nodata, always_deny, always_null, "
 				"noview, nodefault or ipset");
