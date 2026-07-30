@@ -1341,13 +1341,33 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 	if((is_doq) && !(is_https || is_ssl)) do_tcp = 0;
 
 	if(do_auto) {
+		enum listen_type auto_port_type;
 		ub_sock = calloc(1, sizeof(struct unbound_socket));
 		if(!ub_sock)
 			return 0;
+		if(is_dnscrypt) {
+			auto_port_type = listen_type_udpancil_dnscrypt;
+			add = "udpancil_dnscrypt";
+		} else if(is_doq) {
+			auto_port_type = listen_type_doq;
+			add = "doq";
+			if(if_listens_on(ifname, port, 53, NULL)) {
+				log_err("DNS over QUIC is strictly not "
+					"allowed on port 53 as per RFC 9250. "
+					"Port 53 is for DNS datagrams. Error "
+					"for interface '%s'.", ifname);
+				free(ub_sock->addr);
+				free(ub_sock);
+				return 0;
+			}
+		} else {
+			auto_port_type = listen_type_udpancil;
+			add = "udpancil";
+		}
 		if((s = make_sock_port(SOCK_DGRAM, ifname, port, hints, 1,
 			&noip6, rcv, snd, reuseport, transparent,
 			tcp_mss, nodelay, freebind, use_systemd, dscp, ub_sock,
-			(is_dnscrypt?"udpancil_dnscrypt":"udpancil"))) == -1) {
+			add)) == -1) {
 			free(ub_sock->addr);
 			free(ub_sock);
 			if(noip6) {
@@ -1366,9 +1386,7 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 		if (sock_queue_timeout && !set_recvtimestamp(s)) {
 			log_warn("socket timestamping is not available");
 		}
-		if(!port_insert(list, s, is_dnscrypt
-			?listen_type_udpancil_dnscrypt:listen_type_udpancil,
-			is_pp2, ub_sock)) {
+		if(!port_insert(list, s, auto_port_type, is_pp2, ub_sock)) {
 			sock_close(s);
 			free(ub_sock->addr);
 			free(ub_sock);

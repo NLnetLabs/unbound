@@ -1,3 +1,7 @@
+30 July 2026: Wouter
+	- Fix #1482: DNS-over-QUIC doesn't work with simple config.
+	  That fixes interface-automatic for use with doq service.
+
 28 July 2026: Wouter
 	- Tag for 1.26.0rc1. The repo continues with version 1.26.1.
 
