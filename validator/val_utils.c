@@ -1323,6 +1323,20 @@ int val_has_signed_nsecs(struct reply_info* rep, char** reason)
 	return 0;
 }
 
+void val_has_auth_nsecs(struct reply_info* rep, int* has_nsec, int* has_nsec3)
+{
+	size_t i, num_nsec = 0, num_nsec3 = 0;
+	for(i=rep->an_numrrsets; i<rep->an_numrrsets+rep->ns_numrrsets; i++) {
+		if(rep->rrsets[i]->rk.type == htons(LDNS_RR_TYPE_NSEC))
+			num_nsec++;
+		else if(rep->rrsets[i]->rk.type == htons(LDNS_RR_TYPE_NSEC3))
+			num_nsec3++;
+		else continue;
+	}
+	*has_nsec = (num_nsec != 0);
+	*has_nsec3 = (num_nsec3 != 0);
+}
+
 struct dns_msg* 
 val_find_DS(struct module_env* env, uint8_t* nm, size_t nmlen, uint16_t c, 
 	struct regional* region, uint8_t* topname)

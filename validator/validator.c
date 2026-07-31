@@ -3116,6 +3116,7 @@ ds_response_to_ke(struct module_qstate* qstate, struct val_qstate* vq,
 			case sec_status_unchecked:
 			default:
 				/* NSEC proof did not work, try next */
+				verbose(VERB_ALGO, "NSEC proof did not prove insecure delegation, try NSEC3");
 				break;
 		}
 
@@ -3151,6 +3152,25 @@ ds_response_to_ke(struct module_qstate* qstate, struct val_qstate* vq,
 				*ke = NULL;
 				return 0;
 			case sec_status_bogus:
+				/* It could be that the NSEC proof failed,
+				 * and, then tried NSEC3. */
+				{
+					int has_nsec=0, has_nsec3=0;
+					val_has_auth_nsecs(msg->rep, &has_nsec,
+						&has_nsec3);
+					if(!has_nsec3 && has_nsec) {
+						/* The NSECs are the cause, mention that in the error message. */
+						verbose(VERB_DETAIL, "NSECs for the "
+							"referral did not prove no DS.");
+						errinf_ede(qstate, "NSECs for the referral did not prove no DS", LDNS_EDE_DNSSEC_BOGUS);
+						goto return_bogus;
+					}
+					if(!has_nsec3 && !has_nsec) {
+						verbose(VERB_DETAIL, "absence of NSECs and NSEC3s when attempting to prove no DS.");
+						errinf_ede(qstate, "no NSECs or NSEC3s when attempting to prove no DS", LDNS_EDE_DNSSEC_BOGUS);
+						goto return_bogus;
+					}
+				}
 				verbose(VERB_DETAIL, "NSEC3s for the "
 					"referral did not prove no DS.");
 				errinf_ede(qstate, reason, reason_bogus);

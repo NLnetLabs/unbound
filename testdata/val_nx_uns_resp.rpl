@@ -1,0 +1,82 @@
+; config options
+server:
+	; This is the test key 29332 in the testdata.
+	trust-anchor: ". 3600 IN DS 29332 8 2 b75e26316631b6e37cbc977323a08769f86e36a10fee888676d35f61e2ff4181"
+	val-override-date: "20201020135527"
+	target-fetch-policy: "0 0 0 0 0"
+	qname-minimisation: no
+	fake-sha1: yes
+	trust-anchor-signaling: no
+	minimal-responses: no
+	log-servfail: yes
+
+forward-zone:
+	name: "."
+	forward-addr: 10.5.5.5
+CONFIG_END
+
+SCENARIO_BEGIN Test nxdomain that gets unsigned response
+; and the DS lookup that it makes gets an NSEC NXDOMAIN response.
+
+; 10.5.5.5 forwarder
+RANGE_BEGIN 0 100
+	ADDRESS 10.5.5.5
+
+; unsigned NXDOMAIN response, from the first forwarder, here it is served
+; from the upstream.
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR NXDOMAIN
+SECTION QUESTION
+example.veryinvalid. IN TXT
+SECTION AUTHORITY
+. 3600 IN SOA ns.root. host.root. 1 3600 3600 3600 3600
+ENTRY_END
+
+; DNSKEY answer, using CSK for test simplicity.
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR NOERROR
+SECTION QUESTION
+. IN DNSKEY
+SECTION ANSWER
+.       IN      DNSKEY  257 3 8 AwEAAb4WMOTBLTFvmBra5m6SK4VfViOzmvyUAU0qv861ZQXeEFvwlndqNU9rwRsMxrSWAYs5nHErKDn49usC/HyxxW1477iGFHhfgL4mjNreJm9zft2QFB1VLbRbEPYdDMLCn4co0qnG7/KG8W2i8Pym1L7f+aREwbLo+/716AS2PbaKMhfWLKLiq5wnBcUClQMNzCiwhqxDJp1oePqfkVdeUgXOtgi0dYRIKyQFhJ5VWJ22npoi/Gif0XLCADAlAwRLKc8o/yJkCxskzgpHpw5Cki1lclg0aq4ssOuPRQ+ne6IHYCz9D2mwzulblhLFamKdq7aHzNt4NlyxhpANVFiKLD8= ;{id = 29332 (ksk), size = 2048b}
+.	3600	IN	RRSIG	DNSKEY 8 0 3600 20201116135527 20201019135527 29332 . ToK8hJrGa+kNu6y8FpRwZq2FjDPBAk5Ctchia3Vu9yTth2dR7BhK2ALTWVBwAQGwiwxXKoVK9QCxdQM0ti7CVb9x75bejkd2E6UGWVmqyTRPpn3D43qYARm87y3ZVKG7LlWHp8UOf21XLp1H7R+wuipIvBJ1XA+QGXThPdbV9EEz1kKGdprBfdpFkQdcAiuYYrOTa5cJ11z32mGiQ12fWjpb4UUbfcoDD9YOoa/S5a6h7jYBOfm75ZB8UCW3Z/SlsN8KIfYZsg5CZphpf38XH5uNLMmzpaWYhfamJZJve9Isx4eILNmdMLK4E8ESwDFCVNzMIqdf20VRg6Lh7nwQeA==
+ENTRY_END
+
+; answer for DS, from another forwarder, here returned from the test upstream.
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR NXDOMAIN
+SECTION QUESTION
+veryinvalid. IN DS
+SECTION AUTHORITY
+versicherung.	3600	IN	NSEC	vet. NS DS RRSIG NSEC
+versicherung.	3600	IN	RRSIG	NSEC 8 1 3600 20201116135527 20201019135527 29332 . AVAON9Y7AVwX9YWQK8JPcB6Wk/tEfQT7JrLiCRlBBQA0+mpVYYYtMyrm4aMjkhusqYcnpIZoLGOI/dxJjIwDgnMkd4EqY2oICea3I260f8z2v9e7zNobyUTjkoWsmLPc7VRLtEGKu1XyVpt7DX6ElGoSUhU4JsTx7wkkXU0SGAakL0bhK8K68B92NEVwgKX4D7+kVfpjc0aHaB3rAkhQCM/G0jEFp0RuhTX1aru6IuYrZmjW0dvQ2niec6NaYzvuGnbhMLlFLuXqSmI2B7uIFx894usd1cVWnSRg49bAkuiEv5q04ltRel1huJBGGiZlLEwanS5g53C5DHfq10OUrw==
+.	3600	IN	NSEC	aaa. NS SOA RRSIG NSEC DNSKEY ZONEMD
+.	3600	IN	RRSIG	NSEC 8 0 3600 20201116135527 20201019135527 29332 . E8r6rpFgFBUda2GnFSMzHZLtjy1dT+ZS0wPRE12RNwVK547bo2vByv9EFhOHS6sEIFqX+AmIJotuiEPKnCFUTr6FKscaxtw38dJRZ3wldqV6dmqUiRmz91crDCV5nSL45FIbkWKk1Q+tnXie3sZ4zwBc12kGg2BttMAQ0i4sbMbf6EUNYZGwYzSB0/VhXVJcl8gl+5lfpiVqfWNZI7vTEaHqrC2gBC3UK1cQE9lQOqhJ6H5ThA1FR9j/mZFM9sG5vQ2Mqlzl2iiN2Y6mCptDY1vwfff6AnT0YeDwJ/XwGisMZrSvTCYaiRndb8CUUmCr23AFy5OER1rmeFGkHX5+WQ==
+.	3600	IN	SOA	ns.root. host.root. 1 3600 3600 3600 3600
+.	3600	IN	RRSIG	SOA 8 0 3600 20201116135527 20201019135527 29332 . tVeReLMXPnl6rk4QX94xy9lCodQ+xc39lokbNkvbXnTURNCOAwtNiMMPlAAJ3/HTpIxo175gPfupACIveBtgajdp85jUIvLMOM5B6lX80+dUPBGZ4gHVjf+8EGnr7q2wnW2+KcJu0OhN2g+YqCV6aPi8pzuAp+AMsBYcMfXqEQq9Lxqv6TL50MUCJN3GPCyBIdjbs/A+ZB7D1EOO1YgdbsMHK/pWKYt4UfBFfekoA6joIGf4vBKKRTWnoo0BcrFob3AW1SyJkoxoqEsN3YAVL9jNkJCkU0/adLypHgDNayLgsWI5/o4Ng8LxN6tNxAilkMhcGY80T5g0uo+ukY7McA==
+ENTRY_END
+RANGE_END
+
+STEP 1 QUERY
+ENTRY_BEGIN
+REPLY RD DO
+SECTION QUESTION
+example.veryinvalid. IN TXT
+ENTRY_END
+
+STEP 10 CHECK_ANSWER
+ENTRY_BEGIN
+MATCH all
+REPLY QR RD RA DO SERVFAIL
+SECTION QUESTION
+example.veryinvalid. IN TXT
+SECTION ANSWER
+ENTRY_END
+
+SCENARIO_END

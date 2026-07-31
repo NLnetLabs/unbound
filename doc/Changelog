@@ -1,3 +1,9 @@
+31 July 2026: Wouter
+	- For #1483: The failure reason when an NSEC NXDOMAIN is
+	  encountered when looking for an insecure delegation, is
+	  fixed to mention the NSEC records, instead of nonexistent
+	  NSEC3 records, that it attempted.
+
 30 July 2026: Wouter
 	- Fix #1482: DNS-over-QUIC doesn't work with simple config.
 	  That fixes interface-automatic for use with doq service.

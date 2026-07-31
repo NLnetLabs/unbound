@@ -411,6 +411,14 @@ void val_blacklist(struct sock_list** blacklist, struct regional* region,
 int val_has_signed_nsecs(struct reply_info* rep, char** reason);
 
 /**
+ * See if there are NSECs, or NSEC3s in the authority section.
+ * @param rep: reply to check
+ * @param has_nsec: returned true if it has nsecs.
+ * @param has_nsec3: returned true if it has nsec3s.
+ */
+void val_has_auth_nsecs(struct reply_info* rep, int* has_nsec, int* has_nsec3);
+
+/**
  * Return algo number for favorite (best) algorithm that we support in DS.
  * @param ds_rrset: the DSes in this rrset are inspected and best algo chosen.
  * @return algo number or 0 if none supported. 0 is unused as algo number.
