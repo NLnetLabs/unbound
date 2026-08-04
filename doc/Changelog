@@ -1,3 +1,9 @@
+4 August 2026: Wouter
+	- Fix to set makedist.sh to not wget config.sub and
+	  config.guess from git repo. The fetch times out, and the
+	  version from libtoolize is much more recent now than
+	  that it was when the wget was added.
+
 31 July 2026: Wouter
 	- For #1483: The failure reason when an NSEC NXDOMAIN is
 	  encountered when looking for an insecure delegation, is
