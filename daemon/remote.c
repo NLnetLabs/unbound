@@ -2681,7 +2681,7 @@ static int
 ssl_print_name_dp(RES* ssl, const char* str, uint8_t* nm, uint16_t dclass,
 	struct delegpt* dp)
 {
-	char buf[LDNS_MAX_DOMAINLEN];
+	char buf[LDNS_MAX_DOMAINLEN], portstr[128], tls_auth_name[256];
 	struct delegpt_ns* ns;
 	struct delegpt_addr* a;
 	int f = 0;
@@ -2696,13 +2696,32 @@ ssl_print_name_dp(RES* ssl, const char* str, uint8_t* nm, uint16_t dclass,
 	}
 	for(ns = dp->nslist; ns; ns = ns->next) {
 		dname_str(ns->name, buf);
-		if(!ssl_printf(ssl, "%s%s", (f?" ":""), buf))
+		if(ns->port != UNBOUND_DNS_PORT)
+			snprintf(portstr, sizeof(portstr), "@%d", ns->port);
+		else	portstr[0]=0;
+		if(ns->tls_auth_name)
+			snprintf(tls_auth_name, sizeof(tls_auth_name), "#%s",
+				ns->tls_auth_name);
+		else	tls_auth_name[0]=0;
+		if(!ssl_printf(ssl, "%s%s%s%s", (f?" ":""), buf, portstr,
+			tls_auth_name))
 			return 0;
 		f = 1;
 	}
 	for(a = dp->target_list; a; a = a->next_target) {
+		int port = (unsigned)((a->addr.ss_family == AF_INET) ?
+			ntohs(((struct sockaddr_in*)&a->addr)->sin_port) :
+			ntohs(((struct sockaddr_in6*)&a->addr)->sin6_port));
 		addr_to_str(&a->addr, a->addrlen, buf, sizeof(buf));
-		if(!ssl_printf(ssl, "%s%s", (f?" ":""), buf))
+		if(port != UNBOUND_DNS_PORT)
+			snprintf(portstr, sizeof(portstr), "@%d", port);
+		else	portstr[0]=0;
+		if(a->tls_auth_name)
+			snprintf(tls_auth_name, sizeof(tls_auth_name), "#%s",
+				a->tls_auth_name);
+		else	tls_auth_name[0]=0;
+		if(!ssl_printf(ssl, "%s%s%s%s", (f?" ":""), buf, portstr,
+			tls_auth_name))
 			return 0;
 		f = 1;
 	}
