@@ -59,6 +59,11 @@
 static int
 ipsecmod_apply_cfg(struct ipsecmod_env* ipsecmod_env, struct config_file* cfg)
 {
+	if(cfg->ipsecmod_whitelist &&
+		!ipsecmod_whitelist_apply_cfg(ipsecmod_env, cfg))
+		return 0;
+	if(!cfg->ipsecmod_enabled)
+		return 1;
 	if(!cfg->ipsecmod_hook || (cfg->ipsecmod_hook && !cfg->ipsecmod_hook[0])) {
 		log_err("ipsecmod: missing ipsecmod-hook.");
 		return 0;
@@ -68,9 +73,6 @@ ipsecmod_apply_cfg(struct ipsecmod_env* ipsecmod_env, struct config_file* cfg)
 			cfg->ipsecmod_hook, strerror(errno));
 		return 0;
 	}
-	if(cfg->ipsecmod_whitelist &&
-		!ipsecmod_whitelist_apply_cfg(ipsecmod_env, cfg))
-		return 0;
 	return 1;
 }
 
@@ -626,6 +628,8 @@ ipsecmod_inform_super(struct module_qstate* qstate, int id,
 		verbose(VERB_ALGO, "super has no ipsecmod state");
 		return;
 	}
+	if(!siq->enabled)
+		return;
 
 	if(qstate->return_msg) {
 		struct ub_packed_rrset_key* rrset_key = reply_find_answer_rrset(

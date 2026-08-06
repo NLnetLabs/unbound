@@ -2,6 +2,8 @@
 	- Fix #1485: the list_forwards command omits port numbers.
 	  The list_forwards and list_stubs commands for
 	  unbound-control print port and tls auth name.
+	- Fix #1487: regression in 1.26.0, ipsecmod is now always
+	  partly enabled.
 
 4 August 2026: Wouter
 	- Fix to set makedist.sh to not wget config.sub and
