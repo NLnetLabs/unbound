@@ -1,3 +1,11 @@
+6 August 2026: Alex Khanin
+	- Fix bounds check in packed_rr_to_string, it checked the
+	  assembled rr length against the output string length
+	  dest_len, instead of against the size of the rr buffer it
+	  writes into. Callers in cachedump.c and remote.c pass a
+	  dest_len larger than that buffer.
+	- Unit test for packed_rr_to_string.
+
 6 August 2026: Wouter
 	- Fix #1485: the list_forwards command omits port numbers.
 	  The list_forwards and list_stubs commands for

@@ -280,7 +280,9 @@ int packed_rr_to_string(struct ub_packed_rrset_key* rrset, size_t i,
 	size_t rlen = rrset->rk.dname_len + 2 + 2 + 4 + d->rr_len[i];
 	time_t adjust = 0;
 	log_assert(dest_len > 0 && dest);
-	if(rlen > dest_len) {
+	/* rlen is the length written into rr, dest_len bounds the output
+	 * string; check both, callers can pass a dest_len over sizeof(rr). */
+	if(rlen > dest_len || rlen > sizeof(rr)) {
 		dest[0] = 0;
 		return 0;
 	}
