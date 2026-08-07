@@ -79,7 +79,7 @@
                 i+(int)((unsigned int)name[i]) < len) {
                 memmove(buf, name + i + 1, (unsigned int)name[i]);
                 buf[(unsigned int)name[i]] = 0;
-                PyList_SetItem(list, cnt, PyString_FromString(buf));
+                PyList_SetItem(list, cnt, PyUnicode_FromString(buf));
         }
         i += ((unsigned int)name[i]) + 1;
         cnt++;
@@ -96,7 +96,7 @@
 
      list = PyList_New(len);
      for (i=0; i < len; i++) {
-            PyList_SET_ITEM(list, i, PyString_FromString(array[i]));
+            PyList_SET_ITEM(list, i, PyUnicode_FromString(array[i]));
      }
      return list;
    }
@@ -207,7 +207,7 @@ struct query_info {
        char buf[LDNS_MAX_DOMAINLEN];
        buf[0] = '\0';
        dname_str((uint8_t*)PyBytes_AsString(dname), buf);
-       return PyString_FromString(buf);
+       return PyUnicode_FromString(buf);
    }
 %}
 
@@ -345,7 +345,7 @@ struct packed_rrset_data {
    PyObject* _get_data_rr_len(struct packed_rrset_data* d, int idx) {
      if ((d != NULL) && (idx >= 0) &&
              ((size_t)idx < (d->count+d->rrsig_count)))
-        return PyInt_FromLong(d->rr_len[idx]);
+        return PyLong_FromLong(d->rr_len[idx]);
      return Py_None;
    }
    void _set_data_rr_ttl(struct packed_rrset_data* d, int idx, uint32_t ttl)
@@ -357,7 +357,7 @@ struct packed_rrset_data {
    PyObject* _get_data_rr_ttl(struct packed_rrset_data* d, int idx) {
      if ((d != NULL) && (idx >= 0) &&
              ((size_t)idx < (d->count+d->rrsig_count)))
-        return PyInt_FromLong(d->rr_ttl[idx]);
+        return PyLong_FromLong(d->rr_ttl[idx]);
      return Py_None;
    }
    PyObject* _get_data_rr_data(struct packed_rrset_data* d, int idx) {
@@ -555,12 +555,12 @@ struct sockaddr_storage {};
 
         if (ss->ss_family == AF_INET) {
             const struct sockaddr_in *sa4 = (struct sockaddr_in *)ss;
-            return PyInt_FromLong(ntohs(sa4->sin_port));
+            return PyLong_FromLong(ntohs(sa4->sin_port));
         }
 
         if (ss->ss_family == AF_INET6) {
             const struct sockaddr_in6 *sa6 = (struct sockaddr_in6 *)ss;
-            return PyInt_FromLong(ntohs(sa6->sin6_port));
+            return PyLong_FromLong(ntohs(sa6->sin6_port));
         }
 
         return Py_None;
@@ -574,7 +574,7 @@ struct sockaddr_storage {};
         }
 
         sa6 = (struct sockaddr_in6 *)ss;
-        return PyInt_FromLong(ntohl(sa6->sin6_flowinfo));
+        return PyLong_FromLong(ntohl(sa6->sin6_flowinfo));
     }
 
     PyObject *_sockaddr_storage_scope_id(const struct sockaddr_storage *ss) {
@@ -585,7 +585,7 @@ struct sockaddr_storage {};
         }
 
         sa6 = (struct sockaddr_in6 *)ss;
-        return PyInt_FromLong(ntohl(sa6->sin6_scope_id));
+        return PyLong_FromLong(ntohl(sa6->sin6_scope_id));
     }
 %}
 
@@ -661,7 +661,7 @@ struct edns_option {
 %inline %{
     PyObject* _edns_option_opt_code_get(struct edns_option* option) {
         uint16_t opt_code = option->opt_code;
-        return PyInt_FromLong(opt_code);
+        return PyLong_FromLong(opt_code);
     }
 
     PyObject* _edns_option_opt_data_get(struct edns_option* option) {
@@ -1627,7 +1627,7 @@ int edns_opt_list_append(struct edns_option** list, uint16_t code, size_t len,
         }
         result = PyObject_Call(func, py_args, py_kwargs);
         if (result) {
-            res = PyInt_AsLong(result);
+            res = PyLong_AsLong(result);
         }
 out:
         Py_XDECREF(py_edns);
@@ -1711,7 +1711,7 @@ out:
         }
         result = PyObject_Call(func, py_args, py_kwargs);
         if (result) {
-            res = PyInt_AsLong(result);
+            res = PyLong_AsLong(result);
         }
 out:
         Py_XDECREF(py_qinfo);
@@ -1765,7 +1765,7 @@ out:
         }
         result = PyObject_Call(func, py_args, py_kwargs);
         if (result) {
-            res = PyInt_AsLong(result);
+            res = PyLong_AsLong(result);
         }
 out:
         Py_XDECREF(py_qstate);
@@ -1814,7 +1814,7 @@ out:
         }
         result = PyObject_Call(func, py_args, py_kwargs);
         if (result) {
-            res = PyInt_AsLong(result);
+            res = PyLong_AsLong(result);
         }
 out:
         Py_XDECREF(py_qstate);

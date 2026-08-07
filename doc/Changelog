@@ -1,3 +1,7 @@
+7 August 2026: Wouter
+	- Fix #1489 from jplesnik: Replace removed Python 2 C API
+	  macros for SWIG 4.5.0 compatibility.
+
 6 August 2026: Alex Khanin
 	- Fix #1488: bounds check in packed_rr_to_string, it checked
 	  the assembled rr length against the output string length
