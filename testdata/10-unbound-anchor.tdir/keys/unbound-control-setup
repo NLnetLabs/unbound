@@ -158,6 +158,9 @@ test -f $CTL_BASE.pem || error "could not create $CTL_BASE.pem"
 # remove unused permissions
 chmod o-rw $SVR_BASE.pem $SVR_BASE.key $CTL_BASE.pem $CTL_BASE.key
 
+# add needed group permissions
+chmod g+r $SVR_BASE.key $CTL_BASE.key
+
 # remove crap
 rm -f request.cfg
 rm -f $CTL_BASE"_trust.pem" $SVR_BASE"_trust.pem" $SVR_BASE"_trust.srl"
