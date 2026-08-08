@@ -571,6 +571,27 @@ These options are part of the ``server:`` section.
     Default: 1900
 
 
+@@UAHL@unbound.conf@client-wait-timeout@@: *<msec>*
+    The wait time in msec before a client query that is still waiting for
+    recursion is answered with SERVFAIL and Extended DNS Error code 22
+    (No Reachable Authority).
+    Recursion continues in the background so the cache is populated for
+    subsequent identical queries.
+    The EDE code is only attached when :ref:`ede<unbound.conf.ede>` is
+    enabled.
+    If both this and
+    :ref:`serve-expired-client-timeout<unbound.conf.serve-expired-client-timeout>`
+    are set, whichever timer fires first answers and the other becomes a
+    no-op.
+    Keep the value smaller than
+    :ref:`discard-timeout<unbound.conf.discard-timeout>`;
+    UDP replies that arrive between the two timeouts are discarded before
+    this timeout can answer, and those clients receive no response at all.
+    The value ``0`` disables it.
+
+    Default: 0
+
+
 @@UAHL@unbound.conf@wait-limit@@: *<number>*
     The number of replies that can wait for recursion, for an IP address.
     This makes a ratelimit per IP address of waiting replies for recursion.

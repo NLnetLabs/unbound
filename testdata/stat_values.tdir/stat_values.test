@@ -494,6 +494,54 @@ total.num.queries_wait_limit=1"
 
 ###
 #
+# Bring the client-wait-timeout configured Unbound up
+#
+bring_up_alternate_configuration ub_client_wait_timeout.conf
+#
+###
+
+
+teststep "Check client-wait-timeout"
+echo "> dig www.unresponsive"
+dig @127.0.0.1 -p $UNBOUND_PORT +retry=0 +timeout=2 www.unresponsive. | tee outfile
+# The client-wait timer (500 ms) answers SERVFAIL before dig's timeout.
+if grep "SERVFAIL" outfile; then
+	echo "OK"
+else
+	end 1
+fi
+# Same over TCP (different name, the first SERVFAIL is cached); this drives
+# the tcp_req_info reply path of the timeout callback, which testbound
+# replays cannot reach.
+echo "> dig www2.unresponsive +tcp"
+dig @127.0.0.1 -p $UNBOUND_PORT +tcp +retry=0 +timeout=2 www2.unresponsive. | tee outfile
+if grep "SERVFAIL" outfile; then
+	echo "OK"
+else
+	end 1
+fi
+# Wait for the outstanding upstream queries to time out so the states finish.
+sleep 4
+check_stats "\
+infra.cache.count=1
+msg.cache.count=2
+num.answer.rcode.SERVFAIL=2
+num.query.class.IN=2
+num.query.edns.present=2
+num.query.flags.AD=2
+num.query.flags.RD=2
+num.query.opcode.QUERY=2
+num.query.tcp=1
+num.query.type.A=2
+num.query.udpout=2
+total.num.cachemiss=2
+total.num.queries=2
+total.num.queries_client_wait_timeout=2
+total.num.recursivereplies=2"
+
+
+###
+#
 # Bring the downstream DNS Cookies configured Unbound up
 #
 bring_up_alternate_configuration ub_downstream_cookies.conf

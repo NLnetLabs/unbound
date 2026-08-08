@@ -676,6 +676,8 @@ struct module_qstate {
 	time_t prefetch_leeway;
 	/** serve expired data */
 	struct serve_expired_data* serve_expired_data;
+	/** client-wait-timeout timer, fires at the next client's deadline */
+	struct comm_timer* client_wait_timer;
 
 	/** incoming edns options from the front end */
 	struct edns_option* edns_opts_front_in;
