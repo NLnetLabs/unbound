@@ -1,0 +1,13 @@
+server:
+	chroot: ""
+	username: ""
+	directory: "."
+	pidfile: ""
+	local-zone: "example.com." nftset
+	local-zone: "blocked.org." nftset
+
+nftset:
+	family: "inet"
+	table: "fw4"
+	name-v4: "blocklist"
+	name-v6: "blocklist6"

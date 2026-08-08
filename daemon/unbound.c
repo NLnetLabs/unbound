@@ -51,6 +51,7 @@
 #include "util/config_file.h"
 #include "util/storage/slabhash.h"
 #include "services/listen_dnsport.h"
+#include "services/modstack.h"
 #include "services/cache/rrset.h"
 #include "services/cache/infra.h"
 #include "util/fptr_wlist.h"
@@ -77,6 +78,12 @@
 #endif /* S_SPLINT_S */
 #ifdef HAVE_LOGIN_CAP_H
 #include <login_cap.h>
+#endif
+
+#if (defined(USE_IPSET) || defined(USE_NFTSET)) && defined(__linux__)
+#  include <sys/prctl.h>
+#  include <sys/syscall.h>
+#  include <linux/capability.h>
 #endif
 
 #ifdef UB_ON_WINDOWS
@@ -486,6 +493,9 @@ perform_setup(struct daemon* daemon, struct config_file* cfg, int debug_mode,
 #ifdef HAVE_GETPWNAM
 	struct passwd *pwd = NULL;
 #endif
+#if (defined(USE_IPSET) || defined(USE_NFTSET)) && defined(__linux__)
+	int needs_net_admin = 0;
+#endif
 
 	if(!daemon_privileged(daemon))
 		fatal_exit("could not do privileged setup");
@@ -639,6 +649,19 @@ perform_setup(struct daemon* daemon, struct config_file* cfg, int debug_mode,
 		endpwent();
 #  endif
 
+#if (defined(USE_IPSET) || defined(USE_NFTSET)) && defined(__linux__)
+		/* Preserve CAP_NET_ADMIN across the privilege drop only if the
+		 * ipset/nftset module is actually configured to run. */
+		needs_net_admin =
+			modstack_has_module(cfg->module_conf, "ipset") ||
+			modstack_has_module(cfg->module_conf, "nftset");
+		if(needs_net_admin) {
+			if(prctl(PR_SET_KEEPCAPS, 1) != 0)
+				log_warn("prctl(PR_SET_KEEPCAPS) failed: %s",
+					strerror(errno));
+		}
+#endif
+
 #ifdef HAVE_SETRESGID
 		if(setresgid(cfg_gid,cfg_gid,cfg_gid) != 0)
 #elif defined(HAVE_SETREGID) && !defined(DARWIN_BROKEN_SETREUID)
@@ -655,9 +678,28 @@ perform_setup(struct daemon* daemon, struct config_file* cfg, int debug_mode,
 #else /* use setuid */
 		if(setuid(cfg_uid) != 0)
 #endif /* HAVE_SETRESUID */
-			fatal_exit("unable to set user id of %s: %s", 
+			fatal_exit("unable to set user id of %s: %s",
 				cfg->username, strerror(errno));
-		verbose(VERB_QUERY, "drop user privileges, run as %s", 
+#if (defined(USE_IPSET) || defined(USE_NFTSET)) && defined(__linux__)
+		if(needs_net_admin) {
+			/* Restore CAP_NET_ADMIN into effective set (permitted was
+			 * preserved by PR_SET_KEEPCAPS); drop all other caps. */
+			struct __user_cap_header_struct hdr;
+			struct __user_cap_data_struct data[2];
+			memset(&hdr, 0, sizeof(hdr));
+			memset(data, 0, sizeof(data));
+			hdr.version = _LINUX_CAPABILITY_VERSION_3;
+			hdr.pid = 0;
+			data[0].effective = data[0].permitted = (1u << CAP_NET_ADMIN);
+			if(syscall(SYS_capset, &hdr, data) != 0)
+				log_warn("capset(CAP_NET_ADMIN) failed: %s",
+					strerror(errno));
+			else
+				verbose(VERB_QUERY,
+					"retained CAP_NET_ADMIN after privilege drop");
+		}
+#endif
+		verbose(VERB_QUERY, "drop user privileges, run as %s",
 			cfg->username);
 	}
 #endif /* HAVE_GETPWNAM */
