@@ -50,6 +50,7 @@
 #include "util/net_help.h"
 #include "util/log.h"
 #include "util/ub_event.h"
+#include "util/timeval_func.h"
 #include "util/data/dname.h"
 
 /** Auth load notification to string, for descriptive purposes. */
@@ -574,6 +575,9 @@ static int
 auth_load_thread_process(struct auth_load_thread* thr)
 {
 	struct auth_load_task* task = thr->task;
+	struct timeval start, end;
+	if(gettimeofday(&start, NULL) < 0)
+		log_err("gettimeofday: %s", strerror(errno));
 
 	/* apply data */
 	if(task->on_http) {
@@ -586,6 +590,10 @@ auth_load_thread_process(struct auth_load_thread* thr)
 		if(!auth_load_process_axfr(thr))
 			return 0;
 	}
+
+	if(gettimeofday(&end, NULL) < 0)
+		log_err("gettimeofday: %s", strerror(errno));
+	timeval_subtract(&thr->task->time_taken, &end, &start);
 	return 1;
 }
 
@@ -674,6 +682,7 @@ worker_auth_load_service_cb(int ATTR_UNUSED(fd), short ATTR_UNUSED(bits),
 	struct auth_chunk* chunk_list;
 	struct module_env* env = &thr->task->worker->env;
 	int ixfr_fail;
+	struct timeval time_taken;
 
 	log_assert(thr->commpair[0] >= 0);
 	ret = recv(thr->commpair[0], &recv_item, 1, 0);
@@ -725,6 +734,7 @@ worker_auth_load_service_cb(int ATTR_UNUSED(fd), short ATTR_UNUSED(bits),
 	lock_basic_lock(&xfr->lock);
 	lock_rw_unlock(&thr->task->worker->env.auth_zones->lock);
 	ixfr_fail = thr->task->ixfr_fail;
+	time_taken = thr->task->time_taken;
 	if(thr->task->on_http) {
 		chunk_list = thr->task->chunks_first;
 		thr->task->chunks_first = NULL;
@@ -736,7 +746,7 @@ worker_auth_load_service_cb(int ATTR_UNUSED(fd), short ATTR_UNUSED(bits),
 	auth_load_thread_delete(thr);
 	auth_load_info_release_thread(env);
 	xfr_process_load_end_transfer(xfr, env, recv_item, ixfr_fail,
-		chunk_list);
+		&time_taken, chunk_list);
 }
 
 /** Attach worker to the auth load thread. */

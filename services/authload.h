@@ -155,6 +155,9 @@ struct auth_load_task {
 	struct auth_chunk* chunks_last;
 	/** size of data in data chunks. */
 	size_t chunks_total;
+
+	/** time taken for the task */
+	struct timeval time_taken;
 };
 
 /**
