@@ -1732,6 +1732,14 @@ do_view_data_add(RES* ssl, struct worker* worker, char* arg)
 			ssl_printf(ssl,"error out of memory\n");
 			return;
 		}
+		if(!v->isfirst) {
+			/* Global local-zone is not used for this view,
+			 * therefore add defaults to this view-specific
+			 * local-zone. */
+			struct config_file lz_cfg;
+			memset(&lz_cfg, 0, sizeof(lz_cfg));
+			local_zone_enter_defaults(v->local_zones, &lz_cfg);
+		}
 	}
 	do_data_add(ssl, v->local_zones, arg2);
 	lock_rw_unlock(&v->lock);
@@ -1756,6 +1764,14 @@ do_view_datas_add(struct daemon_remote* rc, RES* ssl, struct worker* worker,
 			lock_rw_unlock(&v->lock);
 			ssl_printf(ssl,"error out of memory\n");
 			return;
+		}
+		if(!v->isfirst) {
+			/* Global local-zone is not used for this view,
+			 * therefore add defaults to this view-specific
+			 * local-zone. */
+			struct config_file lz_cfg;
+			memset(&lz_cfg, 0, sizeof(lz_cfg));
+			local_zone_enter_defaults(v->local_zones, &lz_cfg);
 		}
 	}
 	/* put the view name in the command buf */
@@ -2662,7 +2678,7 @@ static int
 ssl_print_name_dp(RES* ssl, const char* str, uint8_t* nm, uint16_t dclass,
 	struct delegpt* dp)
 {
-	char buf[LDNS_MAX_DOMAINLEN];
+	char buf[LDNS_MAX_DOMAINLEN], portstr[128], tls_auth_name[256];
 	struct delegpt_ns* ns;
 	struct delegpt_addr* a;
 	int f = 0;
@@ -2677,13 +2693,32 @@ ssl_print_name_dp(RES* ssl, const char* str, uint8_t* nm, uint16_t dclass,
 	}
 	for(ns = dp->nslist; ns; ns = ns->next) {
 		dname_str(ns->name, buf);
-		if(!ssl_printf(ssl, "%s%s", (f?" ":""), buf))
+		if(ns->port != UNBOUND_DNS_PORT)
+			snprintf(portstr, sizeof(portstr), "@%d", ns->port);
+		else	portstr[0]=0;
+		if(ns->tls_auth_name)
+			snprintf(tls_auth_name, sizeof(tls_auth_name), "#%s",
+				ns->tls_auth_name);
+		else	tls_auth_name[0]=0;
+		if(!ssl_printf(ssl, "%s%s%s%s", (f?" ":""), buf, portstr,
+			tls_auth_name))
 			return 0;
 		f = 1;
 	}
 	for(a = dp->target_list; a; a = a->next_target) {
+		int port = (unsigned)((a->addr.ss_family == AF_INET) ?
+			ntohs(((struct sockaddr_in*)&a->addr)->sin_port) :
+			ntohs(((struct sockaddr_in6*)&a->addr)->sin6_port));
 		addr_to_str(&a->addr, a->addrlen, buf, sizeof(buf));
-		if(!ssl_printf(ssl, "%s%s", (f?" ":""), buf))
+		if(port != UNBOUND_DNS_PORT)
+			snprintf(portstr, sizeof(portstr), "@%d", port);
+		else	portstr[0]=0;
+		if(a->tls_auth_name)
+			snprintf(tls_auth_name, sizeof(tls_auth_name), "#%s",
+				a->tls_auth_name);
+		else	tls_auth_name[0]=0;
+		if(!ssl_printf(ssl, "%s%s%s%s", (f?" ":""), buf, portstr,
+			tls_auth_name))
 			return 0;
 		f = 1;
 	}
@@ -4921,6 +4956,74 @@ fr_check_changed_cfg_str2list(struct config_str2list* cmp1,
 	}
 }
 
+/** fast reload thread, check if config str3list has changed. */
+#define FR_CHECK_CHANGED_CFG_STR3LIST(desc, var, buff) do {		\
+	fr_check_changed_cfg_str3list(cfg->var, newcfg->var, desc, buff,\
+		sizeof(buff));						\
+	} while(0);
+static void
+fr_check_changed_cfg_str3list(struct config_str3list* cmp1,
+	struct config_str3list* cmp2, const char* desc, char* str, size_t len)
+{
+	struct config_str3list* p1 = cmp1, *p2 = cmp2;
+	while(p1 && p2) {
+		if((!p1->str && p2->str) ||
+			(p1->str && !p2->str) ||
+			(p1->str && p2->str && strcmp(p1->str, p2->str) != 0)) {
+			/* The str3list is different. */
+			fr_add_incompatible_option(desc, str, len);
+			return;
+		}
+		if((!p1->str2 && p2->str2) ||
+			(p1->str2 && !p2->str2) ||
+			(p1->str2 && p2->str2 &&
+			strcmp(p1->str2, p2->str2) != 0)) {
+			/* The str3list is different. */
+			fr_add_incompatible_option(desc, str, len);
+			return;
+		}
+		if((!p1->str3 && p2->str3) ||
+			(p1->str3 && !p2->str3) ||
+			(p1->str3 && p2->str3 &&
+			strcmp(p1->str3, p2->str3) != 0)) {
+			/* The str3list is different. */
+			fr_add_incompatible_option(desc, str, len);
+			return;
+		}
+		p1 = p1->next;
+		p2 = p2->next;
+	}
+	if((!p1 && p2) || (p1 && !p2)) {
+		fr_add_incompatible_option(desc, str, len);
+	}
+}
+
+/** fast reload thread, check tag datas. */
+static int
+fr_check_tag_datas(struct fast_reload_thread* fr, struct config_file* newcfg)
+{
+	char changed_str[1024];
+	struct config_file* cfg = fr->worker->env.cfg;
+	changed_str[0]=0;
+
+	/* Check for tag_datas in acl_addr. */
+	FR_CHECK_CHANGED_CFG_STR3LIST("interface-tag-data", interface_tag_datas, changed_str);
+	FR_CHECK_CHANGED_CFG_STR3LIST("access-control-tag-data", acl_tag_datas, changed_str);
+
+	if(changed_str[0] != 0) {
+		if(fr->fr_drop_mesh)
+			return 1; /* already dropping queries */
+		fr->fr_drop_mesh = 1;
+		fr->worker->daemon->fast_reload_drop_mesh = fr->fr_drop_mesh;
+		if(!fr_output_printf(fr, "recursion referenced data has changed, with: '%s"
+			"', and the queries have to be dropped"
+			", setting '+d'\n", changed_str))
+			return 0;
+		fr_send_notification(fr, fast_reload_notification_printout);
+	}
+	return 1;
+}
+
 /** fast reload thread, check compatible config items */
 static int
 fr_check_compat_cfg(struct fast_reload_thread* fr, struct config_file* newcfg)
@@ -6804,6 +6907,10 @@ fr_load_config(struct fast_reload_thread* fr, struct timeval* time_read,
 
 	/* Check if the config can be loaded */
 	if(!fr_check_tag_defines(fr, newcfg)) {
+		config_delete(newcfg);
+		return 0;
+	}
+	if(!fr_check_tag_datas(fr, newcfg)) {
 		config_delete(newcfg);
 		return 0;
 	}

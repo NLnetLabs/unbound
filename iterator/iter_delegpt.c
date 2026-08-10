@@ -412,7 +412,7 @@ find_NS(struct reply_info* rep, size_t from, size_t to, uint16_t qclass)
 }
 
 struct delegpt* 
-delegpt_from_message(struct dns_msg* msg, struct regional* region)
+delegpt_from_message(struct dns_msg* msg, struct regional* region, int port)
 {
 	struct ub_packed_rrset_key* ns_rrset = NULL;
 	struct delegpt* dp;
@@ -441,7 +441,7 @@ delegpt_from_message(struct dns_msg* msg, struct regional* region)
 	dp->has_parent_side_NS = 1; /* created from message */
 	if(!delegpt_set_name(dp, region, ns_rrset->rk.dname))
 		return NULL;
-	if(!delegpt_rrset_add_ns(dp, region, ns_rrset, 0))
+	if(!delegpt_rrset_add_ns(dp, region, ns_rrset, 0, port))
 		return NULL;
 
 	/* add glue, A and AAAA in answer and additional section */
@@ -467,7 +467,7 @@ delegpt_from_message(struct dns_msg* msg, struct regional* region)
 
 int 
 delegpt_rrset_add_ns(struct delegpt* dp, struct regional* region,
-        struct ub_packed_rrset_key* ns_rrset, uint8_t lame)
+        struct ub_packed_rrset_key* ns_rrset, uint8_t lame, int port)
 {
 	struct packed_rrset_data* nsdata = (struct packed_rrset_data*)
 		ns_rrset->entry.data;
@@ -482,7 +482,7 @@ delegpt_rrset_add_ns(struct delegpt* dp, struct regional* region,
 			continue; /* bad format */
 		/* add rdata of NS (= wirefmt dname), skip rdatalen bytes */
 		if(!delegpt_add_ns(dp, region, nsdata->rr_data[i]+2, lame,
-			NULL, UNBOUND_DNS_PORT))
+			NULL, (port==-1?UNBOUND_DNS_PORT:port)))
 			return 0;
 	}
 	return 1;
@@ -541,7 +541,7 @@ delegpt_add_rrset(struct delegpt* dp, struct regional* region,
 	if(!rrset)
 		return 1;
 	if(ntohs(rrset->rk.type) == LDNS_RR_TYPE_NS)
-		return delegpt_rrset_add_ns(dp, region, rrset, lame);
+		return delegpt_rrset_add_ns(dp, region, rrset, lame, -1);
 	else if(ntohs(rrset->rk.type) == LDNS_RR_TYPE_A)
 		return delegpt_add_rrset_A(dp, region, rrset, lame, additions);
 	else if(ntohs(rrset->rk.type) == LDNS_RR_TYPE_AAAA)

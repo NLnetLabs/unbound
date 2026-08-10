@@ -1282,6 +1282,144 @@ static void localzone_test(void)
 	localzone_parents_test();
 }
 
+#include "services/mesh.h"
+/** mesh unit tests */
+static void mesh_test(void)
+{
+	struct regional* r2, *r3;
+	struct respip_client_info* c1, *c2, *c3;
+	unit_show_func("services/mesh.c", "mesh_copy_client_info");
+	r2 = regional_create();
+	r3 = regional_create();
+	if(!r2 || !r3) fatal_exit("out of memory");
+
+	c1 = calloc(1, sizeof(*c1));
+	if(!c1) fatal_exit("out of memory");
+	c1->view = calloc(1, sizeof(*c1->view));
+	if(!c1->view) fatal_exit("out of memory");
+	c1->view->name = strdup("view1");
+	if(!c1->view->name) fatal_exit("out of memory");
+
+	c2 = mesh_copy_client_info(r2, c1);
+	if(!c2) fatal_exit("out of memory");
+	c3 = mesh_copy_client_info(r3, c2);
+	if(!c3) fatal_exit("out of memory");
+
+	unit_assert(strcmp(c1->view->name, c2->view_name) == 0);
+	unit_assert(strcmp(c1->view->name, c3->view_name) == 0);
+
+	/* make sure that the c3 view_name is in the r3 region. */
+	unit_assert(r3->next == NULL);  /* only the first chunk present atm */
+	if(strlen(c3->view_name) >= r3->large_object_size) {
+		char* a = r3->large_list;
+		int found = 0;
+		while(a) {
+			if(strcmp(c3->view_name,
+				a + /* ALIGNEMENT */ sizeof(uint64_t)) == 0) {
+				found = 1;
+				break;
+			}
+			a = *(char**)a;
+		}
+		unit_assert(found == 1);
+	} else {
+		/* The allocation is expected in the r3 region first chunk */
+		unit_assert((uint8_t*)c3->view_name < ((uint8_t*)r3)+r3->first_size);
+	}
+
+	regional_destroy(r2);
+	/* ASAN should complain for the freed access below */
+	unit_assert(strcmp(c1->view->name, c3->view_name) == 0);
+
+	regional_destroy(r3);
+	free(c1->view->name);
+	free(c1->view);
+	free(c1);
+}
+
+#include "util/data/packed_rrset.h"
+#include "sldns/sbuffer.h"
+/** packed_rrset unit tests */
+static void packed_rrset_test(void)
+{
+	/* packed_rr_to_string assembles the dname, type, class, ttl and
+	 * rdata of one rr into a buffer of 65535 bytes.  Check that it
+	 * refuses an rr that does not fit in there, also when the caller
+	 * passes a dest_len that is larger than that, like the callers in
+	 * daemon/cachedump.c and daemon/remote.c do.  Without the check it
+	 * writes past the end of the assembly buffer. */
+	uint8_t smalldname[] = "\003www\007example\003com";
+	uint8_t smallrdata[] = {0, 4, 1, 2, 3, 4};
+	uint8_t maxdname[LDNS_MAX_DOMAINLEN];
+	struct ub_packed_rrset_key rrk;
+	struct packed_rrset_data d;
+	uint8_t* rr_data[1];
+	size_t rr_len[1];
+	time_t rr_ttl[1];
+	size_t dest_len = 65535*4+2048; /* the size daemon/cachedump.c uses */
+	char* dest = (char*)malloc(dest_len);
+	int i;
+
+	unit_show_func("util/data/packed_rrset.c", "packed_rr_to_string");
+	if(!dest) fatal_exit("out of memory");
+	memset(&rrk, 0, sizeof(rrk));
+	memset(&d, 0, sizeof(d));
+	rrk.entry.data = &d;
+	rrk.rk.rrset_class = htons(LDNS_RR_CLASS_IN);
+	d.count = 1;
+	d.rr_len = rr_len;
+	d.rr_ttl = rr_ttl;
+	d.rr_data = rr_data;
+	rr_ttl[0] = 3600;
+
+	/* an ordinary rr is printed, also with the large dest_len */
+	rrk.rk.dname = smalldname;
+	rrk.rk.dname_len = sizeof(smalldname);
+	rrk.rk.type = htons(LDNS_RR_TYPE_A);
+	rr_data[0] = smallrdata;
+	rr_len[0] = sizeof(smallrdata);
+	unit_assert(packed_rr_to_string(&rrk, 0, 0, dest, dest_len) == 1);
+	unit_assert(strstr(dest, "1.2.3.4") != NULL);
+
+	/* a dname of the maximum length, 127 labels of one character */
+	for(i=0; i<127; i++) {
+		maxdname[i*2] = 1;
+		maxdname[i*2+1] = (uint8_t)'a';
+	}
+	maxdname[254] = 0;
+	rrk.rk.dname = maxdname;
+	rrk.rk.dname_len = sizeof(maxdname);
+	rrk.rk.type = htons(LDNS_RR_TYPE_TXT);
+
+	/* 255+2+2+4+65272 is exactly 65535, that still fits */
+	rr_len[0] = 65535 - 255 - 8;
+	rr_data[0] = (uint8_t*)calloc(1, rr_len[0]);
+	if(!rr_data[0]) fatal_exit("out of memory");
+	sldns_write_uint16(rr_data[0], (uint16_t)(rr_len[0]-2));
+	unit_assert(packed_rr_to_string(&rrk, 0, 0, dest, dest_len) == 1);
+	free(rr_data[0]);
+
+	/* one more byte of rdata does not fit and must be refused */
+	rr_len[0] = 65535 - 255 - 8 + 1;
+	rr_data[0] = (uint8_t*)calloc(1, rr_len[0]);
+	if(!rr_data[0]) fatal_exit("out of memory");
+	sldns_write_uint16(rr_data[0], (uint16_t)(rr_len[0]-2));
+	unit_assert(packed_rr_to_string(&rrk, 0, 0, dest, dest_len) == 0);
+	unit_assert(dest[0] == 0);
+	free(rr_data[0]);
+
+	/* the largest rdata an rr can hold, well over the buffer */
+	rr_len[0] = 2 + 65535;
+	rr_data[0] = (uint8_t*)calloc(1, rr_len[0]);
+	if(!rr_data[0]) fatal_exit("out of memory");
+	sldns_write_uint16(rr_data[0], 65535);
+	unit_assert(packed_rr_to_string(&rrk, 0, 0, dest, dest_len) == 0);
+	unit_assert(dest[0] == 0);
+	free(rr_data[0]);
+
+	free(dest);
+}
+
 void unit_show_func(const char* file, const char* func)
 {
 	printf("test %s:%s\n", file, func);
@@ -1354,8 +1492,10 @@ main(int argc, char* argv[])
 	zonemd_test();
 	tcpreuse_test();
 	msgparse_test();
+	packed_rrset_test();
 	edns_ede_answer_encode_test();
 	localzone_test();
+	mesh_test();
 #ifdef CLIENT_SUBNET
 	ecs_test();
 #endif /* CLIENT_SUBNET */
@@ -1389,6 +1529,9 @@ main(int argc, char* argv[])
 #  ifdef HAVE_RAND_CLEANUP
 	RAND_cleanup();
 #  endif
+#ifdef HAVE_OPENSSL_CLEANUP
+	OPENSSL_cleanup();
+#endif
 #elif defined(HAVE_NSS)
 	if(NSS_Shutdown() != SECSuccess)
 		fatal_exit("could not shutdown NSS");

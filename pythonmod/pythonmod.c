@@ -246,14 +246,14 @@ log_py_err(void)
 	}
 
 	/* And it should be a string all ready to go - duplicate it. */
-	if (!PyString_Check(obResult) && !PyUnicode_Check(obResult)) {
+	if (!PyBytes_Check(obResult) && !PyUnicode_Check(obResult)) {
 		log_err("pythonmod: cannot print exception, "
 			"StringIO.getvalue() result did not String_Check"
 			" or Unicode_Check");
 		goto cleanup;
 	}
-	if(PyString_Check(obResult)) {
-		result = PyString_AsString(obResult);
+	if(PyBytes_Check(obResult)) {
+		result = PyBytes_AsString(obResult);
 	} else {
 		ascstr = PyUnicode_AsASCIIString(obResult);
 		result = PyBytes_AsString(ascstr);
@@ -450,7 +450,7 @@ int pythonmod_init(struct module_env* env, int id)
 
    pe->data = PyDict_New();
    /* add the script filename to the global "mod_env" for trivial access */
-   fname = PyString_FromString(pe->fname);
+   fname = PyUnicode_FromString(pe->fname);
    if(PyDict_SetItemString(pe->data, "script", fname) < 0) {
 	log_err("pythonmod: could not add item to dictionary");
 	Py_XDECREF(fname);
@@ -487,10 +487,17 @@ int pythonmod_init(struct module_env* env, int id)
       /* for python 3.9 and newer */
       char* fstr = NULL;
       size_t flen = 0;
+      long pos = 0;
       log_err("pythonmod: can't parse Python script %s", pe->fname);
       /* print the error to logs too, run it again */
       fseek(script_py, 0, SEEK_END);
-      flen = (size_t)ftell(script_py);
+      pos = ftell(script_py);
+      if (pos == -1L) {
+         log_err("ftell failed to print parse error: %s: %s",
+            pe->fname, strerror(errno));
+         goto fail_close_file;
+      }
+      flen = (size_t)pos;
 #ifdef SIZE_MAX
       if(flen > SIZE_MAX-2) {
 		log_err("script file too large");

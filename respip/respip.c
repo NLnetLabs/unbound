@@ -1121,7 +1121,13 @@ respip_operate(struct module_qstate* qstate, enum module_ev event, int id,
 		if((qstate->qinfo.qtype == LDNS_RR_TYPE_A ||
 			qstate->qinfo.qtype == LDNS_RR_TYPE_AAAA ||
 			qstate->qinfo.qtype == LDNS_RR_TYPE_ANY) &&
-			qstate->return_msg && qstate->return_msg->rep) {
+			qstate->return_msg && qstate->return_msg->rep &&
+			!(qstate->env->need_to_validate &&
+			  (!(qstate->query_flags & BIT_CD)
+			    || qstate->env->cfg->ignore_cd) &&
+			  (qstate->return_msg->rep->security <= sec_status_bogus
+			    || qstate->return_msg->rep->security ==
+			    sec_status_secure_sentinel_fail))) {
 			struct reply_info* new_rep = qstate->return_msg->rep;
 			struct ub_packed_rrset_key* alias_rrset = NULL;
 			struct respip_action_info actinfo = {0, 0, 0, 0, NULL, 0, NULL};
@@ -1158,8 +1164,10 @@ respip_operate(struct module_qstate* qstate, enum module_ev event, int id,
 				 * clients. */
 				qstate->is_drop = 1;
 			} else if(alias_rrset) {
-				if(!generate_cname_request(qstate, alias_rrset))
+				if(!generate_cname_request(qstate, alias_rrset)) {
+					errinf(qstate, "Could not generate CNAME request");
 					goto servfail;
+				}
 				next_state = module_wait_subquery;
 			}
 			qstate->return_msg->rep = new_rep;
@@ -1173,6 +1181,7 @@ respip_operate(struct module_qstate* qstate, enum module_ev event, int id,
   servfail:
 	qstate->return_rcode = LDNS_RCODE_SERVFAIL;
 	qstate->return_msg = NULL;
+	qstate->ext_state[id] = module_finished;
 }
 
 int
@@ -1269,6 +1278,7 @@ respip_inform_super(struct module_qstate* qstate, int id,
 	return;
 
   fail:
+	errinf(super, "CNAME lookup failed");
 	super->return_rcode = LDNS_RCODE_SERVFAIL;
 	super->return_msg = NULL;
 	return;

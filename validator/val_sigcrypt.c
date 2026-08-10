@@ -1107,6 +1107,7 @@ canonicalize_rdata(sldns_buffer* buf, struct ub_packed_rrset_key* rrset,
 {
 	uint8_t* datstart = sldns_buffer_current(buf)-len+2;
 	uint8_t* datend = sldns_buffer_current(buf);
+	size_t firstlen;
 	switch(ntohs(rrset->rk.type)) {
 		case LDNS_RR_TYPE_NXT: 
 		case LDNS_RR_TYPE_NS:
@@ -1126,8 +1127,9 @@ canonicalize_rdata(sldns_buffer* buf, struct ub_packed_rrset_key* rrset,
 		case LDNS_RR_TYPE_SOA:
 			/* two names after another */
 			canon_dname_tolower(datstart, datend);
-			canon_dname_tolower(datstart +
-				dname_valid(datstart, len-2), datend);
+			firstlen = dname_valid(datstart, len-2);
+			if(firstlen && firstlen < len-2)
+				canon_dname_tolower(datstart + firstlen, datend);
 			return;
 		case LDNS_RR_TYPE_RT:
 		case LDNS_RR_TYPE_AFSDB:
@@ -1154,8 +1156,9 @@ canonicalize_rdata(sldns_buffer* buf, struct ub_packed_rrset_key* rrset,
 				return;
 			datstart += 2;
 			canon_dname_tolower(datstart, datend);
-			canon_dname_tolower(datstart +
-				dname_valid(datstart, len-2-2), datend);
+			firstlen = dname_valid(datstart, len-2-2);
+			if(firstlen && firstlen < len-2-2)
+				canon_dname_tolower(datstart + firstlen, datend);
 			return;
 		case LDNS_RR_TYPE_NAPTR:
 			if(len < 2+4)
@@ -1624,6 +1627,30 @@ dnskey_verify_rrset_sig(struct regional* region, sldns_buffer* buf,
 			*reason_bogus = LDNS_EDE_DNSSEC_BOGUS;
 		return sec_status_bogus; /* signer name offtree */
 	}
+	/* NSEC3, the owner name must be the <base32hash>.signername */
+	if(ntohs(rrset->rk.type) == LDNS_RR_TYPE_NSEC3 &&
+		rrset->rk.dname_len > 0) {
+		uint8_t* dnameless = rrset->rk.dname;
+		size_t dnamelesslen = rrset->rk.dname_len;
+		dname_remove_label(&dnameless, &dnamelesslen);
+		if(query_dname_compare(dnameless, signer) != 0) {
+			verbose(VERB_QUERY, "verify: NSEC3 owner name is not b32.signer name");
+			*reason = "NSEC3 owner name is not b32.signer name";
+			if(reason_bogus)
+				*reason_bogus = LDNS_EDE_DNSSEC_BOGUS;
+			return sec_status_bogus; /* NSEC3 owner not b32.signer */
+		}
+	}
+	/* NSEC, a next owner that is not under the signer is not allowed.*/
+	if(ntohs(rrset->rk.type) == LDNS_RR_TYPE_NSEC &&
+		!nsec_nextowner_subdomain(rrset, signer)) {
+		verbose(VERB_QUERY, "verify: NSEC next owner overreaches signer name");
+		*reason = "NSEC next owner overreaches signer name";
+		if(reason_bogus)
+			*reason_bogus = LDNS_EDE_DNSSEC_BOGUS;
+		return sec_status_bogus; /* nextowner overreaching */
+	}
+
 	sigblock = (unsigned char*)signer+signer_len;
 	if(siglen < 2+18+signer_len+1) {
 		verbose(VERB_QUERY, "verify: too short, no signature data");
@@ -1677,6 +1704,13 @@ dnskey_verify_rrset_sig(struct regional* region, sldns_buffer* buf,
 	if((int)sig[2+3] > dname_signame_label_count(rrset->rk.dname)) {
 		verbose(VERB_QUERY, "verify: labelcount out of range");
 		*reason = "signature labelcount out of range";
+		if(reason_bogus)
+			*reason_bogus = LDNS_EDE_DNSSEC_BOGUS;
+		return sec_status_bogus;
+	}
+	if((int)sig[2+3] < dname_signame_label_count(signer)) {
+		verbose(VERB_QUERY, "verify: RRSIG label count too low for signer");
+		*reason = "signature labelcount lower than signature signer";
 		if(reason_bogus)
 			*reason_bogus = LDNS_EDE_DNSSEC_BOGUS;
 		return sec_status_bogus;

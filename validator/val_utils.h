@@ -411,6 +411,14 @@ void val_blacklist(struct sock_list** blacklist, struct regional* region,
 int val_has_signed_nsecs(struct reply_info* rep, char** reason);
 
 /**
+ * See if there are NSECs, or NSEC3s in the authority section.
+ * @param rep: reply to check
+ * @param has_nsec: returned true if it has nsecs.
+ * @param has_nsec3: returned true if it has nsec3s.
+ */
+void val_has_auth_nsecs(struct reply_info* rep, int* has_nsec, int* has_nsec3);
+
+/**
  * Return algo number for favorite (best) algorithm that we support in DS.
  * @param ds_rrset: the DSes in this rrset are inspected and best algo chosen.
  * @return algo number or 0 if none supported. 0 is unused as algo number.
@@ -447,5 +455,12 @@ struct dns_msg* val_find_DS(struct module_env* env, uint8_t* nm, size_t nmlen,
  */
 int derive_cname_from_dname(struct ub_packed_rrset_key* cname,
 	struct ub_packed_rrset_key* dname, uint8_t* out, size_t outlen);
+
+/** Get signer name from RRSIG, sname is NULL if malformed. */
+void rrsig_get_signer(uint8_t* data, size_t len, uint8_t** sname,
+	size_t* slen);
+
+/** See if the NSEC nextowner name is a subdomain of the name. */
+int nsec_nextowner_subdomain(struct ub_packed_rrset_key* rrset, uint8_t* name);
 
 #endif /* VALIDATOR_VAL_UTILS_H */

@@ -443,7 +443,12 @@ auth_zone_create(struct auth_zones* az, uint8_t* nm, size_t nmlen,
 	rbtree_init(&z->data, &auth_data_cmp);
 	lock_rw_init(&z->lock);
 	lock_protect(&z->lock, &z->name, sizeof(*z)-sizeof(rbnode_type)-
-			sizeof(&z->rpz_az_next)-sizeof(&z->rpz_az_prev));
+			sizeof(z->rpz_az_next)-sizeof(z->rpz_az_prev)-
+			sizeof(z->max_transfer_size)-sizeof(z->max_transfer_size));
+	lock_protect(&z->lock, &z->max_transfer_size,
+		sizeof(z->max_transfer_size));
+	lock_protect(&z->lock, &z->max_transfer_time,
+		sizeof(z->max_transfer_time));
 	lock_rw_wrlock(&z->lock);
 	/* z lock protects all, except rbtree itself and the rpz linked list
 	 * pointers, which are protected using az->lock */
@@ -5938,8 +5943,7 @@ xfer_target_equals_answer_name(struct auth_master* lookup_target,
 
 /** callback for task_transfer lookup of host name, of A or AAAA */
 void auth_xfer_transfer_lookup_callback(void* arg, int rcode, sldns_buffer* buf,
-	enum sec_status ATTR_UNUSED(sec), char* ATTR_UNUSED(why_bogus),
-	int ATTR_UNUSED(was_ratelimited))
+	enum sec_status sec, char* why_bogus, int ATTR_UNUSED(was_ratelimited))
 {
 	struct auth_xfer* xfr = (struct auth_xfer*)arg;
 	struct module_env* env;
@@ -5952,7 +5956,16 @@ void auth_xfer_transfer_lookup_callback(void* arg, int rcode, sldns_buffer* buf,
 	}
 
 	/* process result */
-	if(rcode == LDNS_RCODE_NOERROR) {
+	if(sec == sec_status_bogus || sec == sec_status_secure_sentinel_fail) {
+		if(verbosity >= VERB_OPS) {
+			char zname[LDNS_MAX_DOMAINLEN];
+			dname_str(xfr->name, zname);
+			verbose(VERB_OPS, "auth zone %s: primary %s address lookup is DNSSEC bogus: %s",
+				zname, xfr->task_transfer->lookup_target->host,
+				(why_bogus?why_bogus:""));
+		}
+		/* fall through to next-lookup / next-master */
+	} else if(rcode == LDNS_RCODE_NOERROR) {
 		uint16_t wanted_qtype = LDNS_RR_TYPE_A;
 		struct regional* temp = env->scratch;
 		struct query_info rq;
@@ -7251,8 +7264,7 @@ xfr_probe_send_or_end(struct auth_xfer* xfr, struct module_env* env)
 
 /** callback for task_probe lookup of host name, of A or AAAA */
 void auth_xfer_probe_lookup_callback(void* arg, int rcode, sldns_buffer* buf,
-	enum sec_status ATTR_UNUSED(sec), char* ATTR_UNUSED(why_bogus),
-	int ATTR_UNUSED(was_ratelimited))
+	enum sec_status sec, char* why_bogus, int ATTR_UNUSED(was_ratelimited))
 {
 	struct auth_xfer* xfr = (struct auth_xfer*)arg;
 	struct module_env* env;
@@ -7265,7 +7277,16 @@ void auth_xfer_probe_lookup_callback(void* arg, int rcode, sldns_buffer* buf,
 	}
 
 	/* process result */
-	if(rcode == LDNS_RCODE_NOERROR) {
+	if(sec == sec_status_bogus || sec == sec_status_secure_sentinel_fail) {
+		if(verbosity >= VERB_OPS) {
+			char zname[LDNS_MAX_DOMAINLEN];
+			dname_str(xfr->name, zname);
+			verbose(VERB_OPS, "auth zone %s: primary %s address probe lookup is DNSSEC bogus: %s",
+				zname, xfr->task_probe->lookup_target->host,
+				(why_bogus?why_bogus:""));
+		}
+		/* fall through to next-lookup / next-master */
+	} else if(rcode == LDNS_RCODE_NOERROR) {
 		uint16_t wanted_qtype = LDNS_RR_TYPE_A;
 		struct regional* temp = env->scratch;
 		struct query_info rq;
@@ -7795,35 +7816,48 @@ xfer_set_masters(struct auth_master** list, struct config_auth* c,
 {
 	struct auth_master* m;
 	struct config_strlist* p;
+	struct auth_master** tail;
 	/* list points to the first, or next pointer for the new element */
 	while(*list) {
 		list = &( (*list)->next );
 	}
 	if(with_http)
 	  for(p = c->urls; p; p = p->next) {
+		tail = list;
 		m = auth_master_new(&list);
 		if(!m) return 0;
 		m->http = 1;
-		if(!parse_url(p->str, &m->host, &m->file, &m->port, &m->ssl))
+		if(!parse_url(p->str, &m->host, &m->file, &m->port, &m->ssl)) {
+			free(m->host);
+			free(m->file);
+			free(m);
+			*tail = NULL;
 			return 0;
+		}
 	}
 	for(p = c->masters; p; p = p->next) {
+		tail = list;
 		m = auth_master_new(&list);
 		if(!m) return 0;
 		m->ixfr = 1; /* this flag is not configurable */
 		m->host = strdup(p->str);
 		if(!m->host) {
 			log_err("malloc failure");
+			free(m);
+			*tail = NULL;
 			return 0;
 		}
 	}
 	for(p = c->allow_notify; p; p = p->next) {
+		tail = list;
 		m = auth_master_new(&list);
 		if(!m) return 0;
 		m->allow_notify = 1;
 		m->host = strdup(p->str);
 		if(!m->host) {
 			log_err("malloc failure");
+			free(m);
+			*tail = NULL;
 			return 0;
 		}
 	}

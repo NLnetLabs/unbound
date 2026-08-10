@@ -11,15 +11,15 @@ sinclude(dnscrypt/dnscrypt.m4)
 
 # must be numbers. ac_defun because of later processing
 m4_define([VERSION_MAJOR],[1])
-m4_define([VERSION_MINOR],[25])
-m4_define([VERSION_MICRO],[2])
+m4_define([VERSION_MINOR],[26])
+m4_define([VERSION_MICRO],[1])
 AC_INIT([unbound],m4_defn([VERSION_MAJOR]).m4_defn([VERSION_MINOR]).m4_defn([VERSION_MICRO]),[unbound-bugs@nlnetlabs.nl or https://github.com/NLnetLabs/unbound/issues],[unbound])
 AC_SUBST(UNBOUND_VERSION_MAJOR, [VERSION_MAJOR])
 AC_SUBST(UNBOUND_VERSION_MINOR, [VERSION_MINOR])
 AC_SUBST(UNBOUND_VERSION_MICRO, [VERSION_MICRO])
 
 LIBUNBOUND_CURRENT=9
-LIBUNBOUND_REVISION=38
+LIBUNBOUND_REVISION=40
 LIBUNBOUND_AGE=1
 # 1.0.0 had 0:12:0
 # 1.0.1 had 0:13:0
@@ -125,6 +125,8 @@ LIBUNBOUND_AGE=1
 # 1.25.0 had 9:36:1
 # 1.25.1 had 9:37:1
 # 1.25.2 had 9:38:1
+# 1.26.0 had 9:39:1
+# 1.26.1 had 9:40:1
 
 #   Current  -- the number of the binary API that we're implementing
 #   Revision -- which iteration of the implementation of the binary
@@ -1080,7 +1082,7 @@ else
 	AC_MSG_RESULT([no])
 fi
 AC_CHECK_HEADERS([openssl/conf.h openssl/engine.h openssl/bn.h openssl/dh.h openssl/dsa.h openssl/rsa.h openssl/core_names.h openssl/param_build.h],,, [AC_INCLUDES_DEFAULT])
-AC_CHECK_FUNCS([OPENSSL_config EVP_sha1 EVP_sha256 EVP_sha512 FIPS_mode EVP_default_properties_is_fips_enabled EVP_MD_CTX_new OpenSSL_add_all_digests OPENSSL_init_crypto EVP_cleanup ENGINE_cleanup ERR_load_crypto_strings CRYPTO_cleanup_all_ex_data ERR_free_strings RAND_cleanup DSA_SIG_set0 EVP_dss1 EVP_DigestVerify EVP_aes_256_cbc EVP_EncryptInit_ex HMAC_Init_ex CRYPTO_THREADID_set_callback EVP_MAC_CTX_set_params OSSL_PARAM_BLD_new BIO_set_callback_ex])
+AC_CHECK_FUNCS([OPENSSL_config EVP_sha1 EVP_sha256 EVP_sha512 FIPS_mode EVP_default_properties_is_fips_enabled EVP_MD_CTX_new OpenSSL_add_all_digests OPENSSL_init_crypto EVP_cleanup ENGINE_cleanup ERR_load_crypto_strings CRYPTO_cleanup_all_ex_data ERR_free_strings RAND_cleanup DSA_SIG_set0 EVP_dss1 EVP_DigestVerify EVP_aes_256_cbc EVP_EncryptInit_ex HMAC_Init_ex CRYPTO_THREADID_set_callback EVP_MAC_CTX_set_params OSSL_PARAM_BLD_new BIO_set_callback_ex OPENSSL_cleanup])
 
 # these check_funcs need -lssl
 BAKLIBS="$LIBS"
@@ -1746,6 +1748,22 @@ if test x_$withval = x_yes -o x_$withval != x_no; then
     ],[
 	AC_MSG_RESULT(no)
     ])
+
+    AC_CHECK_DECL([CLOCK_MONOTONIC]
+        , []
+        , [AC_MSG_ERROR([ngtcp2 for QUIC needs at least CLOCK_MONOTONIC on the system])]
+        , [AC_INCLUDES_DEFAULT
+#ifdef TIME_WITH_SYS_TIME
+# include <sys/time.h>
+# include <time.h>
+#else
+# ifdef HAVE_SYS_TIME_H
+#  include <sys/time.h>
+# else
+#  include <time.h>
+# endif
+#endif
+        ])
 
 fi
 

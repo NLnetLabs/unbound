@@ -157,7 +157,7 @@ val_classify_response(uint16_t query_flags, struct query_info* origqinf,
 }
 
 /** Get signer name from RRSIG */
-static void
+void
 rrsig_get_signer(uint8_t* data, size_t len, uint8_t** sname, size_t* slen)
 {
 	/* RRSIG rdata is not allowed to be compressed, it is stored
@@ -439,10 +439,15 @@ val_verify_rrset(struct module_env* env, struct val_env* ve,
 	 * only improves security status 
 	 * and bogus is set only once, even if we rechecked the status */
 	if(sec > d->security) {
+		int wc_expanded = 0;
 		d->security = sec;
-		if(sec == sec_status_secure)
+		if(sec == sec_status_secure) {
+			uint8_t* wc = NULL;
+			size_t wclen = 0;
 			d->trust = rrset_trust_validated;
-		else if(sec == sec_status_bogus) {
+			if(val_rrset_wildcard(rrset, &wc, &wclen) && wc)
+				wc_expanded = 1;
+		} else if(sec == sec_status_bogus) {
 			size_t i;
 			/* update ttl for rrset to fixed value. */
 			d->ttl = ve->bogus_ttl;
@@ -455,7 +460,11 @@ val_verify_rrset(struct module_env* env, struct val_env* ve,
 			lock_basic_unlock(&ve->bogus_lock);
 		}
 		/* if status updated - store in cache for reuse */
-		rrset_update_sec_status(env->rrset_cache, rrset, *env->now);
+		/* For a wildcard rrset, that is secure, do not store this
+		 * into the cache, because it changes proofs around the
+		 * item. */
+		if(!wc_expanded)
+			rrset_update_sec_status(env->rrset_cache, rrset, *env->now);
 	}
 
 	return sec;
@@ -1314,6 +1323,20 @@ int val_has_signed_nsecs(struct reply_info* rep, char** reason)
 	return 0;
 }
 
+void val_has_auth_nsecs(struct reply_info* rep, int* has_nsec, int* has_nsec3)
+{
+	size_t i, num_nsec = 0, num_nsec3 = 0;
+	for(i=rep->an_numrrsets; i<rep->an_numrrsets+rep->ns_numrrsets; i++) {
+		if(rep->rrsets[i]->rk.type == htons(LDNS_RR_TYPE_NSEC))
+			num_nsec++;
+		else if(rep->rrsets[i]->rk.type == htons(LDNS_RR_TYPE_NSEC3))
+			num_nsec3++;
+		else continue;
+	}
+	*has_nsec = (num_nsec != 0);
+	*has_nsec3 = (num_nsec3 != 0);
+}
+
 struct dns_msg* 
 val_find_DS(struct module_env* env, uint8_t* nm, size_t nmlen, uint16_t c, 
 	struct regional* region, uint8_t* topname)
@@ -1374,4 +1397,21 @@ int derive_cname_from_dname(struct ub_packed_rrset_key* cname,
 	memmove(out, cname->rk.dname, prefix_len);
 	memmove(out+prefix_len, dname_target, dname_target_len);
 	return 1;
+}
+
+int nsec_nextowner_subdomain(struct ub_packed_rrset_key* rrset, uint8_t* name)
+{
+	struct packed_rrset_data* d;
+	uint8_t* next;
+	size_t nextlen;
+	if(ntohs(rrset->rk.type) != LDNS_RR_TYPE_NSEC)
+		return 0;
+	d = (struct packed_rrset_data*)rrset->entry.data;
+	if(!d || d->count == 0)
+		return 0;
+	next = d->rr_data[0]+2;
+	nextlen = dname_valid(next, d->rr_len[0]-2);
+	if(nextlen == 0)
+		return 0; /* malformed */
+	return dname_subdomain_c(next, name);
 }

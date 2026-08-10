@@ -198,6 +198,7 @@ get_cname_target(struct ub_packed_rrset_key* rrset, uint8_t** dname,
 {
 	struct packed_rrset_data* d;
 	size_t len;
+	if(!rrset) return;
 	if(ntohs(rrset->rk.type) != LDNS_RR_TYPE_CNAME && 
 		ntohs(rrset->rk.type) != LDNS_RR_TYPE_DNAME)
 		return;
@@ -279,7 +280,9 @@ int packed_rr_to_string(struct ub_packed_rrset_key* rrset, size_t i,
 	size_t rlen = rrset->rk.dname_len + 2 + 2 + 4 + d->rr_len[i];
 	time_t adjust = 0;
 	log_assert(dest_len > 0 && dest);
-	if(rlen > dest_len) {
+	/* rlen is the length written into rr, dest_len bounds the output
+	 * string; check both, callers can pass a dest_len over sizeof(rr). */
+	if(rlen > dest_len || rlen > sizeof(rr)) {
 		dest[0] = 0;
 		return 0;
 	}

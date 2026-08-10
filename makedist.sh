@@ -608,6 +608,8 @@ rm -rf .git .travis.yml .gitattributes .github .gitignore || error_cleanup "Fail
 info "Adding libtool utils (libtoolize)."
 libtoolize -c --install || libtoolize -c || error_cleanup "Libtoolize failed."
 
+# Turn this off, if the git repo times out for lookups.
+if test "updateconfigsub" = "false"; then
 # https://www.gnu.org/software/gettext/manual/html_node/config_002eguess.html
 info "Updating config.guess and config.sub"
 wget -O config.guess 'https://git.savannah.gnu.org/gitweb/?p=config.git;a=blob_plain;f=config.guess;hb=HEAD'
@@ -620,6 +622,7 @@ if [ `uname -s | grep -i -c darwin` -ne 0 ]; then
         xattr -d com.apple.quarantine config.guess
         xattr -d com.apple.quarantine config.sub
     fi
+fi
 fi
 
 info "Building configure script (autoreconf)."

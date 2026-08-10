@@ -1,3 +1,213 @@
+7 August 2026: Wouter
+	- Fix #1489 from jplesnik: Replace removed Python 2 C API
+	  macros for SWIG 4.5.0 compatibility.
+
+6 August 2026: Alex Khanin
+	- Fix #1488: bounds check in packed_rr_to_string, it checked
+	  the assembled rr length against the output string length
+	  dest_len, instead of against the size of the rr buffer it
+	  writes into. Callers in cachedump.c and remote.c pass a
+	  dest_len larger than that buffer.
+	- Unit test for packed_rr_to_string.
+
+6 August 2026: Wouter
+	- Fix #1485: the list_forwards command omits port numbers.
+	  The list_forwards and list_stubs commands for
+	  unbound-control print port and tls auth name.
+	- Fix #1487: regression in 1.26.0, ipsecmod is now always
+	  partly enabled.
+
+4 August 2026: Wouter
+	- Fix to set makedist.sh to not wget config.sub and
+	  config.guess from git repo. The fetch times out, and the
+	  version from libtoolize is much more recent now than
+	  that it was when the wget was added.
+
+31 July 2026: Wouter
+	- For #1483: The failure reason when an NSEC NXDOMAIN is
+	  encountered when looking for an insecure delegation, is
+	  fixed to mention the NSEC records, instead of nonexistent
+	  NSEC3 records, that it attempted.
+
+30 July 2026: Wouter
+	- Fix #1482: DNS-over-QUIC doesn't work with simple config.
+	  That fixes interface-automatic for use with doq service.
+
+28 July 2026: Wouter
+	- Tag for 1.26.0rc1. The repo continues with version 1.26.1.
+	  This became 1.26.0 on 4 aug 2026.
+
+24 July 2026: Wouter
+	- Merge #1433 from jisakiel: Add new static zone type
+	  block_aaaa to suppress AAAA queries.
+	- Unit test for block_a and block_aaaa.
+	- Fix #1477: respip + dns64: dns64 uses A records modified by
+	  respip instead of original A records. Adds local-zone types
+	  block_a_wdata and block_aaaa_wdata, that are like block_a
+	  and block_aaaa, and uses local-data if present.
+	- set code repository version to 1.26.0.
+	- Update generated man pages.
+	- Fix to allow test fake sha1 on systems with possible sha1
+	  support.
+	- Fix to use sha256 for unbound-anchor unit test.
+	- Fix unbound-anchor check for return value of
+	  X509_NAME_get_text_by_NID of the emailaddress.
+	- Fix lock test protect for auth zone change.
+	- Fix to lock shared_ports structure during initialisation.
+	- Fix to lock anchor structure when file is set for it in
+	  parse of the header.
+	- Merge #1480 from petrvaganoff: authzone: fix memory leak in
+	  xfer_set_masters() error path.
+	- Fix unused variable warnings in shared_ports_fetch_random
+	  and shared_ports_return_port when compiled without threads.
+	- Fix to guard access to shared ports interface array during
+	  set up, for analyzer.
+	- Fix sign of comparison warning in shared ports setup.
+	- Fix #1481: Fix to use tls-port after referral if
+	  tls-upstream is set.
+	- Merge #1479 from psumbera: Fix pthread detection on
+	  Solaris 11.4.
+	- Fix to call OPENSSL_cleanup on exit when that is defined.
+
+23 July 2026: Wouter
+	- Updated credits for Xuanchao Xie in 22 july changelog.
+	- Merge #1478 from petrvaganoff: pythonmod: add check return
+	  value after ftell().
+	- Fix that for NSEC3 proofs the NSEC3 zone, as the b32.name is
+	  checked to be the same as the signer name. Also RRSIGs are
+	  not considered valid when an NSEC3 is not b32.signerzone.
+	  Thanks to Qifan Zhang, Palo Alto Networks, for the report.
+	- Fix that the aggressive negative cache does not insert NSEC
+	  records with overreaching next owner name. Also the result
+	  is not above the trust anchor's bailiwick. Also RRSIGS are
+	  not considered valid when an NSEC next owner name is not
+	  under the signer zone name. Thanks to Qifan Zhang, Palo
+	  Alto Networks, for the report.
+	- Fix mesh cycle detection for configuration with respip CNAME
+	  loop and tagged clients. Thanks to Qifan Zhang, Palo Alto
+	  Networks, for the report.
+
+22 July 2026: Wouter
+	- Release tag for 1.25.2, with the security commits:
+	- Fix CVE-2026-14586, Assertion in libngtcp2 when under pressure
+	  in high concurrency DNS-over-QUIC environments. Thanks to Kunta
+	  Chu, Kaihua Wang, and Jianjun Chen from Tsinghua University,
+	  for the report.
+	- Fix CVE-2026-32665, Remote DNS-over-QUIC denial of
+	  service due to `quic-size` budget bypass. Thanks to N0zoM1z0
+	  (https://github.com/N0zoM1z0) for the report. In addition, thanks to
+	  Kunta Chu, Kaihua Wang, and Jianjun Chen from Tsinghua University,
+	  for also reporting this issue. In addition, thanks to Qifan Zhang,
+	  Palo Alto Networks, for also reporting this issue. In addition,
+	  thanks to Xuanchao Xie, Lutong Chen, and Kaiping Xue of the
+	  University of Science and Technology of China (USTC), for also
+	  reporting this issue.
+	- Fix CVE-2026-40691, Packet of death for DNSCrypt over TCP. Thanks
+	  to Qifan Zhang, Palo Alto Networks, for the report. In addition,
+	  thanks to Trung Nguyen (@everping) of CyStack, for also reporting
+	  this issue.
+	- Fix CVE-2026-41637, Degradation of resolution service from
+	  improperly accounted client-terminated DNS-over-QUIC queries. Thanks
+	  to Qifan Zhang, Palo Alto Networks, for the report.
+	- Fix CVE-2026-42955, Extra fix for CVE-2026-40622 to also clamp
+	  the TTL of A/AAAA records disallowing a one-time 'ghost domain'
+	  delegation renewal via glue records. Thanks to Qifan Zhang, Palo
+	  Alto Networks, for the report.
+	- Fix CVE-2026-44621, Libunbound applications configured with
+	  'unwanted-reply-threshold' could eventually be abruptly
+	  terminated. Thanks to Qifan Zhang, Palo Alto Networks, for the
+	  report.
+	- Fix CVE-2026-44687, Off-by-one error in 'harden-below-nxdomain'
+	  logic can shadow a stub/forward zone by a legitimate parent's
+	  NXDOMAIN. Thanks to Qifan Zhang, Palo Alto Networks, for the report.
+	- Fix CVE-2026-44690, Cross-zone wildcard cache poisoning via
+	  RRSIG.labels manipulation. Thanks to Qifan Zhang, Palo Alto
+	  Networks, for the report.
+	- Fix CVE-2026-46582, A wildcard replay, as another piece of data,
+	  triggers poisoning in the serve expired reply path. Thanks to
+	  Qifan Zhang, Palo Alto Networks, for the report.
+	- Fix CVE-2026-50045, 'max-global-quota' reset by DNSSEC validation
+	  restarts. Thanks to Kunjie Shang, University of Science and
+	  Technology of China, for the report.
+	- Fix CVE-2026-50046, Possible heap use-after-free in an error path
+	  when a DoT forwarded query is jostled out. Thanks to Qifan Zhang,
+	  Palo Alto Networks, for the report.
+	- Fix CVE-2026-50243, 'response-ip'/'rpz' can rewrite BOGUS answers
+	  instead of returning SERVFAIL. Thanks to Qifan Zhang, Palo Alto
+	  Networks, for the report.
+	- Fix CVE-2026-50248, BOGUS configured primary hostname accepted for
+	  XFR in auth/rpz zones. Thanks to Qifan Zhang, Palo Alto Networks,
+	  for the report.
+	- Fix CVE-2026-50251, Attacker supplied `0.0.0.0`/`::` glue triggers
+	  defensive full-cache flush. Thanks to Qifan Zhang, Palo Alto
+	  Networks, for the report.
+	- Fix CVE-2026-50252, Possible cache poisoning attack by mapping
+	  source port population per thread. Thanks to Inbal Schussheim and
+	  Amit Klein, Hebrew University, for the report.
+	- Fix CVE-2026-52863, Memory corruption could lead to crash and
+	  denial of service. Thanks to Qifan Zhang, Palo Alto Networks,
+	  for the report.
+	- Fix CVE-2026-54478, DNS Cookie bypass when combined with
+	  proxy-protocol use. Thanks to Qifan Zhang, Palo Alto Networks,
+	  for the report.
+	- Fix CVE-2026-55708, Privacy/configuration issue when adding local
+	  data in views through 'unbound-control'. Thanks to Qifan Zhang,
+	  Palo Alto Networks, for the report.
+	- Fix CVE-2026-55717, 'serve-expired-client-timeout' and 'response-ip'
+	  CNAME redirect could lead to a crash. Thanks to Qifan Zhang, Palo
+	  Alto Networks, for the report. In addition, thanks to Xin Wang,
+	  Jiapeng Li, and Jiajia Liu, Northwestern Polytechnical University,
+	  for also reporting this issue.
+	- Fix CVE-2026-55973, 'dns-error-reporting: yes' leads to stack buffer
+	  overflow. Thanks to Qifan Zhang, Palo Alto Networks, for the report.
+	- Fix CVE-2026-55990, Packet of death for a DNSCrypt misconfigured
+	  Unbound. Thanks to Qifan Zhang, Palo Alto Networks, for the report.
+	- Fix CVE-2026-55991, Remote DNS-over-QUIC (DoQ) flow-control
+	  assertion failure in libngtcp2. Thanks to Qifan Zhang, Palo Alto
+	  Networks, for the report. In addition, thanks to Xuanchao Xie,
+	  Lutong Chen, and Kaiping Xue of the University of Science and
+	  Technology of China (USTC), for also reporting this issue.
+	- Fix CVE-2026-56416, Possible heap buffer overflow when validator
+	  canonicalizes RDATA that contains domain name. Thanks to Qifan
+	  Zhang, Palo Alto Networks, for the report.
+	- Fix CVE-2026-56444, Degradation of resolution service when
+	  'discard-timeout' and 'serve-expired-client-timeout' are combined in
+	  unusual configuration. Thanks to Qifan Zhang, Palo Alto Networks,
+	  for the report. In addition, thanks to Xin Wang, Jiapeng Li,
+	  and Jiajia Liu, Northwestern Polytechnical University, for also
+	  reporting this issue. In addition, thanks to Haruki Oyama (Waseda
+	  University), for also reporting this issue.
+	- Set the repository to 1.25.3, it continues with the previous
+	  changes.
+	- Unit test for CVE-2026-42955.
+	- Unit test for CVE-2026-44687.
+	- Unit test for CVE-2026-44690.
+	- Unit test for CVE-2026-46582.
+	- Unit test for CVE-2026-50045.
+	- Unit test for CVE-2026-50243.
+	- Unit test for CVE-2026-50248.
+	- Unit test for CVE-2026-55717.
+	- Unit test for CVE-2026-55973.
+	- Unit test for CVE-2026-56416.
+	- Fix error in log printout in fix for CVE-2026-50248, when the
+	  primary name is bogus.
+	- iana portlist update.
+
+21 July 2026: Wouter
+	- Merge #1476 from petrvaganoff: ipsecmod: fix possible deref
+	  on null after reply_find_answer_rrset().
+
+20 July 2026: Wouter
+	- Merge #1475 from petrvaganoff: ipsecmod: fix deref on null
+	  in ipsecmod-whitelist after OOM.
+	- Fix #1474: DoQ responses are never padded - pad-responses
+	  does not apply to comm_doq (RFC 9250 §5.4 MUST).
+
+9 July 2026: Wouter
+	- Merge #1383 from jdek: Fix randomness generation on
+	  macOS/iOS under chroot.
+	- Fix unit test for malformed svcb for test on Windows.
+
 2 July 2026: Wouter
 	- Merge #1087: Overload `local_data_remove` to support removing
 	  specific records.

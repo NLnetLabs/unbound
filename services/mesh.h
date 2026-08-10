@@ -70,6 +70,13 @@ struct respip_client_info;
 #define MESH_MAX_ACTIVATION 10000
 
 /**
+ * Maximum number of mesh state run items. These are different modules
+ * activated during a mesh run. Any more is likely an infinite loop
+ * in the module. It is then terminated, and states are deleted.
+ */
+#define MESH_MAX_RUN_ITER 10000
+
+/**
  * Max number of references-to-references-to-references.. search size.
  * Any more is treated like 'too large', and the creation of a new
  * dependency is failed (so that no loops can be created).
@@ -707,9 +714,12 @@ void mesh_list_remove(struct mesh_state* m, struct mesh_state** fp,
  * @param cp: the comm_point to remove from the list.
  * @param h2_stream: if not NULL, it specifies the h2_stream to match
  *	for the delete.
+ * @param doq_stream: if not NULL, it specifies the doq_stream to match
+ *	for the delete.
  */
 void mesh_state_remove_reply(struct mesh_area* mesh, struct mesh_state* m,
-	struct comm_point* cp, struct http2_stream* h2_stream);
+	struct comm_point* cp, struct http2_stream* h2_stream,
+	struct doq_stream* doq_stream);
 
 /** Callback for when the serve expired client timer has run out.  Tries to
  * find an expired answer in the cache and reply that to the client.
@@ -760,5 +770,9 @@ void mesh_respond_serve_expired(struct mesh_state* mstate);
  */
 void mesh_remove_callback(struct mesh_area* mesh, struct query_info* qinfo,
 	uint16_t qflags, mesh_cb_func_type cb, void* cb_arg, void* unique_info);
+
+/** Copy the client info to the query region. */
+struct respip_client_info* mesh_copy_client_info(struct regional* region,
+	struct respip_client_info* cinfo);
 
 #endif /* SERVICES_MESH_H */
