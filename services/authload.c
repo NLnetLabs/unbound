@@ -422,7 +422,6 @@ auth_load_process_http(struct auth_load_thread* thr)
 	if(z->rpz)
 		rpz_finish_config(z->rpz);
 	if(auth_load_thread_poll_for_quit(thr)) {
-		sldns_buffer_free(scratch_buffer);
 		auth_zone_delete_proxy(z);
 		return 0;
 	}
@@ -430,7 +429,6 @@ auth_load_process_http(struct auth_load_thread* thr)
 	auth_load_calc_mem(task, z, scratch_mem);
 	auth_load_swap_zone(thr, z);
 	auth_zone_delete_proxy(z);
-	sldns_buffer_free(scratch_buffer);
 	return 1;
 }
 
@@ -551,8 +549,8 @@ auth_load_process_ixfr(struct auth_load_thread* thr)
 		auth_zone_delete_proxy(z);
 		return 0;
 	}
+	sldns_buffer_free(scratch_buffer);
 	if(auth_load_thread_poll_for_quit(thr)) {
-		sldns_buffer_free(scratch_buffer);
 		auth_zone_delete_proxy(z);
 		return 0;
 	}
@@ -560,7 +558,6 @@ auth_load_process_ixfr(struct auth_load_thread* thr)
 	auth_load_calc_mem(task, z, scratch_mem);
 	auth_load_swap_zone(thr, z);
 	auth_zone_delete_proxy(z);
-	sldns_buffer_free(scratch_buffer);
 	return 1;
 }
 
@@ -597,8 +594,8 @@ auth_load_process_axfr(struct auth_load_thread* thr)
 		auth_zone_delete_proxy(z);
 		return 0;
 	}
+	sldns_buffer_free(scratch_buffer);
 	if(auth_load_thread_poll_for_quit(thr)) {
-		sldns_buffer_free(scratch_buffer);
 		auth_zone_delete_proxy(z);
 		return 0;
 	}
@@ -606,7 +603,6 @@ auth_load_process_axfr(struct auth_load_thread* thr)
 	auth_load_calc_mem(task, z, scratch_mem);
 	auth_load_swap_zone(thr, z);
 	auth_zone_delete_proxy(z);
-	sldns_buffer_free(scratch_buffer);
 	return 1;
 }
 
