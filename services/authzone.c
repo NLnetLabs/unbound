@@ -6434,7 +6434,8 @@ process_list_end_transfer(struct auth_xfer* xfr, struct module_env* env)
  * ends holding xfr lock. */
 static int
 xfr_process_loaded_transfer(struct auth_xfer* xfr, struct module_env* env,
-	int* gone, struct timeval* time_taken)
+	int* gone, struct timeval* time_taken, size_t mem_used,
+	size_t chunks_total)
 {
 	struct auth_zone* z = NULL;
 	verbose(VERB_ALGO, "xfr_process_loaded_transfer");
@@ -6517,9 +6518,39 @@ xfr_process_loaded_transfer(struct auth_xfer* xfr, struct module_env* env,
 		dname_str(xfr->name, zname);
 		verbose(VERB_QUERY, "auth zone %s updated to serial %u",
 			zname, (unsigned)xfr->serial);
-		verbose(VERB_ALGO, "auth zone %s processing time was %d.%6.6ds",
-			zname, (int)time_taken->tv_sec,
-			(int)time_taken->tv_usec);
+		if(verbosity >= 8) {
+			char taskline[1024];
+			if(xfr->task_transfer->master->http) {
+				snprintf(taskline, sizeof(taskline),
+					"http transfer from %s/%s of %lu "
+					"bytes serial %u",
+					xfr->task_transfer->master->host,
+					xfr->task_transfer->master->file,
+					(unsigned long)chunks_total,
+					(unsigned)xfr->serial);
+			} else if(xfr->task_transfer->on_ixfr &&
+				!xfr->task_transfer->on_ixfr_is_axfr) {
+				snprintf(taskline, sizeof(taskline),
+					"IXFR transfer from %s of %lu "
+					"bytes serial %u",
+					xfr->task_transfer->master->host,
+					(unsigned long)chunks_total,
+					(unsigned)xfr->serial);
+			} else {
+				snprintf(taskline, sizeof(taskline),
+					"AXFR transfer from %s of %lu "
+					"bytes serial %u",
+					xfr->task_transfer->master->host,
+					(unsigned long)chunks_total,
+					(unsigned)xfr->serial);
+			}
+			verbose(VERB_ALGO, "auth zone %s details %s thread "
+				"time was %d.%6.6ds and used %lu bytes of "
+				"memory", zname, taskline,
+				(int)time_taken->tv_sec,
+				(int)time_taken->tv_usec,
+				(unsigned long)mem_used);
+		}
 	}
 	verbose(VERB_ALGO, "xfr_process_loaded_transfer: write after update");
 	/* see if we need to write to a zonefile */
@@ -6530,14 +6561,16 @@ xfr_process_loaded_transfer(struct auth_xfer* xfr, struct module_env* env,
 
 void xfr_process_load_end_transfer(struct auth_xfer* xfr,
 	struct module_env* env, uint8_t status, int ixfr_fail,
-	struct timeval* time_taken, struct auth_chunk* chunk_list)
+	struct timeval* time_taken, size_t mem_used, size_t chunks_total,
+	struct auth_chunk* chunk_list)
 {
 	/* Chunks are put here for the auth zone write for the http case. */
 	verbose(VERB_ALGO, "xfr_process_load_end_transfer");
 	xfr->task_transfer->chunks_first = chunk_list;
 	if(status) {
 		int gone = 0;
-		if(!xfr_process_loaded_transfer(xfr, env, &gone, time_taken)) {
+		if(!xfr_process_loaded_transfer(xfr, env, &gone, time_taken,
+			mem_used, chunks_total)) {
 			status = 0;
 			if(gone) {
 				/* the zone is gone from the authzones. */
@@ -9157,7 +9190,7 @@ auth_data_get_mem(struct auth_data* node)
 }
 
 /** Get memory usage of auth zone */
-static size_t
+size_t
 auth_zone_get_mem(struct auth_zone* z)
 {
 	size_t m = sizeof(*z) + z->namelen;

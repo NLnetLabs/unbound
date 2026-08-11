@@ -45,4 +45,6 @@ else
 	exit 1
 fi
 
+grep "auth zone example.com. details" unbound.log
+
 exit 0

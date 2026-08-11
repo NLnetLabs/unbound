@@ -858,6 +858,9 @@ int chunkline_count_parens(struct sldns_buffer* buf, size_t start);
 /** Clear data in auth zone */
 void auth_zone_clear_data(struct auth_zone* z);
 
+/** Get memory usage of auth zone */
+size_t auth_zone_get_mem(struct auth_zone* z);
+
 /** create domain with the given name */
 struct auth_data* az_domain_create(struct auth_zone* z, uint8_t* nm,
 	size_t nmlen);
@@ -868,7 +871,8 @@ void auth_data_del(rbnode_type* n, void* arg);
 /** Handle the end of an auth load task. */
 void xfr_process_load_end_transfer(struct auth_xfer* xfr,
 	struct module_env* env, uint8_t status, int ixfr_fail,
-	struct timeval* time_taken, struct auth_chunk* chunk_list);
+	struct timeval* time_taken, size_t mem_used, size_t chunks_total,
+	struct auth_chunk* chunk_list);
 
 /** Log preview of http transfer */
 void xfr_http_preview(const char* file, struct auth_chunk* chunk_list);

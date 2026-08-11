@@ -53,6 +53,14 @@
 #include "util/timeval_func.h"
 #include "util/data/dname.h"
 
+/** Get memory use of buffer. */
+static size_t
+buffer_get_mem(struct sldns_buffer* buf)
+{
+	if(!buf) return 0;
+	return sizeof(*buf) + (buf->_data?buf->_capacity:0);
+}
+
 /** Auth load notification to string, for descriptive purposes. */
 static const char*
 auth_load_notification_to_string(enum auth_load_notification_type status)
@@ -311,6 +319,30 @@ auth_zone_delete_proxy(struct auth_zone* z)
 	free(z);
 }
 
+/** Calculate memory use of the authload thread for this task.
+ * The size of the task struct, with the data chunks, and the proxy auth zone
+ * structure that is created while the other auth zone is used for queries,
+ * and other added memory.
+ */
+static void
+auth_load_calc_mem(struct auth_load_task* task, struct auth_zone* z,
+	size_t other)
+{
+	size_t m = 0;
+	if(verbosity < 8) {
+		task->mem_used = 0;
+		return;
+	}
+	m += other;
+	m += sizeof(*task);
+	m += task->namelen;
+	m += getmem_str(task->host);
+	m += getmem_str(task->file);
+	m += task->chunks_total;
+	m += auth_zone_get_mem(z);
+	task->mem_used = m;
+}
+
 /** Swap the final zone contents with the live zone */
 static void
 auth_load_swap_zone(struct auth_load_thread* thr, struct auth_zone* proxyz)
@@ -347,6 +379,7 @@ auth_load_process_http(struct auth_load_thread* thr)
 	struct auth_load_task* task = thr->task;
 	struct sldns_buffer* scratch_buffer;
 	struct auth_zone* z;
+	size_t scratch_mem;
 
 	scratch_buffer = sldns_buffer_new(sldns_buffer_capacity(
 		thr->task->worker->env.scratch_buffer));
@@ -354,6 +387,7 @@ auth_load_process_http(struct auth_load_thread* thr)
 		log_err("out of memory");
 		return 0;
 	}
+	scratch_mem = buffer_get_mem(scratch_buffer);
 	z = auth_zone_create_proxy(task->name, task->namelen, task->dclass);
 	if(!z) {
 		log_err("out of memory");
@@ -393,6 +427,7 @@ auth_load_process_http(struct auth_load_thread* thr)
 		return 0;
 	}
 
+	auth_load_calc_mem(task, z, scratch_mem);
 	auth_load_swap_zone(thr, z);
 	auth_zone_delete_proxy(z);
 	sldns_buffer_free(scratch_buffer);
@@ -482,6 +517,7 @@ auth_load_process_ixfr(struct auth_load_thread* thr)
 	struct auth_load_task* task = thr->task;
 	struct sldns_buffer* scratch_buffer;
 	struct auth_zone* z;
+	size_t scratch_mem;
 
 	scratch_buffer = sldns_buffer_new(sldns_buffer_capacity(
 		thr->task->worker->env.scratch_buffer));
@@ -489,6 +525,7 @@ auth_load_process_ixfr(struct auth_load_thread* thr)
 		log_err("out of memory");
 		return 0;
 	}
+	scratch_mem = buffer_get_mem(scratch_buffer);
 	z = auth_zone_create_proxy(task->name, task->namelen, task->dclass);
 	if(!z) {
 		log_err("out of memory");
@@ -520,6 +557,7 @@ auth_load_process_ixfr(struct auth_load_thread* thr)
 		return 0;
 	}
 
+	auth_load_calc_mem(task, z, scratch_mem);
 	auth_load_swap_zone(thr, z);
 	auth_zone_delete_proxy(z);
 	sldns_buffer_free(scratch_buffer);
@@ -533,6 +571,7 @@ auth_load_process_axfr(struct auth_load_thread* thr)
 	struct auth_load_task* task = thr->task;
 	struct sldns_buffer* scratch_buffer;
 	struct auth_zone* z;
+	size_t scratch_mem;
 
 	scratch_buffer = sldns_buffer_new(sldns_buffer_capacity(
 		thr->task->worker->env.scratch_buffer));
@@ -540,6 +579,7 @@ auth_load_process_axfr(struct auth_load_thread* thr)
 		log_err("out of memory");
 		return 0;
 	}
+	scratch_mem = buffer_get_mem(scratch_buffer);
 	z = auth_zone_create_proxy(task->name, task->namelen, task->dclass);
 	if(!z) {
 		log_err("out of memory");
@@ -563,6 +603,7 @@ auth_load_process_axfr(struct auth_load_thread* thr)
 		return 0;
 	}
 
+	auth_load_calc_mem(task, z, scratch_mem);
 	auth_load_swap_zone(thr, z);
 	auth_zone_delete_proxy(z);
 	sldns_buffer_free(scratch_buffer);
@@ -683,6 +724,7 @@ worker_auth_load_service_cb(int ATTR_UNUSED(fd), short ATTR_UNUSED(bits),
 	struct module_env* env = &thr->task->worker->env;
 	int ixfr_fail;
 	struct timeval time_taken;
+	size_t mem_used, chunks_total;
 
 	log_assert(thr->commpair[0] >= 0);
 	ret = recv(thr->commpair[0], &recv_item, 1, 0);
@@ -735,6 +777,8 @@ worker_auth_load_service_cb(int ATTR_UNUSED(fd), short ATTR_UNUSED(bits),
 	lock_rw_unlock(&thr->task->worker->env.auth_zones->lock);
 	ixfr_fail = thr->task->ixfr_fail;
 	time_taken = thr->task->time_taken;
+	mem_used = thr->task->mem_used;
+	chunks_total = thr->task->chunks_total;
 	if(thr->task->on_http) {
 		chunk_list = thr->task->chunks_first;
 		thr->task->chunks_first = NULL;
@@ -746,7 +790,7 @@ worker_auth_load_service_cb(int ATTR_UNUSED(fd), short ATTR_UNUSED(bits),
 	auth_load_thread_delete(thr);
 	auth_load_info_release_thread(env);
 	xfr_process_load_end_transfer(xfr, env, recv_item, ixfr_fail,
-		&time_taken, chunk_list);
+		&time_taken, mem_used, chunks_total, chunk_list);
 }
 
 /** Attach worker to the auth load thread. */

@@ -158,6 +158,8 @@ struct auth_load_task {
 
 	/** time taken for the task */
 	struct timeval time_taken;
+	/** memory used for the task */
+	size_t mem_used;
 };
 
 /**
