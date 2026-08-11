@@ -1,4 +1,4 @@
-# #-- auth_load.test --#
+# #-- auth_load_http.test --#
 # source the master var file when it's there
 [ -f ../.tpkg.var.master ] && source ../.tpkg.var.master
 # use .tpkg.var.test for in test variable passing
