@@ -1,3 +1,9 @@
+11 August 2026: Wouter
+	- Fix #1492 from zacek: Data race in log_init() on
+	  key_created/log_lock when calling ub_ctx_create()
+	  concurrently from multiple threads.
+	- Fix stat_values.tdir test to have less test failures.
+
 7 August 2026: Wouter
 	- Fix #1489 from jplesnik: Replace removed Python 2 C API
 	  macros for SWIG 4.5.0 compatibility.

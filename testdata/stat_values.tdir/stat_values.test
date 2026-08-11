@@ -107,7 +107,12 @@ check_expected_stats () {
 # Check that the rest (unspecified) stats are all 0 (no surprises).
 check_rest_stats () {
 	echo "> Checking rest stats"
-	grep -F -x -v -f $EXPECTED_STATS_FILE $FILTERED_STATS_FILE > $REST_STATS_FILE
+	grep -F -x -v -f $EXPECTED_STATS_FILE $FILTERED_STATS_FILE | \
+		grep -F -v -e "msg.cache.max_collisions" \
+			-e "rrset.cache.max_collisions" | \
+		> $REST_STATS_FILE
+	# It filtered out the 'max_collisions', since at random, a msg
+	# or rrset cache entry could have a cache hash collision. */
 	if test $DEBUG -ne 0; then
 		echo "Rest:"
 		cat $REST_STATS_FILE
