@@ -470,6 +470,7 @@ minimal-responses{COLON}	{ YDVAR(1, VAR_MINIMAL_RESPONSES) }
 rrset-roundrobin{COLON}		{ YDVAR(1, VAR_RRSET_ROUNDROBIN) }
 unknown-server-time-limit{COLON} { YDVAR(1, VAR_UNKNOWN_SERVER_TIME_LIMIT) }
 discard-timeout{COLON}		{ YDVAR(1, VAR_DISCARD_TIMEOUT) }
+client-wait-timeout{COLON}	{ YDVAR(1, VAR_CLIENT_WAIT_TIMEOUT) }
 wait-limit{COLON}		{ YDVAR(1, VAR_WAIT_LIMIT) }
 wait-limit-cookie{COLON}	{ YDVAR(1, VAR_WAIT_LIMIT_COOKIE) }
 wait-limit-netblock{COLON}	{ YDVAR(2, VAR_WAIT_LIMIT_NETBLOCK) }

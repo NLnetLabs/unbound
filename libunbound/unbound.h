@@ -859,6 +859,8 @@ struct ub_server_stats {
 	long long num_queries_wait_limit;
 	/** number of dns error reports generated */
 	long long num_dns_error_reports;
+	/** number of queries SERVFAILed due to client-wait-timeout */
+	long long num_queries_client_wait_timeout;
 };
 
 /**

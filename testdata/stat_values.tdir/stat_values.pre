@@ -39,6 +39,7 @@ sed -e 's/@PORT\@/'$UNBOUND_PORT'/' -e 's/@TOPORT\@/'$FWD_PORT'/' -e 's/@EXPIRED
 sed -e 's/@PORT\@/'$UNBOUND_PORT'/' -e 's/@TOPORT\@/'$FWD_PORT'/' -e 's/@EXPIREDPORT\@/'$FWD_EXPIRED_PORT'/' -e 's/@CONTROL_PORT\@/'$CONTROL_PORT'/' < stat_values_cachedb.conf > ub_cachedb.conf
 sed -e 's/@PORT\@/'$UNBOUND_PORT'/'                                                                          -e 's/@CONTROL_PORT\@/'$CONTROL_PORT'/' < stat_values_downstream_cookies.conf > ub_downstream_cookies.conf
 sed -e 's/@PORT\@/'$UNBOUND_PORT'/' -e 's/@TOPORT\@/'$FWD_PORT'/'                                            -e 's/@CONTROL_PORT\@/'$CONTROL_PORT'/' < stat_values_discard_wait_limit.conf > ub_discard_wait_limit.conf
+sed -e 's/@PORT\@/'$UNBOUND_PORT'/' -e 's/@TOPORT\@/'$FWD_PORT'/'                                            -e 's/@CONTROL_PORT\@/'$CONTROL_PORT'/' < stat_values_client_wait_timeout.conf > ub_client_wait_timeout.conf
 # start unbound in the background
 $PRE/unbound -d -c ub.conf >unbound.log 2>&1 &
 UNBOUND_PID=$!
