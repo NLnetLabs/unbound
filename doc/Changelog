@@ -1,3 +1,7 @@
+21 August 2026: Wouter
+	- Fix to defend against double event deletion, that could cause
+	  event corruption and use after free, for comm_timer_disable.
+
 11 August 2026: Wouter
 	- Fix #1492 from zacek: Data race in log_init() on
 	  key_created/log_lock when calling ub_ctx_create()

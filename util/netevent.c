@@ -7036,8 +7036,12 @@ comm_timer_disable(struct comm_timer* timer)
 {
 	if(!timer)
 		return;
-	ub_timer_del(timer->ev_timer->ev);
-	timer->ev_timer->enabled = 0;
+	/* The event backend can not always deal with event del if it was not
+	 * added before. For that, there is a check if it was added here.*/
+	if(timer->ev_timer->enabled) {
+		ub_timer_del(timer->ev_timer->ev);
+		timer->ev_timer->enabled = 0;
+	}
 }
 
 void
