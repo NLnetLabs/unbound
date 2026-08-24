@@ -311,6 +311,8 @@ struct config_file {
 	/** harden against unknown records in the authority section and in
 	 * the additional section */
 	int harden_unknown_additional;
+	/** harden to follow cname redirections */
+	int harden_cname_follow;
 	/** use 0x20 bits in query as random ID bits */
 	int use_caps_bits_for_id;
 	/** 0x20 whitelist, domains that do not use capsforid */

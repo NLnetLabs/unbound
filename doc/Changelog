@@ -1,3 +1,8 @@
+24 August 2026: Wouter
+	- Fix #132: Add `harden-cname-follow: yes` config option, that
+	  can be used to disable cname scrubbing. That can be useful
+	  for when the traffic is on localhost only.
+
 21 August 2026: Wouter
 	- Fix to defend against double event deletion, that could cause
 	  event corruption and use after free, for comm_timer_disable.

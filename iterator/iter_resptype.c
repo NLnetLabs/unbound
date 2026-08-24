@@ -46,6 +46,7 @@
 #include "services/cache/dns.h"
 #include "util/net_help.h"
 #include "util/data/dname.h"
+#include "util/config_file.h"
 #include "sldns/rrdef.h"
 #include "sldns/pkthdr.h"
 
@@ -107,7 +108,8 @@ response_type_from_cache(struct dns_msg* msg,
 enum response_type 
 response_type_from_server(int rdset,
 	struct dns_msg* msg, struct query_info* request, struct delegpt* dp,
-	int* empty_nodata_found, int msg_lame_empty, int msg_lame_referral)
+	int* empty_nodata_found, int msg_lame_empty, int msg_lame_referral,
+	struct config_file* cfg)
 {
 	uint8_t* origzone = (uint8_t*)"\000"; /* the default */
 	struct ub_packed_rrset_key* s;
@@ -130,6 +132,16 @@ response_type_from_server(int rdset,
 		if( (msg->rep->flags&BIT_RA) &&
 			!(msg->rep->flags&BIT_AA) && !rdset)
 				return RESPONSE_TYPE_REC_LAME;
+		if(!cfg->harden_cname_follow /* follow CNAME chain */) {
+			/* If the CNAME chain is allowed, see if there is a
+			 * SOA record, if so, the chain is complete to the
+			 * end of it, otherwise it could be a partial chain.*/
+			for(i=msg->rep->an_numrrsets; i<msg->rep->an_numrrsets+msg->rep->ns_numrrsets; i++) {
+				s = msg->rep->rrsets[i];
+				if(ntohs(s->rk.type) == LDNS_RR_TYPE_SOA)
+					return RESPONSE_TYPE_ANSWER;
+			}
+		}
 		/* it could be a CNAME with NXDOMAIN rcode */
 		for(i=0; i<msg->rep->an_numrrsets; i++) {
 			s = msg->rep->rrsets[i];
@@ -162,6 +174,7 @@ response_type_from_server(int rdset,
 	if(msg->rep->an_numrrsets > 0) {
 		uint8_t* mname = request->qname;
 		size_t mname_len = request->qname_len;
+		int sawanswer = 0;
 
 		/* Now look at the answer section first. 3 states: our 
 		 * answer is there directly, our answer is there after 
@@ -197,6 +210,7 @@ response_type_from_server(int rdset,
 				 * the answer, we only provisionally say 
 				 * 'ANSWER' -- it very well could be a 
 				 * REFERRAL. */
+				sawanswer = 1;
 				break;
 			}
 
@@ -214,6 +228,10 @@ response_type_from_server(int rdset,
 		 * still got to here, then it is a CNAME response. 
 		 * (This is regardless of the AA bit at this point) */
 		if(mname != request->qname) {
+			if(!cfg->harden_cname_follow /* allow CNAMEs */ &&
+				sawanswer /* The last was not CNAME, and
+				there is an answer RRset. */ )
+				return RESPONSE_TYPE_ANSWER;
 			return RESPONSE_TYPE_CNAME;
 		}
 	}

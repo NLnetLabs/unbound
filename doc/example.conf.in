@@ -582,6 +582,9 @@ server:
 	# additional section.
 	# harden-unknown-additional: no
 
+	# Harden CNAME redirections by following them.
+	# harden-cname-follow: yes
+
 	# Sent minimum amount of information to upstream servers to enhance
 	# privacy. Only sent minimum required labels of the QNAME and set QTYPE
 	# to A when possible.

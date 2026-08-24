@@ -486,4 +486,7 @@ void iter_make_minimal(struct reply_info* rep);
 /** See if we need a different port number */
 int deleg_port_number(struct module_env* env);
 
+/** Shorten reply CNAME chain to cutoff, cutoff is excluded. */
+void shorten_answer_cname(struct reply_info* rep, uint8_t* cutoff);
+
 #endif /* ITERATOR_ITER_UTILS_H */

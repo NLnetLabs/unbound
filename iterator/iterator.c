@@ -3189,7 +3189,7 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 	type = response_type_from_server(
 		(int)((iq->chase_flags&BIT_RD) || iq->chase_to_rd),
 		iq->response, &iq->qinfo_out, iq->dp, &iq->empty_nodata_found,
-		iq->msg_lame_empty, iq->msg_lame_referral);
+		iq->msg_lame_empty, iq->msg_lame_referral, qstate->env->cfg);
 	iq->chase_to_rd = 0;
 	/* remove TC flag, if this is erroneously set by TCP upstream */
 	iq->response->rep->flags &= ~BIT_TC;
@@ -3301,6 +3301,47 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 		 * can already be treated as such an answer, without having
 		 * to send another query with a new qtype. */
 		type = RESPONSE_TYPE_ANSWER;
+	}
+	if(type == RESPONSE_TYPE_ANSWER &&
+		!qstate->env->cfg->harden_cname_follow /* cname chain from upstream is allowed */ &&
+		qstate->env->auth_zones &&
+		/* Check for CNAMEs in answer and RPZ after the CNAME. */
+		reply_find_rrset_section_an(
+		iq->response->rep, iq->qchase.qname,
+		iq->qchase.qname_len, LDNS_RR_TYPE_CNAME,
+		iq->qchase.qclass) != NULL) {
+		/* If this is an answer with CNAMEs in front, and
+		 * RPZ wants to modify after CNAME(s), cut off, the
+		 * remainder, and treat as the CNAME response */
+		size_t i;
+		uint8_t* origname = iq->qchase.qname;
+		size_t orignamelen = iq->qchase.qname_len;
+		for(i=0; i<iq->response->rep->an_numrrsets; i++) {
+			struct dns_msg* forged_response;
+			if(ntohs(iq->response->rep->rrsets[i]->rk.type) ==
+				LDNS_RR_TYPE_DNAME) {
+				continue;
+			}
+			if(ntohs(iq->response->rep->rrsets[i]->rk.type) !=
+				LDNS_RR_TYPE_CNAME) {
+				break;
+			}
+			get_cname_target(iq->response->rep->rrsets[i],
+				&iq->qchase.qname, &iq->qchase.qname_len);
+			forged_response = rpz_callback_from_iterator_cname(qstate, iq);
+			if(forged_response) {
+				/* Cut off the answer section at this point.
+				 * RPZ is going to make an answer, in the
+				 * processInit after the CNAME(s) in front
+				 * are handled. */
+				shorten_answer_cname(iq->response->rep,
+					iq->qchase.qname);
+				type = RESPONSE_TYPE_CNAME;
+				break;
+			}
+		}
+		iq->qchase.qname = origname;
+		iq->qchase.qname_len = orignamelen;
 	}
 
 	/* handle each of the type cases */
@@ -3804,7 +3845,7 @@ processPrimeResponse(struct module_qstate* qstate, int id)
 	type = response_type_from_server(
 		(int)((iq->chase_flags&BIT_RD) || iq->chase_to_rd), 
 		iq->response, &iq->qchase, iq->dp, NULL, iq->msg_lame_empty,
-		iq->msg_lame_referral);
+		iq->msg_lame_referral, qstate->env->cfg);
 	if(type == RESPONSE_TYPE_ANSWER) {
 		qstate->return_rcode = LDNS_RCODE_NOERROR;
 		qstate->return_msg = iq->response;

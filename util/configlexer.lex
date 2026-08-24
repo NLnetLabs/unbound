@@ -323,6 +323,7 @@ harden-below-nxdomain{COLON}	{ YDVAR(1, VAR_HARDEN_BELOW_NXDOMAIN) }
 harden-referral-path{COLON}	{ YDVAR(1, VAR_HARDEN_REFERRAL_PATH) }
 harden-algo-downgrade{COLON}	{ YDVAR(1, VAR_HARDEN_ALGO_DOWNGRADE) }
 harden-unknown-additional{COLON}	{ YDVAR(1, VAR_HARDEN_UNKNOWN_ADDITIONAL) }
+harden-cname-follow{COLON}	{ YDVAR(1, VAR_HARDEN_CNAME_FOLLOW) }
 use-caps-for-id{COLON}		{ YDVAR(1, VAR_USE_CAPS_FOR_ID) }
 caps-whitelist{COLON}		{ YDVAR(1, VAR_CAPS_WHITELIST) }
 caps-exempt{COLON}		{ YDVAR(1, VAR_CAPS_WHITELIST) }

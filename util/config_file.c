@@ -252,6 +252,7 @@ config_create(void)
 	cfg->harden_referral_path = 0;
 	cfg->harden_algo_downgrade = 0;
 	cfg->harden_unknown_additional = 0;
+	cfg->harden_cname_follow = 1;
 	cfg->use_caps_bits_for_id = 0;
 	cfg->caps_whitelist = NULL;
 	cfg->private_address = NULL;
@@ -737,6 +738,7 @@ int config_set_option(struct config_file* cfg, const char* opt,
 	else S_YNO("harden-referral-path:", harden_referral_path)
 	else S_YNO("harden-algo-downgrade:", harden_algo_downgrade)
 	else S_YNO("harden-unknown-additional:", harden_unknown_additional)
+	else S_YNO("harden-cname-follow:", harden_cname_follow)
 	else S_YNO("use-caps-for-id:", use_caps_bits_for_id)
 	else S_STRLIST("caps-whitelist:", caps_whitelist)
 	else S_SIZET_OR_ZERO("unwanted-reply-threshold:", unwanted_threshold)
@@ -1240,6 +1242,7 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_YNO(opt, "harden-referral-path", harden_referral_path)
 	else O_YNO(opt, "harden-algo-downgrade", harden_algo_downgrade)
 	else O_YNO(opt, "harden-unknown-additional", harden_unknown_additional)
+	else O_YNO(opt, "harden-cname-follow", harden_cname_follow)
 	else O_YNO(opt, "use-caps-for-id", use_caps_bits_for_id)
 	else O_LST(opt, "caps-whitelist", caps_whitelist)
 	else O_DEC(opt, "unwanted-reply-threshold", unwanted_threshold)

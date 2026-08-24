@@ -1952,6 +1952,17 @@ These options are part of the ``server:`` section.
     Default: no
 
 
+@@UAHL@unbound.conf@harden-cname-follow@@: *<yes or no>*
+    Harden CNAME redirections by following them.
+    If no, then upstream CNAME and DNAME redirections are allowed in a
+    response without checking with further messages if those are valid.
+    It can only really be disabled safely on localhost net or encrypted
+    connectivity.
+    Default is on to protect the cache integrity.
+
+    Default: yes
+
+
 @@UAHL@unbound.conf@use-caps-for-id@@: *<yes or no>*
     Use 0x20-encoded random bits in the query to foil spoof attempts.
     This perturbs the lowercase and uppercase of query names sent to authority

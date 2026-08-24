@@ -517,7 +517,7 @@ scrub_normalize(sldns_buffer* pkt, struct msg_parse* msg,
 			 * server, scrub down the length to something
 			 * shorter. This deletes everything after the limit
 			 * is reached. The iterator is going to look up
-			 * the content one by one anyway. */
+			 * the content one by one, if harden-cname-follow . */
 			remove_rrset("normalize: removing because too many cnames:",
 				pkt, msg, prev, &rrset);
 			continue;
@@ -1021,6 +1021,8 @@ scrub_sanitize(sldns_buffer* pkt, struct msg_parse* msg,
 	uint8_t* ns_rrset_dname = NULL;
 	int added_rrlen_ede = 0;
 	struct rrset_parse* rrset, *prev;
+	uint8_t* sname = qinfo->qname;
+	size_t snamelen = qinfo->qname_len;
 	prev = NULL;
 	rrset = msg->rrset_first;
 
@@ -1028,6 +1030,7 @@ scrub_sanitize(sldns_buffer* pkt, struct msg_parse* msg,
 	 * it can be used from the cache. After normalization, an initial 
 	 * DNAME will have a correctly synthesized CNAME after it. */
 	if(rrset && rrset->type == LDNS_RR_TYPE_DNAME && 
+		env->cfg->harden_cname_follow /* CNAME chain is cut off, one DNAME is allowed here. */ &&
 		rrset->section == LDNS_SECTION_ANSWER &&
 		pkt_strict_sub(pkt, qinfo->qname, rrset->dname) &&
 		pkt_sub(pkt, rrset->dname, zonename)) {
@@ -1043,11 +1046,32 @@ scrub_sanitize(sldns_buffer* pkt, struct msg_parse* msg,
 	 * ANY queries get query name in answer section.
 	 * Remainders of CNAME chains are cut off and resolved by iterator. */
 	while(rrset && rrset->section == LDNS_SECTION_ANSWER) {
-		if(dname_pkt_compare(pkt, qinfo->qname, rrset->dname) != 0) {
+		if(!env->cfg->harden_cname_follow /* CNAME chain is allowed to stay */ &&
+			rrset->type == LDNS_RR_TYPE_DNAME &&
+			pkt_strict_sub(pkt, sname, rrset->dname) &&
+			pkt_sub(pkt, rrset->dname, zonename)) {
+			/* This DNAME is allowed to stay, the synthesized
+			 * CNAME follows next. */
+			prev = rrset;
+			rrset = rrset->rrset_all_next;
+			continue;
+		}
+		if(dname_pkt_compare(pkt, sname, rrset->dname) != 0) {
 			if(has_additional(rrset->type)) del_addi = 1;
 			remove_rrset("sanitize: removing extraneous answer "
 				"RRset:", pkt, msg, prev, &rrset);
 			continue;
+		}
+		if(!env->cfg->harden_cname_follow /* CNAME chain is allowed to stay */ &&
+			qinfo->qtype != LDNS_RR_TYPE_ANY &&
+			rrset->type == LDNS_RR_TYPE_CNAME &&
+			dname_pkt_compare(pkt, sname, rrset->dname) == 0) {
+			/* Follow the CNAME chain, and allow the elements
+			 * that match the CNAME chain. Also allow a DNAME
+			 * in front. */
+			if(!parse_get_cname_target(rrset, &sname, &snamelen,
+				pkt))
+				return 0;
 		}
 		prev = rrset;
 		rrset = rrset->rrset_all_next;

@@ -219,6 +219,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_MAX_TRANSFER_SIZE VAR_MAX_TRANSFER_TIME
 %token VAR_MAX_GLOBAL_QUOTA VAR_HARDEN_UNVERIFIED_GLUE VAR_LOG_TIME_ISO
 %token VAR_ITER_SCRUB_PROMISCUOUS VAR_LOG_THREAD_ID
+%token VAR_HARDEN_CNAME_FOLLOW
 
 %%
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
@@ -361,7 +362,8 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_log_destaddr | server_cookie_secret_file |
 	server_iter_scrub_ns | server_iter_scrub_cname | server_max_global_quota |
 	server_iter_scrub_rrsig |
-	server_harden_unverified_glue | server_log_time_iso | server_iter_scrub_promiscuous
+	server_harden_unverified_glue | server_log_time_iso | server_iter_scrub_promiscuous |
+	server_harden_cname_follow
 	;
 stub_clause: stubstart contents_stub
 	{
@@ -1943,6 +1945,16 @@ server_harden_unknown_additional: VAR_HARDEN_UNKNOWN_ADDITIONAL STRING_ARG
 		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
 			yyerror("expected yes or no.");
 		else cfg_parser->cfg->harden_unknown_additional =
+			(strcmp($2, "yes")==0);
+		free($2);
+	}
+	;
+server_harden_cname_follow: VAR_HARDEN_CNAME_FOLLOW STRING_ARG
+	{
+		OUTYY(("P(server_harden_cname_follow:%s)\n", $2));
+		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
+			yyerror("expected yes or no.");
+		else cfg_parser->cfg->harden_cname_follow =
 			(strcmp($2, "yes")==0);
 		free($2);
 	}
