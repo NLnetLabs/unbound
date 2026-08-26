@@ -1,3 +1,7 @@
+26 August 2026: Wouter
+	- Fix notify for auth-zone during initial start up. It
+	  performs the transfer and not only lookup.
+
 24 August 2026: Wouter
 	- Fix #132: Add `harden-cname-follow: yes` config option, that
 	  can be used to disable cname scrubbing. That can be useful

@@ -3911,6 +3911,12 @@ xfr_process_notify(struct auth_xfer* xfr, struct module_env* env,
 		return;
 	}
 	/* start new probe with this addr src, or note serial */
+	if(xfr->task_probe->worker == NULL && xfr->task_probe->only_lookup) {
+		/* Perform transfer, not just lookup this notify.
+		 * The only_lookup could be set during initial start up
+		 * when the timer sets it for address lookup. */
+		xfr->task_probe->only_lookup = 0;
+	}
 	if(!xfr_start_probe(xfr, env, fromhost)) {
 		/* not started because already in progress, note the serial */
 		xfr_note_notify_serial(xfr, has_serial, serial);
