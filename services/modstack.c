@@ -63,7 +63,7 @@
 #ifdef CLIENT_SUBNET
 #include "edns-subnet/subnetmod.h"
 #endif
-#ifdef USE_IPSET
+#if defined(USE_IPSET) || defined(USE_NFTSET)
 #include "ipset/ipset.h"
 #endif
 
@@ -86,6 +86,26 @@ count_modules(const char* s)
                 }
         }
         return num;
+}
+
+int
+modstack_has_module(const char* module_conf, const char* name)
+{
+	size_t nlen;
+	if(!module_conf || !name)
+		return 0;
+	nlen = strlen(name);
+	while(*module_conf) {
+		while(*module_conf && isspace((unsigned char)*module_conf))
+			module_conf++;
+		if(strncmp(module_conf, name, nlen) == 0 &&
+			(module_conf[nlen] == '\0' ||
+			isspace((unsigned char)module_conf[nlen])))
+			return 1;
+		while(*module_conf && !isspace((unsigned char)*module_conf))
+			module_conf++;
+	}
+	return 0;
 }
 
 void
@@ -171,6 +191,10 @@ module_list_avail(void)
 #ifdef USE_IPSET
 		"ipset",
 #endif
+#ifdef USE_NFTSET
+		/* nftset is an alias — same module, nft backend selected via nftset: section */
+		"nftset",
+#endif
 		"respip",
 		"validator",
 		"iterator",
@@ -204,6 +228,9 @@ module_funcs_avail(void)
 #endif
 #ifdef USE_IPSET
 		&ipset_get_funcblock,
+#endif
+#ifdef USE_NFTSET
+		&nftset_get_funcblock,
 #endif
 		&respip_get_funcblock,
 		&val_get_funcblock,
