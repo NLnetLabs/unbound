@@ -129,6 +129,12 @@ struct dns64_env {
      * Tree of names for which AAAA is ignored. always synthesize from A.
      */
     rbtree_type ignore_aaaa;
+
+	/** Tags for clients for which DNS64 is enabled. */
+	uint8_t* taglist;
+
+	/** Length of the DNS64 client tag bitlist. */
+	size_t taglen;
 };
 
 
@@ -389,6 +395,15 @@ dns64_apply_cfg(struct dns64_env* dns64_env, struct config_file* cfg)
 	    if(!dns64_insert_ignore_aaaa(dns64_env, s->str))
 		    return 0;
     }
+	if(cfg->dns64_taglist) {
+		dns64_env->taglist = memdup(cfg->dns64_taglist,
+			cfg->dns64_taglistlen);
+		if(!dns64_env->taglist) {
+			log_err("malloc failure");
+			return 0;
+		}
+		dns64_env->taglen = cfg->dns64_taglistlen;
+	}
     name_tree_init_parents(&dns64_env->ignore_aaaa);
     return 1;
 }
@@ -443,6 +458,8 @@ dns64_deinit(struct module_env* env, int id)
     if(dns64_env) {
 	    traverse_postorder(&dns64_env->ignore_aaaa, free_ignore_aaaa_node,
 	    	NULL);
+	    free(dns64_env->taglist);
+	    dns64_env->taglist = NULL;
     }
     free(env->modinfo[id]);
     env->modinfo[id] = NULL;
@@ -605,6 +622,31 @@ handle_event_pass(struct module_qstate* qstate, int id)
 }
 
 /**
+ * Check whether DNS64 processing is enabled for this query.
+ *
+ * DNS64 is enabled for every query when dns64-tags is not configured.
+ * Otherwise, the query's effective client tags must intersect the configured
+ * DNS64 tags. Queries without client information do not match a configured
+ * DNS64 tag list.
+ *
+ * \param dns64_env DNS64 module configuration.
+ *
+ * \param qstate Query state containing the effective client tags.
+ *
+ * \return True when DNS64 processing is enabled for the query.
+ */
+static int
+dns64_client_is_enabled(struct dns64_env* dns64_env,
+	struct module_qstate* qstate)
+{
+	if(!dns64_env->taglist)
+		return 1;
+	return qstate->client_info && taglist_intersect(dns64_env->taglist,
+		dns64_env->taglen, qstate->client_info->taglist,
+		qstate->client_info->taglen);
+}
+
+/**
  * Handles the "done" event for a query. We need to analyze the response and
  * maybe issue a new sub-query for the A record.
  *
@@ -693,11 +735,23 @@ dns64_operate(struct module_qstate* qstate, enum module_ev event, int id,
 		struct outbound_entry* outbound)
 {
 	struct dns64_qstate* iq;
+	struct dns64_env* dns64_env =
+		(struct dns64_env*)qstate->env->modinfo[id];
 	(void)outbound;
 	verbose(VERB_QUERY, "dns64[module %d] operate: extstate:%s event:%s",
 			id, strextstate(qstate->ext_state[id]),
 			strmodulevent(event));
 	log_query_info(VERB_QUERY, "dns64 operate: query", &qstate->qinfo);
+	/* The DNS64 result depends on the client's tags, so a shared cached
+	 * AAAA response cannot be used when DNS64 is limited by dns64-tags. */
+	if(dns64_env->taglist && qstate->qinfo.qtype == LDNS_RR_TYPE_AAAA)
+		qstate->no_cache_lookup = 1;
+	if(!dns64_client_is_enabled(dns64_env, qstate)) {
+		qstate->ext_state[id] =
+			(event == module_event_new || event == module_event_pass) ?
+			module_wait_module : module_finished;
+		return;
+	}
 
 	switch(event) {
 		case module_event_new:
@@ -1092,7 +1146,7 @@ dns64_get_mem(struct module_env* env, int id)
     struct dns64_env* dns64_env = (struct dns64_env*)env->modinfo[id];
     if (!dns64_env)
         return 0;
-    return sizeof(*dns64_env);
+    return sizeof(*dns64_env) + dns64_env->taglen;
 }
 
 /**

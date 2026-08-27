@@ -124,7 +124,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_MAX_UDP_SIZE VAR_DELAY_CLOSE VAR_UDP_CONNECT
 %token VAR_UNBLOCK_LAN_ZONES VAR_INSECURE_LAN_ZONES
 %token VAR_INFRA_CACHE_MIN_RTT VAR_INFRA_CACHE_MAX_RTT VAR_INFRA_KEEP_PROBING
-%token VAR_DNS64_PREFIX VAR_DNS64_SYNTHALL VAR_DNS64_IGNORE_AAAA
+%token VAR_DNS64_PREFIX VAR_DNS64_SYNTHALL VAR_DNS64_IGNORE_AAAA VAR_DNS64_TAGS
 %token VAR_NAT64_PREFIX
 %token VAR_DNSTAP VAR_DNSTAP_ENABLE VAR_DNSTAP_SOCKET_PATH VAR_DNSTAP_IP
 %token VAR_DNSTAP_TLS VAR_DNSTAP_TLS_SERVER_NAME VAR_DNSTAP_TLS_CERT_BUNDLE
@@ -300,6 +300,7 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_so_reuseport | server_delay_close | server_udp_connect |
 	server_unblock_lan_zones | server_insecure_lan_zones |
 	server_dns64_prefix | server_dns64_synthall | server_dns64_ignore_aaaa |
+	server_dns64_tags |
 	server_nat64_prefix |
 	server_infra_cache_min_rtt | server_infra_cache_max_rtt | server_harden_algo_downgrade |
 	server_ip_transparent | server_ip_ratelimit | server_ratelimit |
@@ -2589,6 +2590,22 @@ server_dns64_ignore_aaaa: VAR_DNS64_IGNORE_AAAA STRING_ARG
 		if(!cfg_strlist_insert(&cfg_parser->cfg->dns64_ignore_aaaa,
 			$2))
 			yyerror("out of memory");
+	}
+	;
+server_dns64_tags: VAR_DNS64_TAGS STRING_ARG
+	{
+		size_t len = 0;
+		uint8_t* taglist;
+		OUTYY(("P(server_dns64_tags:%s)\n", $2));
+		taglist = config_parse_taglist(cfg_parser->cfg, $2, &len);
+		free($2);
+		if(!taglist) {
+			yyerror("could not parse tags, (define-tag them first)");
+		} else {
+			free(cfg_parser->cfg->dns64_taglist);
+			cfg_parser->cfg->dns64_taglist = taglist;
+			cfg_parser->cfg->dns64_taglistlen = len;
+		}
 	}
 	;
 server_nat64_prefix: VAR_NAT64_PREFIX STRING_ARG
