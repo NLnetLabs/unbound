@@ -1519,4 +1519,10 @@ void cfg_tls_protocols_allowed(const char* tls_protocols, int* allow12, int* all
 /** get the file mtime stat (or error, with errno and nonexist) */
 int file_get_mtime(const char* file, time_t* mtime, long* ns, int* nonexist);
 
+/** check local-zone type for correctness */
+int cfg_local_zone_type_value_check(const char* str);
+
+/** the list of local-zone types, for error printout. */
+const char* cfg_local_zone_type_list(void);
+
 #endif /* UTIL_CONFIG_FILE_H */

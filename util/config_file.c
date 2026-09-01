@@ -3090,3 +3090,40 @@ file_get_mtime(const char* file, time_t* mtime, long* ns, int* nonexist)
 #endif
 	return 1;
 }
+
+int cfg_local_zone_type_value_check(const char* str)
+{
+	if(strcmp(str, "static")!=0 && strcmp(str, "deny")!=0 &&
+	   strcmp(str, "refuse")!=0 && strcmp(str, "redirect")!=0 &&
+	   strcmp(str, "transparent")!=0 && strcmp(str, "nodefault")!=0
+	   && strcmp(str, "typetransparent")!=0
+	   && strcmp(str, "always_transparent")!=0
+	   && strcmp(str, "block_a")!=0
+	   && strcmp(str, "block_aaaa")!=0
+	   && strcmp(str, "block_a_wdata")!=0
+	   && strcmp(str, "block_aaaa_wdata")!=0
+	   && strcmp(str, "always_refuse")!=0
+	   && strcmp(str, "always_nxdomain")!=0
+	   && strcmp(str, "always_nodata")!=0
+	   && strcmp(str, "always_deny")!=0
+	   && strcmp(str, "always_null")!=0
+	   && strcmp(str, "noview")!=0
+	   && strcmp(str, "inform")!=0 && strcmp(str, "inform_deny")!=0
+	   && strcmp(str, "inform_redirect") != 0
+	   && strcmp(str, "ipset") != 0)
+		return 0;
+	return 1;
+}
+
+const char* cfg_local_zone_type_list(void)
+{
+	return "static, deny, "
+		"refuse, redirect, transparent, "
+		"typetransparent, inform, inform_deny, "
+		"inform_redirect, always_transparent, "
+		"block_a, block_aaaa, "
+		"block_a_wdata, block_aaaa_wdata, "
+		"always_refuse, always_nxdomain, "
+		"always_nodata, always_deny, always_null, "
+		"noview, nodefault or ipset";
+}

@@ -2401,33 +2401,9 @@ server_neg_cache_size: VAR_NEG_CACHE_SIZE STRING_ARG
 server_local_zone: VAR_LOCAL_ZONE STRING_ARG STRING_ARG
 	{
 		OUTYY(("P(server_local_zone:%s %s)\n", $2, $3));
-		if(strcmp($3, "static")!=0 && strcmp($3, "deny")!=0 &&
-		   strcmp($3, "refuse")!=0 && strcmp($3, "redirect")!=0 &&
-		   strcmp($3, "transparent")!=0 && strcmp($3, "nodefault")!=0
-		   && strcmp($3, "typetransparent")!=0
-		   && strcmp($3, "always_transparent")!=0
-		   && strcmp($3, "block_a")!=0
-		   && strcmp($3, "block_aaaa")!=0
-		   && strcmp($3, "block_a_wdata")!=0
-		   && strcmp($3, "block_aaaa_wdata")!=0
-		   && strcmp($3, "always_refuse")!=0
-		   && strcmp($3, "always_nxdomain")!=0
-		   && strcmp($3, "always_nodata")!=0
-		   && strcmp($3, "always_deny")!=0
-		   && strcmp($3, "always_null")!=0
-		   && strcmp($3, "noview")!=0
-		   && strcmp($3, "inform")!=0 && strcmp($3, "inform_deny")!=0
-		   && strcmp($3, "inform_redirect") != 0
-		   && strcmp($3, "ipset") != 0) {
-			yyerror("local-zone type: expected static, deny, "
-				"refuse, redirect, transparent, "
-				"typetransparent, inform, inform_deny, "
-				"inform_redirect, always_transparent, "
-				"block_a, block_aaaa, "
-				"block_a_wdata, block_aaaa_wdata, "
-				"always_refuse, always_nxdomain, "
-				"always_nodata, always_deny, always_null, "
-				"noview, nodefault or ipset");
+		if(!cfg_local_zone_type_value_check($3)) {
+			ub_c_error_msg("local-zone type: expected %s",
+				cfg_local_zone_type_list());
 			free($2);
 			free($3);
 		} else if(strcmp($3, "nodefault")==0) {
@@ -3393,27 +3369,9 @@ view_name: VAR_NAME STRING_ARG
 view_local_zone: VAR_LOCAL_ZONE STRING_ARG STRING_ARG
 	{
 		OUTYY(("P(view_local_zone:%s %s)\n", $2, $3));
-		if(strcmp($3, "static")!=0 && strcmp($3, "deny")!=0 &&
-		   strcmp($3, "refuse")!=0 && strcmp($3, "redirect")!=0 &&
-		   strcmp($3, "transparent")!=0 && strcmp($3, "nodefault")!=0
-		   && strcmp($3, "typetransparent")!=0
-		   && strcmp($3, "always_transparent")!=0
-		   && strcmp($3, "always_refuse")!=0
-		   && strcmp($3, "always_nxdomain")!=0
-		   && strcmp($3, "always_nodata")!=0
-		   && strcmp($3, "always_deny")!=0
-		   && strcmp($3, "always_null")!=0
-		   && strcmp($3, "noview")!=0
-		   && strcmp($3, "inform")!=0 && strcmp($3, "inform_deny")!=0
-		   && strcmp($3, "inform_redirect") != 0
-		   && strcmp($3, "ipset") != 0) {
-			yyerror("local-zone type: expected static, deny, "
-				"refuse, redirect, transparent, "
-				"typetransparent, inform, inform_deny, "
-				"inform_redirect, always_transparent, "
-				"always_refuse, always_nxdomain, "
-				"always_nodata, always_deny, always_null, "
-				"noview, nodefault or ipset");
+		if(!cfg_local_zone_type_value_check($3)) {
+			ub_c_error_msg("local-zone type: expected %s",
+				cfg_local_zone_type_list());
 			free($2);
 			free($3);
 		} else if(strcmp($3, "nodefault")==0) {
