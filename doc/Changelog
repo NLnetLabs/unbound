@@ -1,5 +1,7 @@
 1 September 2026: Wouter
 	- Fix to allow block_a and other local-zone types in a view.
+	- Fix LOC RR parse to avoid double to uint32 cast overflow.
+	  Thanks to Qifan Zhang, Palo Alto Networks, for the report.
 
 26 August 2026: Wouter
 	- Fix notify for auth-zone during initial start up. It

@@ -2304,6 +2304,8 @@ int sldns_str2wire_loc_buf(const char* str, uint8_t* rd, size_t* len)
 
 	if (isdigit((unsigned char) *my_str)) {
 		s = strtod(my_str, &my_str);
+		if(s > 60.0)
+			return LDNS_WIREPARSE_ERR_SYNTAX;
 	}
 
 	/* skip blanks before northerness */
@@ -2362,6 +2364,8 @@ north:
 
 	if (isdigit((unsigned char) *my_str)) {
 		s = strtod(my_str, &my_str);
+		if(s > 60.0)
+			return LDNS_WIREPARSE_ERR_SYNTAX;
 	}
 
 	/* skip blanks before easterness */
@@ -2394,8 +2398,17 @@ east:
 		longitude = equator - longitude;
 	}
 
-	altitude = (uint32_t)(strtod(my_str, &my_str)*100.0 +
-		10000000.0 + 0.5);
+	while (isblank((unsigned char) *my_str)) {
+		my_str++;
+	}
+
+	/* altitude */
+	if(!(isdigit((unsigned char) *my_str) || *my_str == '-'))
+		return LDNS_WIREPARSE_ERR_SYNTAX;
+	s = strtod(my_str, &my_str);
+	if(s < -100000.0 || s > 42849672.95)
+		return LDNS_WIREPARSE_ERR_SYNTAX;
+	altitude = (uint32_t)(s*100.0 + 10000000.0 + 0.5);
 	if (*my_str == 'm' || *my_str == 'M') {
 		my_str++;
 	}
