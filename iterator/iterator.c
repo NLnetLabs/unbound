@@ -55,6 +55,7 @@
 #include "services/cache/rrset.h"
 #include "services/cache/infra.h"
 #include "services/authzone.h"
+#include "services/outside_network.h"
 #include "util/module.h"
 #include "util/netevent.h"
 #include "util/net_help.h"
@@ -150,6 +151,7 @@ iter_new(struct module_qstate* qstate, int id)
 	iq->ratelimit_ok = 0;
 	iq->target_count = NULL;
 	iq->dp_target_count = 0;
+	iq->no_route_family = 0;
 	iq->wait_priming_stub = 0;
 	iq->refetch_glue = 0;
 	iq->dnssec_expected = 0;
@@ -2942,7 +2944,7 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 		iq->dp->name, iq->dp->namelen, iq->qchase.qtype,
 		&iq->dnssec_lame_query, &iq->chase_to_rd,
 		iq->num_target_queries, qstate->blacklist,
-		qstate->prefetch_leeway);
+		qstate->prefetch_leeway, iq->no_route_family);
 
 	/* If no usable target was selected... */
 	if(!target) {
@@ -4406,6 +4408,12 @@ process_response(struct module_qstate* qstate, struct iter_qstate* iq,
 	iq->response = NULL;
 	iq->state = QUERY_RESP_STATE;
 	if(event == module_event_noreply || event == module_event_error) {
+		if(event == module_event_noreply && outbound && outbound->qsent &&
+			outbound->qsent->last_send_no_route) {
+			/* skip this address family for the rest of this query */
+			iq->no_route_family = addr_is_ip6(&outbound->qsent->addr,
+				outbound->qsent->addrlen) ? AF_INET6 : AF_INET;
+		}
 		if(event == module_event_noreply && iq->timeout_count >= 3 &&
 			qstate->env->cfg->use_caps_bits_for_id &&
 			!iq->caps_fallback && !is_caps_whitelisted(ie, iq)) {

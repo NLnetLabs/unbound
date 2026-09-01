@@ -551,6 +551,9 @@ struct serviced_query {
 	struct timeval last_sent_time;
 	/** rtt of last message */
 	int last_rtt;
+	/** true if the last send failed with no route for the
+	 * destination's address family */
+	int last_send_no_route;
 	/** do we know edns probe status already, for UDP_EDNS queries */
 	int edns_lame_known;
 	/** edns options to use for sending upstream packet */
