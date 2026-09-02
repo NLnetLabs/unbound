@@ -5204,7 +5204,6 @@ apply_axfr(struct auth_xfer* xfr, struct auth_zone* z,
 	}
 
 	xfr->serial = serial;
-	xfr->have_zone = 1;
 	return 1;
 }
 
@@ -5468,6 +5467,7 @@ xfr_process_chunk_list(struct auth_xfer* xfr, struct module_env* env,
 	xfr->zone_expired = 0;
 	z->zone_expired = 0;
 	if(!xfr_find_soa(z, xfr)) {
+		auth_zone_clear_data(z);
 		lock_rw_unlock(&z->lock);
 		verbose(VERB_ALGO, "xfr from %s: no SOA in zone after update"
 			" (or malformed RR)", xfr->task_transfer->master->host);

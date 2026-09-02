@@ -1,3 +1,11 @@
+2 September 2026: Wouter
+	- Fix to not commit to have_zone at apply AXFR time for auth
+	  zone transfers, so that later failure rolls back to not.
+	  The have_zone value is set later when the SOA is retrieved.
+	  Also fix to clear the zone data when a transfer does not
+	  have a valid SOA record in the zone for it.
+	  Thanks to Qifan Zhang, Palo Alto Networks, for the report.
+
 1 September 2026: Wouter
 	- Fix to allow block_a and other local-zone types in a view.
 	- Fix LOC RR parse to avoid double to uint32 cast overflow.
