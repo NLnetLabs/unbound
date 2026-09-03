@@ -9,6 +9,10 @@
 	  zonefile input. If it can not be parsed it is leniently
 	  accepted, much like as a secondary it leniently accepts it.
 	  Thanks to Qifan Zhang, Palo Alto Networks, for the report.
+	- Fix that when extended EDNS RCODE does not fit, at short
+	  udpsize, the reply is truncated with TC and fix for the
+	  rcode in that short reply to be a sensible rcode.
+	  Thanks to Qifan Zhang, Palo Alto Networks, for the report.
 
 2 September 2026: Wouter
 	- Fix to not commit to have_zone at apply AXFR time for auth
