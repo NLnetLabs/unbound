@@ -842,8 +842,7 @@ rrinternal_parse_rdata(sldns_buffer* strbuf, char* token, size_t token_len,
 	sldns_write_uint16(rr+dname_len+8, (uint16_t)(rr_cur_len-dname_len-10));
 	*rr_len = rr_cur_len;
 	/* SVCB/HTTPS handling  */
-	if ((rr_type == LDNS_RR_TYPE_SVCB || rr_type == LDNS_RR_TYPE_HTTPS)
-		&& !was_unknown_rr_format) {
+	if (rr_type == LDNS_RR_TYPE_SVCB || rr_type == LDNS_RR_TYPE_HTTPS) {
 		size_t rdata_len = rr_cur_len - dname_len - 10;
 		uint8_t *rdata = rr+dname_len + 10;
 
@@ -875,7 +874,14 @@ rrinternal_parse_rdata(sldns_buffer* strbuf, char* token, size_t token_len,
 
 		rdata_len -= 1;
 		rdata += 1;
-		return sldns_str2wire_check_svcbparams(rdata, rdata_len);
+		status = sldns_str2wire_check_svcbparams(rdata, rdata_len);
+		/* For RFC3597 generic-form input, preserve unprintable records.
+		 * Those could have appeared due to secondary zones, and also
+		 * unbound writing invalid-format records out in generic form.
+		 * If it can be parsed, it fixes the svcparam ordering. */
+		if(was_unknown_rr_format && status != LDNS_WIREPARSE_ERR_OK)
+			status = LDNS_WIREPARSE_ERR_OK;
+		return status;
 
 	}
 	return LDNS_WIREPARSE_ERR_OK;

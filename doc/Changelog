@@ -5,6 +5,10 @@
 	  is valid. Thanks to Yuqi Qiu & Xiang Li (Nankai University,
 	  AOSP Lab).
 	- Remove unused .travis.yml for ci integration.
+	- Fix to reorder SVCB and HTTPS svcparams for unknown RR form
+	  zonefile input. If it can not be parsed it is leniently
+	  accepted, much like as a secondary it leniently accepts it.
+	  Thanks to Qifan Zhang, Palo Alto Networks, for the report.
 
 2 September 2026: Wouter
 	- Fix to not commit to have_zone at apply AXFR time for auth

@@ -230,3 +230,11 @@ v20	HTTPS	\# 35 (
 68 32                                              ; alpn value
 )
 
+; This vector is out-of-order in the wireformat encoding. That could come
+; from an upstream when this is the secondary zone. To leniently accept such
+; content as a secondary, it has to be able to be written and read back in.
+v21	HTTPS	\# 16 000100000300021e6100010003026833
+
+; If the server can leniently accept broken svcparams, then it should be able
+; to write and read them back in. This svcparam is broken, it is truncated.
+v22	HTTPS	\# 8 000100000300021e
