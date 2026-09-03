@@ -1706,6 +1706,8 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 		}
 		memset(&reply_edns, 0, sizeof(reply_edns));
 		reply_edns.edns_present = 1;
+		reply_edns.edns_version = EDNS_ADVERTISED_VERSION;
+		reply_edns.udp_size = EDNS_ADVERTISED_SIZE;
 		error_encode(c->buffer, ret, &qinfo,
 			*(uint16_t*)(void *)sldns_buffer_begin(c->buffer),
 			sldns_buffer_read_u16_at(c->buffer, 2), &reply_edns);

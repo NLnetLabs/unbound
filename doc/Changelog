@@ -13,6 +13,11 @@
 	  udpsize, the reply is truncated with TC and fix for the
 	  rcode in that short reply to be a sensible rcode.
 	  Thanks to Qifan Zhang, Palo Alto Networks, for the report.
+	- Fix that when a partial EDNS option is in a query, the
+	  response is a more RFC conformant FORMERR, since the EDNS
+	  option is malformed. Also fix to have an EDNS size for
+	  the reply error encoding for failed EDNS parse of the query.
+	  Thanks to Qifan Zhang, Palo Alto Networks, for the report.
 
 2 September 2026: Wouter
 	- Fix to not commit to have_zone at apply AXFR time for auth

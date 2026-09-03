@@ -974,7 +974,6 @@ parse_edns_options_from_query(uint8_t* rdata_ptr, size_t rdata_len,
 	}
 
 	/* while still more options, and have code+len to read */
-	/* ignores partial content (i.e. rdata len 3) */
 	while(rdata_len >= 4 && i < MAX_PARSED_EDNS_OPTIONS) {
 		uint16_t opt_code = sldns_read_uint16(rdata_ptr);
 		uint16_t opt_len = sldns_read_uint16(rdata_ptr+2);
@@ -984,8 +983,10 @@ parse_edns_options_from_query(uint8_t* rdata_ptr, size_t rdata_len,
 
 		rdata_ptr += 4;
 		rdata_len -= 4;
-		if(opt_len > rdata_len)
-			break; /* option code partial */
+		if(opt_len > rdata_len) {
+			/* option code partial */
+			return LDNS_RCODE_FORMERR;
+		}
 
 		/* handle parse time edns options here */
 		switch(opt_code) {
@@ -1160,6 +1161,9 @@ parse_edns_options_from_query(uint8_t* rdata_ptr, size_t rdata_len,
 		rdata_len -= opt_len;
 		i++;
 	}
+	/* partial content (i.e. rdata len 3) is FORMERR */
+	if(rdata_len > 0 && rdata_len <= 3)
+		return LDNS_RCODE_FORMERR;
 	return LDNS_RCODE_NOERROR;
 }
 
@@ -1240,6 +1244,8 @@ parse_extract_edns_from_response_msg(struct msg_parse* msg,
 		rdata_len -= 4;
 		if(opt_len > rdata_len)
 			break; /* option code partial */
+			/* This is lenient for partially broken messages
+			 * from upstream. With a partial EDNS option. */
 
 		if(!edns_opt_list_append(&edns->opt_list_in,
 				opt_code, opt_len, rdata_ptr, region)) {
