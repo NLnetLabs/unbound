@@ -104,6 +104,9 @@ struct sldns_buffer;
  */
 #define MAX_NSEC3_CALCULATIONS 8
 
+/** Length of the hash in bytes for the NSEC3 algorithm SHA1 */
+#define NSEC3_SHA_LEN 20
+
 /**
 * Cache table for NSEC3 hashes.
 * It keeps a *pointer* to the region its items are allocated.

@@ -265,6 +265,8 @@ size_t nsec3_hash_to_b32(uint8_t* hash, size_t hashlen, uint8_t* zone,
 	ret = sldns_b32_ntop_extended_hex(hash, hashlen, (char*)buf+1, max-1);
 	if(ret < 1) 
 		return 0;
+	if(ret > LDNS_MAX_LABELLEN)
+		return 0; /* label length too long */
 	buf[0] = (uint8_t)ret; /* length of b32 label */
 	ret++;
 	if(max - ret < zonelen)
@@ -273,13 +275,30 @@ size_t nsec3_hash_to_b32(uint8_t* hash, size_t hashlen, uint8_t* zone,
 	return zonelen+(size_t)ret;
 }
 
+/** Check that the hash length corresponds to the nsec3 algo */
+static int
+nsec3_algo_has_hashlen(int algo, size_t hlen)
+{
+	if(algo == NSEC3_HASH_SHA1) {
+		if(hlen != NSEC3_SHA_LEN)
+			return 0; /* wrong hash length for this algo */
+	} else {
+		return 0; /* unknown algo */
+	}
+	return 1;
+}
+
 size_t nsec3_get_nextowner_b32(struct ub_packed_rrset_key* rrset, int r,
 	uint8_t* buf, size_t max)
 {
 	uint8_t* nm, *zone;
 	size_t nmlen, zonelen;
+	int algo;
 	if(!nsec3_get_nextowner(rrset, r, &nm, &nmlen))
 		return 0;
+	algo = nsec3_get_algo(rrset, r);
+	if(!nsec3_algo_has_hashlen(algo, nmlen))
+		return 0; /* wrong hash length for this algo */
 	/* append zone name; the owner name must be <b32>.zone */
 	zone = rrset->rk.dname;
 	zonelen = rrset->rk.dname_len;

@@ -1,3 +1,10 @@
+3 September 2026: Wouter
+	- Fix to match NSEC3 hash length to the NSEC3 algorithm,
+	  this stops negative cache overdeletion. It also contrains
+	  the hash label length and checks if the NSEC nextowner
+	  is valid. Thanks to Yuqi Qiu & Xiang Li (Nankai University,
+	  AOSP Lab).
+
 2 September 2026: Wouter
 	- Fix to not commit to have_zone at apply AXFR time for auth
 	  zone transfers, so that later failure rolls back to not.

@@ -42,12 +42,6 @@
  * from cached NSEC records.
  */
 #include "config.h"
-#ifdef HAVE_OPENSSL_SSL_H
-#include <openssl/ssl.h>
-#define NSEC3_SHA_LEN SHA_DIGEST_LENGTH
-#else
-#define NSEC3_SHA_LEN 20
-#endif
 #include "validator/val_neg.h"
 #include "validator/val_nsec.h"
 #include "validator/val_nsec3.h"
@@ -694,6 +688,8 @@ static void wipeout(struct val_neg_cache* neg, struct val_neg_zone* zone,
 	if(ntohs(nsec->rk.type) == LDNS_RR_TYPE_NSEC) {
 		end = d->rr_data[0]+2;
 		end_len = dname_valid(end, d->rr_len[0]-2);
+		if(!end_len)
+			return;
 		end_labs = dname_count_labels(end);
 	} else {
 		/* NSEC3 */
