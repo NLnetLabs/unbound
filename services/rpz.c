@@ -506,6 +506,7 @@ delete_cname_override(struct rpz* r)
 static int
 rpz_apply_cfg_elements(struct rpz* r, struct config_auth* p)
 {
+	enum rpz_action action_override;
 	if(p->rpz_taglist && p->rpz_taglistlen) {
 		uint8_t* taglist = memdup(p->rpz_taglist, p->rpz_taglistlen);
 		if(!taglist) {
@@ -526,12 +527,12 @@ rpz_apply_cfg_elements(struct rpz* r, struct config_auth* p)
 	}
 
 	if(p->rpz_action_override) {
-		r->action_override = rpz_config_to_action(p->rpz_action_override);
+		action_override = rpz_config_to_action(p->rpz_action_override);
 	}
 	else
-		r->action_override = RPZ_NO_OVERRIDE_ACTION;
+		action_override = RPZ_NO_OVERRIDE_ACTION;
 
-	if(r->action_override == RPZ_CNAME_OVERRIDE_ACTION) {
+	if(action_override == RPZ_CNAME_OVERRIDE_ACTION) {
 		uint8_t nm[LDNS_MAX_DOMAINLEN+1];
 		size_t nmlen = sizeof(nm);
 		struct regional* newr;
@@ -564,6 +565,7 @@ rpz_apply_cfg_elements(struct rpz* r, struct config_auth* p)
 	} else {
 		delete_cname_override(r);
 	}
+	r->action_override = action_override;
 	r->log = p->rpz_log;
 	r->signal_nxdomain_ra = p->rpz_signal_nxdomain_ra;
 	if(p->rpz_log_name) {
