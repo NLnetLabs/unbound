@@ -1,3 +1,8 @@
+4 September 2026: Wouter
+	- Fix to make rpz_config leave the rpz with correct set up
+	  on failure. The struct is not half configured on exit.
+	  Thanks to Qifan Zhang, Palo Alto Networks, for the report.
+
 3 September 2026: Wouter
 	- Fix to match NSEC3 hash length to the NSEC3 algorithm,
 	  this stops negative cache overdeletion. It also contrains
