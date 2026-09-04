@@ -39,6 +39,7 @@
 #include "config.h"
 
 #include <stdarg.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -52,11 +53,12 @@
 int ub_c_lex(void);
 void ub_c_error(const char *message);
 
-static void validate_respip_action(const char* action);
-static void validate_acl_action(const char* action);
+static void validate_respip_action(const char *action);
+static void validate_acl_action(const char *action);
+static void normalize_domain_name(char *name, bool abs);
 
 /* these need to be global, otherwise they cannot be used inside yacc */
-extern struct config_parser_state* cfg_parser;
+extern struct config_parser_state *cfg_parser;
 
 #if 0
 #define OUTYY(s)  printf s /* used ONLY when debugging */
@@ -66,7 +68,7 @@ extern struct config_parser_state* cfg_parser;
 
 %}
 %union {
-	char*	str;
+	char	*str;
 };
 
 %token SPACE LETTER NEWLINE COMMENT COLON ANY ZONESTR
@@ -375,7 +377,7 @@ stub_clause: stubstart contents_stub
 	;
 stubstart: VAR_STUB_ZONE
 	{
-		struct config_stub* s;
+		struct config_stub *s;
 		OUTYY(("\nP(stub_zone:)\n"));
 		cfg_parser->started_toplevel = 1;
 		s = (struct config_stub*)calloc(1, sizeof(struct config_stub));
@@ -402,7 +404,7 @@ forward_clause: forwardstart contents_forward
 	;
 forwardstart: VAR_FORWARD_ZONE
 	{
-		struct config_stub* s;
+		struct config_stub *s;
 		OUTYY(("\nP(forward_zone:)\n"));
 		cfg_parser->started_toplevel = 1;
 		s = (struct config_stub*)calloc(1, sizeof(struct config_stub));
@@ -429,7 +431,7 @@ view_clause: viewstart contents_view
 	;
 viewstart: VAR_VIEW
 	{
-		struct config_view* s;
+		struct config_view *s;
 		OUTYY(("\nP(view:)\n"));
 		cfg_parser->started_toplevel = 1;
 		s = (struct config_view*)calloc(1, sizeof(struct config_view));
@@ -448,7 +450,7 @@ content_view: view_name | view_local_zone | view_local_data | view_first |
 	;
 authstart: VAR_AUTH_ZONE
 	{
-		struct config_auth* s;
+		struct config_auth *s;
 		OUTYY(("\nP(auth_zone:)\n"));
 		cfg_parser->started_toplevel = 1;
 		s = (struct config_auth*)calloc(1, sizeof(struct config_auth));
@@ -550,7 +552,7 @@ rpz_signal_nxdomain_ra: VAR_RPZ_SIGNAL_NXDOMAIN_RA STRING_ARG
 
 rpzstart: VAR_RPZ
 	{
-		struct config_auth* s;
+		struct config_auth *s;
 		OUTYY(("\nP(rpz:)\n"));
 		cfg_parser->started_toplevel = 1;
 		s = (struct config_auth*)calloc(1, sizeof(struct config_auth));
@@ -1509,6 +1511,7 @@ server_root_key_sentinel: VAR_ROOT_KEY_SENTINEL STRING_ARG
 	;
 server_domain_insecure: VAR_DOMAIN_INSECURE STRING_ARG
 	{
+		normalize_domain_name($2, true);
 		OUTYY(("P(server_domain_insecure:%s)\n", $2));
 		if(!cfg_strlist_insert(&cfg_parser->cfg->domain_insecure, $2))
 			yyerror("out of memory");
@@ -1985,6 +1988,7 @@ server_private_address: VAR_PRIVATE_ADDRESS STRING_ARG
 	;
 server_private_domain: VAR_PRIVATE_DOMAIN STRING_ARG
 	{
+		normalize_domain_name($2, true);
 		OUTYY(("P(server_private_domain:%s)\n", $2));
 		if(!cfg_strlist_insert(&cfg_parser->cfg->private_domain, $2))
 			yyerror("out of memory");
@@ -2400,6 +2404,7 @@ server_neg_cache_size: VAR_NEG_CACHE_SIZE STRING_ARG
 	;
 server_local_zone: VAR_LOCAL_ZONE STRING_ARG STRING_ARG
 	{
+		normalize_domain_name($2, true);
 		OUTYY(("P(server_local_zone:%s %s)\n", $2, $3));
 		if(!cfg_local_zone_type_value_check($3)) {
 			ub_c_error_msg("local-zone type: expected %s",
@@ -2413,19 +2418,6 @@ server_local_zone: VAR_LOCAL_ZONE STRING_ARG STRING_ARG
 			free($3);
 #ifdef USE_IPSET
 		} else if(strcmp($3, "ipset")==0) {
-			size_t len = strlen($2);
-			/* Make sure to add the trailing dot.
-			 * These are str compared to domain names. */
-			if($2[len-1] != '.') {
-				char* prev = $2;
-				if(!($2 = realloc($2, len+2))) {
-					yyerror("out of memory");
-					free(prev);
-				} else {
-					$2[len] = '.';
-					$2[len+1] = 0;
-				}
-			}
 			if(!cfg_strlist_insert(&cfg_parser->cfg->
 				local_zones_ipset, $2))
 				yyerror("out of memory");
@@ -3118,6 +3110,7 @@ server_proxy_protocol_port: VAR_PROXY_PROTOCOL_PORT STRING_ARG
 	;
 stub_name: VAR_NAME STRING_ARG
 	{
+		normalize_domain_name($2, true);
 		OUTYY(("P(name:%s)\n", $2));
 		if(cfg_parser->cfg->stubs->name)
 			yyerror("stub name override, there must be one name "
@@ -3190,6 +3183,7 @@ stub_prime: VAR_STUB_PRIME STRING_ARG
 	;
 forward_name: VAR_NAME STRING_ARG
 	{
+		normalize_domain_name($2, true);
 		OUTYY(("P(name:%s)\n", $2));
 		if(cfg_parser->cfg->forwards->name)
 			yyerror("forward name override, there must be one "
@@ -3252,6 +3246,7 @@ forward_tcp_upstream: VAR_FORWARD_TCP_UPSTREAM STRING_ARG
         ;
 auth_name: VAR_NAME STRING_ARG
 	{
+		normalize_domain_name($2, true);
 		OUTYY(("P(name:%s)\n", $2));
 		if(cfg_parser->cfg->auths->name)
 			yyerror("auth name override, there must be one name "
@@ -3368,6 +3363,7 @@ view_name: VAR_NAME STRING_ARG
 	;
 view_local_zone: VAR_LOCAL_ZONE STRING_ARG STRING_ARG
 	{
+		normalize_domain_name($2, true);
 		OUTYY(("P(view_local_zone:%s %s)\n", $2, $3));
 		if(!cfg_local_zone_type_value_check($3)) {
 			ub_c_error_msg("local-zone type: expected %s",
@@ -3381,19 +3377,6 @@ view_local_zone: VAR_LOCAL_ZONE STRING_ARG STRING_ARG
 			free($3);
 #ifdef USE_IPSET
 		} else if(strcmp($3, "ipset")==0) {
-			size_t len = strlen($2);
-			/* Make sure to add the trailing dot.
-			 * These are str compared to domain names. */
-			if($2[len-1] != '.') {
-				char* prev = $2;
-				if(!($2 = realloc($2, len+2))) {
-					yyerror("out of memory");
-					free(prev);
-				} else {
-					$2[len] = '.';
-					$2[len+1] = 0;
-				}
-			}
 			if(!cfg_strlist_insert(&cfg_parser->cfg->views->
 				local_zones_ipset, $2))
 				yyerror("out of memory");
@@ -4331,7 +4314,7 @@ ipset_name_v6: VAR_IPSET_NAME_V6 STRING_ARG
 
 /* parse helper routines could be here */
 static void
-validate_respip_action(const char* action)
+validate_respip_action(const char *action)
 {
 	if(strcmp(action, "deny")!=0 &&
 		strcmp(action, "redirect")!=0 &&
@@ -4348,7 +4331,7 @@ validate_respip_action(const char* action)
 }
 
 static void
-validate_acl_action(const char* action)
+validate_acl_action(const char *action)
 {
 	if(strcmp(action, "deny")!=0 &&
 		strcmp(action, "refuse")!=0 &&
@@ -4363,4 +4346,34 @@ validate_acl_action(const char* action)
 			"refuse_non_local, allow, allow_setrd, "
 			"allow_snoop or allow_cookie as access control action");
 	}
+}
+
+static void
+normalize_domain_name(char *name, bool abs)
+{
+	char *src, *dst;
+
+	/* skip leading dot(s) */
+	for (src = dst = name; *src == '.'; src++)
+		/* nothing */;
+	/* copy to the end */
+	while (*src != '\0') {
+		if ((*dst++ = *src++) == '.') {
+			/* deduplicate dots */
+			while (*src == '.')
+				src++;
+		}
+	}
+	/* If the caller did not ask for an absolute name, strip any
+	 * trailing dot(s). */
+	while (!abs && dst > name && dst[-1] == '.')
+		dst--;
+	/* If the result is empty, or the caller asked for an absolute
+	 * name and there is no trailing dot, add a dot.  The lexer always
+	 * allocates one extra byte, so there is room to add a dot even if
+	 * we didn't skip anything while copying. */
+	if (dst == name || (abs && dst[-1] != '.'))
+		*dst++ = '.';
+	/* terminate the result */
+	*dst = '\0';
 }
