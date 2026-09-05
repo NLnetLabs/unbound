@@ -30,3 +30,8 @@ do-tests.sh : runs all the tests in the testdata directory.
 testbed.sh : compiles on a set of (user specific) hosts and runs do-tests.
 
 Tests are run using testcode/mini_tpkg.sh.
+
+The long-test harness generates its TLS keys, certificates, and
+unbound-anchor signatures automatically.  To generate them manually, run:
+
+	sh testdata/gen_testkeys.sh testdata
