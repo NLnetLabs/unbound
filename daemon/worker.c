@@ -919,8 +919,11 @@ answer_from_cache(struct worker* worker, struct query_info* qinfo,
 		/* Attach the cached EDE (RFC8914) if CD bit is set and the
 		 * answer is bogus. */
 		if(*is_secure_answer == 0 &&
-			worker->env.cfg->ede && has_cd_bit &&
-			encode_rep->reason_bogus != LDNS_EDE_NONE) {
+			worker->env.cfg->ede &&
+			encode_rep->reason_bogus != LDNS_EDE_NONE &&
+			(has_cd_bit ||
+			(encode_rep->security == sec_status_insecure &&
+			 encode_rep->reason_bogus == LDNS_EDE_NEGATIVE_TRUST_ANCHOR))) {
 			edns_opt_list_append_ede(&edns->opt_list_out,
 				worker->scratchpad, encode_rep->reason_bogus,
 				encode_rep->reason_bogus_str);
