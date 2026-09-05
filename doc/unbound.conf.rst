@@ -4270,6 +4270,23 @@ and be compiled into the daemon to be enabled.
     per line.
     Applies also to names underneath the name given.
 
+@@UAHL@unbound.conf.dns64@dns64-tags@@: *"<list of tags>"*
+    Limit DNS64 processing to clients with a matching tag.
+
+    Tags need to be defined in :ref:`define-tag<unbound.conf.define-tag>` and
+    can be assigned to client addresses using
+    :ref:`access-control-tag<unbound.conf.access-control-tag>` or
+    :ref:`interface-tag<unbound.conf.interface-tag>`.
+    Enclose list of tags in quotes (``""``) and put spaces between tags.
+
+    For clients that match an ``access-control-*`` setting, the access-control
+    settings override the interface settings.
+    Assign the DNS64 tag with
+    :ref:`access-control-tag<unbound.conf.access-control-tag>` for those
+    clients as well.
+
+    If no tags are specified, DNS64 processing will be applied to all clients.
+
 NAT64 Options
 -------------
 

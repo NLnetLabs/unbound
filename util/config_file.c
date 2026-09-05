@@ -1099,6 +1099,14 @@ config_collate_cat(struct config_strlist* list)
 		} \
 	} \
 	}
+/** compare and print a taglist option */
+#define O_TAG(opt, name, tags, taglen) if(strcmp(opt, name)==0) { \
+	char* tmpstr = config_taglist2str(cfg, cfg->tags, cfg->taglen); \
+	if(tmpstr) { \
+		func(tmpstr, arg); \
+		free(tmpstr); \
+	} \
+	}
 
 int
 config_get_option(struct config_file* cfg, const char* opt,
@@ -1398,6 +1406,7 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_LTG(opt, "local-zone-tag", local_zone_tags)
 	else O_LTG(opt, "access-control-tag", acl_tags)
 	else O_LTG(opt, "response-ip-tag", respip_tags)
+	else O_TAG(opt, "dns64-tags", dns64_taglist, dns64_taglistlen)
 	else O_LS3(opt, "local-zone-override", local_zone_overrides)
 	else O_LS3(opt, "access-control-tag-action", acl_tag_actions)
 	else O_LS3(opt, "access-control-tag-data", acl_tag_datas)
@@ -1843,6 +1852,7 @@ config_delete(struct config_file* cfg)
 	free(cfg->nat64_prefix);
 	free(cfg->dns64_prefix);
 	config_delstrlist(cfg->dns64_ignore_aaaa);
+	free(cfg->dns64_taglist);
 	free(cfg->dnstap_socket_path);
 	free(cfg->dnstap_ip);
 	free(cfg->dnstap_tls_server_name);
