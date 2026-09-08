@@ -2237,6 +2237,9 @@ These options are part of the ``server:`` section.
     It is possible to use wildcards with this statement, the wildcard is
     expanded on start and on reload.
 
+    A wildcard that matches no files is not an error: the entry loads no
+    trust anchors, and the condition is logged at operational verbosity.
+
     Default: "" (no trusted keys file)
 
 

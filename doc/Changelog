@@ -1,3 +1,9 @@
+8 September 2026: Wouter
+	- Fix to elevate the diagnostic for no matches for a wildcard
+	  trusted-keys-file, make it more descriptive, and more man
+	  page content for it. Thanks to Qifan Zhang, Palo Alto
+	  Networks, for the report.
+
 4 September 2026: Wouter
 	- Fix to make rpz_config leave the rpz with correct set up
 	  on failure. The struct is not half configured on exit.

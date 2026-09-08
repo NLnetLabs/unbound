@@ -829,8 +829,9 @@ anchor_read_bind_file_wild(struct val_anchors* anchors, sldns_buffer* buffer,
 	if(r) {
 		/* some error */
 		if(r == GLOB_NOMATCH) {
-			verbose(VERB_QUERY, "trusted-keys-file: "
-				"no matches for %s", pat);
+			verbose(VERB_OPS, "trusted-keys-file: "
+				"no matches for %s; "
+				"no trust anchors loaded from it", pat);
 			return 1;
 		} else if(r == GLOB_NOSPACE) {
 			log_err("wildcard trusted-keys-file %s: "
