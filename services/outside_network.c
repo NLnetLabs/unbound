@@ -2227,11 +2227,34 @@ select_ifport(struct outside_network* outnet, struct pending* pend,
 				/* connect() to the destination */
 				if(connect(fd, (struct sockaddr*)&pend->addr,
 					pend->addrlen) < 0) {
-					if(udp_connect_needs_log(errno,
+					int err = errno;
+					if(udp_connect_needs_log(err,
 						&pend->addr, pend->addrlen)) {
 						log_err_addr("udp connect failed",
-							strerror(errno), &pend->addr,
+							strerror(err), &pend->addr,
 							pend->addrlen);
+					}
+					switch(err) {
+#ifdef ENETUNREACH
+					case ENETUNREACH:
+#endif
+#ifdef ENETDOWN
+					case ENETDOWN:
+#endif
+#ifdef EHOSTUNREACH
+					case EHOSTUNREACH:
+#endif
+#ifdef EHOSTDOWN
+					case EHOSTDOWN:
+#endif
+#ifdef EADDRNOTAVAIL
+					case EADDRNOTAVAIL:
+#endif
+						/* no route for this address family */
+						pend->sq->last_send_no_route = 1;
+						break;
+					default:
+						break;
 					}
 					sock_close(fd);
 #ifndef DISABLE_EXPLICIT_PORT_RANDOMISATION
@@ -2767,6 +2790,7 @@ serviced_create(struct outside_network* outnet, sldns_buffer* buff, int dnssec,
 	sq->status = serviced_initial;
 	sq->retry = 0;
 	sq->to_be_deleted = 0;
+	sq->last_send_no_route = 0;
 	sq->padding_block_size = pad_queries_block_size;
 #ifdef UNBOUND_DEBUG
 	ins =
