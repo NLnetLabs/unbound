@@ -2639,6 +2639,7 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 		iq->qinfo_out.qname_len = iq->qchase.qname_len;
 		iq->minimise_count++;
 		iq->timeout_count = 0;
+		iq->minimise_terminal_probe = 0;
 
 		iter_dec_attempts(iq->dp, 1, ie->outbound_msg_retry);
 
@@ -2677,21 +2678,36 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 				&iq->qinfo_out.qname_len, 
 				labdiff-1);
 		}
-		if(labdiff < 1 || (labdiff < 2 
+		if(labdiff < 1 || (labdiff < 2
 			&& (iq->qchase.qtype == LDNS_RR_TYPE_DS
 			|| iq->qchase.qtype == LDNS_RR_TYPE_A)))
 			/* Stop minimising this query, resolve "as usual" */
 			iq->minimisation_state = DONOT_MINIMISE_STATE;
 		else if(!qstate->no_cache_lookup) {
-			struct dns_msg* msg = dns_cache_lookup(qstate->env, 
-				iq->qinfo_out.qname, iq->qinfo_out.qname_len, 
-				iq->qinfo_out.qtype, iq->qinfo_out.qclass, 
-				qstate->query_flags, qstate->region, 
+			struct dns_msg* msg;
+			if(labdiff < 2)
+				/* labdiff==1: qinfo_out.qname already equals
+				 * the full target qname, but qtype is still
+				 * the type-hiding "A" probe (qtype not A/DS)
+				 * -- this IS the terminal label. Mark it so
+				 * that, if this probe fails, the best-effort
+				 * minimisation fallback below can restore
+				 * this query target's attempt budget before
+				 * retrying with the real qtype. Otherwise a
+				 * single-nameserver zone can be left with no
+				 * usable target at all for the real query,
+				 * causing an avoidable SERVFAIL
+				 * (GitHub issue #1500). */
+				iq->minimise_terminal_probe = 1;
+			msg = dns_cache_lookup(qstate->env,
+				iq->qinfo_out.qname, iq->qinfo_out.qname_len,
+				iq->qinfo_out.qtype, iq->qinfo_out.qclass,
+				qstate->query_flags, qstate->region,
 				qstate->env->scratch, 0, iq->dp->name,
 				iq->dp->namelen);
 			if(msg && FLAGS_GET_RCODE(msg->rep->flags) ==
 				LDNS_RCODE_NOERROR)
-				/* no need to send query if it is already 
+				/* no need to send query if it is already
 				 * cached as NOERROR */
 				return 1;
 			if(msg && FLAGS_GET_RCODE(msg->rep->flags) ==
@@ -3412,9 +3428,25 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 					return error_response_cache(qstate, id,
 						LDNS_RCODE_SERVFAIL);
 				}
-				/* Best effort qname-minimisation. 
+				/* Best effort qname-minimisation.
 				 * Stop minimising and send full query when
 				 * RCODE is not NOERROR. */
+				if(iq->minimise_terminal_probe) {
+					/* The query that just failed was the
+					 * terminal-label type-hiding "A"
+					 * probe, not a real answer attempt.
+					 * Restore this query target's attempt
+					 * budget so the real qtype (about to
+					 * be sent via DONOT_MINIMISE_STATE
+					 * below) still has a target to go to,
+					 * instead of an avoidable SERVFAIL
+					 * when the zone has few or no other
+					 * usable addresses
+					 * (GitHub issue #1500). */
+					iter_dec_attempts(iq->dp, 1,
+						ie->outbound_msg_retry);
+					iq->minimise_terminal_probe = 0;
+				}
 				iq->minimisation_state = DONOT_MINIMISE_STATE;
 			}
 			if(FLAGS_GET_RCODE(iq->response->rep->flags) ==
