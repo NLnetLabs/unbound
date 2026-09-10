@@ -197,6 +197,8 @@ sldns_fget_token_l(FILE *f, char *token, const char *delim, size_t limit, int *l
 	}
 	*t = '\0';
 	if (c == EOF) {
+		if(p != 0 || quoted)
+			return -1;
 		return (ssize_t)i;
 	}
 

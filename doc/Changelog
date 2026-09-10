@@ -2,6 +2,9 @@
 	- Fix to construct the delegation point during DS NS find
 	  as a child side delegation point if that was the response.
 	  Thanks to Qifan Zhang, Palo Alto Networks, for the report.
+	- Fix to error on missing close parenthesis for zone file
+	  read and for url content read. Thanks to Qifan Zhang, Palo
+	  Alto Networks, for the report.
 
 8 September 2026: Wouter
 	- Fix to elevate the diagnostic for no matches for a wildcard

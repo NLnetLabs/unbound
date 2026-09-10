@@ -4514,7 +4514,7 @@ check_packet_ok(sldns_buffer* pkt, uint16_t qtype, struct auth_xfer* xfr,
 /** read one line from chunks into buffer at current position */
 static int
 chunkline_get_line(struct auth_chunk** chunk, size_t* chunk_pos,
-	sldns_buffer* buf)
+	sldns_buffer* buf, int* eof)
 {
 	int readsome = 0;
 	while(*chunk) {
@@ -4543,6 +4543,7 @@ chunkline_get_line(struct auth_chunk** chunk, size_t* chunk_pos,
 	}
 	/* no more text */
 	if(readsome) return 1;
+	*eof = 1;
 	return 0;
 }
 
@@ -4620,13 +4621,13 @@ chunkline_is_comment_line_or_empty(sldns_buffer* buf)
 /** find a line with ( ) collated */
 static int
 chunkline_get_line_collated(struct auth_chunk** chunk, size_t* chunk_pos,
-	sldns_buffer* buf)
+	sldns_buffer* buf, int* eof)
 {
 	size_t pos;
 	int parens = 0;
 	sldns_buffer_clear(buf);
 	pos = sldns_buffer_position(buf);
-	if(!chunkline_get_line(chunk, chunk_pos, buf)) {
+	if(!chunkline_get_line(chunk, chunk_pos, buf, eof)) {
 		if(sldns_buffer_position(buf) < sldns_buffer_limit(buf))
 			sldns_buffer_write_u8_at(buf, sldns_buffer_position(buf), 0);
 		else sldns_buffer_write_u8_at(buf, sldns_buffer_position(buf)-1, 0);
@@ -4637,11 +4638,16 @@ chunkline_get_line_collated(struct auth_chunk** chunk, size_t* chunk_pos,
 	while(parens > 0) {
 		chunkline_remove_trailcomment(buf, pos);
 		pos = sldns_buffer_position(buf);
-		if(!chunkline_get_line(chunk, chunk_pos, buf)) {
+		if(!chunkline_get_line(chunk, chunk_pos, buf, eof)) {
 			if(sldns_buffer_position(buf) < sldns_buffer_limit(buf))
 				sldns_buffer_write_u8_at(buf, sldns_buffer_position(buf), 0);
 			else sldns_buffer_write_u8_at(buf, sldns_buffer_position(buf)-1, 0);
 			sldns_buffer_flip(buf);
+			if(eof) {
+				verbose(VERB_ALGO, "http chunkline: "
+					"missing closing parenthesis");
+				*eof = 0; /* It is an error instead of EOF */
+			}
 			return 0;
 		}
 		parens += chunkline_count_parens(buf, pos);
@@ -4650,6 +4656,8 @@ chunkline_get_line_collated(struct auth_chunk** chunk, size_t* chunk_pos,
 	if(sldns_buffer_remaining(buf) < 1) {
 		verbose(VERB_ALGO, "http chunkline: "
 			"line too long");
+		/* null terminate for safety */
+		sldns_buffer_write_u8_at(buf, sldns_buffer_capacity(buf)-1, 0);
 		return 0;
 	}
 	sldns_buffer_write_u8_at(buf, sldns_buffer_position(buf), 0);
@@ -4718,8 +4726,8 @@ static int
 chunkline_non_comment_RR(struct auth_chunk** chunk, size_t* chunk_pos,
 	sldns_buffer* buf, struct sldns_file_parse_state* pstate)
 {
-	int ret;
-	while(chunkline_get_line_collated(chunk, chunk_pos, buf)) {
+	int ret, eof = 0;
+	while(chunkline_get_line_collated(chunk, chunk_pos, buf, &eof)) {
 		chunkline_newline_removal(buf);
 		if(chunkline_is_comment_line_or_empty(buf)) {
 			/* a comment, go to next line */
@@ -4737,6 +4745,7 @@ chunkline_non_comment_RR(struct auth_chunk** chunk, size_t* chunk_pos,
 		}
 		return 1;
 	}
+	if(!eof) return 0;
 	/* no noncomments, fail */
 	return 0;
 }
@@ -5218,7 +5227,7 @@ apply_http(struct auth_xfer* xfr, struct auth_zone* z,
 	struct sldns_file_parse_state pstate;
 	struct auth_chunk* chunk;
 	size_t chunk_pos;
-	int ret;
+	int ret, eof=0;
 	memset(&pstate, 0, sizeof(pstate));
 	pstate.default_ttl = 3600;
 	if(xfr->namelen < sizeof(pstate.origin)) {
@@ -5263,7 +5272,8 @@ apply_http(struct auth_xfer* xfr, struct auth_zone* z,
 	chunk = xfr->task_transfer->chunks_first;
 	chunk_pos = 0;
 	pstate.lineno = 0;
-	while(chunkline_get_line_collated(&chunk, &chunk_pos, scratch_buffer)) {
+	while(chunkline_get_line_collated(&chunk, &chunk_pos, scratch_buffer,
+		&eof)) {
 		/* process this line */
 		pstate.lineno++;
 		chunkline_newline_removal(scratch_buffer);
@@ -5298,6 +5308,13 @@ apply_http(struct auth_xfer* xfr, struct auth_zone* z,
 				sldns_buffer_begin(scratch_buffer));
 			return 0;
 		}
+	}
+	if(!eof) {
+		verbose(VERB_ALGO, "error parsing line [%s:%d] %s",
+			xfr->task_transfer->master->file,
+			pstate.lineno,
+			sldns_buffer_begin(scratch_buffer));
+		return 0;
 	}
 	return 1;
 }
