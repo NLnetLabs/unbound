@@ -1586,10 +1586,16 @@ mesh_send_reply(struct mesh_state* m, int rcode, struct reply_info* rep,
 
 		/* Attach EDE without SERVFAIL if the validation failed.
 		 * Need to explicitly check for rep->security otherwise failed
-		 * validation paths may attach to a secure answer. */
+		 * validation paths may attach to a secure answer.
+		 * RPZ-blocked responses are excepted from that security-status
+		 * gate: their reason_bogus/security are set together atomically
+		 * on a freshly synthesized reply_info (see services/rpz.c), so
+		 * there is no risk of a stale EDE leaking onto an unrelated
+		 * secure answer the way there could be for the validator. */
 		if(m->s.env->cfg->ede && rep &&
 			(rep->security <= sec_status_bogus ||
-			rep->security == sec_status_secure_sentinel_fail)) {
+			rep->security == sec_status_secure_sentinel_fail ||
+			rep->reason_bogus == LDNS_EDE_BLOCKED)) {
 			mesh_find_and_attach_ede_and_reason(m, rep, r);
 		}
 
