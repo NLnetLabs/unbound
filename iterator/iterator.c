@@ -3995,15 +3995,32 @@ processDSNSResponse(struct module_qstate* qstate, int id,
 	struct module_qstate* forq)
 {
 	struct iter_qstate* foriq = (struct iter_qstate*)forq->minfo[id];
+	int sec_an = 0, sec_ns = 0;
 
 	/* if the finished (iq->response) query has no NS set: continue
 	 * up to look for the right dp; nothing to change, do DPNSstate */
 	if(qstate->return_rcode != LDNS_RCODE_NOERROR)
 		return; /* seek further */
 	/* find the NS RRset (without allowing CNAMEs) */
-	if(!reply_find_rrset(qstate->return_msg->rep, qstate->qinfo.qname,
-		qstate->qinfo.qname_len, LDNS_RR_TYPE_NS,
-		qstate->qinfo.qclass)){
+	/* Usually, the response has a NS in the answer section, since that
+	 * was the query type. And it is then the child side part of the NS
+	 * set. This child side part would be used if next up a delegation
+	 * point was constructed from cache, for example. But now it uses that
+	 * child side part for constructing a delegation point for the DS
+	 * lookup.
+	 * If that is not there, we can pick up the NS from the authority
+	 * section as well, like from a referral. */
+	if(reply_find_rrset_section_an(qstate->return_msg->rep,
+		qstate->qinfo.qname, qstate->qinfo.qname_len,
+		LDNS_RR_TYPE_NS, qstate->qinfo.qclass))
+		sec_an = 1;
+	if(!sec_an && reply_find_rrset_section_ns(qstate->return_msg->rep,
+		qstate->qinfo.qname, qstate->qinfo.qname_len,
+		LDNS_RR_TYPE_NS, qstate->qinfo.qclass))
+		sec_ns = 1;
+	if(!sec_an && !sec_ns) {
+		/* We probably hit an intermediate label, without a type NS
+		 * record there. To find the nameservers, it must go up more.*/
 		return; /* seek further */
 	}
 
@@ -4015,6 +4032,11 @@ processDSNSResponse(struct module_qstate* qstate, int id,
 		log_err("out of memory in dsns dp alloc");
 		errinf(qstate, "malloc failure, in DS search");
 		return; /* dp==NULL in QUERYTARGETS makes SERVFAIL */
+	}
+	if(sec_an) {
+		/* The NS is in the answer section, this is not a parent side,
+		 * but a child side response for it. */
+		foriq->dp->has_parent_side_NS = 0;
 	}
 	/* success, go query the querytargets in the new dp (and go down) */
 }

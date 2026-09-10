@@ -1,3 +1,8 @@
+10 September 2026: Wouter
+	- Fix to construct the delegation point during DS NS find
+	  as a child side delegation point if that was the response.
+	  Thanks to Qifan Zhang, Palo Alto Networks, for the report.
+
 8 September 2026: Wouter
 	- Fix to elevate the diagnostic for no matches for a wildcard
 	  trusted-keys-file, make it more descriptive, and more man
