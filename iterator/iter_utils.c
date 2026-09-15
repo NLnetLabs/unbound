@@ -1215,8 +1215,8 @@ iter_store_parentside_rrset(struct module_env* env,
 	rrset->entry.hash = rrset_key_hash(&rrset->rk);
 	ref.key = rrset;
 	ref.id = rrset->id;
-	/* ignore ret: if it was in the cache, ref updated */
-	(void)rrset_cache_update(env->rrset_cache, &ref, env->alloc, *env->now);
+	/* if it was in the cache, ref updated */
+	rrset_cache_update_unlock(env->rrset_cache, &ref, env->alloc, *env->now);
 }
 
 /** fetch NS record from reply, if any */

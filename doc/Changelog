@@ -1,3 +1,7 @@
+15 September 2026: Wouter
+	- For #1507: TOCTOU race in store_rrsets() can return a
+	  CNAME chain whose target owns no address.
+
 10 September 2026: Wouter
 	- Fix to construct the delegation point during DS NS find
 	  as a child side delegation point if that was the response.

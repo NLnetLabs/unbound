@@ -554,7 +554,7 @@ move_into_cache(struct ub_packed_rrset_key* k,
 
 	ref.key = ak;
 	ref.id = ak->id;
-	(void)rrset_cache_update(worker->env.rrset_cache, &ref,
+	rrset_cache_update_unlock(worker->env.rrset_cache, &ref,
 		worker->alloc, *worker->env.now);
 
 	return 1;

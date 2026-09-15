@@ -95,7 +95,8 @@ store_rrsets(struct module_env* env, struct reply_info* rep, time_t now,
 		case 2: /* ref updated, cache is superior */
 			if(region) {
 				struct ub_packed_rrset_key* ck;
-				lock_rw_rdlock(&rep->ref[i].key->entry.lock);
+				/* the entry is already readlocked from the
+				 * check in rrset_cache_update. */
 				/* if deleted rrset, do not copy it */
 				if(rep->ref[i].key->id == 0 ||
 					rep->ref[i].id != rep->ref[i].key->id)
@@ -116,6 +117,8 @@ store_rrsets(struct module_env* env, struct reply_info* rep, time_t now,
 						qrep->serve_expired_ttl = qrep->ttl + SERVE_EXPIRED_TTL;
 					}
 				}
+			} else {
+				lock_rw_unlock(&rep->ref[i].key->entry.lock);
 			}
 			/* no break: also copy key item */
 			/* the line below is matched by gcc regex and silences
@@ -1208,9 +1211,9 @@ dns_cache_store(struct module_env* env, struct query_info* msgqinf,
 				rep->rrsets[i]->entry.data, *env->now);
 			ref.key = rep->rrsets[i];
 			ref.id = rep->rrsets[i]->id;
-			/*ignore ret: it was in the cache, ref updated */
+			/* if it was in the cache, ref updated */
 			/* no leeway for typeNS */
-			(void)rrset_cache_update(env->rrset_cache, &ref, 
+			rrset_cache_update_unlock(env->rrset_cache, &ref,
 				env->alloc,
 				((ntohs(ref.key->rk.type)==LDNS_RR_TYPE_NS
 				 && !pside) ? qstarttime:*env->now + leeway));

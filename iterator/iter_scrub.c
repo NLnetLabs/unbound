@@ -893,8 +893,8 @@ store_rrset(sldns_buffer* pkt, struct msg_parse* msg, struct module_env* env,
 	packed_rrset_ttl_add(d, now);
 	ref.key = k;
 	ref.id = k->id;
-	/*ignore ret: it was in the cache, ref updated */
-	(void)rrset_cache_update(env->rrset_cache, &ref, env->alloc, now);
+	/* if it was in the cache, ref updated */
+	rrset_cache_update_unlock(env->rrset_cache, &ref, env->alloc, now);
 }
 
 /**

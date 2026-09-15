@@ -129,8 +129,14 @@ void rrset_cache_touch(struct rrset_cache* r, struct ub_packed_rrset_key* key,
  * 	1: reference updated, item is inserted in cache.
  * 	2: reference updated, item in cache is considered superior.
  *	   also the rdata is equal (but other parameters in cache are superior).
+ *	   In case 2 the item is returned under a readlock. The caller must
+ *	   unlock.
  */
 int rrset_cache_update(struct rrset_cache* r, struct rrset_ref* ref, 
+	struct alloc_cache* alloc, time_t timenow);
+
+/** The rrset_cache_update routine that unlocks at end */
+void rrset_cache_update_unlock(struct rrset_cache* r, struct rrset_ref* ref,
 	struct alloc_cache* alloc, time_t timenow);
 
 /**
