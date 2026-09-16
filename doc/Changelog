@@ -1,3 +1,38 @@
+16 September 2026: Wouter
+	- Release of 1.26.1 with the following security fixes.
+	- Fix CVE-2026-81642, Heap buffer overflow and possible Remote Code
+	  Execution when digesting DNSKEY. Thanks to Yuqi Qiu and Xiang Li
+	  from Nankai University, AOSP Lab for the report.
+	- Fix CVE-2026-81634, Possible heap buffer overflow during DNSSEC
+	  canonicalization. Thanks to Vlatko Kosturjak with Marlink Cyber,
+	  for the report.
+	- Fix CVE-2026-82717, CNAME synthesis could lead to heap corruption.
+	  Thanks to Ben Morris from Anthropic for the report.
+	- Fix CVE-2026-77955, Possible ZONEMD verification bypass window.
+	  Thanks to Yuqi Qiu and Xiang Li from Nankai University, AOSP Lab,
+	  for the report. In addition, thanks to Qifan Zhang from Palo Alto
+	  Networks for also reporting this issue.
+	- Fix CVE-2026-78227, Use-after-free in DoQ stream output buffer on
+	  reset re-transmission. Thanks to Yuqi Qiu and Xiang Li from Nankai
+	  University, AOSP Lab for the report.
+	- Fix CVE-2026-80225, Possible degradation of service from continuous
+	  queries on the same TCP/DoT connection. Thanks to Qifan Zhang from
+	  Palo Alto Networks for the report.
+	- Fix CVE-2026-82720, Use-after-free in DoH stream cleanup code path.
+	  Thanks to Yuqi Qiu and Xiang Li from Nankai University, AOSP Lab,
+	  for the report.
+	- Fix CVE-2026-85501, Retrap: Novel Vulnerabilities to launch
+	  Algorithmic Complexity Attacks on DNSSEC. Thanks to Zuyao Xu and
+	  Xiang Li from Nankai University, AOSP Lab for the report. In
+	  addition, thanks to Qifan Zhang from Palo Alto Networks for a
+	  complimentary report.
+	- Fix CVE-2026-77860, 'serve-expired' can bypass Unbound 'wait-limit'.
+	  Thanks to Xuanchao Xie, Lutong Chen, and Kaiping Xue from the
+	  University of Science and Technology of China (USTC) for the
+	  report.
+	- The code repository continues with 1.26.2 under development,
+	  that includes the changes from before the 1.26.1 commits.
+
 15 September 2026: Wouter
 	- For #1507: TOCTOU race in store_rrsets() can return a
 	  CNAME chain whose target owns no address.
