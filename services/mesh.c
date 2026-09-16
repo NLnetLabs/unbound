@@ -2703,8 +2703,7 @@ mesh_serve_expired_callback(void* arg)
 		if(r->query_reply.c->tcp_req_info)
 			tcp_req_info_remove_mesh_state(r->query_reply.c->tcp_req_info, mstate);
 		/* mesh_send_reply removed mesh state from http2_stream. */
-		infra_wait_limit_dec(mstate->s.env->infra_cache,
-			&r->query_reply, mstate->s.env->cfg);
+		/* mesh_send_reply decremented wait_limit. */
 		prev = r;
 		prev_buffer = r_buffer;
 	}
