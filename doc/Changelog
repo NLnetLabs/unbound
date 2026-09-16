@@ -32,6 +32,8 @@
 	  report.
 	- The code repository continues with 1.26.2 under development,
 	  that includes the changes from before the 1.26.1 commits.
+	- Unit test for CVE-2026-81642.
+	- Unit test for CVE-2026-82717.
 
 15 September 2026: Wouter
 	- For #1507: TOCTOU race in store_rrsets() can return a

@@ -1,0 +1,206 @@
+; config options
+; The island of trust is at test.
+server:
+	target-fetch-policy: "0 0 0 0 0"
+	qname-minimisation: no
+	minimal-responses: no
+	local-zone: test. nodefault
+	log-servfail: yes
+	cache-max-ttl: 86400
+
+stub-zone:
+	name: "."
+	stub-addr: 193.0.14.129 	# K.ROOT-SERVERS.NET.
+CONFIG_END
+
+SCENARIO_BEGIN Test DNAME for post parse packet alteration
+
+; K.ROOT-SERVERS.NET.
+RANGE_BEGIN 0 100
+	ADDRESS 193.0.14.129 
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR NOERROR
+SECTION QUESTION
+. IN NS
+SECTION ANSWER
+. IN NS	K.ROOT-SERVERS.NET.
+SECTION ADDITIONAL
+K.ROOT-SERVERS.NET.	IN	A	193.0.14.129
+ENTRY_END
+
+ENTRY_BEGIN
+MATCH opcode subdomain
+ADJUST copy_id copy_query
+REPLY QR NOERROR
+SECTION QUESTION
+test. IN NS
+SECTION AUTHORITY
+test.	IN NS	ns.test.
+SECTION ADDITIONAL
+ns.test. IN A 1.2.3.5
+ENTRY_END
+RANGE_END
+
+; ns.test
+RANGE_BEGIN 0 100
+	ADDRESS 1.2.3.5
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR AA NOERROR
+SECTION QUESTION
+test. IN NS
+SECTION ANSWER
+test.    IN NS   ns.test
+SECTION ADDITIONAL
+ns.test. IN A 1.2.3.5
+ENTRY_END
+
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR AA NOERROR
+SECTION QUESTION
+ns.test. IN A
+SECTION ANSWER
+ns.test. IN A 1.2.3.5
+ENTRY_END
+
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR AA NOERROR
+SECTION QUESTION
+ns.test. IN AAAA
+SECTION AUTHORITY
+test. 3600 IN SOA ns.test. host.test. 20201 3600 1800 604800 3600
+ENTRY_END
+
+ENTRY_BEGIN
+MATCH opcode subdomain
+ADJUST copy_id copy_query
+REPLY QR NOERROR
+SECTION QUESTION
+example.test. IN NS
+SECTION AUTHORITY
+example.test.    IN NS   ns.example.test.
+SECTION ADDITIONAL
+ns.example.test. IN A 1.2.3.4
+ENTRY_END
+RANGE_END
+
+; ns.example.test.
+RANGE_BEGIN 0 100
+	ADDRESS 1.2.3.4
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR NOERROR
+SECTION QUESTION
+example.test. IN NS
+SECTION ANSWER
+example.test.    IN NS   ns.example.test.
+SECTION ADDITIONAL
+ns.example.test.         IN      A       1.2.3.4
+ENTRY_END
+
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR AA NOERROR
+SECTION QUESTION
+ns.example.test. IN A
+SECTION ANSWER
+ns.example.test.         IN      A       1.2.3.4
+ENTRY_END
+
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR AA NOERROR
+SECTION QUESTION
+ns.example.test. IN AAAA
+SECTION AUTHORITY
+example.test. 3600 IN SOA ns.example.test. host.example.test. 20301 3600 1800 604800 3600
+ENTRY_END
+
+; response to query of interest
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR AA NOERROR
+SECTION QUESTION
+a.d.example.test. IN CNAME
+SECTION ANSWER
+HEX_ANSWER_BEGIN
+00 00 84 00             ; QR AA
+00 01 00 02 00 01 00 00 ; QDCOUNT=1, ANCOUNT=2, NSCOUNT=1, ARCOUNT=0.
+; a.d.example.test. IN CNAME
+01 61 01 64 07 6578616d706c65 04 74657374 00 00 05 00 01
+; answer d.example.test. DNAME IN TTL=.. e.example.test.
+01 64 07 6578616d706c65 04 74657374 00 00 27 00 01 FF 00 12 34
+00 10 01 65 07 6578616d706c65 04 74657374 00
+; . TXT len to have space.
+00 00 10 00 01 00 00 00 15
+00 10
+0F 000102030405060708090A0B0C0D0E
+; auth SOA, with rdata compression pointer that points to the
+; DNAME TTL value. That gets clamped with max-ttl.
+; example.test. SOA IN ttl
+07 6578616d706c65 04 74657374 00 00 06 00 01 00 00 00 15
+00 18
+; DNAME TTL is at 36
+c0 37
+c0 0c
+00 00 00 01
+00 00 00 02
+00 00 00 03
+00 00 00 04
+00 00 00 05
+HEX_ANSWER_END
+ENTRY_END
+
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR AA NOERROR
+SECTION QUESTION
+a.e.example.test. IN A
+SECTION AUTHORITY
+example.test. 3600 IN SOA ns.example.test. host.example.test. 20301 3600 1800 604800 3600
+ENTRY_END
+RANGE_END
+
+STEP 1 QUERY
+ENTRY_BEGIN
+REPLY RD DO
+SECTION QUESTION
+a.d.example.test. IN CNAME 
+ENTRY_END
+
+; The query is for type CNAME, so that the DNAME redirect is not followed,
+; but we get the processed answer from that DNAME reply.
+; The packet alteration would have changed the domain name in the SOA rdata.
+; but it should not have happened, the check below has the correct outcome,
+; where the packet data has not been altered, from its already awkward
+; contents.
+; The TXT RR has been scrubbed from the reply.
+; The malformed rdata would read something like:
+; example.test. 5 IN SOA . \001e\007example\004test\000. 1048577 21 1052416 16909060 84281096
+
+STEP 10 CHECK_ANSWER
+ENTRY_BEGIN
+MATCH all
+REPLY QR RD RA DO NOERROR
+SECTION QUESTION
+a.d.example.test. IN CNAME
+SECTION ANSWER
+d.example.test. 21 IN DNAME e.example.test.
+a.d.example.test. 21 IN CNAME a.e.example.test.
+SECTION AUTHORITY
+example.test. 3600 IN SOA . a.d.example.test. 1 2 3 4 5
+ENTRY_END
+
+SCENARIO_END
