@@ -655,6 +655,9 @@ scrub_normalize(sldns_buffer* pkt, struct msg_parse* msg,
 					if(rrset->type == LDNS_RR_TYPE_NS &&
 						rrset->rr_count > env->cfg->iter_scrub_ns) {
 						shorten_rrset(pkt, rrset, env->cfg->iter_scrub_ns);
+					} else if(rrset->type == LDNS_RR_TYPE_DS &&
+						rrset->rr_count > env->cfg->iter_scrub_ns) {
+						shorten_rrset(pkt, rrset, env->cfg->iter_scrub_ns);
 					}
 					prev = rrset;
 					rrset = rrset->rrset_all_next;
@@ -672,6 +675,9 @@ scrub_normalize(sldns_buffer* pkt, struct msg_parse* msg,
 		}
 
 		if(rrset->type == LDNS_RR_TYPE_NS &&
+			rrset->rr_count > env->cfg->iter_scrub_ns) {
+			shorten_rrset(pkt, rrset, env->cfg->iter_scrub_ns);
+		} else if(rrset->type == LDNS_RR_TYPE_DS &&
 			rrset->rr_count > env->cfg->iter_scrub_ns) {
 			shorten_rrset(pkt, rrset, env->cfg->iter_scrub_ns);
 		}
@@ -797,6 +803,11 @@ scrub_normalize(sldns_buffer* pkt, struct msg_parse* msg,
 				} else {
 					shorten_rrset(pkt, rrset, env->cfg->iter_scrub_ns);
 				}
+			}
+		} else if(rrset->type==LDNS_RR_TYPE_DS) {
+			if(rrset->rr_count > env->cfg->iter_scrub_ns) {
+				shorten_rrset(pkt, rrset,
+					env->cfg->iter_scrub_ns);
 			}
 		}
 		/* if this is type DS and we query for type DS we just got

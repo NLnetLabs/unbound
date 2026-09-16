@@ -1139,6 +1139,17 @@ reply_all_rrsets_secure(struct reply_info* rep)
 	return 1;
 }
 
+int reply_an_ns_rrsets_secure(struct reply_info* rep)
+{
+	size_t i;
+	for(i=0; i<rep->an_numrrsets+rep->ns_numrrsets; i++) {
+		if( ((struct packed_rrset_data*)rep->rrsets[i]->entry.data)
+			->security != sec_status_secure )
+		return 0;
+	}
+	return 1;
+}
+
 struct reply_info*
 parse_reply_in_temp_region(sldns_buffer* pkt, struct regional* region,
 	struct query_info* qi)

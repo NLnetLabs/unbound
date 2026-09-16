@@ -82,6 +82,8 @@
 
 /** Maximum number of RRSIG validations for an RRset. */
 #define MAX_VALIDATE_RRSIGS 8
+/** Maximum number of NSEC validations for a message. */
+#define MAX_VALIDATE_NSECS 8
 
 /** return number of rrs in an rrset */
 static size_t
@@ -548,8 +550,10 @@ int algo_needs_missing(struct algo_needs* n)
  * @param reason_bogus: EDE (RFC8914) code paired with the reason of failure.
  * @param section: section of packet where this rrset comes from.
  * @param qstate: qstate with region.
+ * @param vq: validator qstate with attempt counts.
  * @param numverified: incremented when the number of RRSIG validations
  * 	increases.
+ * @param num_tagmatches: incremented for tag matches.
  * @return secure if any key signs *this* signature. bogus if no key signs it,
  *	unchecked on error, or indeterminate if all keys are not supported by
  *	the crypto library (openssl3+ only).
@@ -561,7 +565,7 @@ dnskeyset_verify_rrset_sig(struct module_env* env, struct val_env* ve,
 	struct rbtree_type** sortree,
 	char** reason, sldns_ede_code *reason_bogus,
 	sldns_pkt_section section, struct module_qstate* qstate,
-	int* numverified)
+	struct val_qstate* vq, int* numverified, size_t* num_tagmatches)
 {
 	/* find matching keys and check them */
 	enum sec_status sec = sec_status_bogus;
@@ -580,12 +584,40 @@ dnskeyset_verify_rrset_sig(struct module_env* env, struct val_env* ve,
 	}
 
 	for(i=0; i<num; i++) {
+		if((*num_tagmatches)++ > MAX_TAG_MATCHES) {
+			*reason = "too many tag matches";
+			if(reason_bogus)
+				*reason_bogus = LDNS_EDE_DNSSEC_BOGUS;
+			verbose(VERB_ALGO, "verify sig: too many tag matches, "
+				"MAX_TAG_MATCHES (%d); bogus", MAX_TAG_MATCHES);
+			return sec_status_bogus;
+		}
 		/* see if key matches keytag and algo */
 		if(algo != dnskey_get_algo(dnskey, i) ||
 			tag != dnskey_calc_keytag(dnskey, i))
 			continue;
 		numchecked ++;
 		(*numverified)++;
+
+		if(vq && vq->num_validation_attempts++ > env->cfg->val_validation_attempts) {
+			*reason = "too many validation attempts";
+			if(reason_bogus)
+				*reason_bogus = LDNS_EDE_DNSSEC_BOGUS;
+			verbose(VERB_ALGO, "verify sig: too many validation attempts, "
+				"val-validation-attempts (%d); bogus", env->cfg->val_validation_attempts);
+			return sec_status_bogus;
+		}
+		if(vq && (ntohs(rrset->rk.type) == LDNS_RR_TYPE_NSEC ||
+			ntohs(rrset->rk.type) == LDNS_RR_TYPE_NSEC3) &&
+			vq->num_nsec_attempts++ > MAX_VALIDATE_NSECS) {
+			*reason = "too many NSEC or NSEC3 validation attempts";
+			if(reason_bogus)
+				*reason_bogus = LDNS_EDE_DNSSEC_BOGUS;
+			verbose(VERB_ALGO, "verify sig: too many NSEC or NSEC3 validation attempts, "
+				"(%d); bogus", MAX_VALIDATE_NSECS);
+			vq->num_nsec_attempts_exceeded = 1;
+			return sec_status_bogus;
+		}
 
 		/* see if key verifies */
 		sec = dnskey_verify_rrset_sig(env->scratch,
@@ -626,11 +658,12 @@ enum sec_status
 dnskeyset_verify_rrset(struct module_env* env, struct val_env* ve,
 	struct ub_packed_rrset_key* rrset, struct ub_packed_rrset_key* dnskey,
 	uint8_t* sigalg, char** reason, sldns_ede_code *reason_bogus,
-	sldns_pkt_section section, struct module_qstate* qstate, int* verified,
-	char* reasonbuf, size_t reasonlen)
+	sldns_pkt_section section, struct module_qstate* qstate,
+	struct val_qstate* vq, int* verified, char* reasonbuf,
+	size_t reasonlen)
 {
 	enum sec_status sec;
-	size_t i, num;
+	size_t i, num, num_tagmatches = 0;
 	rbtree_type* sortree = NULL;
 	/* make sure that for all DNSKEY algorithms there are valid sigs */
 	struct algo_needs needs;
@@ -658,9 +691,19 @@ dnskeyset_verify_rrset(struct module_env* env, struct val_env* ve,
 		}
 	}
 	for(i=0; i<num; i++) {
+		if(num_tagmatches > MAX_TAG_MATCHES) {
+			*reason = "too many tag matches";
+			if(reason_bogus)
+				*reason_bogus = LDNS_EDE_DNSSEC_BOGUS;
+			verbose(VERB_ALGO, "rrset failed to verify: too many tag matches, "
+				"MAX_TAG_MATCHES (%d)", MAX_TAG_MATCHES);
+			if(reason_bogus)
+				*reason_bogus = LDNS_EDE_DNSSEC_BOGUS;
+			return sec_status_bogus;
+		}
 		sec = dnskeyset_verify_rrset_sig(env, ve, *env->now, rrset, 
 			dnskey, i, &sortree, reason, reason_bogus,
-			section, qstate, verified);
+			section, qstate, vq, verified, &num_tagmatches);
 		/* see which algorithm has been fixed up */
 		if(sec == sec_status_secure) {
 			if(!sigalg)
@@ -709,7 +752,8 @@ enum sec_status
 dnskey_verify_rrset(struct module_env* env, struct val_env* ve,
         struct ub_packed_rrset_key* rrset, struct ub_packed_rrset_key* dnskey,
 	size_t dnskey_idx, char** reason, sldns_ede_code *reason_bogus,
-	sldns_pkt_section section, struct module_qstate* qstate)
+	sldns_pkt_section section, struct module_qstate* qstate,
+	struct val_qstate* vq, size_t* num_tagmatches)
 {
 	enum sec_status sec;
 	size_t i, num, numchecked = 0, numindeterminate = 0;
@@ -730,9 +774,26 @@ dnskey_verify_rrset(struct module_env* env, struct val_env* ve,
 	}
 	for(i=0; i<num; i++) {
 		/* see if sig matches keytag and algo */
+		if((*num_tagmatches)++ > MAX_TAG_MATCHES) {
+			*reason = "too many tag matches";
+			if(reason_bogus)
+				*reason_bogus = LDNS_EDE_DNSSEC_BOGUS;
+			verbose(VERB_ALGO, "rrset failed to verify: too many tag matches, "
+				"MAX_TAG_MATCHES (%d); bogus", MAX_TAG_MATCHES);
+			return sec_status_bogus;
+		}
 		if(algo != rrset_get_sig_algo(rrset, i) ||
 			tag != rrset_get_sig_keytag(rrset, i))
 			continue;
+		if(vq && vq->num_validation_attempts++ > env->cfg->val_validation_attempts) {
+			*reason = "too many validation attempts";
+			if(reason_bogus)
+				*reason_bogus = LDNS_EDE_DNSSEC_BOGUS;
+			verbose(VERB_ALGO, "rrset failed to verify: too many validation attempts, "
+				"val-validation-attempts (%d); bogus", env->cfg->val_validation_attempts);
+			return sec_status_bogus;
+		}
+
 		buf_canon = 0;
 		sec = dnskey_verify_rrset_sig(env->scratch,
 			env->scratch_buffer, ve, *env->now, rrset, 

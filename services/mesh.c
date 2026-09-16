@@ -373,7 +373,7 @@ mesh_serve_expired_lookup(struct module_qstate* qstate,
 			"validation");
 		goto bail_out; /* need to validate cache entry first */
 	} else if(msg->rep->security == sec_status_secure &&
-		!reply_all_rrsets_secure(msg->rep) && must_validate) {
+		!reply_an_ns_rrsets_secure(msg->rep) && must_validate) {
 			verbose(VERB_ALGO, "Serve expired: secure entry"
 				" changed status");
 			goto bail_out; /* rrset changed, re-verify */

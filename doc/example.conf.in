@@ -203,6 +203,12 @@ server:
 	# protects against poison attempts.
 	# iter-scrub-promiscuous: yes
 
+	# Limit on number of DNSSEC validation attempts for a query.
+	# val-validation-attempts: 32
+
+	# Limit on number of DNSSEC hash attempts for a query.
+	# val-hash-attempts: 32
+
 	# msec for waiting for an unknown server to reply.  Increase if you
 	# are behind a slow satellite link, to eg. 1128.
 	# unknown-server-time-limit: 376
@@ -728,7 +734,7 @@ server:
 	# non-secure data. Useful to shield the users of this validator from
 	# potential bogus data in the additional section. All unsigned data
 	# in the additional section is removed from secure messages.
-	# val-clean-additional: yes
+	# val-clean-additional: no
 
 	# Turn permissive mode on to permit bogus messages. Thus, messages
 	# for which security checks failed will be returned to clients,

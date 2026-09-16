@@ -8234,7 +8234,8 @@ static int zonemd_dnssec_verify_rrset(struct auth_zone* z,
 			"zonemd: verify %s RRset with DNSKEY", typestr);
 	}
 	sec = dnskeyset_verify_rrset(env, ve, &pk, dnskey, sigalg, why_bogus, NULL,
-		LDNS_SECTION_ANSWER, NULL, &verified, reasonbuf, reasonlen);
+		LDNS_SECTION_ANSWER, NULL, NULL, &verified, reasonbuf,
+		reasonlen);
 	if(sec == sec_status_secure) {
 		return 1;
 	}
@@ -8583,8 +8584,8 @@ zonemd_get_dnskey_from_anchor(struct auth_zone* z, struct module_env* env,
 	auth_zone_log(z->name, VERB_QUERY,
 		"zonemd: verify DNSKEY RRset with trust anchor");
 	sec = val_verify_DNSKEY_with_TA(env, ve, keystorage, anchor->ds_rrset,
-		anchor->dnskey_rrset, NULL, why_bogus, NULL, NULL, reasonbuf,
-		reasonlen);
+		anchor->dnskey_rrset, NULL, why_bogus, NULL, NULL, NULL,
+		reasonbuf, reasonlen);
 	regional_free_all(env->scratch);
 	if(sec == sec_status_secure) {
 		/* success */
@@ -8644,7 +8645,7 @@ auth_zone_verify_zonemd_key_with_ds(struct auth_zone* z,
 	keystorage->rk.rrset_class = htons(z->dclass);
 	auth_zone_log(z->name, VERB_QUERY, "zonemd: verify zone DNSKEY with DS");
 	sec = val_verify_DNSKEY_with_DS(env, ve, keystorage, ds, sigalg,
-		why_bogus, NULL, NULL, reasonbuf, reasonlen);
+		why_bogus, NULL, NULL, NULL, reasonbuf, reasonlen);
 	regional_free_all(env->scratch);
 	if(sec == sec_status_secure) {
 		/* success */
