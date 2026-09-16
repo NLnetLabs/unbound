@@ -3230,6 +3230,26 @@ static int http2_submit_settings(struct http2_session* h2_session)
 }
 #endif /* HAVE_NGHTTP2 */
 
+/** Clear http2 stream mesh states */
+static void http2_session_clear_meshstate(struct http2_session* h2_session)
+{
+#ifdef HAVE_NGHTTP2
+	/* Since the session gets closed, remove the mesh state references. */
+	struct http2_stream* h2_stream;
+	for(h2_stream = h2_session->first_stream; h2_stream;
+		h2_stream = h2_stream->next) {
+		if(h2_stream->mesh_state) {
+			mesh_state_remove_reply(h2_stream->mesh,
+				h2_stream->mesh_state, h2_session->c,
+				h2_stream, NULL);
+			h2_stream->mesh_state = NULL;
+		}
+	}
+#else
+	(void)h2_session;
+#endif /* HAVE_NGHTTP2 */
+}
+
 #ifdef HAVE_NGHTTP2
 /** Delete http2 stream. After session delete or stream close callback */
 static void http2_stream_delete(struct http2_session* h2_session,
@@ -6936,6 +6956,7 @@ comm_point_drop_reply(struct comm_reply* repinfo)
 	if(repinfo->c->type == comm_http) {
 		if(repinfo->c->h2_session) {
 			repinfo->c->h2_session->is_drop = 1;
+			http2_session_clear_meshstate(repinfo->c->h2_session);
 			if(!repinfo->c->h2_session->postpone_drop)
 				reclaim_http_handler(repinfo->c);
 			return;
