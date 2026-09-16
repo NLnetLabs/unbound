@@ -305,6 +305,8 @@ ds_create_dnskey_digest(struct module_env* env,
 	 * digest = digest_algorithm( DNSKEY owner name | DNSKEY RDATA);
 	 *	DNSKEY RDATA = Flags | Protocol | Algorithm | Public Key. */
 	sldns_buffer_clear(b);
+	if(!sldns_buffer_available(b, dnskey_rrset->rk.dname_len + dnskey_len-2))
+		return 0; /* buffer too small */
 	sldns_buffer_write(b, dnskey_rrset->rk.dname, 
 		dnskey_rrset->rk.dname_len);
 	query_dname_tolower(sldns_buffer_begin(b));
