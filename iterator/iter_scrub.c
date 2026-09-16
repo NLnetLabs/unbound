@@ -294,7 +294,14 @@ synth_cname_rrset(uint8_t** sname, size_t* snamelen, uint8_t* alias,
 		if(ttl_t > MAX_TTL) ttl_t = MAX_TTL;
 		ttl = (uint32_t)ttl_t;
 		sldns_write_uint32(cn->rr_first->ttl_data, ttl);
-		sldns_write_uint32(rrset->rr_first->ttl_data, ttl);
+		/* Do NOT write the clamp back into the packet buffer:
+		 * parse_packet already sized every name from the original
+		 * bytes and rdata_copy re-walks them trusting those sizes;
+		 * mutating packet bytes between the walks breaks that
+		 * invariant (compression pointers can target these TTL
+		 * bytes). The DNAME rrset receives the same clamp at store
+		 * time in rdata_copy, so the DNAME and the synthesized
+		 * CNAME still carry equal TTLs in the cache. */
 	}
 	sldns_write_uint16(cn->rr_first->ttl_data+4, aliaslen);
 	memmove(cn->rr_first->ttl_data+6, alias, aliaslen);
