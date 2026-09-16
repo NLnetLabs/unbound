@@ -1310,15 +1310,32 @@ rrset_canonical(struct regional* region, sldns_buffer* buf,
 	}
 
 	sldns_buffer_clear(buf);
+	if(sldns_buffer_remaining(buf) < siglen || siglen < 18+1) {
+		verbose(VERB_ALGO, "verify: failed to canonicalize, "
+			"rrset too big");
+		return 0;
+	}
 	sldns_buffer_write(buf, sig, siglen);
 	/* canonicalize signer name */
 	canon_dname_tolower(sldns_buffer_begin(buf)+18,
 		sldns_buffer_current(buf));
+
+	if(sldns_buffer_remaining(buf) < k->rk.dname_len+2) {
+		/* Check if the first can_owner name can fit in the buffer.
+		 * The length is k->rk.dname_len or k->rk.dname_len+2
+		 * if it has '*.' in prefixed. Checks the upper bound,
+		 * also realistically the rest of the rrtype, rrclass, origttl,
+		 * rdata and so on has to be inserted, so that extra space has
+		 * to be there. */
+		verbose(VERB_ALGO, "verify: failed to canonicalize, "
+			"rrset too big");
+		return 0;
+	}
 	RBTREE_FOR(walk, struct canon_rr*, (*sortree)) {
 		/* see if there is enough space left in the buffer */
 		if(sldns_buffer_remaining(buf) < can_owner_len + 2 + 2 + 4
 			+ d->rr_len[walk->rr_idx]) {
-			log_err("verify: failed to canonicalize, "
+			verbose(VERB_ALGO, "verify: failed to canonicalize, "
 				"rrset too big");
 			return 0;
 		}
@@ -1327,6 +1344,13 @@ rrset_canonical(struct regional* region, sldns_buffer* buf,
 			sldns_buffer_write(buf, can_owner, can_owner_len);
 		else	insert_can_owner(buf, k, sig, &can_owner, 
 				&can_owner_len);
+		/* Check again, if the rdata can fit in the buffer */
+		if(sldns_buffer_remaining(buf) < 2 + 2 + 4
+                        + d->rr_len[walk->rr_idx]) {
+			verbose(VERB_ALGO, "verify: failed to canonicalize, "
+				"rrset too big");
+                        return 0;
+                }
 		sldns_buffer_write(buf, &k->rk.type, 2);
 		sldns_buffer_write(buf, &k->rk.rrset_class, 2);
 		sldns_buffer_write(buf, sig+4, 4);
@@ -1378,11 +1402,17 @@ rrset_canonicalize_to_buffer(struct regional* region, sldns_buffer* buf,
 	canonical_sort(k, d, sortree, rrs);
 
 	sldns_buffer_clear(buf);
+	if(sldns_buffer_remaining(buf) < k->rk.dname_len) {
+		/* Check if the first can_owner name can fit in the buffer. */
+		verbose(VERB_ALGO, "verify: failed to canonicalize, "
+			"rrset too big");
+		return 0;
+	}
 	RBTREE_FOR(walk, struct canon_rr*, sortree) {
 		/* see if there is enough space left in the buffer */
 		if(sldns_buffer_remaining(buf) < can_owner_len + 2 + 2 + 4
 			+ d->rr_len[walk->rr_idx]) {
-			log_err("verify: failed to canonicalize, "
+			verbose(VERB_ALGO, "verify: failed to canonicalize, "
 				"rrset too big");
 			return 0;
 		}
@@ -1395,6 +1425,13 @@ rrset_canonicalize_to_buffer(struct regional* region, sldns_buffer* buf,
 			query_dname_tolower(can_owner);
 			can_owner_len = k->rk.dname_len;
 		}
+		/* Check again, if the rdata can fit in the buffer */
+		if(sldns_buffer_remaining(buf) < 2 + 2 + 4
+                        + d->rr_len[walk->rr_idx]) {
+			verbose(VERB_ALGO, "verify: failed to canonicalize, "
+				"rrset too big");
+                        return 0;
+                }
 		sldns_buffer_write(buf, &k->rk.type, 2);
 		sldns_buffer_write(buf, &k->rk.rrset_class, 2);
 		sldns_buffer_write_u32(buf, d->rr_ttl[walk->rr_idx]);
