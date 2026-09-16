@@ -4514,7 +4514,7 @@ doq_stream_reset_cb(ngtcp2_conn* ATTR_UNUSED(conn), int64_t stream_id,
 			"unknown stream %d", (int)stream_id);
 		return 0;
 	}
-	if(!doq_stream_close(doq_conn, stream, 0))
+	if(!doq_stream_close(doq_conn, stream, 1))
 		return NGTCP2_ERR_CALLBACK_FAILURE;
 	return 0;
 }
