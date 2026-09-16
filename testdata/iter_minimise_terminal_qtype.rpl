@@ -1,0 +1,200 @@
+; Regression test for GitHub issue #1500.
+;
+; When qname-minimisation is enabled, the terminal (final) query is sent
+; as a type-hiding "A" probe rather than the real requested qtype (unless
+; qtype is already A or DS). If that probe gets a non-NOERROR response
+; (e.g. NXDOMAIN, because the target name genuinely has no A record) and
+; the zone has only a single nameserver, the probe alone can exhaust that
+; nameserver's outbound-msg-retry budget, leaving no usable query target
+; at all for the real qtype -- causing an erroneous SERVFAIL for a record
+; that genuinely exists.
+;
+; The fix restores the query target's attempt budget specifically when a
+; terminal-label probe fails, so the real qtype is still sent to the same
+; server afterwards. This test asserts the full sequence: the terminal A
+; probe IS still sent (NXDOMAINs, as the target name has no A record),
+; and the real TXT query is THEN also sent to the very same nameserver
+; and succeeds -- matching the real-world case from the bug report
+; (a wildcard TXT-only zone with a single NS).
+;
+; Setup mirrors the real-world case from the bug report:
+;   - Query: www.example.com. TXT
+;   - The zone example.com is served by a single NS (ns.example.com.)
+;   - www.example.com. has a TXT record but NO A record
+;   - outbound-msg-retry is forced to 1 so a single failed probe would,
+;     without the fix, fully exhaust the sole nameserver's address.
+
+; config options
+server:
+	target-fetch-policy: "0 0 0 0 0"
+	qname-minimisation: yes
+	minimal-responses: no
+	iter-scrub-promiscuous: no
+	outbound-msg-retry: 1
+	do-not-query-localhost: no
+
+stub-zone:
+	name: "."
+	stub-addr: 193.0.14.129 	# K.ROOT-SERVERS.NET.
+CONFIG_END
+
+SCENARIO_BEGIN Test that a failed qname-minimisation terminal-label A probe does not exhaust a single-NS zone's only query target before the real qtype is tried (issue #1500).
+
+; K.ROOT-SERVERS.NET.
+RANGE_BEGIN 0 100
+	ADDRESS 193.0.14.129
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR NOERROR
+SECTION QUESTION
+. IN NS
+SECTION ANSWER
+. IN NS	K.ROOT-SERVERS.NET.
+SECTION ADDITIONAL
+K.ROOT-SERVERS.NET.	IN	A	193.0.14.129
+ENTRY_END
+
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR NOERROR
+SECTION QUESTION
+com. IN A
+SECTION AUTHORITY
+com.	IN NS	a.gtld-servers.net.
+SECTION ADDITIONAL
+a.gtld-servers.net.	IN 	A	192.5.6.30
+ENTRY_END
+RANGE_END
+
+; a.gtld-servers.net.
+RANGE_BEGIN 0 100
+	ADDRESS 192.5.6.30
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR NOERROR
+SECTION QUESTION
+com. IN A
+SECTION AUTHORITY
+com.	IN NS	a.gtld-servers.net.
+SECTION ADDITIONAL
+a.gtld-servers.net.	IN 	A	192.5.6.30
+ENTRY_END
+
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR NOERROR
+SECTION QUESTION
+example.com. IN A
+SECTION AUTHORITY
+example.com.	IN NS	ns.example.com.
+SECTION ADDITIONAL
+ns.example.com.		IN 	A	1.2.3.4
+ENTRY_END
+RANGE_END
+
+; ns.example.com. -- the single authoritative nameserver for example.com.
+; www.example.com. has only a TXT record; there is no A record, so the
+; terminal-label probe genuinely NXDOMAINs here, exactly like a real
+; misconfigured/unusual zone would.
+RANGE_BEGIN 0 100
+	ADDRESS 1.2.3.4
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR AA NOERROR
+SECTION QUESTION
+example.com. IN A
+SECTION AUTHORITY
+example.com.	IN NS	ns.example.com.
+SECTION ADDITIONAL
+ns.example.com.		IN 	A	1.2.3.4
+ENTRY_END
+
+; The terminal-label type-hiding probe: no A record exists at this name.
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR AA NXDOMAIN
+SECTION QUESTION
+www.example.com. IN A
+SECTION AUTHORITY
+example.com. 300 IN SOA a.example.com. b.example.com. 1 2 3 4 300
+ENTRY_END
+
+; The real query, retried against the same (only) nameserver after the
+; probe failed -- this is what the fix makes possible.
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR AA NOERROR
+SECTION QUESTION
+www.example.com. IN TXT
+SECTION ANSWER
+www.example.com.	IN TXT	"v=spf1 -all"
+SECTION AUTHORITY
+example.com.	IN NS	ns.example.com.
+SECTION ADDITIONAL
+ns.example.com.		IN 	A	1.2.3.4
+ENTRY_END
+RANGE_END
+
+STEP 10 QUERY
+ENTRY_BEGIN
+REPLY RD
+SECTION QUESTION
+www.example.com. IN TXT
+ENTRY_END
+
+; Intermediate minimisation step: hide target within com.
+STEP 20 CHECK_OUT_QUERY
+ENTRY_BEGIN
+MATCH qname qtype opcode
+SECTION QUESTION
+com. IN A
+ENTRY_END
+
+; Intermediate minimisation step: hide target within example.com.
+STEP 30 CHECK_OUT_QUERY
+ENTRY_BEGIN
+MATCH qname qtype opcode
+SECTION QUESTION
+example.com. IN A
+ENTRY_END
+
+; Terminal-label probe: still sent as "A" (qtype-hiding), same as before
+; the fix -- this is expected and correct, not the bug.
+STEP 40 CHECK_OUT_QUERY
+ENTRY_BEGIN
+MATCH qname qtype opcode
+SECTION QUESTION
+www.example.com. IN A
+ENTRY_END
+
+; The fix: despite the probe's NXDOMAIN and outbound-msg-retry: 1, the
+; real qtype is still sent to the same (only) nameserver, not SERVFAIL.
+STEP 50 CHECK_OUT_QUERY
+ENTRY_BEGIN
+MATCH qname qtype opcode
+SECTION QUESTION
+www.example.com. IN TXT
+ENTRY_END
+
+STEP 60 CHECK_ANSWER
+ENTRY_BEGIN
+MATCH all
+REPLY QR RD RA NOERROR
+SECTION QUESTION
+www.example.com. IN TXT
+SECTION ANSWER
+www.example.com.	IN TXT	"v=spf1 -all"
+SECTION AUTHORITY
+example.com.	IN NS	ns.example.com.
+SECTION ADDITIONAL
+ns.example.com.		IN 	A	1.2.3.4
+ENTRY_END
+
+SCENARIO_END
