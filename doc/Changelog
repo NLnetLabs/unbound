@@ -34,6 +34,7 @@
 	  that includes the changes from before the 1.26.1 commits.
 	- Unit test for CVE-2026-81642.
 	- Unit test for CVE-2026-82717.
+	- Unit test for CVE-2026-85501.
 
 15 September 2026: Wouter
 	- For #1507: TOCTOU race in store_rrsets() can return a
