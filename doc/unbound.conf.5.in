@@ -2633,7 +2633,7 @@ Default: 0 (disabled)
 .UNINDENT
 .INDENT 0.0
 .TP
-.B val\-permissive\-mode: \fI<yes or no>\fP
+.B val\-permissive\-mode: \fI<yes or no>\fP 
 Instruct the validator to mark bogus messages as indeterminate.
 The security checks are performed, but if the result is bogus (failed
 security), the reply is not withheld from the client with SERVFAIL as
@@ -2646,63 +2646,7 @@ Default: no
 .UNINDENT
 .INDENT 0.0
 .TP
-.B val\-permissive\-nxdomain: \fI<yes or no>\fP 
-The scoped form of \fBval\-permissive\-mode\fP, limited to NXDOMAIN responses
-that are bare. Such a response is marked indeterminate and reaches the client
-instead of SERVFAIL. A bogus response of any other kind is still withheld, so
-the protection the unscoped option gives up \- an address record the signer
-never published, presented to the client as the answer to its question \- is
-kept here.
-.sp
-Only a bare negative is admitted: the answer section must be empty, the
-authority section at most an SOA, and the additional section empty. Those are
-the sections the validator does not vouch for and Unbound carries as received,
-so without that restriction a forged negative could smuggle records the signer
-never published \- including an address record as name\-server glue for the
-queried name \- into the client response and the cache. A filtering resolver's
-block is a bare negative, so this costs the intended case nothing.
-.sp
-This is for a deployment that forwards to a filtering resolver, such as a
-threat\-intelligence blocklist service: such a service expresses a block by
-answering NXDOMAIN, and a forged NXDOMAIN carries no NSEC or NSEC3 denial
-proof, so the validator correctly calls it bogus.
-.sp
-NXDOMAIN can no longer be authenticated for the names this applies to, so an
-NXDOMAIN from a hostile or compromised forwarder, or from an on\-path attacker
-when the upstream is not reached over a confidential transport, can deny the
-existence of a name that does exist. A denial of existence is a lesser attack
-than a forged address, which is why this is safer than unbounded
-\fBval\-permissive\-mode\fP, but it is not nothing.
-.sp
-A CNAME or DNAME chain that ends in such an answer is covered too, but only when
-the chain itself is authenticated. The chain is served to the client, so
-admitting a forged one would be handing over a redirection; the validator
-verifies a chain's rrsets before it examines the denial, so a message whose chain
-links are all secure and whose denial alone could not be proven is served as the
-negative it is. A chain that failed to validate still returns SERVFAIL.
-.sp
-Note the interaction with \fBserve\-expired\fP. Once a permitted answer has
-been cached, a repeat query for the same question takes the serve\-expired path
-before reaching this option, so the client is answered from that cached copy;
-if that copy cannot be turned into a reply, the query is SERVFAIL even though
-this option would have served it. The cached entry need not be expired.
-.sp
-Default: no
-.UNINDENT
-.INDENT 0.0
-.TP
-.B val\-permissive\-nodata: \fI<yes or no>\fP 
-The scoped form of \fBval\-permissive\-mode\fP, limited to NODATA responses
-(NOERROR with an empty answer section). Otherwise identical to
-\fBval\-permissive\-nxdomain\fP, including what it gives up and its
-\fBserve\-expired\fP interaction, and it is the counterpart option for a
-filtering resolver that expresses a block as NODATA rather than as NXDOMAIN.
-.sp
-Default: no
-.UNINDENT
-.INDENT 0.0
-.TP
-.B ignore\-cd\-flag: \fI<yes or no>\fP
+.B ignore\-cd\-flag: \fI<yes or no>\fP 
 Instruct Unbound to ignore the CD flag from clients and refuse to return
 bogus answers to them.
 Thus, the CD (Checking Disabled) flag does not disable checking any more.

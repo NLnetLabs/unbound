@@ -1,3 +1,7 @@
+17 September 2026: alxrxs
+	- Add val-permissive-nxdomain and val-permissive-nodata, scoped forms of
+	  val-permissive-mode that let a filtering forwarder's bogus negative
+	  answer reach the client without also admitting a bogus positive one.
 16 September 2026: Wouter
 	- Release of 1.26.1 with the following security fixes.
 	- Fix CVE-2026-81642, Heap buffer overflow and possible Remote Code

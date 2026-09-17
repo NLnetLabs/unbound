@@ -2365,70 +2365,42 @@ These options are part of the ``server:`` section.
 
 
 @@UAHL@unbound.conf@val-permissive-nxdomain@@: *<yes or no>*
-    The scoped form of :ref:`val-permissive-mode<unbound.conf.val-permissive-mode>`, limited to NXDOMAIN
-    responses that are bare, as defined below.  Such a response is marked
-    indeterminate and reaches the client instead of SERVFAIL.  A bogus
-    response of any other kind is still withheld, so the protection the
-    unscoped option gives up - an address record the signer never published,
-    presented to the client as the answer to its question - is kept here.
+    The scoped form of :ref:`val-permissive-mode<unbound.conf.val-permissive-mode>`,
+    limited to NXDOMAIN responses.  A bogus NXDOMAIN is marked indeterminate and
+    reaches the client instead of SERVFAIL, so an operator forwarding to a
+    filtering resolver receives its blocks as the upstream expressed them.  A
+    bogus response of any other kind is still withheld, including a positive
+    answer carrying an address the signer never published.
 
-    This exists for a deployment that forwards to a filtering resolver, such
-    as a threat-intelligence blocklist service.  Such a service expresses a
-    block by answering NXDOMAIN, and a forged NXDOMAIN carries no NSEC or
-    NSEC3 denial proof, so the validator correctly calls it bogus.  With this
-    option the operator can receive the block as the NXDOMAIN the upstream
-    intended, while keeping validation for everything else.
+    A response is admitted only if it is bare: no additional section, an empty or
+    SOA-only authority section, and any answer-section records already
+    authenticated.  The sections the validator does not vouch for are the ones
+    Unbound carries to the client as received, so without that a forged negative
+    could smuggle records the signer never published into the client's answer and
+    the cache.  A CNAME or DNAME chain ending in such a negative is admitted when
+    the chain itself validates, since the chain is what the client is given; a
+    chain that failed to validate still returns SERVFAIL.  A filtering resolver's
+    block is bare, so none of this costs the intended case anything.
 
-    It has no effect on a name that is not under a DNSSEC signed parent: an
-    NXDOMAIN from an insecure or unsigned zone carries nothing to fail
-    validation against, and already reaches the client (unless a filtering
-    upstream's forged answer is what the upstream sent, in which case the
-    same servfail-vs-block problem does not arise).
-
-    It is worth being explicit about what is given up: NXDOMAIN can no longer
-    be authenticated for the names this applies to, so an NXDOMAIN that
-    reaches Unbound from somewhere other than the intended upstream - a
-    hostile or compromised forwarder, or an on-path attacker when the
-    upstream is not reached over a confidential transport - can deny the
-    existence of a name that does in fact exist.  A denial of existence is a
-    lesser attack than a forged address, which is why this scoping is safer
-    than :ref:`val-permissive-mode<unbound.conf.val-permissive-mode>`, but it is not nothing.
-
-    Note the interaction with :ref:`serve-expired<unbound.conf.serve-expired>`. Once a permitted answer has
-    been cached, a repeat query for the same question takes the serve-expired
-    path before reaching this option, so the client is answered from that
-    cached copy rather than from a fresh lookup; if that cached copy cannot be
-    turned into a reply, the query is SERVFAIL even though this option would
-    have served it. The cache entry need not be expired for the path to be
-    taken. This is inherited from :ref:`val-permissive-mode<unbound.conf.val-permissive-mode>`.
-
-    Only a bare negative answer is admitted: the answer section must be
-    empty, the authority section at most an SOA, and the additional section
-    empty. Those are the sections the validator does not vouch for and Unbound
-    carries as received, so without that restriction a forged negative could
-    smuggle records the signer never published - including an address record
-    as name-server glue for the queried name - into the client response and
-    the cache. A filtering resolver's block is a bare negative, so this costs
-    the intended case nothing.
-
-    A CNAME or DNAME chain that ends in such an answer is covered too, but only
-    when the chain itself is authenticated. The chain is served to the client,
-    so admitting a forged one would be handing over a redirection; the validator
-    verifies a chain's rrsets before it examines the denial, and a message whose
-    chain links are all secure and whose denial alone could not be proven is
-    served as the negative it is. A chain that failed to validate still returns
-    SERVFAIL.
+    NXDOMAIN can no longer be authenticated for the names this applies to: a
+    hostile or compromised forwarder, or an on-path attacker where the upstream
+    is not reached over a confidential transport, can deny the existence of a
+    name that does exist.  That is a lesser attack than a forged address, which
+    is why this is safer than the unscoped option, but it is not nothing.  Note
+    also that :ref:`serve-expired<unbound.conf.serve-expired>` can answer a
+    repeat query from the cache before this option is reached.  If
+    :ref:`val-permissive-mode<unbound.conf.val-permissive-mode>` is also enabled
+    it governs on its own, and this option has no further effect.
 
     Default: no
 
 
 @@UAHL@unbound.conf@val-permissive-nodata@@: *<yes or no>*
-    The scoped form of :ref:`val-permissive-mode<unbound.conf.val-permissive-mode>`, limited to NODATA
-    responses (NOERROR with an empty answer section).  Otherwise identical to
-    :ref:`val-permissive-nxdomain<unbound.conf.val-permissive-nxdomain>`, including what it gives up and the
-    :ref:`serve-expired<unbound.conf.serve-expired>` interaction, and it is the counterpart option for a
-    filtering resolver that expresses a block as NODATA rather than as
-    NXDOMAIN.
+    The scoped form of :ref:`val-permissive-mode<unbound.conf.val-permissive-mode>`,
+    limited to NODATA responses, for a filtering resolver that expresses a block
+    that way rather than as NXDOMAIN.  Otherwise as
+    :ref:`val-permissive-nxdomain<unbound.conf.val-permissive-nxdomain>`,
+    including what it gives up and the conditions for admission.
 
     Default: no
 
