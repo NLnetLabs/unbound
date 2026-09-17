@@ -2547,6 +2547,8 @@ processFinished(struct module_qstate* qstate, struct val_qstate* vq,
 		vq->orig_msg->rep->an_numrrsets]->rk.type) ==
 		LDNS_RR_TYPE_SOA &&
 		((struct packed_rrset_data*)vq->orig_msg->rep->rrsets[
+		vq->orig_msg->rep->an_numrrsets]->entry.data) != NULL &&
+		((struct packed_rrset_data*)vq->orig_msg->rep->rrsets[
 		vq->orig_msg->rep->an_numrrsets]->entry.data)->security ==
 		sec_status_secure));
 	/* A chain that ran out of answer section carries the rcode that says
