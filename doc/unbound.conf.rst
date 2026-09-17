@@ -2372,15 +2372,19 @@ These options are part of the ``server:`` section.
     bogus response of any other kind is still withheld, including a positive
     answer carrying an address the signer never published.
 
-    A response is admitted only if it is bare: no additional section, an empty or
-    SOA-only authority section, and any answer-section records already
-    authenticated.  The sections the validator does not vouch for are the ones
-    Unbound carries to the client as received, so without that a forged negative
-    could smuggle records the signer never published into the client's answer and
-    the cache.  A CNAME or DNAME chain ending in such a negative is admitted when
+    A response is admitted only if it is bare: no authority or additional
+    section, and any answer-section records already authenticated.  The sections
+    the validator does not vouch for are the ones Unbound carries to the client
+    as received, so without that a forged negative could smuggle records the
+    signer never published into the client's answer and the cache.  An SOA in the
+    authority section is NOT accepted, not even a well-formed one: its own
+    security cannot be established for the message being judged, so admitting it
+    would mean deciding on the contents of the rrset cache rather than on this
+    response.  A CNAME or DNAME chain ending in such a negative is admitted when
     the chain itself validates, since the chain is what the client is given; a
     chain that failed to validate still returns SERVFAIL.  A filtering resolver's
-    block is bare, so none of this costs the intended case anything.
+    block is bare, so none of this costs the intended case anything -- an
+    upstream that attaches an SOA to its blocks is refused rather than served.
 
     NXDOMAIN can no longer be authenticated for the names this applies to: a
     hostile or compromised forwarder, or an on-path attacker where the upstream

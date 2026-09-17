@@ -2538,19 +2538,14 @@ processFinished(struct module_qstate* qstate, struct val_qstate* vq,
 	enum val_classification subtype = val_classify_response(
 		qstate->query_flags, &qstate->qinfo, &vq->qchase,
 		vq->orig_msg->rep, vq->rrset_skip);
-	/* The authority and additional sections are ones the validator does not
-	 * vouch for and Unbound carries to the client as received, so admit
-	 * nothing there but an empty section or a proven SOA. */
-	int authority_ok = (vq->orig_msg->rep->ns_numrrsets == 0 ||
-		(vq->orig_msg->rep->ns_numrrsets == 1 &&
-		ntohs(vq->orig_msg->rep->rrsets[
-		vq->orig_msg->rep->an_numrrsets]->rk.type) ==
-		LDNS_RR_TYPE_SOA &&
-		((struct packed_rrset_data*)vq->orig_msg->rep->rrsets[
-		vq->orig_msg->rep->an_numrrsets]->entry.data) != NULL &&
-		((struct packed_rrset_data*)vq->orig_msg->rep->rrsets[
-		vq->orig_msg->rep->an_numrrsets]->entry.data)->security ==
-		sec_status_secure));
+	/* The authority section is one the validator does not vouch for and
+	 * Unbound carries to the client as received, so it must be empty. An
+	 * SOA is NOT enough: its own security flag is not set for the message
+	 * being judged - validation stopped earlier - so testing it would ask
+	 * the rrset cache whether some earlier query happened to prove the same
+	 * SOA, making the verdict depend on cache history rather than on the
+	 * message. A filtering resolver's block carries no authority section. */
+	int authority_ok = (vq->orig_msg->rep->ns_numrrsets == 0);
 	/* A chain that ran out of answer section carries the rcode that says
 	 * which scoped option it belongs to, and the chain is what the client
 	 * is served - so it has to be proven, not merely present. */
