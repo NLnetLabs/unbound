@@ -40,7 +40,6 @@ REPLY QR NXDOMAIN
 SECTION QUESTION
 example.veryinvalid. IN TXT
 SECTION AUTHORITY
-. 3600 IN SOA ns.root. host.root. 1 3600 3600 3600 3600
 ENTRY_END
 
 ; NODATA, unsigned, from the upstream.
@@ -51,7 +50,6 @@ REPLY QR NOERROR
 SECTION QUESTION
 example.veryinvalid. IN A
 SECTION AUTHORITY
-. 3600 IN SOA ns.root. host.root. 1 3600 3600 3600 3600
 ENTRY_END
 
 ; A positive answer, unsigned, from the upstream.
@@ -134,6 +132,20 @@ SECTION QUESTION
 zeroauth.veryinvalid. IN A
 ENTRY_END
 
+; A forged negative carrying an UNSIGNED SOA. The type looks benign, but the
+; section is not validated and Unbound carries it as received -- so it reaches
+; the client, sets its negative-cache TTL, and lands in the rrset cache. Must
+; stay SERVFAIL.
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR NXDOMAIN
+SECTION QUESTION
+withsoa.veryinvalid. IN A
+SECTION AUTHORITY
+. 604800 IN SOA ns.evil.example. host.evil.example. 1 604800 604800 604800 604800
+ENTRY_END
+
 ; DNSKEY answer, using CSK for test simplicity.
 ENTRY_BEGIN
 MATCH opcode qtype qname
@@ -179,7 +191,6 @@ SECTION QUESTION
 example.veryinvalid. IN TXT
 SECTION ANSWER
 SECTION AUTHORITY
-. 3600 IN SOA ns.root. host.root. 1 3600 3600 3600 3600
 SECTION ADDITIONAL
 . 32768 CLASS1232 OPT \# 00
 ENTRY_END
@@ -310,6 +321,26 @@ MATCH rcode
 REPLY QR RD RA DO NXDOMAIN
 SECTION QUESTION
 zeroauth.veryinvalid. IN A
+ENTRY_END
+
+; An unsigned SOA in authority is refused like any other smuggled record.
+STEP 95 QUERY
+ENTRY_BEGIN
+REPLY RD DO
+SECTION QUESTION
+withsoa.veryinvalid. IN A
+ENTRY_END
+
+STEP 96 CHECK_ANSWER
+ENTRY_BEGIN
+MATCH all
+REPLY QR RD RA SERVFAIL
+SECTION QUESTION
+withsoa.veryinvalid. IN A
+SECTION ANSWER
+SECTION AUTHORITY
+SECTION ADDITIONAL
+. 32768 CLASS1232 OPT \# 00
 ENTRY_END
 
 SCENARIO_END

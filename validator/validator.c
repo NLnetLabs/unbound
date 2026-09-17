@@ -2540,15 +2540,23 @@ processFinished(struct module_qstate* qstate, struct val_qstate* vq,
 		vq->orig_msg->rep, vq->rrset_skip);
 	/* The authority section is one the validator does not vouch for, and
 	 * Unbound carries it to the client as received. Only an empty one, or a
-	 * single SOA, is acceptable: any other type there is one record of the
-	 * sender's choosing - a TXT, MX or CAA - that a forged negative could
-	 * smuggle into the client's answer and into the cache. Checking the
-	 * count alone is not enough, since one RRset of any type passes that. */
+	 * single AUTHENTICATED SOA, is acceptable. Any other type there is one
+	 * record of the sender's choosing - a TXT, MX or CAA - that a forged
+	 * negative could smuggle into the client's answer and into the cache;
+	 * counting the rrsets is not enough, since one RRset of any type passes
+	 * that; and an UNSIGNED SOA is the same smuggling with a benign-looking
+	 * type, which also sets the client's negative-cache TTL and lands in the
+	 * rrset cache. A filtering resolver's block carries no authority section
+	 * at all (Quad9 answers a blocked name with ANSWER: 0, AUTHORITY: 0), so
+	 * requiring this costs the intended case nothing. */
 	int authority_ok = (vq->orig_msg->rep->ns_numrrsets == 0 ||
 		(vq->orig_msg->rep->ns_numrrsets == 1 &&
 		ntohs(vq->orig_msg->rep->rrsets[
 		vq->orig_msg->rep->an_numrrsets]->rk.type) ==
-		LDNS_RR_TYPE_SOA));
+		LDNS_RR_TYPE_SOA &&
+		((struct packed_rrset_data*)vq->orig_msg->rep->rrsets[
+		vq->orig_msg->rep->an_numrrsets]->entry.data)->security ==
+		sec_status_secure));
 	/* A chain that ran out of answer section - a CNAME or DNAME ending in a
 	 * negative - is classified as a chain, not as a negative, and carries
 	 * its own rcode: NXDOMAIN or NOERROR. That rcode is the only thing that
@@ -2556,10 +2564,19 @@ processFinished(struct module_qstate* qstate, struct val_qstate* vq,
 	 *
 	 * What must NOT be admitted is a chain whose own redirection failed to
 	 * validate: that would hand the client an authenticated-looking CNAME
-	 * pointing wherever the sender chose. validate_cname_noanswer_response
-	 * verifies the chain rrsets first and returns early if any fails, so a
-	 * message that reached the denial check with every answer rrset secure
-	 * is one whose chain is proven and only whose denial is not. */
+	 * pointing wherever the sender chose. So the test is on the answer
+	 * section itself - every rrset in it authenticated - because that is
+	 * what the client is given.
+	 *
+	 * The answer section is not the whole story of why the message is
+	 * bogus, and this deliberately does not try to make it one. A chain is
+	 * verified by validate_msg_signatures before the denial is examined, so
+	 * the cases that reach here with a secure answer section are "the chain
+	 * is proven and the denial is not" and "the chain is proven and the key
+	 * or DS lookup for the chased name failed". Neither is admitted on the
+	 * strength of a forged redirect; both serve the client the authenticated
+	 * chain it would have been given anyway, with the negative it asked for.
+	 * Anything with an unauthenticated answer rrset fails closed. */
 	int negative_nxdomain = (subtype == VAL_CLASS_NAMEERROR ||
 		(subtype == VAL_CLASS_CNAMENOANSWER &&
 		FLAGS_GET_RCODE(vq->orig_msg->rep->flags) ==
