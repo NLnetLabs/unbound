@@ -2538,17 +2538,9 @@ processFinished(struct module_qstate* qstate, struct val_qstate* vq,
 	enum val_classification subtype = val_classify_response(
 		qstate->query_flags, &qstate->qinfo, &vq->qchase,
 		vq->orig_msg->rep, vq->rrset_skip);
-	/* The authority section is one the validator does not vouch for, and
-	 * Unbound carries it to the client as received. Only an empty one, or a
-	 * single AUTHENTICATED SOA, is acceptable. Any other type there is one
-	 * record of the sender's choosing - a TXT, MX or CAA - that a forged
-	 * negative could smuggle into the client's answer and into the cache;
-	 * counting the rrsets is not enough, since one RRset of any type passes
-	 * that; and an UNSIGNED SOA is the same smuggling with a benign-looking
-	 * type, which also sets the client's negative-cache TTL and lands in the
-	 * rrset cache. A filtering resolver's block carries no authority section
-	 * at all (Quad9 answers a blocked name with ANSWER: 0, AUTHORITY: 0), so
-	 * requiring this costs the intended case nothing. */
+	/* The authority and additional sections are ones the validator does not
+	 * vouch for and Unbound carries to the client as received, so admit
+	 * nothing there but an empty section or a proven SOA. */
 	int authority_ok = (vq->orig_msg->rep->ns_numrrsets == 0 ||
 		(vq->orig_msg->rep->ns_numrrsets == 1 &&
 		ntohs(vq->orig_msg->rep->rrsets[
@@ -2557,26 +2549,9 @@ processFinished(struct module_qstate* qstate, struct val_qstate* vq,
 		((struct packed_rrset_data*)vq->orig_msg->rep->rrsets[
 		vq->orig_msg->rep->an_numrrsets]->entry.data)->security ==
 		sec_status_secure));
-	/* A chain that ran out of answer section - a CNAME or DNAME ending in a
-	 * negative - is classified as a chain, not as a negative, and carries
-	 * its own rcode: NXDOMAIN or NOERROR. That rcode is the only thing that
-	 * says which scoped option it belongs to, so it is read here.
-	 *
-	 * What must NOT be admitted is a chain whose own redirection failed to
-	 * validate: that would hand the client an authenticated-looking CNAME
-	 * pointing wherever the sender chose. So the test is on the answer
-	 * section itself - every rrset in it authenticated - because that is
-	 * what the client is given.
-	 *
-	 * The answer section is not the whole story of why the message is
-	 * bogus, and this deliberately does not try to make it one. A chain is
-	 * verified by validate_msg_signatures before the denial is examined, so
-	 * the cases that reach here with a secure answer section are "the chain
-	 * is proven and the denial is not" and "the chain is proven and the key
-	 * or DS lookup for the chased name failed". Neither is admitted on the
-	 * strength of a forged redirect; both serve the client the authenticated
-	 * chain it would have been given anyway, with the negative it asked for.
-	 * Anything with an unauthenticated answer rrset fails closed. */
+	/* A chain that ran out of answer section carries the rcode that says
+	 * which scoped option it belongs to, and the chain is what the client
+	 * is served - so it has to be proven, not merely present. */
 	int negative_nxdomain = (subtype == VAL_CLASS_NAMEERROR ||
 		(subtype == VAL_CLASS_CNAMENOANSWER &&
 		FLAGS_GET_RCODE(vq->orig_msg->rep->flags) ==
@@ -2753,30 +2728,11 @@ processFinished(struct module_qstate* qstate, struct val_qstate* vq,
 		/* If we are in permissive mode, bogus gets indeterminate */
 		if(qstate->env->cfg->val_permissive_mode)
 			vq->orig_msg->rep->security = sec_status_indeterminate;
-		/* The scoped forms of permissive mode. Only a BARE negative
-		 * answer is let through: the authority section empty or a single
-		 * SOA, the additional section empty, and anything in the answer
-		 * section already authenticated.
-		 *
-		 * The authority and additional sections are ones the validator
-		 * does not vouch for, and Unbound encodes them as they were
-		 * received - the scrubber keeps TXT/MX/CAA in the authority
-		 * section and permits an A/AAAA in the additional section when it
-		 * is glue for an NS target, and that target is the sender's
-		 * choice, so it can be the queried name itself. Without these
-		 * tests a forged negative marketing itself as a block could
-		 * smuggle records the signer never published - including an
-		 * address record - into the client's answer and into the cache.
-		 *
-		 * answer_proven carries the same idea for a CNAME or DNAME chain:
-		 * the chain IS served to the client, so it must be authenticated
-		 * before the message is admitted, and only the denial at the end
-		 * of it may be unproven. That is what separates a block reached
-		 * through a chain from a forged redirection.
-		 *
-		 * A filtering resolver's block is a bare negative (Quad9 answers
-		 * a blocked name with ANSWER: 0, AUTHORITY: 0), so requiring this
-		 * costs the intended case nothing and fails closed for the rest. */
+		/* The scoped forms of permissive mode: only a bare negative answer
+		 * is let through, so an operator behind a filtering forwarder
+		 * receives its block instead of SERVFAIL without also accepting a
+		 * forged positive answer. See unbound.conf(5) for what "bare"
+		 * excludes and for what an operator gives up by enabling this. */
 		else if(answer_proven &&
 			authority_ok &&
 			vq->orig_msg->rep->ar_numrrsets == 0 &&
