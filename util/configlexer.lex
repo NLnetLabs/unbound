@@ -406,6 +406,8 @@ val-max-restart{COLON}		{ YDVAR(1, VAR_VAL_MAX_RESTART) }
 val-bogus-ttl{COLON}		{ YDVAR(1, VAR_BOGUS_TTL) }
 val-clean-additional{COLON}	{ YDVAR(1, VAR_VAL_CLEAN_ADDITIONAL) }
 val-permissive-mode{COLON}	{ YDVAR(1, VAR_VAL_PERMISSIVE_MODE) }
+val-permissive-nxdomain{COLON}	{ YDVAR(1, VAR_VAL_PERMISSIVE_NXDOMAIN) }
+val-permissive-nodata{COLON}	{ YDVAR(1, VAR_VAL_PERMISSIVE_NODATA) }
 aggressive-nsec{COLON}		{ YDVAR(1, VAR_AGGRESSIVE_NSEC) }
 ignore-cd-flag{COLON}		{ YDVAR(1, VAR_IGNORE_CD_FLAG) }
 disable-edns-do{COLON}		{ YDVAR(1, VAR_DISABLE_EDNS_DO) }

@@ -283,6 +283,8 @@ config_create(void)
 	cfg->val_log_level = 0;
 	cfg->val_log_squelch = 0;
 	cfg->val_permissive_mode = 0;
+	cfg->val_permissive_nxdomain = 0;
+	cfg->val_permissive_nodata = 0;
 	cfg->aggressive_nsec = 1;
 	cfg->ignore_cd = 0;
 	cfg->disable_edns_do = 0;
@@ -767,6 +769,8 @@ int config_set_option(struct config_file* cfg, const char* opt,
 	else S_YNO("log-destaddr:", log_destaddr)
 	else S_YNO("log-thread-id:", log_thread_id)
 	else S_YNO("val-permissive-mode:", val_permissive_mode)
+	else S_YNO("val-permissive-nxdomain:", val_permissive_nxdomain)
+	else S_YNO("val-permissive-nodata:", val_permissive_nodata)
 	else S_YNO("aggressive-nsec:", aggressive_nsec)
 	else S_YNO("ignore-cd-flag:", ignore_cd)
 	else S_YNO("disable-edns-do:", disable_edns_do)
@@ -1256,6 +1260,8 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_YNO(opt, "val-clean-additional", val_clean_additional)
 	else O_DEC(opt, "val-log-level", val_log_level)
 	else O_YNO(opt, "val-permissive-mode", val_permissive_mode)
+	else O_YNO(opt, "val-permissive-nxdomain", val_permissive_nxdomain)
+	else O_YNO(opt, "val-permissive-nodata", val_permissive_nodata)
 	else O_YNO(opt, "aggressive-nsec", aggressive_nsec)
 	else O_YNO(opt, "ignore-cd-flag", ignore_cd)
 	else O_YNO(opt, "disable-edns-do", disable_edns_do)

@@ -6430,6 +6430,8 @@ fr_atomic_copy_cfg(struct config_file* oldcfg, struct config_file* cfg,
 	COPY_VAR_int(val_log_level);
 	COPY_VAR_int(val_log_squelch);
 	COPY_VAR_int(val_permissive_mode);
+	COPY_VAR_int(val_permissive_nxdomain);
+	COPY_VAR_int(val_permissive_nodata);
 	COPY_VAR_int(aggressive_nsec);
 	COPY_VAR_int(ignore_cd);
 	COPY_VAR_int(disable_edns_do);

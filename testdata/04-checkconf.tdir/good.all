@@ -204,7 +204,13 @@ server:
 	# result in interesting log files and possibly the AD bit in
 	# replies if the message is found secure. The default is off.
 	val-permissive-mode: no
-	
+
+	# The scoped forms of permissive mode: permit a bogus NXDOMAIN, or a
+	# bogus NODATA, to reach the client instead of SERVFAIL. A bogus
+	# positive answer is still withheld. The default is off.
+	val-permissive-nxdomain: no
+	val-permissive-nodata: no
+
 	# It is possible to configure NSEC3 maximum iteration counts per
 	# keysize. Keep this table very short, as linear search is done.
 	# A message with an NSEC3 with larger count is marked insecure.

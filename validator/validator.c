@@ -2696,6 +2696,16 @@ processFinished(struct module_qstate* qstate, struct val_qstate* vq,
 		/* If we are in permissive mode, bogus gets indeterminate */
 		if(qstate->env->cfg->val_permissive_mode)
 			vq->orig_msg->rep->security = sec_status_indeterminate;
+		/* The scoped forms of permissive mode: only a bogus negative
+		 * answer is let through, so an operator behind a filtering
+		 * forwarder receives its block instead of SERVFAIL. A bogus
+		 * positive answer - a name resolved to an address the signer
+		 * never published - is still withheld from the client. */
+		else if((subtype == VAL_CLASS_NAMEERROR &&
+			qstate->env->cfg->val_permissive_nxdomain) ||
+			(subtype == VAL_CLASS_NODATA &&
+			qstate->env->cfg->val_permissive_nodata))
+			vq->orig_msg->rep->security = sec_status_indeterminate;
 	}
 
 	if(vq->orig_msg->rep->security == sec_status_secure &&

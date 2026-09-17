@@ -427,6 +427,10 @@ struct config_file {
 	int val_log_squelch;
 	/** should validator allow bogus messages to go through */
 	int val_permissive_mode;
+	/** should validator allow bogus NXDOMAIN messages to go through */
+	int val_permissive_nxdomain;
+	/** should validator allow bogus NODATA messages to go through */
+	int val_permissive_nodata;
 	/** use cached NSEC records to synthesise (negative) answers */
 	int aggressive_nsec;
 	/** ignore the CD flag in incoming queries and refuse them bogus data */

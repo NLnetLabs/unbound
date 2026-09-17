@@ -2364,6 +2364,55 @@ These options are part of the ``server:`` section.
     Default: no
 
 
+@@UAHL@unbound.conf@val-permissive-nxdomain@@: *<yes or no>*
+    The scoped form of @ref val-permissive-mode@, limited to NXDOMAIN
+    responses.  A bogus NXDOMAIN is marked indeterminate and reaches the
+    client instead of SERVFAIL; a bogus response of any other kind is still
+    withheld.  In particular a bogus positive answer - a name resolved to an
+    address the signer never published - is not let through, which is the
+    protection that the unscoped option gives up.
+
+    This exists for a deployment that forwards to a filtering resolver, such
+    as a threat-intelligence blocklist service.  Such a service expresses a
+    block by answering NXDOMAIN, and a forged NXDOMAIN carries no NSEC or
+    NSEC3 denial proof, so the validator correctly calls it bogus.  With this
+    option the operator can receive the block as the NXDOMAIN the upstream
+    intended, while keeping validation for everything else.
+
+    It has no effect on a name that is not under a DNSSEC signed parent: an
+    NXDOMAIN from an insecure or unsigned zone carries nothing to fail
+    validation against, and already reaches the client (unless a filtering
+    upstream's forged answer is what the upstream sent, in which case the
+    same servfail-vs-block problem does not arise).
+
+    It is worth being explicit about what is given up: NXDOMAIN can no longer
+    be authenticated for the names this applies to, so an NXDOMAIN that
+    reaches Unbound from somewhere other than the intended upstream - a
+    hostile or compromised forwarder, or an on-path attacker when the
+    upstream is not reached over a confidential transport - can deny the
+    existence of a name that does in fact exist.  A denial of existence is a
+    lesser attack than a forged address, which is why this scoping is safer
+    than @ref val-permissive-mode@, but it is not nothing.
+
+    Note the interaction with @ref serve-expired@: when an expired answer for
+    the same question is already in the cache, Unbound takes the
+    serve-expired path first and the response is SERVFAIL, as with
+    @ref val-permissive-mode@.
+
+    Default: no
+
+
+@@UAHL@unbound.conf@val-permissive-nodata@@: *<yes or no>*
+    The scoped form of @ref val-permissive-mode@, limited to NODATA
+    responses (NOERROR with an empty answer section).  Otherwise identical to
+    @ref val-permissive-nxdomain@, including what it gives up and the
+    @ref serve-expired@ interaction, and it is the counterpart option for a
+    filtering resolver that expresses a block as NODATA rather than as
+    NXDOMAIN.
+
+    Default: no
+
+
 @@UAHL@unbound.conf@ignore-cd-flag@@: *<yes or no>*
     Instruct Unbound to ignore the CD flag from clients and refuse to return
     bogus answers to them.
