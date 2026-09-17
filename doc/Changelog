@@ -3,7 +3,7 @@
 	  DNSSEC validation for NXDOMAIN and NODATA answers, so an upstream
 	  that answers them without valid signatures is not turned into
 	  SERVFAIL.  Intended for a resolver that forwards to a malware or
-	  site-blocking service.
+	  site-blocking DNS resolver, such as Quad9.
 16 September 2026: Wouter
 	- Release of 1.26.1 with the following security fixes.
 	- Fix CVE-2026-81642, Heap buffer overflow and possible Remote Code

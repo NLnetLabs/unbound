@@ -2370,8 +2370,9 @@ These options are part of the ``server:`` section.
     sent to the client instead of being withheld with SERVFAIL.
     A bogus message of any other type is still withheld, so a positive answer
     carrying an address the signer never published is not accepted.
-    Meant for a resolver that forwards to a malware or site-blocking service,
-    which answers a blocked name with an NXDOMAIN that no signature backs.
+    Meant for a resolver that forwards to a malware or site-blocking DNS
+    resolver, such as Quad9, which answers a blocked name with an NXDOMAIN that
+    no signature backs.
 
     The reply is accepted only if it is bare: no authority section, no
     additional section, and every answer-section record already validated.

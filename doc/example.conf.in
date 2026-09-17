@@ -755,9 +755,9 @@ server:
 	# back and which therefore validates as bogus.
 	#
 	# Accept a bogus NXDOMAIN instead of withholding it with SERVFAIL, for a
-	# resolver that forwards to a malware or site-blocking service, which
-	# answers a blocked name with an NXDOMAIN no signature backs. The reply
-	# must be bare - no authority or additional section, and every
+	# resolver that forwards to a malware or site-blocking DNS resolver such as
+	# Quad9, which answers a blocked name with an NXDOMAIN no signature backs.
+	# The reply must be bare - no authority or additional section, and every
 	# answer-section record already validated - and an SOA in the authority
 	# section is not accepted either. A bogus message of any other type is
 	# still withheld. The default is off.
