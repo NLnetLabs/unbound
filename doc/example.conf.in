@@ -746,12 +746,21 @@ server:
 	# replies if the message is found secure. The default is off.
 	# val-permissive-mode: no
 
-	# The scoped forms of permissive mode. Permit a bogus NXDOMAIN, or a
-	# bogus NODATA, to reach the client instead of SERVFAIL; a bogus
-	# positive answer is still withheld. For a deployment that forwards to
-	# a filtering resolver that expresses a block as a forged NXDOMAIN --
-	# which no NSEC or NSEC3 proof can back, and so validates as bogus.
-	# The default is off.
+	# The scoped forms of permissive mode. These permit a BARE bogus
+	# NXDOMAIN, or a bare bogus NODATA, to reach the client instead of
+	# SERVFAIL; any bogus response of another kind is still withheld, so a
+	# forged address presented as the answer is not let through. They exist
+	# for a deployment that forwards to a filtering resolver, which
+	# expresses a block as a forged NXDOMAIN that no NSEC or NSEC3 proof can
+	# back and which therefore validates as bogus.
+	#
+	# Only a bare negative is admitted - an empty answer section, an empty
+	# or SOA-only authority section, and an empty additional section -
+	# because Unbound carries the sections it does not validate to the
+	# client as received, so anything else there would be a record the
+	# signer never published. A filtering resolver's block is bare. A CNAME
+	# or DNAME chain that ends in such a negative is NOT covered and still
+	# returns SERVFAIL. The default is off.
 	# val-permissive-nxdomain: no
 	# val-permissive-nodata: no
 

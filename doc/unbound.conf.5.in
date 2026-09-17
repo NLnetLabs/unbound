@@ -2646,7 +2646,7 @@ Default: no
 .UNINDENT
 .INDENT 0.0
 .TP
-.B val\-permissive\-nxdomain: \fI<yes or no>\fP
+.B val\-permissive\-nxdomain: \fI<yes or no>\fP 
 The scoped form of \fBval\-permissive\-mode\fP, limited to NXDOMAIN responses
 that are bare. Such a response is marked indeterminate and reaches the client
 instead of SERVFAIL. A bogus response of any other kind is still withheld, so
@@ -2690,7 +2690,7 @@ Default: no
 .UNINDENT
 .INDENT 0.0
 .TP
-.B val\-permissive\-nodata: \fI<yes or no>\fP
+.B val\-permissive\-nodata: \fI<yes or no>\fP 
 The scoped form of \fBval\-permissive\-mode\fP, limited to NODATA responses
 (NOERROR with an empty answer section). Otherwise identical to
 \fBval\-permissive\-nxdomain\fP, including what it gives up and its

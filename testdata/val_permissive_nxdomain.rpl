@@ -100,6 +100,31 @@ smuggle.veryinvalid. 3600 IN TXT "forged-dmarc-v=DMARC1; p=none"
 smuggle.veryinvalid. 3600 IN MX 10 forged.example.
 ENTRY_END
 
+; A forged negative whose AUTHORITY holds ONE record of a type that is not an
+; SOA. The section is not validated and Unbound carries it as received, so
+; admitting it would let the sender put a TXT, MX or CAA of its choosing into
+; the client's answer and the cache. This must stay SERVFAIL - and it is why
+; the gate checks the TYPE of the single authority RRset, not merely its count.
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR NXDOMAIN
+SECTION QUESTION
+onlytxt.veryinvalid. IN A
+SECTION AUTHORITY
+onlytxt.veryinvalid. 3600 IN TXT "forged-only-txt"
+ENTRY_END
+
+; A forged NXDOMAIN with NO authority section at all: the shape a filtering
+; resolver actually sends (ANSWER: 0, AUTHORITY: 0).
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR NXDOMAIN
+SECTION QUESTION
+zeroauth.veryinvalid. IN A
+ENTRY_END
+
 ; DNSKEY answer, using CSK for test simplicity.
 ENTRY_BEGIN
 MATCH opcode qtype qname
@@ -139,10 +164,15 @@ ENTRY_END
 
 STEP 10 CHECK_ANSWER
 ENTRY_BEGIN
-MATCH rcode
-REPLY QR RD RA DO NXDOMAIN
+MATCH all
+REPLY QR RD RA NXDOMAIN
 SECTION QUESTION
 example.veryinvalid. IN TXT
+SECTION ANSWER
+SECTION AUTHORITY
+. 3600 IN SOA ns.root. host.root. 1 3600 3600 3600 3600
+SECTION ADDITIONAL
+. 32768 CLASS1232 OPT \# 00
 ENTRY_END
 
 ; It does not leak into NODATA.
@@ -222,6 +252,42 @@ MATCH rcode
 REPLY QR RD RA DO SERVFAIL
 SECTION QUESTION
 smuggle.veryinvalid. IN A
+ENTRY_END
+
+; One non-SOA authority record is refused: checking the COUNT alone would let
+; this through.
+STEP 91 QUERY
+ENTRY_BEGIN
+REPLY RD DO
+SECTION QUESTION
+onlytxt.veryinvalid. IN A
+ENTRY_END
+
+STEP 92 CHECK_ANSWER
+ENTRY_BEGIN
+MATCH rcode
+REPLY QR RD RA DO SERVFAIL
+SECTION QUESTION
+onlytxt.veryinvalid. IN A
+ENTRY_END
+
+; The bare shape must be SERVED - this is the shape a filtering resolver sends.
+; NOTE step numbers must stay within the mock's RANGE_END (100): RANGE_BEGIN is
+; a time window and the STEP number is the clock, so a step past it finds the
+; mock gone and dies with "query answer not matched".
+STEP 93 QUERY
+ENTRY_BEGIN
+REPLY RD DO
+SECTION QUESTION
+zeroauth.veryinvalid. IN A
+ENTRY_END
+
+STEP 94 CHECK_ANSWER
+ENTRY_BEGIN
+MATCH rcode
+REPLY QR RD RA DO NXDOMAIN
+SECTION QUESTION
+zeroauth.veryinvalid. IN A
 ENTRY_END
 
 SCENARIO_END

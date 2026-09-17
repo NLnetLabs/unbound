@@ -2365,7 +2365,7 @@ These options are part of the ``server:`` section.
 
 
 @@UAHL@unbound.conf@val-permissive-nxdomain@@: *<yes or no>*
-    The scoped form of @ref val-permissive-mode@, limited to NXDOMAIN
+    The scoped form of :ref:`val-permissive-mode<unbound.conf.val-permissive-mode>`, limited to NXDOMAIN
     responses that are bare, as defined below.  Such a response is marked
     indeterminate and reaches the client instead of SERVFAIL.  A bogus
     response of any other kind is still withheld, so the protection the
@@ -2392,15 +2392,15 @@ These options are part of the ``server:`` section.
     upstream is not reached over a confidential transport - can deny the
     existence of a name that does in fact exist.  A denial of existence is a
     lesser attack than a forged address, which is why this scoping is safer
-    than @ref val-permissive-mode@, but it is not nothing.
+    than :ref:`val-permissive-mode<unbound.conf.val-permissive-mode>`, but it is not nothing.
 
-    Note the interaction with @ref serve-expired@. Once a permitted answer has
+    Note the interaction with :ref:`serve-expired<unbound.conf.serve-expired>`. Once a permitted answer has
     been cached, a repeat query for the same question takes the serve-expired
     path before reaching this option, so the client is answered from that
     cached copy rather than from a fresh lookup; if that cached copy cannot be
     turned into a reply, the query is SERVFAIL even though this option would
     have served it. The cache entry need not be expired for the path to be
-    taken. This is inherited from @ref val-permissive-mode@.
+    taken. This is inherited from :ref:`val-permissive-mode<unbound.conf.val-permissive-mode>`.
 
     Only a bare negative answer is admitted: the answer section must be
     empty, the authority section at most an SOA, and the additional section
@@ -2424,10 +2424,10 @@ These options are part of the ``server:`` section.
 
 
 @@UAHL@unbound.conf@val-permissive-nodata@@: *<yes or no>*
-    The scoped form of @ref val-permissive-mode@, limited to NODATA
+    The scoped form of :ref:`val-permissive-mode<unbound.conf.val-permissive-mode>`, limited to NODATA
     responses (NOERROR with an empty answer section).  Otherwise identical to
-    @ref val-permissive-nxdomain@, including what it gives up and the
-    @ref serve-expired@ interaction, and it is the counterpart option for a
+    :ref:`val-permissive-nxdomain<unbound.conf.val-permissive-nxdomain>`, including what it gives up and the
+    :ref:`serve-expired<unbound.conf.serve-expired>` interaction, and it is the counterpart option for a
     filtering resolver that expresses a block as NODATA rather than as
     NXDOMAIN.
 

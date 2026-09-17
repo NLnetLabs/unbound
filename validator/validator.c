@@ -2536,8 +2536,19 @@ processFinished(struct module_qstate* qstate, struct val_qstate* vq,
 	struct val_env* ve, int id)
 {
 	enum val_classification subtype = val_classify_response(
-		qstate->query_flags, &qstate->qinfo, &vq->qchase, 
+		qstate->query_flags, &qstate->qinfo, &vq->qchase,
 		vq->orig_msg->rep, vq->rrset_skip);
+	/* The authority section is one the validator does not vouch for, and
+	 * Unbound carries it to the client as received. Only an empty one, or a
+	 * single SOA, is acceptable: any other type there is one record of the
+	 * sender's choosing - a TXT, MX or CAA - that a forged negative could
+	 * smuggle into the client's answer and into the cache. Checking the
+	 * count alone is not enough, since one RRset of any type passes that. */
+	int authority_ok = (vq->orig_msg->rep->ns_numrrsets == 0 ||
+		(vq->orig_msg->rep->ns_numrrsets == 1 &&
+		ntohs(vq->orig_msg->rep->rrsets[
+		vq->orig_msg->rep->an_numrrsets]->rk.type) ==
+		LDNS_RR_TYPE_SOA));
 
 	/* store overall validation result in orig_msg */
 	if(vq->rrset_skip == 0) {
@@ -2698,15 +2709,15 @@ processFinished(struct module_qstate* qstate, struct val_qstate* vq,
 			vq->orig_msg->rep->security = sec_status_indeterminate;
 		/* The scoped forms of permissive mode. Only a BARE negative
 		 * answer is let through: the answer section must be empty, the
-		 * authority section at most an SOA, and the additional section
-		 * empty.
+		 * authority section empty or a single SOA, and the additional
+		 * section empty.
 		 *
 		 * Those are exactly the sections the validator does not vouch
 		 * for, and Unbound encodes them as they were received - the
 		 * scrubber keeps TXT/MX/CAA in the authority section and permits
 		 * an A/AAAA in the additional section when it is glue for an NS
 		 * target, and that target is the sender's choice, so it can be
-		 * the queried name itself. Without this test a forged negative
+		 * the queried name itself. Without these tests a forged negative
 		 * marketing itself as a block could smuggle records the signer
 		 * never published - including an address record - into the
 		 * client's answer and into the cache.
@@ -2715,7 +2726,7 @@ processFinished(struct module_qstate* qstate, struct val_qstate* vq,
 		 * a blocked name with ANSWER: 0, AUTHORITY: 0), so requiring this
 		 * costs the intended case nothing and fails closed for the rest. */
 		else if(vq->orig_msg->rep->an_numrrsets == 0 &&
-			vq->orig_msg->rep->ns_numrrsets <= 1 &&
+			authority_ok &&
 			vq->orig_msg->rep->ar_numrrsets == 0 &&
 			((subtype == VAL_CLASS_NAMEERROR &&
 			qstate->env->cfg->val_permissive_nxdomain) ||
