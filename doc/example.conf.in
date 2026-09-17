@@ -754,15 +754,13 @@ server:
 	# expresses a block as a forged NXDOMAIN that no NSEC or NSEC3 proof can
 	# back and which therefore validates as bogus.
 	#
-	# Only a bare negative is admitted - no authority section, no additional
-	# section, and any answer-section records already authenticated - because
-	# Unbound carries the sections it does not validate to the client as
-	# received, so anything else there would be a record the signer never
-	# published. An SOA in the authority section is not accepted either: its
-	# security cannot be established for this message, so it would be a
-	# verdict about the cache rather than about the response. A filtering
-	# resolver's block is bare. A CNAME or DNAME chain ending in such a
-	# negative is covered when the chain itself validates. The default is off.
+	# Accept a bogus NXDOMAIN instead of withholding it with SERVFAIL, for a
+	# resolver that forwards to a malware or site-blocking service, which
+	# answers a blocked name with an NXDOMAIN no signature backs. The reply
+	# must be bare - no authority or additional section, and every
+	# answer-section record already validated - and an SOA in the authority
+	# section is not accepted either. A bogus message of any other type is
+	# still withheld. The default is off.
 	# val-permissive-nxdomain: no
 	# val-permissive-nodata: no
 

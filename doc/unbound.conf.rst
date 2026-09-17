@@ -2365,46 +2365,32 @@ These options are part of the ``server:`` section.
 
 
 @@UAHL@unbound.conf@val-permissive-nxdomain@@: *<yes or no>*
-    The scoped form of :ref:`val-permissive-mode<unbound.conf.val-permissive-mode>`,
-    limited to NXDOMAIN responses.  A bogus NXDOMAIN is marked indeterminate and
-    reaches the client instead of SERVFAIL, so an operator forwarding to a
-    filtering resolver receives its blocks as the upstream expressed them.  A
-    bogus response of any other kind is still withheld, including a positive
-    answer carrying an address the signer never published.
+    Instruct the validator to accept a bogus NXDOMAIN.
+    The security checks are performed, but if the result is bogus the reply is
+    sent to the client instead of being withheld with SERVFAIL.
+    A bogus message of any other type is still withheld, so a positive answer
+    carrying an address the signer never published is not accepted.
+    Meant for a resolver that forwards to a malware or site-blocking service,
+    which answers a blocked name with an NXDOMAIN that no signature backs.
 
-    A response is admitted only if it is bare: no authority or additional
-    section, and any answer-section records already authenticated.  The sections
-    the validator does not vouch for are the ones Unbound carries to the client
-    as received, so without that a forged negative could smuggle records the
-    signer never published into the client's answer and the cache.  An SOA in the
-    authority section is NOT accepted, not even a well-formed one: its own
-    security cannot be established for the message being judged, so admitting it
-    would mean deciding on the contents of the rrset cache rather than on this
-    response.  A CNAME or DNAME chain ending in such a negative is admitted when
-    the chain itself validates, since the chain is what the client is given; a
-    chain that failed to validate still returns SERVFAIL.  A filtering resolver's
-    block is bare, so none of this costs the intended case anything -- an
-    upstream that attaches an SOA to its blocks is refused rather than served.
+    The reply is accepted only if it is bare: no authority section, no
+    additional section, and every answer-section record already validated.
+    Unbound passes those sections to the client as received, so a record in them
+    is one the signer never published.
+    An SOA in the authority section is not accepted either, because its own
+    security cannot be established for this reply.
+    A CNAME or DNAME chain ending in such an NXDOMAIN is accepted if the chain
+    itself validates.
 
-    NXDOMAIN can no longer be authenticated for the names this applies to: a
-    hostile or compromised forwarder, or an on-path attacker where the upstream
-    is not reached over a confidential transport, can deny the existence of a
-    name that does exist.  That is a lesser attack than a forged address, which
-    is why this is safer than the unscoped option, but it is not nothing.  Note
-    also that :ref:`serve-expired<unbound.conf.serve-expired>` can answer a
-    repeat query from the cache before this option is reached.  If
-    :ref:`val-permissive-mode<unbound.conf.val-permissive-mode>` is also enabled
-    it governs on its own, and this option has no further effect.
+    NXDOMAIN is no longer authenticated for the names this applies to, so
+    whoever can answer for the upstream can deny a name that exists.
 
     Default: no
 
 
 @@UAHL@unbound.conf@val-permissive-nodata@@: *<yes or no>*
-    The scoped form of :ref:`val-permissive-mode<unbound.conf.val-permissive-mode>`,
-    limited to NODATA responses, for a filtering resolver that expresses a block
-    that way rather than as NXDOMAIN.  Otherwise as
-    :ref:`val-permissive-nxdomain<unbound.conf.val-permissive-nxdomain>`,
-    including what it gives up and the conditions for admission.
+    As :ref:`val-permissive-nxdomain<unbound.conf.val-permissive-nxdomain>`, but
+    for NODATA messages, for a blocking service that answers that way.
 
     Default: no
 
