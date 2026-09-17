@@ -2399,6 +2399,13 @@ These options are part of the ``server:`` section.
     serve-expired path first and the response is SERVFAIL, as with
     @ref val-permissive-mode@.
 
+    A CNAME or DNAME chain that ends in such a negative answer is not covered
+    and still returns SERVFAIL. By the time the validator classifies the
+    response it has already rewritten the rcode, so a chain that ended in
+    NXDOMAIN is indistinguishable from one that ended in NODATA at the point
+    this option applies; admitting chains wholesale would let a bogus positive
+    chain through, which is the protection being kept here.
+
     Default: no
 
 

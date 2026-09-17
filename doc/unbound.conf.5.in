@@ -2633,7 +2633,7 @@ Default: 0 (disabled)
 .UNINDENT
 .INDENT 0.0
 .TP
-.B val\-permissive\-mode: \fI<yes or no>\fP 
+.B val\-permissive\-mode: \fI<yes or no>\fP
 Instruct the validator to mark bogus messages as indeterminate.
 The security checks are performed, but if the result is bogus (failed
 security), the reply is not withheld from the client with SERVFAIL as
@@ -2646,7 +2646,46 @@ Default: no
 .UNINDENT
 .INDENT 0.0
 .TP
-.B ignore\-cd\-flag: \fI<yes or no>\fP 
+.B val\-permissive\-nxdomain: \fI<yes or no>\fP
+The scoped form of \fBval\-permissive\-mode\fP, limited to NXDOMAIN responses.
+A bogus NXDOMAIN is marked indeterminate and reaches the client instead of
+SERVFAIL; a bogus response of any other kind is still withheld, so a bogus
+positive answer \- a name resolved to an address the signer never published \-
+is not let through.
+.sp
+This is for a deployment that forwards to a filtering resolver, such as a
+threat\-intelligence blocklist service: such a service expresses a block by
+answering NXDOMAIN, and a forged NXDOMAIN carries no NSEC or NSEC3 denial
+proof, so the validator correctly calls it bogus.
+.sp
+NXDOMAIN can no longer be authenticated for the names this applies to, so an
+NXDOMAIN from a hostile or compromised forwarder, or from an on\-path attacker
+when the upstream is not reached over a confidential transport, can deny the
+existence of a name that does exist. A denial of existence is a lesser attack
+than a forged address, which is why this is safer than unbounded
+\fBval\-permissive\-mode\fP, but it is not nothing.
+.sp
+A CNAME or DNAME chain that ends in such an answer is not covered and still
+returns SERVFAIL: the rcode has already been rewritten by the time the
+response is classified, so a chain ending in NXDOMAIN cannot be told apart
+from one ending in NODATA there.
+.sp
+Default: no
+.UNINDENT
+.INDENT 0.0
+.TP
+.B val\-permissive\-nodata: \fI<yes or no>\fP
+The scoped form of \fBval\-permissive\-mode\fP, limited to NODATA responses
+(NOERROR with an empty answer section). Otherwise identical to
+\fBval\-permissive\-nxdomain\fP, including what it gives up and its
+\fBserve\-expired\fP interaction, and it is the counterpart option for a
+filtering resolver that expresses a block as NODATA rather than as NXDOMAIN.
+.sp
+Default: no
+.UNINDENT
+.INDENT 0.0
+.TP
+.B ignore\-cd\-flag: \fI<yes or no>\fP
 Instruct Unbound to ignore the CD flag from clients and refuse to return
 bogus answers to them.
 Thus, the CD (Checking Disabled) flag does not disable checking any more.

@@ -67,6 +67,22 @@ SECTION AUTHORITY
 . 3600 IN SOA ns.root. host.root. 1 3600 3600 3600 3600
 ENTRY_END
 
+; A CNAME chain ending in NXDOMAIN, as a filtering forwarder returns it: the
+; whole chain in one response, carrying the negative rcode. This classifies as
+; VAL_CLASS_CNAMENOANSWER rather than NAMEERROR, so it exercises the rcode
+; disambiguation.
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR NXDOMAIN
+SECTION QUESTION
+chain.veryinvalid. IN A
+SECTION ANSWER
+chain.veryinvalid. 3600 IN CNAME example.veryinvalid.
+SECTION AUTHORITY
+. 3600 IN SOA ns.root. host.root. 1 3600 3600 3600 3600
+ENTRY_END
+
 ; DNSKEY answer, using CSK for test simplicity.
 ENTRY_BEGIN
 MATCH opcode qtype qname
@@ -144,6 +160,28 @@ MATCH rcode
 REPLY QR RD RA DO SERVFAIL
 SECTION QUESTION
 positive.veryinvalid. IN A
+ENTRY_END
+
+; A CNAME chain that ended in NXDOMAIN is NOT covered, and must stay SERVFAIL.
+; By the time the validator classifies the message it has already rewritten the
+; rcode to NOERROR (it arrives as VAL_CLASS_CNAME), so at the point this option
+; is applied a chain ending in NXDOMAIN is indistinguishable from one ending in
+; NODATA. Widening the gate to VAL_CLASS_CNAME would admit a bogus positive
+; chain, which is the protection this option exists to keep. Pinned here so the
+; gap cannot change silently.
+STEP 60 QUERY
+ENTRY_BEGIN
+REPLY RD DO
+SECTION QUESTION
+chain.veryinvalid. IN A
+ENTRY_END
+
+STEP 70 CHECK_ANSWER
+ENTRY_BEGIN
+MATCH rcode
+REPLY QR RD RA DO SERVFAIL
+SECTION QUESTION
+chain.veryinvalid. IN A
 ENTRY_END
 
 SCENARIO_END
