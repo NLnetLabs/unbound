@@ -2536,8 +2536,37 @@ processFinished(struct module_qstate* qstate, struct val_qstate* vq,
 	struct val_env* ve, int id)
 {
 	enum val_classification subtype = val_classify_response(
-		qstate->query_flags, &qstate->qinfo, &vq->qchase, 
+		qstate->query_flags, &qstate->qinfo, &vq->qchase,
 		vq->orig_msg->rep, vq->rrset_skip);
+	/* The authority section is one the validator does not vouch for and
+	 * Unbound carries to the client as received, so it must be empty. An
+	 * SOA is NOT enough: its own security flag is not set for the message
+	 * being judged - validation stopped earlier - so testing it would ask
+	 * the rrset cache whether some earlier query happened to prove the same
+	 * SOA, making the verdict depend on cache history rather than on the
+	 * message. A filtering resolver's block carries no authority section. */
+	int authority_ok = (vq->orig_msg->rep->ns_numrrsets == 0);
+	/* A chain that ran out of answer section carries the rcode that says
+	 * which scoped option it belongs to, and the chain is what the client
+	 * is served - so it has to be proven, not merely present. */
+	int negative_nxdomain = (subtype == VAL_CLASS_NAMEERROR ||
+		(subtype == VAL_CLASS_CNAMENOANSWER &&
+		FLAGS_GET_RCODE(vq->orig_msg->rep->flags) ==
+		LDNS_RCODE_NXDOMAIN));
+	int negative_nodata = (subtype == VAL_CLASS_NODATA ||
+		(subtype == VAL_CLASS_CNAMENOANSWER &&
+		FLAGS_GET_RCODE(vq->orig_msg->rep->flags) ==
+		LDNS_RCODE_NOERROR));
+	int answer_proven = 1;
+	size_t i;
+	for(i = 0; i < vq->orig_msg->rep->an_numrrsets; i++) {
+		struct packed_rrset_data* d = (struct packed_rrset_data*)
+			vq->orig_msg->rep->rrsets[i]->entry.data;
+		if(!d || d->security != sec_status_secure) {
+			answer_proven = 0;
+			break;
+		}
+	}
 
 	/* store overall validation result in orig_msg */
 	if(vq->rrset_skip == 0) {
@@ -2695,6 +2724,19 @@ processFinished(struct module_qstate* qstate, struct val_qstate* vq,
 		 */
 		/* If we are in permissive mode, bogus gets indeterminate */
 		if(qstate->env->cfg->val_permissive_mode)
+			vq->orig_msg->rep->security = sec_status_indeterminate;
+		/* The scoped forms of permissive mode: only a bare negative answer
+		 * is let through, so an operator behind a filtering forwarder
+		 * receives its block instead of SERVFAIL without also accepting a
+		 * forged positive answer. See unbound.conf(5) for what "bare"
+		 * excludes and for what an operator gives up by enabling this. */
+		else if(answer_proven &&
+			authority_ok &&
+			vq->orig_msg->rep->ar_numrrsets == 0 &&
+			((negative_nxdomain &&
+			qstate->env->cfg->val_permissive_nxdomain) ||
+			(negative_nodata &&
+			qstate->env->cfg->val_permissive_nodata)))
 			vq->orig_msg->rep->security = sec_status_indeterminate;
 	}
 

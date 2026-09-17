@@ -746,6 +746,24 @@ server:
 	# replies if the message is found secure. The default is off.
 	# val-permissive-mode: no
 
+	# The scoped forms of permissive mode. These permit a BARE bogus
+	# NXDOMAIN, or a bare bogus NODATA, to reach the client instead of
+	# SERVFAIL; any bogus response of another kind is still withheld, so a
+	# forged address presented as the answer is not let through. They exist
+	# for a deployment that forwards to a filtering resolver, which
+	# expresses a block as a forged NXDOMAIN that no NSEC or NSEC3 proof can
+	# back and which therefore validates as bogus.
+	#
+	# Accept a bogus NXDOMAIN instead of withholding it with SERVFAIL, for a
+	# resolver that forwards to a malware or site-blocking DNS resolver such as
+	# Quad9, which answers a blocked name with an NXDOMAIN no signature backs.
+	# The reply must be bare - no authority or additional section, and every
+	# answer-section record already validated - and an SOA in the authority
+	# section is not accepted either. A bogus message of any other type is
+	# still withheld. The default is off.
+	# val-permissive-nxdomain: no
+	# val-permissive-nodata: no
+
 	# Ignore the CD flag in incoming queries and refuse them bogus data.
 	# Enable it if the only clients of Unbound are legacy servers (w2008)
 	# that set CD but cannot validate themselves.

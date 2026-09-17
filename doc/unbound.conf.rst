@@ -2364,6 +2364,38 @@ These options are part of the ``server:`` section.
     Default: no
 
 
+@@UAHL@unbound.conf@val-permissive-nxdomain@@: *<yes or no>*
+    Instruct the validator to accept a bogus NXDOMAIN.
+    The security checks are performed, but if the result is bogus the reply is
+    sent to the client instead of being withheld with SERVFAIL.
+    A bogus message of any other type is still withheld, so a positive answer
+    carrying an address the signer never published is not accepted.
+    Meant for a resolver that forwards to a malware or site-blocking DNS
+    resolver, such as Quad9, which answers a blocked name with an NXDOMAIN that
+    no signature backs.
+
+    The reply is accepted only if it is bare: no authority section, no
+    additional section, and every answer-section record already validated.
+    Unbound passes those sections to the client as received, so a record in them
+    is one the signer never published.
+    An SOA in the authority section is not accepted either, because its own
+    security cannot be established for this reply.
+    A CNAME or DNAME chain ending in such an NXDOMAIN is accepted if the chain
+    itself validates.
+
+    NXDOMAIN is no longer authenticated for the names this applies to, so
+    whoever can answer for the upstream can deny a name that exists.
+
+    Default: no
+
+
+@@UAHL@unbound.conf@val-permissive-nodata@@: *<yes or no>*
+    As :ref:`val-permissive-nxdomain<unbound.conf.val-permissive-nxdomain>`, but
+    for NODATA messages, for a blocking service that answers that way.
+
+    Default: no
+
+
 @@UAHL@unbound.conf@ignore-cd-flag@@: *<yes or no>*
     Instruct Unbound to ignore the CD flag from clients and refuse to return
     bogus answers to them.
