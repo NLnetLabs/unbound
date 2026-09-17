@@ -237,13 +237,12 @@ SECTION ADDITIONAL
 . 32768 CLASS1232 OPT \# 00
 ENTRY_END
 
-; A CNAME chain that ended in NXDOMAIN IS covered - but only when its own links
-; are authenticated, because the chain is served to the client and admitting a
-; forged one would be handing over a redirection. Here the whole zone is bogus,
-; so the chain link is not secure and the message must stay SERVFAIL. That is
-; the security half of the rule; the fixture that exercises the admitting half,
-; where the chain is signed and only the denial is unproven, is
-; testdata/val_permissive_cnamechain.rpl.
+; A chain that ends in NXDOMAIN, in a zone where nothing is signed. This one is
+; NOT the security half of the rule, whatever it looks like: the resolver chases
+; the chain and the message arrives classified as an ordinary chain rather than
+; as a negative, so it is refused by the class terms and would be refused with
+; the answer-section test deleted. The fixture that actually pins that test is
+; testdata/val_permissive_cnamechain_nonsec.rpl.
 STEP 60 QUERY
 ENTRY_BEGIN
 REPLY RD DO
@@ -305,9 +304,9 @@ SECTION ADDITIONAL
 ENTRY_END
 
 ; The bare shape must be SERVED - this is the shape a filtering resolver sends.
-; NOTE step numbers must stay within the mock's RANGE_END (100): RANGE_BEGIN is
-; a time window and the STEP number is the clock, so a step past it finds the
-; mock gone and dies with "query answer not matched".
+; NOTE step numbers must stay within the mock's RANGE_END: RANGE_BEGIN is a time
+; window and the STEP number is the clock, so a step past it finds the mock gone
+; and dies with "query answer not matched".
 STEP 93 QUERY
 ENTRY_BEGIN
 REPLY RD DO
