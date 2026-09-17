@@ -2411,14 +2411,13 @@ These options are part of the ``server:`` section.
     the cache. A filtering resolver's block is a bare negative, so this costs
     the intended case nothing.
 
-    A CNAME or DNAME chain that ends in such an answer is NOT covered and
-    still returns SERVFAIL - the response is classified as a chain rather
-    than as a negative, and this option does not recognise it. That fails
-    closed rather than leaking, but it is a real gap: a filter that blocks a
-    name by pointing it at a blockpage and then answering NXDOMAIN for the
-    target will still show the client SERVFAIL. Closing it means recognising
-    the chain case and accounting for the chain's own validation, which this
-    option deliberately does not attempt.
+    A CNAME or DNAME chain that ends in such an answer is covered too, but only
+    when the chain itself is authenticated. The chain is served to the client,
+    so admitting a forged one would be handing over a redirection; the validator
+    verifies a chain's rrsets before it examines the denial, and a message whose
+    chain links are all secure and whose denial alone could not be proven is
+    served as the negative it is. A chain that failed to validate still returns
+    SERVFAIL.
 
     Default: no
 

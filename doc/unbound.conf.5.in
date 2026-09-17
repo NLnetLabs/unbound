@@ -2674,11 +2674,12 @@ existence of a name that does exist. A denial of existence is a lesser attack
 than a forged address, which is why this is safer than unbounded
 \fBval\-permissive\-mode\fP, but it is not nothing.
 .sp
-A CNAME or DNAME chain that ends in such an answer is NOT covered and still
-returns SERVFAIL \- the response is classified as a chain rather than as a
-negative. That fails closed rather than leaking, but it is a real gap: a filter
-that blocks a name by pointing it at a blockpage and then answering NXDOMAIN
-for the target will still show the client SERVFAIL.
+A CNAME or DNAME chain that ends in such an answer is covered too, but only when
+the chain itself is authenticated. The chain is served to the client, so
+admitting a forged one would be handing over a redirection; the validator
+verifies a chain's rrsets before it examines the denial, so a message whose chain
+links are all secure and whose denial alone could not be proven is served as the
+negative it is. A chain that failed to validate still returns SERVFAIL.
 .sp
 Note the interaction with \fBserve\-expired\fP. Once a permitted answer has
 been cached, a repeat query for the same question takes the serve\-expired path

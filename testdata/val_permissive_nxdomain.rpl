@@ -67,18 +67,27 @@ SECTION AUTHORITY
 . 3600 IN SOA ns.root. host.root. 1 3600 3600 3600 3600
 ENTRY_END
 
-; A CNAME chain ending in NXDOMAIN, as a filtering forwarder returns it: the
-; whole chain in one response, carrying the negative rcode. This classifies as
-; VAL_CLASS_CNAMENOANSWER rather than NAMEERROR, so it exercises the rcode
-; disambiguation.
+; A chain that runs out of answer section and ends in NXDOMAIN. The chain itself
+; is one query and the negative is another, so the message the validator ends up
+; with is a CNAME chain whose last hop is a NAMEERROR -- VAL_CLASS_CNAMENOANSWER,
+; which is why it needs the rcode to say which scoped option it belongs to.
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR NOERROR
+SECTION QUESTION
+chain.veryinvalid. IN A
+SECTION ANSWER
+chain.veryinvalid. 3600 IN CNAME target.veryinvalid.
+ENTRY_END
+
+; ...and the target it points at does not exist.
 ENTRY_BEGIN
 MATCH opcode qtype qname
 ADJUST copy_id
 REPLY QR NXDOMAIN
 SECTION QUESTION
-chain.veryinvalid. IN A
-SECTION ANSWER
-chain.veryinvalid. 3600 IN CNAME example.veryinvalid.
+target.veryinvalid. IN A
 SECTION AUTHORITY
 . 3600 IN SOA ns.root. host.root. 1 3600 3600 3600 3600
 ENTRY_END
@@ -209,20 +218,13 @@ SECTION QUESTION
 positive.veryinvalid. IN A
 ENTRY_END
 
-; A CNAME chain that ended in NXDOMAIN is NOT covered, and must stay SERVFAIL.
-; The gate recognises only the two bare negative classes; a chain that ran out
-; of answer section is classified as a chain instead, and admitting that class
-; wholesale would take in a chain whose own redirection failed to validate.
-; Closing this properly means recognising the chain case and accounting for the
-; chain's validation, which this option does not attempt. It fails closed, so
-; the gap is safe rather than a leak -- but it is a real gap: a filter that
-; blocks by pointing a name at a blockpage and then NXDOMAINs the target still
-; shows the client SERVFAIL. Pinned here so it cannot change silently.
-;
-; NOTE this fixture's chain does NOT produce the class in question: because
-; the mock below also answers the CNAME target, the resolver chases it and the
-; message is classified as an ordinary chain, not as a chain-out-of-answer.
-; testdata/val_cnametonx.rpl is the fixture that reproduces the real case.
+; A CNAME chain that ended in NXDOMAIN IS covered - but only when its own links
+; are authenticated, because the chain is served to the client and admitting a
+; forged one would be handing over a redirection. Here the whole zone is bogus,
+; so the chain link is not secure and the message must stay SERVFAIL. That is
+; the security half of the rule; the fixture that exercises the admitting half,
+; where the chain is signed and only the denial is unproven, is
+; testdata/val_permissive_cnamechain.rpl.
 STEP 60 QUERY
 ENTRY_BEGIN
 REPLY RD DO

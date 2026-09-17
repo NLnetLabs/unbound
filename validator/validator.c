@@ -2549,6 +2549,35 @@ processFinished(struct module_qstate* qstate, struct val_qstate* vq,
 		ntohs(vq->orig_msg->rep->rrsets[
 		vq->orig_msg->rep->an_numrrsets]->rk.type) ==
 		LDNS_RR_TYPE_SOA));
+	/* A chain that ran out of answer section - a CNAME or DNAME ending in a
+	 * negative - is classified as a chain, not as a negative, and carries
+	 * its own rcode: NXDOMAIN or NOERROR. That rcode is the only thing that
+	 * says which scoped option it belongs to, so it is read here.
+	 *
+	 * What must NOT be admitted is a chain whose own redirection failed to
+	 * validate: that would hand the client an authenticated-looking CNAME
+	 * pointing wherever the sender chose. validate_cname_noanswer_response
+	 * verifies the chain rrsets first and returns early if any fails, so a
+	 * message that reached the denial check with every answer rrset secure
+	 * is one whose chain is proven and only whose denial is not. */
+	int negative_nxdomain = (subtype == VAL_CLASS_NAMEERROR ||
+		(subtype == VAL_CLASS_CNAMENOANSWER &&
+		FLAGS_GET_RCODE(vq->orig_msg->rep->flags) ==
+		LDNS_RCODE_NXDOMAIN));
+	int negative_nodata = (subtype == VAL_CLASS_NODATA ||
+		(subtype == VAL_CLASS_CNAMENOANSWER &&
+		FLAGS_GET_RCODE(vq->orig_msg->rep->flags) ==
+		LDNS_RCODE_NOERROR));
+	int answer_proven = 1;
+	size_t i;
+	for(i = 0; i < vq->orig_msg->rep->an_numrrsets; i++) {
+		struct packed_rrset_data* d = (struct packed_rrset_data*)
+			vq->orig_msg->rep->rrsets[i]->entry.data;
+		if(!d || d->security != sec_status_secure) {
+			answer_proven = 0;
+			break;
+		}
+	}
 
 	/* store overall validation result in orig_msg */
 	if(vq->rrset_skip == 0) {
@@ -2708,29 +2737,35 @@ processFinished(struct module_qstate* qstate, struct val_qstate* vq,
 		if(qstate->env->cfg->val_permissive_mode)
 			vq->orig_msg->rep->security = sec_status_indeterminate;
 		/* The scoped forms of permissive mode. Only a BARE negative
-		 * answer is let through: the answer section must be empty, the
-		 * authority section empty or a single SOA, and the additional
-		 * section empty.
+		 * answer is let through: the authority section empty or a single
+		 * SOA, the additional section empty, and anything in the answer
+		 * section already authenticated.
 		 *
-		 * Those are exactly the sections the validator does not vouch
-		 * for, and Unbound encodes them as they were received - the
-		 * scrubber keeps TXT/MX/CAA in the authority section and permits
-		 * an A/AAAA in the additional section when it is glue for an NS
-		 * target, and that target is the sender's choice, so it can be
-		 * the queried name itself. Without these tests a forged negative
-		 * marketing itself as a block could smuggle records the signer
-		 * never published - including an address record - into the
-		 * client's answer and into the cache.
+		 * The authority and additional sections are ones the validator
+		 * does not vouch for, and Unbound encodes them as they were
+		 * received - the scrubber keeps TXT/MX/CAA in the authority
+		 * section and permits an A/AAAA in the additional section when it
+		 * is glue for an NS target, and that target is the sender's
+		 * choice, so it can be the queried name itself. Without these
+		 * tests a forged negative marketing itself as a block could
+		 * smuggle records the signer never published - including an
+		 * address record - into the client's answer and into the cache.
+		 *
+		 * answer_proven carries the same idea for a CNAME or DNAME chain:
+		 * the chain IS served to the client, so it must be authenticated
+		 * before the message is admitted, and only the denial at the end
+		 * of it may be unproven. That is what separates a block reached
+		 * through a chain from a forged redirection.
 		 *
 		 * A filtering resolver's block is a bare negative (Quad9 answers
 		 * a blocked name with ANSWER: 0, AUTHORITY: 0), so requiring this
 		 * costs the intended case nothing and fails closed for the rest. */
-		else if(vq->orig_msg->rep->an_numrrsets == 0 &&
+		else if(answer_proven &&
 			authority_ok &&
 			vq->orig_msg->rep->ar_numrrsets == 0 &&
-			((subtype == VAL_CLASS_NAMEERROR &&
+			((negative_nxdomain &&
 			qstate->env->cfg->val_permissive_nxdomain) ||
-			(subtype == VAL_CLASS_NODATA &&
+			(negative_nodata &&
 			qstate->env->cfg->val_permissive_nodata)))
 			vq->orig_msg->rep->security = sec_status_indeterminate;
 	}
