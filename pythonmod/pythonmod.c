@@ -470,7 +470,12 @@ int pythonmod_init(struct module_env* env, int id)
       /* for python before 3.9 */
       log_err("pythonmod: can't parse Python script %s", pe->fname);
       /* print the error to logs too, run it again */
-      fseek(script_py, 0, SEEK_SET);
+      if(fseek(script_py, 0, SEEK_SET) != 0) {
+         log_err("fseek failed to rewind script to print parse error: "
+            "%s: %s", pe->fname, strerror(errno));
+         goto fail_close_file;
+      }
+
       /* we don't run the file, like this, because then side-effects
        *    s = PyRun_File(script_py, pe->fname, Py_file_input, 
        *        PyModule_GetDict(PyImport_AddModule("__main__")), pe->dict);
@@ -490,7 +495,12 @@ int pythonmod_init(struct module_env* env, int id)
       long pos = 0;
       log_err("pythonmod: can't parse Python script %s", pe->fname);
       /* print the error to logs too, run it again */
-      fseek(script_py, 0, SEEK_END);
+      if(fseek(script_py, 0, SEEK_END) != 0) {
+         log_err("fseek failed to determine script size: %s: %s",
+            pe->fname, strerror(errno));
+         goto fail_close_file;
+      }
+
       pos = ftell(script_py);
       if (pos == -1L) {
          log_err("ftell failed to print parse error: %s: %s",
@@ -509,7 +519,12 @@ int pythonmod_init(struct module_env* env, int id)
 		log_err("malloc failure to print parse error");
 		goto fail_close_file;
       }
-      fseek(script_py, 0, SEEK_SET);
+      if(fseek(script_py, 0, SEEK_SET) != 0) {
+         log_err("fseek failed to rewind script to print parse error: "
+            "%s: %s", pe->fname, strerror(errno));
+         free(fstr);
+         goto fail_close_file;
+      }
       if(fread(fstr, flen, 1, script_py) < 1) {
 		log_err("file read failed to print parse error: %s: %s",
 		pe->fname, strerror(errno));
