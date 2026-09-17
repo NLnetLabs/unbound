@@ -2696,15 +2696,31 @@ processFinished(struct module_qstate* qstate, struct val_qstate* vq,
 		/* If we are in permissive mode, bogus gets indeterminate */
 		if(qstate->env->cfg->val_permissive_mode)
 			vq->orig_msg->rep->security = sec_status_indeterminate;
-		/* The scoped forms of permissive mode: only a bogus negative
-		 * answer is let through, so an operator behind a filtering
-		 * forwarder receives its block instead of SERVFAIL. A bogus
-		 * positive answer - a name resolved to an address the signer
-		 * never published - is still withheld from the client. */
-		else if((subtype == VAL_CLASS_NAMEERROR &&
+		/* The scoped forms of permissive mode. Only a BARE negative
+		 * answer is let through: the answer section must be empty, the
+		 * authority section at most an SOA, and the additional section
+		 * empty.
+		 *
+		 * Those are exactly the sections the validator does not vouch
+		 * for, and Unbound encodes them as they were received - the
+		 * scrubber keeps TXT/MX/CAA in the authority section and permits
+		 * an A/AAAA in the additional section when it is glue for an NS
+		 * target, and that target is the sender's choice, so it can be
+		 * the queried name itself. Without this test a forged negative
+		 * marketing itself as a block could smuggle records the signer
+		 * never published - including an address record - into the
+		 * client's answer and into the cache.
+		 *
+		 * A filtering resolver's block is a bare negative (Quad9 answers
+		 * a blocked name with ANSWER: 0, AUTHORITY: 0), so requiring this
+		 * costs the intended case nothing and fails closed for the rest. */
+		else if(vq->orig_msg->rep->an_numrrsets == 0 &&
+			vq->orig_msg->rep->ns_numrrsets <= 1 &&
+			vq->orig_msg->rep->ar_numrrsets == 0 &&
+			((subtype == VAL_CLASS_NAMEERROR &&
 			qstate->env->cfg->val_permissive_nxdomain) ||
 			(subtype == VAL_CLASS_NODATA &&
-			qstate->env->cfg->val_permissive_nodata))
+			qstate->env->cfg->val_permissive_nodata)))
 			vq->orig_msg->rep->security = sec_status_indeterminate;
 	}
 

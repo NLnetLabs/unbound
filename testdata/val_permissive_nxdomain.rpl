@@ -83,6 +83,23 @@ SECTION AUTHORITY
 . 3600 IN SOA ns.root. host.root. 1 3600 3600 3600 3600
 ENTRY_END
 
+; A forged negative that carries records the signer never published in its
+; AUTHORITY section. The validator does not vouch for that section and Unbound
+; encodes it as received, so admitting any negative would let it smuggle an
+; MX or TXT of the sender's choosing into the client's answer and the cache.
+; This must stay SERVFAIL.
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR NXDOMAIN
+SECTION QUESTION
+smuggle.veryinvalid. IN A
+SECTION AUTHORITY
+. 3600 IN SOA ns.root. host.root. 1 3600 3600 3600 3600
+smuggle.veryinvalid. 3600 IN TXT "forged-dmarc-v=DMARC1; p=none"
+smuggle.veryinvalid. 3600 IN MX 10 forged.example.
+ENTRY_END
+
 ; DNSKEY answer, using CSK for test simplicity.
 ENTRY_BEGIN
 MATCH opcode qtype qname
@@ -163,12 +180,19 @@ positive.veryinvalid. IN A
 ENTRY_END
 
 ; A CNAME chain that ended in NXDOMAIN is NOT covered, and must stay SERVFAIL.
-; By the time the validator classifies the message it has already rewritten the
-; rcode to NOERROR (it arrives as VAL_CLASS_CNAME), so at the point this option
-; is applied a chain ending in NXDOMAIN is indistinguishable from one ending in
-; NODATA. Widening the gate to VAL_CLASS_CNAME would admit a bogus positive
-; chain, which is the protection this option exists to keep. Pinned here so the
-; gap cannot change silently.
+; The gate recognises only the two bare negative classes; a chain that ran out
+; of answer section is classified as a chain instead, and admitting that class
+; wholesale would take in a chain whose own redirection failed to validate.
+; Closing this properly means recognising the chain case and accounting for the
+; chain's validation, which this option does not attempt. It fails closed, so
+; the gap is safe rather than a leak -- but it is a real gap: a filter that
+; blocks by pointing a name at a blockpage and then NXDOMAINs the target still
+; shows the client SERVFAIL. Pinned here so it cannot change silently.
+;
+; NOTE this fixture's chain does NOT produce the class in question: because
+; the mock below also answers the CNAME target, the resolver chases it and the
+; message is classified as an ordinary chain, not as a chain-out-of-answer.
+; testdata/val_cnametonx.rpl is the fixture that reproduces the real case.
 STEP 60 QUERY
 ENTRY_BEGIN
 REPLY RD DO
@@ -182,6 +206,22 @@ MATCH rcode
 REPLY QR RD RA DO SERVFAIL
 SECTION QUESTION
 chain.veryinvalid. IN A
+ENTRY_END
+
+; And a negative padded with unvalidated records is refused outright.
+STEP 80 QUERY
+ENTRY_BEGIN
+REPLY RD DO
+SECTION QUESTION
+smuggle.veryinvalid. IN A
+ENTRY_END
+
+STEP 90 CHECK_ANSWER
+ENTRY_BEGIN
+MATCH rcode
+REPLY QR RD RA DO SERVFAIL
+SECTION QUESTION
+smuggle.veryinvalid. IN A
 ENTRY_END
 
 SCENARIO_END

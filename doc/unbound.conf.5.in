@@ -2647,11 +2647,20 @@ Default: no
 .INDENT 0.0
 .TP
 .B val\-permissive\-nxdomain: \fI<yes or no>\fP
-The scoped form of \fBval\-permissive\-mode\fP, limited to NXDOMAIN responses.
-A bogus NXDOMAIN is marked indeterminate and reaches the client instead of
-SERVFAIL; a bogus response of any other kind is still withheld, so a bogus
-positive answer \- a name resolved to an address the signer never published \-
-is not let through.
+The scoped form of \fBval\-permissive\-mode\fP, limited to NXDOMAIN responses
+that are bare. Such a response is marked indeterminate and reaches the client
+instead of SERVFAIL. A bogus response of any other kind is still withheld, so
+the protection the unscoped option gives up \- an address record the signer
+never published, presented to the client as the answer to its question \- is
+kept here.
+.sp
+Only a bare negative is admitted: the answer section must be empty, the
+authority section at most an SOA, and the additional section empty. Those are
+the sections the validator does not vouch for and Unbound carries as received,
+so without that restriction a forged negative could smuggle records the signer
+never published \- including an address record as name\-server glue for the
+queried name \- into the client response and the cache. A filtering resolver's
+block is a bare negative, so this costs the intended case nothing.
 .sp
 This is for a deployment that forwards to a filtering resolver, such as a
 threat\-intelligence blocklist service: such a service expresses a block by
@@ -2665,10 +2674,17 @@ existence of a name that does exist. A denial of existence is a lesser attack
 than a forged address, which is why this is safer than unbounded
 \fBval\-permissive\-mode\fP, but it is not nothing.
 .sp
-A CNAME or DNAME chain that ends in such an answer is not covered and still
-returns SERVFAIL: the rcode has already been rewritten by the time the
-response is classified, so a chain ending in NXDOMAIN cannot be told apart
-from one ending in NODATA there.
+A CNAME or DNAME chain that ends in such an answer is NOT covered and still
+returns SERVFAIL \- the response is classified as a chain rather than as a
+negative. That fails closed rather than leaking, but it is a real gap: a filter
+that blocks a name by pointing it at a blockpage and then answering NXDOMAIN
+for the target will still show the client SERVFAIL.
+.sp
+Note the interaction with \fBserve\-expired\fP. Once a permitted answer has
+been cached, a repeat query for the same question takes the serve\-expired path
+before reaching this option, so the client is answered from that cached copy;
+if that copy cannot be turned into a reply, the query is SERVFAIL even though
+this option would have served it. The cached entry need not be expired.
 .sp
 Default: no
 .UNINDENT
