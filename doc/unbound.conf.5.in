@@ -4863,6 +4863,22 @@ Can be entered multiple times, list a new domain for which it applies, one
 per line.
 Applies also to names underneath the name given.
 .UNINDENT
+.INDENT 0.0
+.TP
+.B dns64\-tags: \fI\(dq<list of tags>\(dq\fP
+Limit DNS64 processing to clients with a matching tag.
+.sp
+Tags need to be defined in \fI\%define\-tag\fP and can be assigned to
+client addresses with \fI\%access\-control\-tag\fP or to listening
+interfaces with \fI\%interface\-tag\fP.
+Enclose list of tags in quotes (\fB\(dq\(dq\fP) and put spaces between tags.
+.sp
+For clients that match an \fI\%access\-control*\fP setting, the
+access-control settings override the interface settings. Assign the DNS64
+tag with \fI\%access\-control\-tag\fP for those clients as well.
+.sp
+If no tags are specified, DNS64 processing will be applied to all clients.
+.UNINDENT
 .SH NAT64 OPTIONS
 .sp
 These options are part of the \fBserver:\fP section.

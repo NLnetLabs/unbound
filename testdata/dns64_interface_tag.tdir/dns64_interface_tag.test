@@ -1,0 +1,6 @@
+# #-- dns64_interface_tag.test --#
+[ -f ../.tpkg.var.master ] && source ../.tpkg.var.master
+[ -f .tpkg.var.test ] && source .tpkg.var.test
+
+unshare -rUn $shell dns64_interface_tag.test.scenario
+exit $?
