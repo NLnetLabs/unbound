@@ -1,3 +1,7 @@
+21 September 2026: Yorgos
+	- Merge #1510 from Andy Warner: Move unlink of temp file to before
+	  fatal exit.
+
 16 September 2026: Wouter
 	- Release of 1.26.1 with the following security fixes.
 	- Fix CVE-2026-81642, Heap buffer overflow and possible Remote Code
