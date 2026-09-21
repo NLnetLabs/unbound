@@ -1275,9 +1275,9 @@ void autr_write_file(struct module_env* env, struct trust_anchor* tp)
 	FlushFileBuffers((HANDLE)_get_osfhandle(_fileno(out)));
 #endif
 	if(fclose(out) != 0) {
+		unlink(tempf);
 		fatal_exit("could not complete write: %s: %s",
 			fname, strerror(errno));
-		unlink(tempf);
 		return;
 	}
 	/* success; overwrite actual file */
