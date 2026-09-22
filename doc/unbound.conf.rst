@@ -2088,7 +2088,10 @@ These options are part of the ``server:`` section.
 @@UAHL@unbound.conf@do-not-query-localhost@@: *<yes or no>*
     If yes, localhost is added to the
     :ref:`do-not-query-address<unbound.conf.do-not-query-address>` entries,
-    both IPv6 ``::1`` and IPv4 ``127.0.0.1/8``.
+    both IPv4 ``127.0.0.1/8`` (also ``::ffff:127.0.0.0/104``) and IPv6 ``::1``.
+    Additionally, the zero subnets ``0.0.0.0/8`` (also ``::ffff:0:0/96``) and
+    ``::`` are added to the list since on some systems they route to
+    localhost as well.
     If no, then localhost can be used to send queries to.
 
     Default: yes

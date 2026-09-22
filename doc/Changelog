@@ -1,3 +1,7 @@
+22 September 2026: Yorgos
+	- Fix #1514: [FR] do-not-query-localhost is not including
+	  0.0.0.0/8 and ‘::’ in the manpage.
+
 21 September 2026: Yorgos
 	- Merge #1510 from Andy Warner: Move unlink of temp file to before
 	  fatal exit.
