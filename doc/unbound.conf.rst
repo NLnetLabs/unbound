@@ -1845,6 +1845,7 @@ These options are part of the ``server:`` section.
 
 @@UAHL@unbound.conf@harden-large-queries@@: *<yes or no>*
     Very large queries are ignored.
+    The cutoff value is chosen to be the normal UDP packet size (512 bytes).
     Default is no, since it is legal protocol wise to send these, and could be
     necessary for operation if TSIG or EDNS payload is very large.
 
