@@ -1990,8 +1990,26 @@ rpz_dns_msg_new(struct regional* region)
 	return msg;
 }
 
+/** Build a client-visible EDE (RFC 8914) text for an RPZ-triggered
+ * response, naming the RPZ zone (its configured rpz-log-name, if set) so
+ * the EDE text matches what rpz-log already reports server-side. Returns
+ * NULL (silently, matching regional_strdup's own OOM behaviour) on
+ * allocation failure -- the response is still emitted with the EDE code
+ * set, just without extra text. */
+static char*
+rpz_ede_text(struct rpz* r, struct regional* region)
+{
+	char buf[256];
+	if(r && r->log_name && r->log_name[0] != 0)
+		snprintf(buf, sizeof(buf), "blocked by RPZ policy \"%s\"",
+			r->log_name);
+	else
+		snprintf(buf, sizeof(buf), "blocked by RPZ policy");
+	return regional_strdup(region, buf);
+}
+
 static inline struct dns_msg*
-rpz_synthesize_nodata(struct rpz* ATTR_UNUSED(r), struct module_qstate* ms,
+rpz_synthesize_nodata(struct rpz* r, struct module_qstate* ms,
 	struct query_info* qinfo, struct auth_zone* az)
 {
 	struct dns_msg* msg = rpz_dns_msg_new(ms->region);
@@ -2009,10 +2027,11 @@ rpz_synthesize_nodata(struct rpz* ATTR_UNUSED(r), struct module_qstate* ms,
 					     0, /* ar */
 					     0, /* total */
 					     sec_status_insecure,
-					     LDNS_EDE_NONE);
+					     LDNS_EDE_BLOCKED);
 	if(!msg->rep)
 		return NULL;
 	msg->rep->authoritative = 1;
+	msg->rep->reason_bogus_str = rpz_ede_text(r, ms->region);
 	if(!rpz_add_soa(msg->rep, ms, az))
 		return NULL;
 	return msg;
@@ -2041,17 +2060,18 @@ rpz_synthesize_nxdomain(struct rpz* r, struct module_qstate* ms,
 					     0, /* ar */
 					     0, /* total */
 					     sec_status_insecure,
-					     LDNS_EDE_NONE);
+					     LDNS_EDE_BLOCKED);
 	if(!msg->rep)
 		return NULL;
 	msg->rep->authoritative = 1;
+	msg->rep->reason_bogus_str = rpz_ede_text(r, ms->region);
 	if(!rpz_add_soa(msg->rep, ms, az))
 		return NULL;
 	return msg;
 }
 
 static inline struct dns_msg*
-rpz_synthesize_localdata_from_rrset(struct rpz* ATTR_UNUSED(r), struct module_qstate* ms,
+rpz_synthesize_localdata_from_rrset(struct rpz* r, struct module_qstate* ms,
 	struct query_info* qi, struct local_rrset* rrset, struct auth_zone* az)
 {
 	struct dns_msg* msg = NULL;
@@ -2075,12 +2095,13 @@ rpz_synthesize_localdata_from_rrset(struct rpz* ATTR_UNUSED(r), struct module_qs
                                                    0, /* ar */
                                                    1, /* total */
                                                    sec_status_insecure,
-                                                   LDNS_EDE_NONE);
+                                                   LDNS_EDE_BLOCKED);
 	if(new_reply_info == NULL) {
 		log_err("out of memory");
 		return NULL;
 	}
 	new_reply_info->authoritative = 1;
+	new_reply_info->reason_bogus_str = rpz_ede_text(r, ms->region);
 	rp = respip_copy_rrset(rrset->rrset, ms->region);
 	if(rp == NULL) {
 		log_err("out of memory");
@@ -2239,12 +2260,13 @@ rpz_synthesize_cname_override_msg(struct rpz* r, struct module_qstate* ms,
                                                    0, /* ar */
                                                    1, /* total */
                                                    sec_status_insecure,
-                                                   LDNS_EDE_NONE);
+                                                   LDNS_EDE_BLOCKED);
 	if(new_reply_info == NULL) {
 		log_err("out of memory");
 		return NULL;
 	}
 	new_reply_info->authoritative = 1;
+	new_reply_info->reason_bogus_str = rpz_ede_text(r, ms->region);
 
 	rp = respip_copy_rrset(r->cname_override, ms->region);
 	if(rp == NULL) {
@@ -2300,7 +2322,7 @@ rpz_synthesize_qname_localdata(struct module_env* env, struct rpz* r,
 	}
 
 	ret = local_zones_zone_answer(z, env, qinfo, edns, repinfo, buf, temp,
-		0 /* no local data used */, lzt);
+		0 /* no local data used */, lzt, rpz_ede_text(r, temp));
 	if(r->signal_nxdomain_ra && LDNS_RCODE_WIRE(sldns_buffer_begin(buf))
 		== LDNS_RCODE_NXDOMAIN)
 		LDNS_RA_CLR(sldns_buffer_begin(buf));
@@ -2746,7 +2768,8 @@ rpz_apply_maybe_clientip_trigger(struct auth_zones* az, struct module_env* env,
 		} else {
 			local_zones_zone_answer(*z_out /*likely NULL, no zone*/, env, qinfo, edns,
 				repinfo, buf, temp, 0 /* no local data used */,
-				rpz_action_to_localzone_type(client_action));
+				rpz_action_to_localzone_type(client_action),
+				rpz_ede_text(*r_out, temp));
 			if(*r_out && (*r_out)->signal_nxdomain_ra &&
 				LDNS_RCODE_WIRE(sldns_buffer_begin(buf))
 				== LDNS_RCODE_NXDOMAIN)
