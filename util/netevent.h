@@ -118,6 +118,9 @@ typedef int comm_point_callback_type(struct comm_point*, void*, int,
 /** for doq, the maximum dcid length, in ngtcp2 it is 20. */
 #define DOQ_MAX_CIDLEN 24
 
+/** Size of an UDP datagram */
+#define NORMAL_UDP_SIZE	512 /* bytes */
+
 /**
  * A communication point dispatcher. Thread specific.
  */

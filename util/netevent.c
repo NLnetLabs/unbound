@@ -6312,8 +6312,8 @@ comm_point_create_http_handler(struct comm_base *base,
 
 	c->http_min_version = http_version_2;
 	c->http2_stream_max_qbuffer_size = bufsize;
-	if(harden_large_queries && bufsize > 512)
-		c->http2_stream_max_qbuffer_size = 512;
+	if(harden_large_queries && bufsize > NORMAL_UDP_SIZE)
+		c->http2_stream_max_qbuffer_size = NORMAL_UDP_SIZE;
 	c->http2_max_streams = http_max_streams;
 	if(!(c->http_endpoint = strdup(http_endpoint))) {
 		log_err("could not strdup http_endpoint");

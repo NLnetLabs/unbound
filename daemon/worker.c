@@ -95,8 +95,6 @@
 #include "winrc/win_svc.h"
 #endif
 
-/** Size of an UDP datagram */
-#define NORMAL_UDP_SIZE	512 /* bytes */
 /** ratelimit for error responses */
 #define ERROR_RATELIMIT 100 /* qps */
 
