@@ -2070,7 +2070,8 @@ Default:  \(dq3 2 1 0 0\(dq
 .INDENT 0.0
 .TP
 .B harden\-short\-bufsize: \fI<yes or no>\fP 
-Very small EDNS buffer sizes from queries are ignored.
+Very small EDNS buffer sizes from queries are ignored and are instead
+set to the normal UDP packet size (512 bytes).
 .sp
 Default: yes (per \fI\%RFC 6891\fP)
 .UNINDENT
@@ -2078,6 +2079,7 @@ Default: yes (per \fI\%RFC 6891\fP)
 .TP
 .B harden\-large\-queries: \fI<yes or no>\fP 
 Very large queries are ignored.
+The cutoff value is chosen to be the normal UDP packet size (512 bytes).
 Default is no, since it is legal protocol wise to send these, and could be
 necessary for operation if TSIG or EDNS payload is very large.
 .sp
@@ -2198,6 +2200,18 @@ If yes, it could hamper future protocol developments that want to add
 records.
 .sp
 Default: no
+.UNINDENT
+.INDENT 0.0
+.TP
+.B harden\-cname\-follow: \fI<yes or no>\fP 
+Harden CNAME redirections by following them.
+If no, then upstream CNAME and DNAME redirections are allowed in a
+response without checking with further messages if those are valid.
+It can only really be disabled safely on localhost net or encrypted
+connectivity.
+Default is on to protect the cache integrity.
+.sp
+Default: yes
 .UNINDENT
 .INDENT 0.0
 .TP
@@ -2336,7 +2350,10 @@ Default: (none)
 .B do\-not\-query\-localhost: \fI<yes or no>\fP 
 If yes, localhost is added to the
 \fI\%do\-not\-query\-address\fP entries,
-both IPv6 \fB::1\fP and IPv4 \fB127.0.0.1/8\fP\&.
+both IPv4 \fB127.0.0.1/8\fP (also \fB::ffff:127.0.0.0/104\fP) and IPv6 \fB::1\fP\&.
+Additionally, the zero subnets \fB0.0.0.0/8\fP (also \fB::ffff:0:0/96\fP) and
+\fB::\fP are added to the list since on some systems they route to
+localhost as well.
 If no, then localhost can be used to send queries to.
 .sp
 Default: yes
@@ -2504,6 +2521,9 @@ Format is BIND\-9 style format, the \fBtrusted\-keys { name flag proto algo
 It is possible to use wildcards with this statement, the wildcard is
 expanded on start and on reload.
 .sp
+A wildcard that matches no files is not an error: the entry loads no
+trust anchors, and the condition is logged at operational verbosity.
+.sp
 Default: \(dq\(dq (no trusted keys file)
 .UNINDENT
 .INDENT 0.0
@@ -2613,7 +2633,7 @@ affected.
 Use this setting to protect the users that rely on this validator for
 authentication from potentially bad data in the additional section.
 .sp
-Default: yes
+Default: no
 .UNINDENT
 .INDENT 0.0
 .TP
@@ -3876,6 +3896,28 @@ This protects against poisonous contents, that could affect names in the
 same zone as a spoofed packet.
 .sp
 Default: yes
+.UNINDENT
+.INDENT 0.0
+.TP
+.B val\-validation\-attempts: \fI<number>\fP 
+Limit on the number of DNSSEC validation attempts for a query.
+This protects against too large numbers of cryptographic operations,
+like for a deep delegation chain.
+This counts attempts to validate RRSIGs.
+When it is exceeded, the query fails.
+.sp
+Default: 32
+.UNINDENT
+.INDENT 0.0
+.TP
+.B val\-hash\-attempts: \fI<number>\fP 
+Limit on the number of DNSSEC hash attempts for a query.
+This protects against too large numbers of cryptographic operations,
+like for a deep delegation chain.
+This counts DS hash attempts to match DNSKEYs.
+When it is exceeded, the query fails.
+.sp
+Default: 32
 .UNINDENT
 .INDENT 0.0
 .TP
