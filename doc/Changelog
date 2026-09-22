@@ -3,6 +3,7 @@
 	  0.0.0.0/8 and ‘::’ in the man page.
 	- Fix #1513: [FR] Size of harden-large-queries in the man page.
 	- Move NORMAL_UDP_SIZE around.
+	- Clarify man page text for harden-short-bufsize.
 
 21 September 2026: Yorgos
 	- Merge #1510 from Andy Warner: Move unlink of temp file to before

@@ -1838,7 +1838,8 @@ These options are part of the ``server:`` section.
 
 
 @@UAHL@unbound.conf@harden-short-bufsize@@: *<yes or no>*
-    Very small EDNS buffer sizes from queries are ignored.
+    Very small EDNS buffer sizes from queries are ignored and are instead
+    set to the normal UDP packet size (512 bytes).
 
     Default: yes (per :rfc:`6891`)
 
