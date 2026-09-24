@@ -2097,6 +2097,7 @@ rpz_synthesize_localdata_from_rrset(struct rpz* ATTR_UNUSED(r), struct module_qs
 	 * actual data. So that the actual network data and fake data
 	 * are kept track of separately. */
 	rp->rk.flags |= PACKED_RRSET_RPZ;
+	rp->entry.hash = rrset_key_hash(&rp->rk);
 	new_reply_info->rrsets[0] = rp;
 	msg->rep = new_reply_info;
 	if(!rpz_add_soa(msg->rep, ms, az))
@@ -2262,6 +2263,7 @@ rpz_synthesize_cname_override_msg(struct rpz* r, struct module_qstate* ms,
 	 * actual data. So that the actual network data and fake data
 	 * are kept track of separately. */
 	rp->rk.flags |= PACKED_RRSET_RPZ;
+	rp->entry.hash = rrset_key_hash(&rp->rk);
 	new_reply_info->rrsets[0] = rp;
 
 	msg->rep = new_reply_info;

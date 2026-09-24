@@ -1511,6 +1511,7 @@ val_neg_getmsg(struct val_neg_cache* neg, struct query_info* qinfo,
 				lock_rw_unlock(&cache_wc->entry.lock);
 				wcrr->rk.dname = qinfo->qname;
 				wcrr->rk.dname_len = qinfo->qname_len;
+				wcrr->entry.hash = rrset_key_hash(&wcrr->rk);
 				if(!dns_msg_ansadd(msg, region, wcrr, 0))
 					return NULL;
 				/* No SOA needed for wildcard synthesised
