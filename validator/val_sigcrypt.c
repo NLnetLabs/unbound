@@ -1432,6 +1432,7 @@ rrset_canonical(struct regional* region, sldns_buffer* buf,
 			return 0;
 		k->rk.dname = new_dname;
 		k->rk.dname_len = can_owner_len;
+		k->entry.hash = rrset_key_hash(&k->rk);
 	}
 	
 

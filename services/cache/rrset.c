@@ -222,6 +222,7 @@ rrset_cache_update(struct rrset_cache* r, struct rrset_ref* ref,
 			the grace ttl amount.
 			This means the ref was not changed by the call. */
 	}
+	log_assert(k->entry.hash == rrset_key_hash(&k->rk));
 	/* looks up item with a readlock - no editing! */
 	if((e=slabhash_lookup(&r->table, h, k, 0)) != 0) {
 		/* return id and key as they will be used in the cache
