@@ -45,26 +45,28 @@
 ;     RequiredForOnline=routable
 ;
 [Unit]
-Description=Validating, recursive, and caching DNS resolver
-Documentation=man:unbound(8)
+Description=unbound-anchor
+Documentation=man:unbound-anchor(8)
 After=network-online.target
 Wants=network-online.target
-Before=nss-lookup.target
-# These two are needed for systemd-managed root.hints and trusted-key.key updates.
-#After=unbound-roothints.service
-#Wants=unbound-roothints.service
-#After=unbound-anchor.service
-#Wants=unbound-anchor.service
+After=unbound-roothints.service
+Wants=unbound-roothints.service
+Before=unbound.service
+OnFailure=logger "Error (unbound-anchor): Please check root anchor."
 
 [Install]
 WantedBy=multi-user.target
 
 [Service]
-ExecReload=+/bin/kill -HUP $MAINPID
-ExecStart=@UNBOUND_SBIN_DIR@/unbound -d -p
+User=unbound
+Group=unbound
+ExecCondition=@UNBOUND_RUN_DIR@/roothints-sig.sh
+ExecStart=/bin/cp "/etc/trusted-key.key" @UNBOUND_ROOTKEY_FILE@
+ExecStart=@UNBOUND_SBIN_DIR@/unbound-anchor -f "/etc/resolv.conf" -r @UNBOUND_RUN_DIR@/root.hints -a @UNBOUND_ROOTKEY_FILE@ -c @UNBOUND_RUN_DIR@/icannbundle.pem
 NotifyAccess=main
-Type=notify
-CapabilityBoundingSet=CAP_NET_BIND_SERVICE CAP_SETGID CAP_SETUID CAP_SYS_CHROOT CAP_SYS_RESOURCE CAP_NET_ADMIN
+Type=oneshot
+# TODO: Needs checking. Does unbound-anchor require net capabilities?
+CapabilityBoundingSet=CAP_DAC_OVERRIDE CAP_NET_RAW CAP_NET_OVERRIDE
 MemoryDenyWriteExecute=true
 NoNewPrivileges=true
 PrivateDevices=true
@@ -74,26 +76,17 @@ ProtectClock=true
 ProtectControlGroups=true
 ProtectKernelLogs=true
 ProtectKernelModules=true
-# This breaks using socket options like 'so-rcvbuf'. Explicitly disable for visibility.
-ProtectKernelTunables=false
+ProtectKernelTunables=true
 ProtectProc=invisible
 ProtectSystem=strict
 RuntimeDirectory=unbound
 ConfigurationDirectory=unbound
 StateDirectory=unbound
-RestrictAddressFamilies=AF_INET AF_INET6 AF_NETLINK AF_UNIX
+RestrictAddressFamilies=AF_INET AF_INET6
 RestrictRealtime=true
 SystemCallArchitectures=native
-SystemCallFilter=~@clock @cpu-emulation @debug @keyring @module mount @obsolete @resources
 RestrictNamespaces=yes
 LockPersonality=yes
 RestrictSUIDSGID=yes
-ReadWritePaths=@UNBOUND_RUN_DIR@ @UNBOUND_CHROOT_DIR@
-
-# Below rules are needed when chroot is enabled (usually it's enabled by default).
-# If chroot is disabled like chroot: "" then they may be safely removed.
-TemporaryFileSystem=@UNBOUND_CHROOT_DIR@/dev:ro
-TemporaryFileSystem=@UNBOUND_CHROOT_DIR@/run:ro
-BindReadOnlyPaths=-/run/systemd/notify:@UNBOUND_CHROOT_DIR@/run/systemd/notify
-BindReadOnlyPaths=-/dev/urandom:@UNBOUND_CHROOT_DIR@/dev/urandom
-BindPaths=-/dev/log:@UNBOUND_CHROOT_DIR@/dev/log
+ReadWritePaths=@UNBOUND_ROOTKEY_FILE@
+ReadOnlyPaths=/etc/trusted-key.key /etc/resolv.conf @UNBOUND_RUN_DIR@/root.hints @UNBOUND_RUN_DIR@/icannbundle.pem
