@@ -32,11 +32,61 @@
 %{
 #include <unistd.h>
 #include <fcntl.h>
+#ifdef __MINGW32__
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+#endif
 %}
 
 %types(FILE *);
 
 //#define SWIG_FILE3_DEBUG
+
+%{
+#ifdef __MINGW32__
+typedef LONG NTSTATUS;
+typedef struct _IO_STATUS_BLOCK {
+    union {
+        NTSTATUS Status;
+        PVOID Pointer;
+    };
+    ULONG_PTR Information;
+
+} IO_STATUS_BLOCK, * PIO_STATUS_BLOCK;
+typedef enum _FILE_INFORMATION_CLASS {
+    FileAccessInformation = 8,
+} FILE_INFORMATION_CLASS, * PFILE_INFORMATION_CLASS;
+typedef struct _FILE_ACCESS_INFORMATION {
+    ACCESS_MASK AccessFlags;
+} FILE_ACCESS_INFORMATION, * PFILE_ACCESS_INFORMATION;
+extern NTSTATUS __stdcall NtQueryInformationFile(
+	/*IN*/  HANDLE                 FileHandle,
+	/*OUT*/ PIO_STATUS_BLOCK       IoStatusBlock,
+	/*OUT*/ PVOID                  FileInformation,
+	/*IN*/  ULONG                  Length,
+	/*IN*/  FILE_INFORMATION_CLASS FileInformationClass
+);
+int fcntl_getfl(int fd)
+{
+	intptr_t fh;
+	NTSTATUS ntrc;
+	IO_STATUS_BLOCK sb;
+	FILE_ACCESS_INFORMATION fi;
+	int is_r, is_w;
+	fh = _get_osfhandle(fh);
+	if (fh == -1) { return -1; }
+	ntrc = NtQueryInformationFile((HANDLE)fh, &sb, &fi, sizeof(fi), FileAccessInformation);
+	if (ntrc != 0) { return -1; }
+	is_r = (fi.AccessFlags & FILE_READ_DATA) == FILE_READ_DATA;
+	is_w = (fi.AccessFlags & FILE_WRITE_DATA) == FILE_WRITE_DATA;
+	if (is_r && is_w) { return _O_RDWR; }
+	if (is_w) { return _O_WRONLY; }
+	if (is_r) { return _O_RDONLY; }
+	return -1;
+}
+#endif
+%}
+
 
 /* converts basic file descriptor flags onto a string */
 %fragment("fdfl_to_str", "header") {
@@ -63,7 +113,11 @@ is_obj_file(PyObject *obj) {
       PyObject_HasAttrString(obj, "fileno") &&             /* has fileno method */
       (PyObject_CallMethod(obj, "flush", NULL) != NULL) && /* flush() succeeded */
       ((fd = PyObject_AsFileDescriptor(obj)) != -1) &&     /* got file descriptor */
+%#ifdef __MINGW32__
+      ((fdfl = fcntl_getfl(fd)) != -1)
+%#else
       ((fdfl = fcntl(fd, F_GETFL)) != -1)                  /* got descriptor flags */
+%#endif
     ) {
     return 1;
   }
@@ -80,7 +134,11 @@ obj_to_file(PyObject *obj) {
   FILE *fp;
   if (is_obj_file(obj)) {
     fd = PyObject_AsFileDescriptor(obj);
+%#ifdef __MINGW32__
+    fdfl = fcntl_getfl(fd);
+%#else
     fdfl = fcntl(fd, F_GETFL);
+%#endif
     fp = fdopen(dup(fd), fdfl_to_str(fdfl)); /* the FILE* must be flushed
                                                 and closed after being used */
 #ifdef SWIG_FILE3_DEBUG
