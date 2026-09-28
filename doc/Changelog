@@ -1,5 +1,7 @@
 28 September 2026: Wouter
 	- Fix to log the errno for trust anchor write close fail.
+	- Merge #1518 from nshopik: rrset: rehash copies after
+	  changing the key.
 
 22 September 2026: Yorgos
 	- Fix #1514: [FR] do-not-query-localhost is not including
