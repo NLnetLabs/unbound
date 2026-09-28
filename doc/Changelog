@@ -2,6 +2,7 @@
 	- Fix to log the errno for trust anchor write close fail.
 	- Merge #1518 from nshopik: rrset: rehash copies after
 	  changing the key.
+	- Fix to allow for large (64Kb) packets with testbound.
 
 22 September 2026: Yorgos
 	- Fix #1514: [FR] do-not-query-localhost is not including
