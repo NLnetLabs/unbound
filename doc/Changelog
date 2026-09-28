@@ -1,3 +1,6 @@
+28 September 2026: Wouter
+	- Fix to log the errno for trust anchor write close fail.
+
 22 September 2026: Yorgos
 	- Fix #1514: [FR] do-not-query-localhost is not including
 	  0.0.0.0/8 and ‘::’ in the man page.
