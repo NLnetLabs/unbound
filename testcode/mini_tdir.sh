@@ -18,9 +18,9 @@ fi
 
 if test "$1" = "clean"; then
 	if test $quiet = 0; then
-		echo "rm -f result.* .done* .skip* .tdir.var.master .tdir.var.test"
+		echo "rm -f result.* .done* .skip* .tdir.var.master .tdir.var.test .testkeys-generated"
 	fi
-	rm -f result.* .done* .skip* .tdir.var.master .tdir.var.test
+	rm -f result.* .done* .skip* .tdir.var.master .tdir.var.test .testkeys-generated
 	exit 0
 fi
 if test "$1" = "fake"; then
@@ -112,6 +112,16 @@ if test "$1" != 'exe'; then
 	exit 1
 fi
 shift
+
+if test ! -f .testkeys-generated; then
+	if test ! -f ./gen_testkeys.sh ||
+		! sh ./gen_testkeys.sh .; then
+		echo "Unable to generate TLS test secrets." >&2
+		echo "From the repository root, run 'sh testdata/gen_testkeys.sh testdata' before running the tests." >&2
+		exit 1
+	fi
+	: > .testkeys-generated
+fi
 
 # do not execute if the disk is too full
 #DISKLIMIT=100000
