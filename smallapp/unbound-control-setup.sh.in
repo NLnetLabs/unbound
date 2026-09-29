@@ -209,6 +209,11 @@ chmod g+r,o-rw \
       "$CTL_BASE.pem" \
       "$CTL_BASE.key"
 
+# Ensure expected group permissions
+chmod g+r \
+      "$SVR_BASE.key" \
+      "$CTL_BASE.key" \
+
 cleanup
 
 echo "Setup success. Certificates created. Enable in unbound.conf file to use"
