@@ -3344,6 +3344,38 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 		iq->qchase.qname_len = orignamelen;
 	}
 
+	/* A DS referral whose NS sits exactly at the queried name is the
+	 * final answer; do not chase it down to the child. */
+	if(type == RESPONSE_TYPE_REFERRAL && iq->qchase.qtype == LDNS_RR_TYPE_DS
+		&& !iq->dsns_point && !(iq->chase_flags&BIT_RD)
+		&& reply_find_rrset_section_ns(iq->response->rep,
+			iq->qchase.qname, iq->qchase.qname_len,
+			LDNS_RR_TYPE_NS, iq->qchase.qclass)) {
+		if(!qstate->no_cache_store) {
+			iter_dns_store(qstate->env, &iq->response->qinfo,
+				iq->response->rep,
+				iq->qchase.qtype != iq->response->qinfo.qtype,
+				qstate->prefetch_leeway,
+				iq->dp&&iq->dp->has_parent_side_NS,
+				qstate->region, qstate->query_flags,
+				qstate->qstarttime, qstate->is_valrec);
+			if(qstate->env->neg_cache)
+				val_neg_addreferral(qstate->env->neg_cache,
+					iq->response->rep, iq->dp->name);
+		}
+		outbound_list_clear(&iq->outlist);
+		iq->num_current_queries = 0;
+		fptr_ok(fptr_whitelist_modenv_detach_subs(
+			qstate->env->detach_subs));
+		(*qstate->env->detach_subs)(qstate);
+		iq->num_target_queries = 0;
+		if(qstate->reply)
+			sock_list_insert(&qstate->reply_origin,
+				&qstate->reply->remote_addr,
+				qstate->reply->remote_addrlen, qstate->region);
+		return final_state(iq);
+	}
+
 	/* handle each of the type cases */
 	if(type == RESPONSE_TYPE_ANSWER) {
 		/* ANSWER type responses terminate the query algorithm, 
