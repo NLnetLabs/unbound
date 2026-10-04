@@ -1,0 +1,2 @@
+# #-- dns64_interface_tag.post --#
+# All processes run in the test's network namespace and exit with it.

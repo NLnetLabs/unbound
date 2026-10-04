@@ -1,0 +1,32 @@
+# #-- dns64_interface_tag.pre --#
+[ -f ../.tpkg.var.master ] && source ../.tpkg.var.master
+[ -f .tpkg.var.test ] && source .tpkg.var.test
+
+PRE="../.."
+. ../common.sh
+
+if test ! -x "`which unshare 2>&1`"; then
+	skip_test "no unshare (from util-linux package) available, skip test"
+fi
+
+if test -x "`which bash`"; then
+	shell="bash"
+else
+	shell="sh"
+fi
+
+get_random_port 3
+TAGGED_PORT=$RND_PORT
+UNTAGGED_PORT=$(($RND_PORT + 1))
+FORWARD_PORT=$(($RND_PORT + 2))
+
+echo "TAGGED_PORT=$TAGGED_PORT" >> .tpkg.var.test
+echo "UNTAGGED_PORT=$UNTAGGED_PORT" >> .tpkg.var.test
+echo "FORWARD_PORT=$FORWARD_PORT" >> .tpkg.var.test
+echo "shell=$shell" >> .tpkg.var.test
+
+sed \
+	-e 's/@TAGGED_PORT\@/'$TAGGED_PORT'/' \
+	-e 's/@UNTAGGED_PORT\@/'$UNTAGGED_PORT'/' \
+	-e 's/@FORWARD_PORT\@/'$FORWARD_PORT'/' \
+	< dns64_interface_tag.conf > ub.conf
