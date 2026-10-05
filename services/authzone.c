@@ -397,6 +397,20 @@ auth_data_del(rbnode_type* n, void* ATTR_UNUSED(arg))
 	auth_data_delete(z);
 }
 
+/** delete chunklist */
+static void
+auth_chunk_list_delete(struct auth_chunk* first)
+{
+	struct auth_chunk* c, *cn;
+	c = first;
+	while(c) {
+		cn = c->next;
+		free(c->data);
+		free(c);
+		c = cn;
+	}
+}
+
 /** delete an auth zone structure (tree remove must be done elsewhere) */
 static void
 auth_zone_delete(struct auth_zone* z, struct auth_zones* az)
@@ -418,6 +432,7 @@ auth_zone_delete(struct auth_zone* z, struct auth_zones* az)
 	}
 	if(z->rpz)
 		rpz_delete(z->rpz);
+	auth_chunk_list_delete(z->perform_write_chunk_list);
 	free(z->name);
 	free(z->zonefile);
 	free(z);
@@ -2374,14 +2389,7 @@ static void
 auth_chunks_delete(struct auth_transfer* at)
 {
 	if(at->chunks_first) {
-		struct auth_chunk* c, *cn;
-		c = at->chunks_first;
-		while(c) {
-			cn = c->next;
-			free(c->data);
-			free(c);
-			c = cn;
-		}
+		auth_chunk_list_delete(at->chunks_first);
 	}
 	at->chunks_first = NULL;
 	at->chunks_last = NULL;
@@ -3598,7 +3606,13 @@ int auth_zones_lookup(struct auth_zones* az, struct query_info* qinfo,
 		*fallback = 1;
 		return 0;
 	}
-	if(z->zone_expired) {
+	if(z->zone_expired || (z->zonemd_check && z->zonemd_callback_env)) {
+		/* Do not serve from a zonemd-check zone while its ZONEMD
+		 * verification is still pending: the content is not yet known
+		 * to pass the configured check. The pending marker
+		 * (zonemd_callback_env) is set under z->lock when the async
+		 * lookup is spawned and cleared by the callback under z->lock,
+		 * so this test is race-free. */
 		*fallback = z->fallback_enabled;
 		lock_rw_unlock(&z->lock);
 		return 0;
@@ -3700,7 +3714,10 @@ int auth_zones_downstream_answer(struct auth_zones* az, struct module_env* env,
 		lock_rw_unlock(&z->lock);
 		return 0;
 	}
-	if(z->zone_expired) {
+	if(z->zone_expired || (z->zonemd_check && z->zonemd_callback_env)) {
+		/* see auth_zones_lookup: a pending ZONEMD verification is
+		 * treated like expiry - the zone content is not yet known
+		 * to pass the configured check. */
 		if(z->fallback_enabled) {
 			lock_rw_unlock(&z->lock);
 			return 0;
@@ -3916,6 +3933,12 @@ xfr_process_notify(struct auth_xfer* xfr, struct module_env* env,
 		return;
 	}
 	/* start new probe with this addr src, or note serial */
+	if(xfr->task_probe->worker == NULL && xfr->task_probe->only_lookup) {
+		/* Perform transfer, not just lookup this notify.
+		 * The only_lookup could be set during initial start up
+		 * when the timer sets it for address lookup. */
+		xfr->task_probe->only_lookup = 0;
+	}
 	if(!xfr_start_probe(xfr, env, fromhost)) {
 		/* not started because already in progress, note the serial */
 		xfr_note_notify_serial(xfr, has_serial, serial);
@@ -4513,7 +4536,7 @@ check_packet_ok(sldns_buffer* pkt, uint16_t qtype, struct auth_xfer* xfr,
 /** read one line from chunks into buffer at current position */
 static int
 chunkline_get_line(struct auth_chunk** chunk, size_t* chunk_pos,
-	sldns_buffer* buf)
+	sldns_buffer* buf, int* eof)
 {
 	int readsome = 0;
 	while(*chunk) {
@@ -4542,6 +4565,7 @@ chunkline_get_line(struct auth_chunk** chunk, size_t* chunk_pos,
 	}
 	/* no more text */
 	if(readsome) return 1;
+	*eof = 1;
 	return 0;
 }
 
@@ -4619,13 +4643,13 @@ chunkline_is_comment_line_or_empty(sldns_buffer* buf)
 /** find a line with ( ) collated */
 static int
 chunkline_get_line_collated(struct auth_chunk** chunk, size_t* chunk_pos,
-	sldns_buffer* buf)
+	sldns_buffer* buf, int* eof)
 {
 	size_t pos;
 	int parens = 0;
 	sldns_buffer_clear(buf);
 	pos = sldns_buffer_position(buf);
-	if(!chunkline_get_line(chunk, chunk_pos, buf)) {
+	if(!chunkline_get_line(chunk, chunk_pos, buf, eof)) {
 		if(sldns_buffer_position(buf) < sldns_buffer_limit(buf))
 			sldns_buffer_write_u8_at(buf, sldns_buffer_position(buf), 0);
 		else sldns_buffer_write_u8_at(buf, sldns_buffer_position(buf)-1, 0);
@@ -4636,11 +4660,16 @@ chunkline_get_line_collated(struct auth_chunk** chunk, size_t* chunk_pos,
 	while(parens > 0) {
 		chunkline_remove_trailcomment(buf, pos);
 		pos = sldns_buffer_position(buf);
-		if(!chunkline_get_line(chunk, chunk_pos, buf)) {
+		if(!chunkline_get_line(chunk, chunk_pos, buf, eof)) {
 			if(sldns_buffer_position(buf) < sldns_buffer_limit(buf))
 				sldns_buffer_write_u8_at(buf, sldns_buffer_position(buf), 0);
 			else sldns_buffer_write_u8_at(buf, sldns_buffer_position(buf)-1, 0);
 			sldns_buffer_flip(buf);
+			if(eof) {
+				verbose(VERB_ALGO, "http chunkline: "
+					"missing closing parenthesis");
+				*eof = 0; /* It is an error instead of EOF */
+			}
 			return 0;
 		}
 		parens += chunkline_count_parens(buf, pos);
@@ -4649,6 +4678,8 @@ chunkline_get_line_collated(struct auth_chunk** chunk, size_t* chunk_pos,
 	if(sldns_buffer_remaining(buf) < 1) {
 		verbose(VERB_ALGO, "http chunkline: "
 			"line too long");
+		/* null terminate for safety */
+		sldns_buffer_write_u8_at(buf, sldns_buffer_capacity(buf)-1, 0);
 		return 0;
 	}
 	sldns_buffer_write_u8_at(buf, sldns_buffer_position(buf), 0);
@@ -4717,8 +4748,8 @@ static int
 chunkline_non_comment_RR(struct auth_chunk** chunk, size_t* chunk_pos,
 	sldns_buffer* buf, struct sldns_file_parse_state* pstate)
 {
-	int ret;
-	while(chunkline_get_line_collated(chunk, chunk_pos, buf)) {
+	int ret, eof = 0;
+	while(chunkline_get_line_collated(chunk, chunk_pos, buf, &eof)) {
 		chunkline_newline_removal(buf);
 		if(chunkline_is_comment_line_or_empty(buf)) {
 			/* a comment, go to next line */
@@ -4736,6 +4767,7 @@ chunkline_non_comment_RR(struct auth_chunk** chunk, size_t* chunk_pos,
 		}
 		return 1;
 	}
+	if(!eof) return 0;
 	/* no noncomments, fail */
 	return 0;
 }
@@ -5280,7 +5312,7 @@ xfr_apply_http(uint8_t* name, size_t namelen, const char* host,
 	struct sldns_file_parse_state pstate;
 	struct auth_chunk* chunk;
 	size_t chunk_pos;
-	int ret;
+	int ret, eof=0;
 	memset(&pstate, 0, sizeof(pstate));
 	pstate.default_ttl = 3600;
 	if(namelen < sizeof(pstate.origin)) {
@@ -5293,7 +5325,8 @@ xfr_apply_http(uint8_t* name, size_t namelen, const char* host,
 	chunk = chunk_list;
 	chunk_pos = 0;
 	pstate.lineno = 0;
-	while(chunkline_get_line_collated(&chunk, &chunk_pos, scratch_buffer)) {
+	while(chunkline_get_line_collated(&chunk, &chunk_pos, scratch_buffer,
+		&eof)) {
 		/* process this line */
 		pstate.lineno++;
 		chunkline_newline_removal(scratch_buffer);
@@ -5330,6 +5363,13 @@ xfr_apply_http(uint8_t* name, size_t namelen, const char* host,
 			return 0;
 		}
 	}
+	if(!eof) {
+		verbose(VERB_ALGO, "error parsing line [%s:%d] %s",
+			xfr->task_transfer->master->file,
+			pstate.lineno,
+			sldns_buffer_begin(scratch_buffer));
+		return 0;
+	}
 	return 1;
 }
 
@@ -5357,7 +5397,7 @@ apply_http(struct auth_xfer* xfr, struct auth_zone* z,
 
 /** write http chunks to zonefile to create downloaded file */
 static int
-auth_zone_write_chunks(struct auth_xfer* xfr, const char* fname)
+auth_zone_write_chunks(struct auth_chunk* chunk_list, const char* fname)
 {
 	FILE* out;
 	struct auth_chunk* p;
@@ -5366,7 +5406,7 @@ auth_zone_write_chunks(struct auth_xfer* xfr, const char* fname)
 		log_err("could not open %s: %s", fname, strerror(errno));
 		return 0;
 	}
-	for(p = xfr->task_transfer->chunks_first; p ; p = p->next) {
+	for(p = chunk_list; p ; p = p->next) {
 		if(!write_out(out, (char*)p->data, p->len)) {
 			log_err("could not write http download to %s", fname);
 			fclose(out);
@@ -5377,14 +5417,91 @@ auth_zone_write_chunks(struct auth_xfer* xfr, const char* fname)
 	return 1;
 }
 
-/** write to zonefile after zone has been updated */
+/** write to zonefile after zone has been updated, z has rdlock by caller. */
 static void
-xfr_write_after_update(struct auth_xfer* xfr, struct module_env* env)
+zone_write_after_update(struct auth_zone* z, struct module_env* env,
+	struct auth_chunk* chunk_list)
 {
 	struct config_file* cfg = env->cfg;
-	struct auth_zone* z;
 	char tmpfile[1024];
 	char* zfilename;
+
+	if(z->zonefile == NULL || z->zonefile[0] == 0) {
+		/* no write needed, no zonefile set */
+		auth_chunk_list_delete(chunk_list);
+		return;
+	}
+	zfilename = z->zonefile;
+	if(cfg->chrootdir && cfg->chrootdir[0] && strncmp(zfilename,
+		cfg->chrootdir, strlen(cfg->chrootdir)) == 0)
+		zfilename += strlen(cfg->chrootdir);
+	if(verbosity >= VERB_ALGO) {
+		char nm[LDNS_MAX_DOMAINLEN];
+		dname_str(z->name, nm);
+		verbose(VERB_ALGO, "write zonefile %s for %s", zfilename, nm);
+	}
+
+	/* write to tempfile first */
+	if((size_t)strlen(zfilename) + 16 > sizeof(tmpfile)) {
+		verbose(VERB_ALGO, "tmpfilename too long, cannot update "
+			" zonefile %s", zfilename);
+		auth_chunk_list_delete(chunk_list);
+		return;
+	}
+	snprintf(tmpfile, sizeof(tmpfile), "%s.tmp%u", zfilename,
+		(unsigned)getpid());
+	if(chunk_list) {
+		/* use the stored chunk list to write them */
+		if(!auth_zone_write_chunks(chunk_list, tmpfile)) {
+			unlink(tmpfile);
+			auth_chunk_list_delete(chunk_list);
+			return;
+		}
+		auth_chunk_list_delete(chunk_list);
+	} else if(!auth_zone_write_file(z, tmpfile)) {
+		unlink(tmpfile);
+		return;
+	}
+#ifdef UB_ON_WINDOWS
+	(void)unlink(zfilename); /* windows does not replace file with rename() */
+#endif
+	if(rename(tmpfile, zfilename) < 0) {
+		log_err("could not rename(%s, %s): %s", tmpfile, zfilename,
+			strerror(errno));
+		unlink(tmpfile);
+		return;
+	}
+}
+
+/** write to zonefile after zone has updated, reacquires z readlock. */
+static void
+zone_write_after_update_reacq(uint8_t* bakname, size_t baknamelen,
+	uint16_t bakdclass, struct module_env* env,
+	struct auth_chunk* chunk_list)
+{
+	struct auth_zone* z;
+	/* get lock again, so it is a readlock and concurrently queries
+	 * can be answered */
+	lock_rw_rdlock(&env->auth_zones->lock);
+	z = auth_zone_find(env->auth_zones, bakname, baknamelen, bakdclass);
+	if(!z) {
+		lock_rw_unlock(&env->auth_zones->lock);
+		/* the zone is gone, ignore xfr results */
+		return;
+	}
+	lock_rw_rdlock(&z->lock);
+	lock_rw_unlock(&env->auth_zones->lock);
+
+	zone_write_after_update(z, env, chunk_list);
+	lock_rw_unlock(&z->lock);
+}
+
+/** write to zonefile after zone has been updated */
+static void
+xfr_write_after_update(struct auth_xfer* xfr, struct module_env* env,
+	struct auth_chunk* chunk_list)
+{
+	struct auth_zone* z;
 	lock_basic_unlock(&xfr->lock);
 
 	/* get lock again, so it is a readlock and concurrently queries
@@ -5402,52 +5519,7 @@ xfr_write_after_update(struct auth_xfer* xfr, struct module_env* env)
 	lock_basic_lock(&xfr->lock);
 	lock_rw_unlock(&env->auth_zones->lock);
 
-	if(z->zonefile == NULL || z->zonefile[0] == 0) {
-		lock_rw_unlock(&z->lock);
-		/* no write needed, no zonefile set */
-		return;
-	}
-	zfilename = z->zonefile;
-	if(cfg->chrootdir && cfg->chrootdir[0] && strncmp(zfilename,
-		cfg->chrootdir, strlen(cfg->chrootdir)) == 0)
-		zfilename += strlen(cfg->chrootdir);
-	if(verbosity >= VERB_ALGO) {
-		char nm[LDNS_MAX_DOMAINLEN];
-		dname_str(z->name, nm);
-		verbose(VERB_ALGO, "write zonefile %s for %s", zfilename, nm);
-	}
-
-	/* write to tempfile first */
-	if((size_t)strlen(zfilename) + 16 > sizeof(tmpfile)) {
-		verbose(VERB_ALGO, "tmpfilename too long, cannot update "
-			" zonefile %s", zfilename);
-		lock_rw_unlock(&z->lock);
-		return;
-	}
-	snprintf(tmpfile, sizeof(tmpfile), "%s.tmp%u", zfilename,
-		(unsigned)getpid());
-	if(xfr->task_transfer->master->http) {
-		/* use the stored chunk list to write them */
-		if(!auth_zone_write_chunks(xfr, tmpfile)) {
-			unlink(tmpfile);
-			lock_rw_unlock(&z->lock);
-			return;
-		}
-	} else if(!auth_zone_write_file(z, tmpfile)) {
-		unlink(tmpfile);
-		lock_rw_unlock(&z->lock);
-		return;
-	}
-#ifdef UB_ON_WINDOWS
-	(void)unlink(zfilename); /* windows does not replace file with rename() */
-#endif
-	if(rename(tmpfile, zfilename) < 0) {
-		log_err("could not rename(%s, %s): %s", tmpfile, zfilename,
-			strerror(errno));
-		unlink(tmpfile);
-		lock_rw_unlock(&z->lock);
-		return;
-	}
+	zone_write_after_update(z, env, chunk_list);
 	lock_rw_unlock(&z->lock);
 }
 
@@ -5480,6 +5552,8 @@ xfr_process_chunk_list(struct auth_xfer* xfr, struct module_env* env,
 	int* ixfr_fail)
 {
 	struct auth_zone* z;
+	int zonemd_in_progress;
+	struct auth_chunk* current_chunk_list = NULL;
 
 	/* obtain locks and structures */
 	lock_basic_unlock(&xfr->lock);
@@ -5520,6 +5594,7 @@ xfr_process_chunk_list(struct auth_xfer* xfr, struct module_env* env,
 	xfr->zone_expired = 0;
 	z->zone_expired = 0;
 	if(!xfr_find_soa(z, xfr)) {
+		auth_zone_clear_data(z);
 		lock_rw_unlock(&z->lock);
 		verbose(VERB_ALGO, "xfr from %s: no SOA in zone after update"
 			" (or malformed RR)", xfr->task_transfer->master->host);
@@ -5563,6 +5638,25 @@ xfr_process_chunk_list(struct auth_xfer* xfr, struct module_env* env,
 	if(z->rpz)
 		rpz_finish_config(z->rpz);
 
+	if(z->zonemd_check && z->zonemd_callback_env) {
+		zonemd_in_progress = 1;
+		z->zonemd_callback_perform_write = 1;
+		auth_chunk_list_delete(z->perform_write_chunk_list);
+		z->perform_write_chunk_list = NULL;
+		if(xfr->task_transfer->master->http) {
+			z->perform_write_chunk_list = xfr->task_transfer->chunks_first;
+			xfr->task_transfer->chunks_first = NULL;
+			auth_chunks_delete(xfr->task_transfer);
+		}
+	} else {
+		zonemd_in_progress = 0;
+		z->zonemd_callback_perform_write = 0;
+		if(xfr->task_transfer->master->http) {
+			current_chunk_list = xfr->task_transfer->chunks_first;
+			xfr->task_transfer->chunks_first = NULL;
+			auth_chunks_delete(xfr->task_transfer);
+		}
+	}
 	/* unlock */
 	lock_rw_unlock(&z->lock);
 
@@ -5573,7 +5667,9 @@ xfr_process_chunk_list(struct auth_xfer* xfr, struct module_env* env,
 			(unsigned)xfr->serial);
 	}
 	/* see if we need to write to a zonefile */
-	xfr_write_after_update(xfr, env);
+	if(!zonemd_in_progress) {
+		xfr_write_after_update(xfr, env, current_chunk_list);
+	}
 	return 1;
 }
 
@@ -8415,7 +8511,8 @@ static int zonemd_dnssec_verify_rrset(struct auth_zone* z,
 			"zonemd: verify %s RRset with DNSKEY", typestr);
 	}
 	sec = dnskeyset_verify_rrset(env, ve, &pk, dnskey, sigalg, why_bogus, NULL,
-		LDNS_SECTION_ANSWER, NULL, &verified, reasonbuf, reasonlen);
+		LDNS_SECTION_ANSWER, NULL, NULL, &verified, reasonbuf,
+		reasonlen);
 	if(sec == sec_status_secure) {
 		return 1;
 	}
@@ -8764,8 +8861,8 @@ zonemd_get_dnskey_from_anchor(struct auth_zone* z, struct module_env* env,
 	auth_zone_log(z->name, VERB_QUERY,
 		"zonemd: verify DNSKEY RRset with trust anchor");
 	sec = val_verify_DNSKEY_with_TA(env, ve, keystorage, anchor->ds_rrset,
-		anchor->dnskey_rrset, NULL, why_bogus, NULL, NULL, reasonbuf,
-		reasonlen);
+		anchor->dnskey_rrset, NULL, why_bogus, NULL, NULL, NULL,
+		reasonbuf, reasonlen);
 	regional_free_all(env->scratch);
 	if(sec == sec_status_secure) {
 		/* success */
@@ -8825,7 +8922,7 @@ auth_zone_verify_zonemd_key_with_ds(struct auth_zone* z,
 	keystorage->rk.rrset_class = htons(z->dclass);
 	auth_zone_log(z->name, VERB_QUERY, "zonemd: verify zone DNSKEY with DS");
 	sec = val_verify_DNSKEY_with_DS(env, ve, keystorage, ds, sigalg,
-		why_bogus, NULL, NULL, reasonbuf, reasonlen);
+		why_bogus, NULL, NULL, NULL, reasonbuf, reasonlen);
 	regional_free_all(env->scratch);
 	if(sec == sec_status_secure) {
 		/* success */
@@ -8854,9 +8951,13 @@ void auth_zonemd_dnskey_lookup_callback(void* arg, int rcode, sldns_buffer* buf,
 	char reasonbuf[256];
 	char* reason = NULL, *ds_bogus = NULL, *typestr="DNSKEY";
 	struct ub_packed_rrset_key* dnskey = NULL, *ds = NULL;
-	int is_insecure = 0, downprot;
+	int is_insecure = 0, downprot, perform_write = 0;
 	struct ub_packed_rrset_key keystorage;
 	uint8_t sigalg[ALGO_NEEDS_MAX+1];
+	uint8_t bakname[LDNS_MAX_DOMAINLEN];
+	size_t baknamelen;
+	uint16_t bakdclass;
+	struct auth_chunk* chunk_list = NULL;
 
 	lock_rw_wrlock(&z->lock);
 	env = z->zonemd_callback_env;
@@ -8979,7 +9080,37 @@ void auth_zonemd_dnskey_lookup_callback(void* arg, int rcode, sldns_buffer* buf,
 	auth_zone_verify_zonemd_with_key(z, env, &env->mesh->mods, dnskey,
 		is_insecure, NULL, downprot?sigalg:NULL);
 	regional_free_all(env->scratch);
+
+	if(z->zonemd_callback_perform_write) {
+		if(!z->zone_expired) {
+			/* Write to zonefile if the ZONEMD is okay. */
+			perform_write = 1;
+			/* copy the key to lookup the z structure.
+			 * The new lookup is readonly so concurrent
+			 * queries can continue. */
+			if(z->namelen > sizeof(bakname)) {
+				perform_write = 0;
+				auth_chunk_list_delete(z->perform_write_chunk_list);
+				z->perform_write_chunk_list = NULL;
+			} else {
+				memcpy(bakname, z->name, z->namelen);
+				baknamelen = z->namelen;
+				bakdclass = z->dclass;
+				chunk_list = z->perform_write_chunk_list;
+				z->perform_write_chunk_list = NULL;
+			}
+		} else {
+			auth_chunk_list_delete(z->perform_write_chunk_list);
+			z->perform_write_chunk_list = NULL;
+		}
+		z->zonemd_callback_perform_write = 0;
+	}
 	lock_rw_unlock(&z->lock);
+
+	if(perform_write) {
+		zone_write_after_update_reacq(bakname, baknamelen, bakdclass,
+			env, chunk_list);
+	}
 }
 
 /** lookup DNSKEY for ZONEMD verification */
@@ -9047,6 +9178,9 @@ zonemd_lookup_dnskey(struct auth_zone* z, struct module_env* env)
 		&auth_zonemd_dnskey_lookup_callback, z, 0,
 		&z->zonemd_callback_unique_info)) {
 		lock_rw_wrlock(&z->lock);
+		/* no callback will run; do not leave the pending
+		 * marker set */
+		z->zonemd_callback_env = NULL;
 		log_err("out of memory lookup of %s for zonemd",
 			(fetch_ds?"DS":"DNSKEY"));
 		return 0;

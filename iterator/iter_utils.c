@@ -1215,8 +1215,8 @@ iter_store_parentside_rrset(struct module_env* env,
 	rrset->entry.hash = rrset_key_hash(&rrset->rk);
 	ref.key = rrset;
 	ref.id = rrset->id;
-	/* ignore ret: if it was in the cache, ref updated */
-	(void)rrset_cache_update(env->rrset_cache, &ref, env->alloc, *env->now);
+	/* if it was in the cache, ref updated */
+	rrset_cache_update_unlock(env->rrset_cache, &ref, env->alloc, *env->now);
 }
 
 /** fetch NS record from reply, if any */
@@ -1711,4 +1711,29 @@ deleg_port_number(struct module_env* env)
 	if(env->cfg->ssl_upstream)
 		return env->cfg->ssl_port;
 	return -1;
+}
+
+void
+shorten_answer_cname(struct reply_info* rep, uint8_t* cutoff)
+{
+	size_t i, found = 0, removenum;
+	uint8_t* sname = NULL;
+	size_t snamelen = 0;
+	for(i=0; i<rep->an_numrrsets; i++) {
+		if(query_dname_compare(rep->rrsets[i]->rk.dname, cutoff) == 0) {
+			found = 1;
+			removenum = i;
+			break;
+		}
+		if(ntohs(rep->rrsets[i]->rk.type) == LDNS_RR_TYPE_CNAME) {
+			get_cname_target(rep->rrsets[i], &sname, &snamelen);
+			if(query_dname_compare(sname, cutoff) == 0) {
+				found = 1;
+				removenum = i+1;
+				break;
+			}
+		}
+	}
+	if(!found) return; /* not found */
+	val_reply_remove_answers(rep, removenum, rep->an_numrrsets-removenum);
 }

@@ -219,7 +219,9 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_ITER_SCRUB_RRSIG
 %token VAR_MAX_TRANSFER_SIZE VAR_MAX_TRANSFER_TIME
 %token VAR_MAX_GLOBAL_QUOTA VAR_HARDEN_UNVERIFIED_GLUE VAR_LOG_TIME_ISO
+%token VAR_VAL_VALIDATION_ATTEMPTS VAR_VAL_HASH_ATTEMPTS
 %token VAR_ITER_SCRUB_PROMISCUOUS VAR_LOG_THREAD_ID
+%token VAR_HARDEN_CNAME_FOLLOW
 
 %%
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
@@ -362,8 +364,10 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_harden_unknown_additional | server_disable_edns_do |
 	server_log_destaddr | server_cookie_secret_file |
 	server_iter_scrub_ns | server_iter_scrub_cname | server_max_global_quota |
-	server_iter_scrub_rrsig |
-	server_harden_unverified_glue | server_log_time_iso | server_iter_scrub_promiscuous
+	server_val_validation_attempts |
+	server_val_hash_attempts | server_iter_scrub_rrsig |
+	server_harden_unverified_glue | server_log_time_iso | server_iter_scrub_promiscuous |
+	server_harden_cname_follow
 	;
 stub_clause: stubstart contents_stub
 	{
@@ -1949,6 +1953,16 @@ server_harden_unknown_additional: VAR_HARDEN_UNKNOWN_ADDITIONAL STRING_ARG
 		free($2);
 	}
 	;
+server_harden_cname_follow: VAR_HARDEN_CNAME_FOLLOW STRING_ARG
+	{
+		OUTYY(("P(server_harden_cname_follow:%s)\n", $2));
+		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
+			yyerror("expected yes or no.");
+		else cfg_parser->cfg->harden_cname_follow =
+			(strcmp($2, "yes")==0);
+		free($2);
+	}
+	;
 server_use_caps_for_id: VAR_USE_CAPS_FOR_ID STRING_ARG
 	{
 		OUTYY(("P(server_use_caps_for_id:%s)\n", $2));
@@ -2391,33 +2405,9 @@ server_neg_cache_size: VAR_NEG_CACHE_SIZE STRING_ARG
 server_local_zone: VAR_LOCAL_ZONE STRING_ARG STRING_ARG
 	{
 		OUTYY(("P(server_local_zone:%s %s)\n", $2, $3));
-		if(strcmp($3, "static")!=0 && strcmp($3, "deny")!=0 &&
-		   strcmp($3, "refuse")!=0 && strcmp($3, "redirect")!=0 &&
-		   strcmp($3, "transparent")!=0 && strcmp($3, "nodefault")!=0
-		   && strcmp($3, "typetransparent")!=0
-		   && strcmp($3, "always_transparent")!=0
-		   && strcmp($3, "block_a")!=0
-		   && strcmp($3, "block_aaaa")!=0
-		   && strcmp($3, "block_a_wdata")!=0
-		   && strcmp($3, "block_aaaa_wdata")!=0
-		   && strcmp($3, "always_refuse")!=0
-		   && strcmp($3, "always_nxdomain")!=0
-		   && strcmp($3, "always_nodata")!=0
-		   && strcmp($3, "always_deny")!=0
-		   && strcmp($3, "always_null")!=0
-		   && strcmp($3, "noview")!=0
-		   && strcmp($3, "inform")!=0 && strcmp($3, "inform_deny")!=0
-		   && strcmp($3, "inform_redirect") != 0
-		   && strcmp($3, "ipset") != 0) {
-			yyerror("local-zone type: expected static, deny, "
-				"refuse, redirect, transparent, "
-				"typetransparent, inform, inform_deny, "
-				"inform_redirect, always_transparent, "
-				"block_a, block_aaaa, "
-				"block_a_wdata, block_aaaa_wdata, "
-				"always_refuse, always_nxdomain, "
-				"always_nodata, always_deny, always_null, "
-				"noview, nodefault or ipset");
+		if(!cfg_local_zone_type_value_check($3)) {
+			ub_c_error_msg("local-zone type: expected %s",
+				cfg_local_zone_type_list());
 			free($2);
 			free($3);
 		} else if(strcmp($3, "nodefault")==0) {
@@ -3383,27 +3373,9 @@ view_name: VAR_NAME STRING_ARG
 view_local_zone: VAR_LOCAL_ZONE STRING_ARG STRING_ARG
 	{
 		OUTYY(("P(view_local_zone:%s %s)\n", $2, $3));
-		if(strcmp($3, "static")!=0 && strcmp($3, "deny")!=0 &&
-		   strcmp($3, "refuse")!=0 && strcmp($3, "redirect")!=0 &&
-		   strcmp($3, "transparent")!=0 && strcmp($3, "nodefault")!=0
-		   && strcmp($3, "typetransparent")!=0
-		   && strcmp($3, "always_transparent")!=0
-		   && strcmp($3, "always_refuse")!=0
-		   && strcmp($3, "always_nxdomain")!=0
-		   && strcmp($3, "always_nodata")!=0
-		   && strcmp($3, "always_deny")!=0
-		   && strcmp($3, "always_null")!=0
-		   && strcmp($3, "noview")!=0
-		   && strcmp($3, "inform")!=0 && strcmp($3, "inform_deny")!=0
-		   && strcmp($3, "inform_redirect") != 0
-		   && strcmp($3, "ipset") != 0) {
-			yyerror("local-zone type: expected static, deny, "
-				"refuse, redirect, transparent, "
-				"typetransparent, inform, inform_deny, "
-				"inform_redirect, always_transparent, "
-				"always_refuse, always_nxdomain, "
-				"always_nodata, always_deny, always_null, "
-				"noview, nodefault or ipset");
+		if(!cfg_local_zone_type_value_check($3)) {
+			ub_c_error_msg("local-zone type: expected %s",
+				cfg_local_zone_type_list());
 			free($2);
 			free($3);
 		} else if(strcmp($3, "nodefault")==0) {
@@ -4325,6 +4297,24 @@ server_iter_scrub_promiscuous: VAR_ITER_SCRUB_PROMISCUOUS STRING_ARG
 			yyerror("expected yes or no.");
 		else cfg_parser->cfg->iter_scrub_promiscuous =
 			(strcmp($2, "yes")==0);
+		free($2);
+	}
+	;
+server_val_validation_attempts: VAR_VAL_VALIDATION_ATTEMPTS STRING_ARG
+	{
+		OUTYY(("P(server_val_validation_attempts:%s)\n", $2));
+		if(atoi($2) == 0 && strcmp($2, "0") != 0)
+			yyerror("number expected");
+		else cfg_parser->cfg->val_validation_attempts = atoi($2);
+		free($2);
+	}
+	;
+server_val_hash_attempts: VAR_VAL_HASH_ATTEMPTS STRING_ARG
+	{
+		OUTYY(("P(server_val_hash_attempts:%s)\n", $2));
+		if(atoi($2) == 0 && strcmp($2, "0") != 0)
+			yyerror("number expected");
+		else cfg_parser->cfg->val_hash_attempts = atoi($2);
 		free($2);
 	}
 	;

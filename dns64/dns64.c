@@ -968,6 +968,7 @@ dns64_adjust_ptr(struct module_qstate* qstate, struct module_qstate* super)
     if(answer) {
 	    answer->rk.dname = super->qinfo.qname;
 	    answer->rk.dname_len = super->qinfo.qname_len;
+	    answer->entry.hash = rrset_key_hash(&answer->rk);
     }
 }
 

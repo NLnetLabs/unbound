@@ -323,6 +323,7 @@ harden-below-nxdomain{COLON}	{ YDVAR(1, VAR_HARDEN_BELOW_NXDOMAIN) }
 harden-referral-path{COLON}	{ YDVAR(1, VAR_HARDEN_REFERRAL_PATH) }
 harden-algo-downgrade{COLON}	{ YDVAR(1, VAR_HARDEN_ALGO_DOWNGRADE) }
 harden-unknown-additional{COLON}	{ YDVAR(1, VAR_HARDEN_UNKNOWN_ADDITIONAL) }
+harden-cname-follow{COLON}	{ YDVAR(1, VAR_HARDEN_CNAME_FOLLOW) }
 use-caps-for-id{COLON}		{ YDVAR(1, VAR_USE_CAPS_FOR_ID) }
 caps-whitelist{COLON}		{ YDVAR(1, VAR_CAPS_WHITELIST) }
 caps-exempt{COLON}		{ YDVAR(1, VAR_CAPS_WHITELIST) }
@@ -609,6 +610,8 @@ iter-scrub-ns{COLON}		{ YDVAR(1, VAR_ITER_SCRUB_NS) }
 iter-scrub-cname{COLON}		{ YDVAR(1, VAR_ITER_SCRUB_CNAME) }
 iter-scrub-rrsig{COLON}		{ YDVAR(1, VAR_ITER_SCRUB_RRSIG) }
 max-global-quota{COLON}		{ YDVAR(1, VAR_MAX_GLOBAL_QUOTA) }
+val-validation-attempts{COLON}	{ YDVAR(1, VAR_VAL_VALIDATION_ATTEMPTS) }
+val-hash-attempts{COLON}	{ YDVAR(1, VAR_VAL_HASH_ATTEMPTS) }
 max-transfer-size{COLON}	{ YDVAR(1, VAR_MAX_TRANSFER_SIZE) }
 max-transfer-time{COLON}	{ YDVAR(1, VAR_MAX_TRANSFER_TIME) }
 iter-scrub-promiscuous{COLON}	{ YDVAR(1, VAR_ITER_SCRUB_PROMISCUOUS) }

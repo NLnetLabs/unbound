@@ -294,7 +294,14 @@ synth_cname_rrset(uint8_t** sname, size_t* snamelen, uint8_t* alias,
 		if(ttl_t > MAX_TTL) ttl_t = MAX_TTL;
 		ttl = (uint32_t)ttl_t;
 		sldns_write_uint32(cn->rr_first->ttl_data, ttl);
-		sldns_write_uint32(rrset->rr_first->ttl_data, ttl);
+		/* Do NOT write the clamp back into the packet buffer:
+		 * parse_packet already sized every name from the original
+		 * bytes and rdata_copy re-walks them trusting those sizes;
+		 * mutating packet bytes between the walks breaks that
+		 * invariant (compression pointers can target these TTL
+		 * bytes). The DNAME rrset receives the same clamp at store
+		 * time in rdata_copy, so the DNAME and the synthesized
+		 * CNAME still carry equal TTLs in the cache. */
 	}
 	sldns_write_uint16(cn->rr_first->ttl_data+4, aliaslen);
 	memmove(cn->rr_first->ttl_data+6, alias, aliaslen);
@@ -517,7 +524,7 @@ scrub_normalize(sldns_buffer* pkt, struct msg_parse* msg,
 			 * server, scrub down the length to something
 			 * shorter. This deletes everything after the limit
 			 * is reached. The iterator is going to look up
-			 * the content one by one anyway. */
+			 * the content one by one, if harden-cname-follow . */
 			remove_rrset("normalize: removing because too many cnames:",
 				pkt, msg, prev, &rrset);
 			continue;
@@ -648,6 +655,9 @@ scrub_normalize(sldns_buffer* pkt, struct msg_parse* msg,
 					if(rrset->type == LDNS_RR_TYPE_NS &&
 						rrset->rr_count > env->cfg->iter_scrub_ns) {
 						shorten_rrset(pkt, rrset, env->cfg->iter_scrub_ns);
+					} else if(rrset->type == LDNS_RR_TYPE_DS &&
+						rrset->rr_count > env->cfg->iter_scrub_ns) {
+						shorten_rrset(pkt, rrset, env->cfg->iter_scrub_ns);
 					}
 					prev = rrset;
 					rrset = rrset->rrset_all_next;
@@ -665,6 +675,9 @@ scrub_normalize(sldns_buffer* pkt, struct msg_parse* msg,
 		}
 
 		if(rrset->type == LDNS_RR_TYPE_NS &&
+			rrset->rr_count > env->cfg->iter_scrub_ns) {
+			shorten_rrset(pkt, rrset, env->cfg->iter_scrub_ns);
+		} else if(rrset->type == LDNS_RR_TYPE_DS &&
 			rrset->rr_count > env->cfg->iter_scrub_ns) {
 			shorten_rrset(pkt, rrset, env->cfg->iter_scrub_ns);
 		}
@@ -791,6 +804,11 @@ scrub_normalize(sldns_buffer* pkt, struct msg_parse* msg,
 					shorten_rrset(pkt, rrset, env->cfg->iter_scrub_ns);
 				}
 			}
+		} else if(rrset->type==LDNS_RR_TYPE_DS) {
+			if(rrset->rr_count > env->cfg->iter_scrub_ns) {
+				shorten_rrset(pkt, rrset,
+					env->cfg->iter_scrub_ns);
+			}
 		}
 		/* if this is type DS and we query for type DS we just got
 		 * a referral answer for our type DS query, fix packet */
@@ -893,8 +911,8 @@ store_rrset(sldns_buffer* pkt, struct msg_parse* msg, struct module_env* env,
 	packed_rrset_ttl_add(d, now);
 	ref.key = k;
 	ref.id = k->id;
-	/*ignore ret: it was in the cache, ref updated */
-	(void)rrset_cache_update(env->rrset_cache, &ref, env->alloc, now);
+	/* if it was in the cache, ref updated */
+	rrset_cache_update_unlock(env->rrset_cache, &ref, env->alloc, now);
 }
 
 /**
@@ -1021,6 +1039,8 @@ scrub_sanitize(sldns_buffer* pkt, struct msg_parse* msg,
 	uint8_t* ns_rrset_dname = NULL;
 	int added_rrlen_ede = 0;
 	struct rrset_parse* rrset, *prev;
+	uint8_t* sname = qinfo->qname;
+	size_t snamelen = qinfo->qname_len;
 	prev = NULL;
 	rrset = msg->rrset_first;
 
@@ -1028,6 +1048,7 @@ scrub_sanitize(sldns_buffer* pkt, struct msg_parse* msg,
 	 * it can be used from the cache. After normalization, an initial 
 	 * DNAME will have a correctly synthesized CNAME after it. */
 	if(rrset && rrset->type == LDNS_RR_TYPE_DNAME && 
+		env->cfg->harden_cname_follow /* CNAME chain is cut off, one DNAME is allowed here. */ &&
 		rrset->section == LDNS_SECTION_ANSWER &&
 		pkt_strict_sub(pkt, qinfo->qname, rrset->dname) &&
 		pkt_sub(pkt, rrset->dname, zonename)) {
@@ -1043,11 +1064,32 @@ scrub_sanitize(sldns_buffer* pkt, struct msg_parse* msg,
 	 * ANY queries get query name in answer section.
 	 * Remainders of CNAME chains are cut off and resolved by iterator. */
 	while(rrset && rrset->section == LDNS_SECTION_ANSWER) {
-		if(dname_pkt_compare(pkt, qinfo->qname, rrset->dname) != 0) {
+		if(!env->cfg->harden_cname_follow /* CNAME chain is allowed to stay */ &&
+			rrset->type == LDNS_RR_TYPE_DNAME &&
+			pkt_strict_sub(pkt, sname, rrset->dname) &&
+			pkt_sub(pkt, rrset->dname, zonename)) {
+			/* This DNAME is allowed to stay, the synthesized
+			 * CNAME follows next. */
+			prev = rrset;
+			rrset = rrset->rrset_all_next;
+			continue;
+		}
+		if(dname_pkt_compare(pkt, sname, rrset->dname) != 0) {
 			if(has_additional(rrset->type)) del_addi = 1;
 			remove_rrset("sanitize: removing extraneous answer "
 				"RRset:", pkt, msg, prev, &rrset);
 			continue;
+		}
+		if(!env->cfg->harden_cname_follow /* CNAME chain is allowed to stay */ &&
+			qinfo->qtype != LDNS_RR_TYPE_ANY &&
+			rrset->type == LDNS_RR_TYPE_CNAME &&
+			dname_pkt_compare(pkt, sname, rrset->dname) == 0) {
+			/* Follow the CNAME chain, and allow the elements
+			 * that match the CNAME chain. Also allow a DNAME
+			 * in front. */
+			if(!parse_get_cname_target(rrset, &sname, &snamelen,
+				pkt))
+				return 0;
 		}
 		prev = rrset;
 		rrset = rrset->rrset_all_next;

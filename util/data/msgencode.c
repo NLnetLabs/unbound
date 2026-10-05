@@ -1166,6 +1166,12 @@ extended_error_encode(sldns_buffer* buf, uint16_t rcode,
 			edns_opt_list_remove(&es.opt_list_inplace_cb_out, LDNS_EDNS_EDE);
 			edns_opt_list_remove(&es.opt_list_out, LDNS_EDNS_EDE);
 			attach_edns_record_max_msg_sz(buf, &es, edns->udp_size);
+		} else {
+			LDNS_TC_SET(sldns_buffer_begin(buf));
+			if(es.ext_rcode != 0) {
+				LDNS_RCODE_SET(sldns_buffer_begin(buf),
+					LDNS_RCODE_SERVFAIL);
+			}
 		}
 	}
 }

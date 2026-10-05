@@ -506,24 +506,37 @@ delete_cname_override(struct rpz* r)
 static int
 rpz_apply_cfg_elements(struct rpz* r, struct config_auth* p)
 {
+	enum rpz_action action_override;
 	if(p->rpz_taglist && p->rpz_taglistlen) {
-		r->taglistlen = p->rpz_taglistlen;
-		r->taglist = memdup(p->rpz_taglist, r->taglistlen);
-		if(!r->taglist) {
+		uint8_t* taglist = memdup(p->rpz_taglist, p->rpz_taglistlen);
+		if(!taglist) {
 			log_err("malloc failure on RPZ taglist alloc");
 			return 0;
+		}
+		if(r->taglist)
+			free(r->taglist);
+		r->taglist = taglist;
+		r->taglistlen = p->rpz_taglistlen;
+	} else {
+		/* free taglist, if any */
+		if(r->taglist) {
+			free(r->taglist);
+			r->taglist = NULL;
+			r->taglistlen = 0;
 		}
 	}
 
 	if(p->rpz_action_override) {
-		r->action_override = rpz_config_to_action(p->rpz_action_override);
+		action_override = rpz_config_to_action(p->rpz_action_override);
 	}
 	else
-		r->action_override = RPZ_NO_OVERRIDE_ACTION;
+		action_override = RPZ_NO_OVERRIDE_ACTION;
 
-	if(r->action_override == RPZ_CNAME_OVERRIDE_ACTION) {
+	if(action_override == RPZ_CNAME_OVERRIDE_ACTION) {
 		uint8_t nm[LDNS_MAX_DOMAINLEN+1];
 		size_t nmlen = sizeof(nm);
+		struct regional* newr;
+		struct ub_packed_rrset_key* cname_override;
 
 		if(!p->rpz_cname) {
 			log_err("rpz: override with cname action found, but no "
@@ -536,17 +549,39 @@ rpz_apply_cfg_elements(struct rpz* r, struct config_auth* p)
 				p->rpz_cname);
 			return 0;
 		}
-		r->cname_override = new_cname_override(r->region, nm, nmlen);
-		if(!r->cname_override) {
+		newr = regional_create_custom(sizeof(struct regional));
+		if(!newr) {
+			log_err("malloc failure on RPZ cname override region");
 			return 0;
 		}
+		cname_override = new_cname_override(newr, nm, nmlen);
+		if(!cname_override) {
+			regional_destroy(newr);
+			return 0;
+		}
+		regional_destroy(r->region);
+		r->region = newr;
+		r->cname_override = cname_override;
+	} else {
+		delete_cname_override(r);
 	}
+	r->action_override = action_override;
 	r->log = p->rpz_log;
 	r->signal_nxdomain_ra = p->rpz_signal_nxdomain_ra;
 	if(p->rpz_log_name) {
-		if(!(r->log_name = strdup(p->rpz_log_name))) {
+		char* log_name = strdup(p->rpz_log_name);
+		if(!log_name) {
 			log_err("malloc failure on RPZ log_name strdup");
 			return 0;
+		}
+		if(r->log_name)
+			free(r->log_name);
+		r->log_name = log_name;
+	} else {
+		/* free logname, if any */
+		if(r->log_name) {
+			free(r->log_name);
+			r->log_name = NULL;
 		}
 	}
 	return 1;
@@ -616,22 +651,6 @@ rpz_config(struct rpz* r, struct config_auth* p)
 {
 	/* If the zonefile changes, it is read later, after which
 	 * rpz_clear and rpz_finish_config is called. */
-
-	/* free taglist, if any */
-	if(r->taglist) {
-		free(r->taglist);
-		r->taglist = NULL;
-		r->taglistlen = 0;
-	}
-
-	/* free logname, if any */
-	if(r->log_name) {
-		free(r->log_name);
-		r->log_name = NULL;
-	}
-
-	delete_cname_override(r);
-
 	if(!rpz_apply_cfg_elements(r, p))
 		return 0;
 	return 1;
@@ -2078,6 +2097,7 @@ rpz_synthesize_localdata_from_rrset(struct rpz* ATTR_UNUSED(r), struct module_qs
 	 * actual data. So that the actual network data and fake data
 	 * are kept track of separately. */
 	rp->rk.flags |= PACKED_RRSET_RPZ;
+	rp->entry.hash = rrset_key_hash(&rp->rk);
 	new_reply_info->rrsets[0] = rp;
 	msg->rep = new_reply_info;
 	if(!rpz_add_soa(msg->rep, ms, az))
@@ -2243,6 +2263,7 @@ rpz_synthesize_cname_override_msg(struct rpz* r, struct module_qstate* ms,
 	 * actual data. So that the actual network data and fake data
 	 * are kept track of separately. */
 	rp->rk.flags |= PACKED_RRSET_RPZ;
+	rp->entry.hash = rrset_key_hash(&rp->rk);
 	new_reply_info->rrsets[0] = rp;
 
 	msg->rep = new_reply_info;

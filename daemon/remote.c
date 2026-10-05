@@ -6285,6 +6285,7 @@ fr_atomic_copy_cfg(struct config_file* oldcfg, struct config_file* cfg,
 	COPY_VAR_int(harden_referral_path);
 	COPY_VAR_int(harden_algo_downgrade);
 	COPY_VAR_int(harden_unknown_additional);
+	COPY_VAR_int(harden_cname_follow);
 	COPY_VAR_int(use_caps_bits_for_id);
 	COPY_VAR_ptr(caps_whitelist);
 	COPY_VAR_ptr(private_address);
@@ -6521,6 +6522,8 @@ fr_atomic_copy_cfg(struct config_file* oldcfg, struct config_file* cfg,
 	COPY_VAR_ptr(ipset_name_v6);
 #endif
 	COPY_VAR_int(ede);
+	COPY_VAR_int(val_validation_attempts);
+	COPY_VAR_int(val_hash_attempts);
 	COPY_VAR_int(iter_scrub_ns);
 	COPY_VAR_int(iter_scrub_cname);
 	COPY_VAR_int(iter_scrub_rrsig);

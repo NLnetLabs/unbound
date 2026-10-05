@@ -1,3 +1,135 @@
+2 October 2026: Yorgos
+	- Document libunbound's context lifetime during an async callback.
+	  Thanks to Omar Mousa for the suggestion.
+
+28 September 2026: Wouter
+	- Fix to log the errno for trust anchor write close fail.
+	- Merge #1518 from nshopik: rrset: rehash copies after
+	  changing the key.
+	- Fix to allow for large (64Kb) packets with testbound.
+
+22 September 2026: Yorgos
+	- Fix #1514: [FR] do-not-query-localhost is not including
+	  0.0.0.0/8 and ‘::’ in the man page.
+	- Fix #1513: [FR] Size of harden-large-queries in the man page.
+	- Move NORMAL_UDP_SIZE around.
+	- Clarify man page text for harden-short-bufsize.
+	- Update generated man pages.
+
+21 September 2026: Yorgos
+	- Merge #1510 from Andy Warner: Move unlink of temp file to before
+	  fatal exit.
+
+16 September 2026: Wouter
+	- Release of 1.26.1 with the following security fixes.
+	- Fix CVE-2026-81642, Heap buffer overflow and possible Remote Code
+	  Execution when digesting DNSKEY. Thanks to Yuqi Qiu and Xiang Li
+	  from Nankai University, AOSP Lab for the report.
+	- Fix CVE-2026-81634, Possible heap buffer overflow during DNSSEC
+	  canonicalization. Thanks to Vlatko Kosturjak with Marlink Cyber,
+	  for the report.
+	- Fix CVE-2026-82717, CNAME synthesis could lead to heap corruption.
+	  Thanks to Ben Morris from Anthropic for the report.
+	- Fix CVE-2026-77955, Possible ZONEMD verification bypass window.
+	  Thanks to Yuqi Qiu and Xiang Li from Nankai University, AOSP Lab,
+	  for the report. In addition, thanks to Qifan Zhang from Palo Alto
+	  Networks for also reporting this issue.
+	- Fix CVE-2026-78227, Use-after-free in DoQ stream output buffer on
+	  reset re-transmission. Thanks to Yuqi Qiu and Xiang Li from Nankai
+	  University, AOSP Lab for the report.
+	- Fix CVE-2026-80225, Possible degradation of service from continuous
+	  queries on the same TCP/DoT connection. Thanks to Qifan Zhang from
+	  Palo Alto Networks for the report.
+	- Fix CVE-2026-82720, Use-after-free in DoH stream cleanup code path.
+	  Thanks to Yuqi Qiu and Xiang Li from Nankai University, AOSP Lab,
+	  for the report.
+	- Fix CVE-2026-85501, Retrap: Novel Vulnerabilities to launch
+	  Algorithmic Complexity Attacks on DNSSEC. Thanks to Zuyao Xu and
+	  Xiang Li from Nankai University, AOSP Lab for the report. In
+	  addition, thanks to Qifan Zhang from Palo Alto Networks for a
+	  complimentary report.
+	- Fix CVE-2026-77860, 'serve-expired' can bypass Unbound 'wait-limit'.
+	  Thanks to Xuanchao Xie, Lutong Chen, and Kaiping Xue from the
+	  University of Science and Technology of China (USTC) for the
+	  report.
+	- The code repository continues with 1.26.2 under development,
+	  that includes the changes from before the 1.26.1 commits.
+	- Unit test for CVE-2026-81642.
+	- Unit test for CVE-2026-82717.
+	- Unit test for CVE-2026-85501.
+
+15 September 2026: Wouter
+	- For #1507: TOCTOU race in store_rrsets() can return a
+	  CNAME chain whose target owns no address.
+
+10 September 2026: Wouter
+	- Fix to construct the delegation point during DS NS find
+	  as a child side delegation point if that was the response.
+	  Thanks to Qifan Zhang, Palo Alto Networks, for the report.
+	- Fix to error on missing close parenthesis for zone file
+	  read and for url content read. Thanks to Qifan Zhang, Palo
+	  Alto Networks, for the report.
+
+8 September 2026: Wouter
+	- Fix to elevate the diagnostic for no matches for a wildcard
+	  trusted-keys-file, make it more descriptive, and more man
+	  page content for it. Thanks to Qifan Zhang, Palo Alto
+	  Networks, for the report.
+
+4 September 2026: Wouter
+	- Fix to make rpz_config leave the rpz with correct set up
+	  on failure. The struct is not half configured on exit.
+	  Thanks to Qifan Zhang, Palo Alto Networks, for the report.
+	- Fix to not change the action override in rpz_config, before
+	  the cname override has succeeded.
+
+3 September 2026: Wouter
+	- Fix to match NSEC3 hash length to the NSEC3 algorithm,
+	  this stops negative cache overdeletion. It also contrains
+	  the hash label length and checks if the NSEC nextowner
+	  is valid. Thanks to Yuqi Qiu & Xiang Li (Nankai University,
+	  AOSP Lab).
+	- Remove unused .travis.yml for ci integration.
+	- Fix to reorder SVCB and HTTPS svcparams for unknown RR form
+	  zonefile input. If it can not be parsed it is leniently
+	  accepted, much like as a secondary it leniently accepts it.
+	  Thanks to Qifan Zhang, Palo Alto Networks, for the report.
+	- Fix that when extended EDNS RCODE does not fit, at short
+	  udpsize, the reply is truncated with TC and fix for the
+	  rcode in that short reply to be a sensible rcode.
+	  Thanks to Qifan Zhang, Palo Alto Networks, for the report.
+	- Fix that when a partial EDNS option is in a query, the
+	  response is a more RFC conformant FORMERR, since the EDNS
+	  option is malformed. Also fix to have an EDNS size for
+	  the reply error encoding for failed EDNS parse of the query.
+	  Thanks to Qifan Zhang, Palo Alto Networks, for the report.
+
+2 September 2026: Wouter
+	- Fix to not commit to have_zone at apply AXFR time for auth
+	  zone transfers, so that later failure rolls back to not.
+	  The have_zone value is set later when the SOA is retrieved.
+	  Also fix to clear the zone data when a transfer does not
+	  have a valid SOA record in the zone for it.
+	  Thanks to Qifan Zhang, Palo Alto Networks, for the report.
+
+1 September 2026: Wouter
+	- Fix to allow block_a and other local-zone types in a view.
+	- Fix LOC RR parse to avoid double to uint32 cast overflow.
+	  Thanks to Qifan Zhang, Palo Alto Networks, for the report.
+
+26 August 2026: Wouter
+	- Fix notify for auth-zone during initial start up. It
+	  performs the transfer and not only lookup.
+
+24 August 2026: Wouter
+	- Fix #132: Add `harden-cname-follow: yes` config option, that
+	  can be used to disable cname scrubbing. That can be useful
+	  for when the traffic is on localhost only.
+
+21 August 2026: Wouter
+	- Fix to defend against double event deletion, that could cause
+	  event corruption and use after free, for comm_timer_disable.
+
 11 August 2026: Wouter
 	- Fix #1492 from zacek: Data race in log_init() on
 	  key_created/log_lock when calling ub_ctx_create()

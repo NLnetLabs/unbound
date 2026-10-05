@@ -1,0 +1,602 @@
+; config options
+; The island of trust is at example.com
+server:
+	trust-anchor: "example.com.    3600    IN      DS      2854 3 1 46e4ffc6e9a4793b488954bd3f0cc6af0dfb201b"
+	val-override-date: "20070916134226"
+	target-fetch-policy: "0 0 0 0 0"
+	qname-minimisation: "no"
+	fake-sha1: yes
+	trust-anchor-signaling: no
+	minimal-responses: no
+	ede: yes
+	# this is not the limit that is tested here.
+	val-hash-attempts: 128
+
+stub-zone:
+	name: "."
+	stub-addr: 193.0.14.129 	# K.ROOT-SERVERS.NET.
+CONFIG_END
+
+SCENARIO_BEGIN Test validator with too many tag matches
+
+; K.ROOT-SERVERS.NET.
+RANGE_BEGIN 0 100
+	ADDRESS 193.0.14.129 
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR NOERROR
+SECTION QUESTION
+. IN NS
+SECTION ANSWER
+. IN NS	K.ROOT-SERVERS.NET.
+SECTION ADDITIONAL
+K.ROOT-SERVERS.NET.	IN	A	193.0.14.129
+ENTRY_END
+
+ENTRY_BEGIN
+MATCH opcode subdomain
+ADJUST copy_id copy_query
+REPLY QR NOERROR
+SECTION QUESTION
+com. IN NS
+SECTION AUTHORITY
+com.	IN NS	a.gtld-servers.net.
+SECTION ADDITIONAL
+a.gtld-servers.net.	IN 	A	192.5.6.30
+ENTRY_END
+RANGE_END
+
+; a.gtld-servers.net.
+RANGE_BEGIN 0 100
+	ADDRESS 192.5.6.30
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR NOERROR
+SECTION QUESTION
+com. IN NS
+SECTION ANSWER
+com.    IN NS   a.gtld-servers.net.
+SECTION ADDITIONAL
+a.gtld-servers.net.     IN      A       192.5.6.30
+ENTRY_END
+
+ENTRY_BEGIN
+MATCH opcode subdomain
+ADJUST copy_id copy_query
+REPLY QR NOERROR
+SECTION QUESTION
+example.com. IN NS
+SECTION AUTHORITY
+example.com.	IN NS	ns.example.com.
+SECTION ADDITIONAL
+ns.example.com.		IN 	A	1.2.3.4
+ENTRY_END
+RANGE_END
+
+; ns.example.com.
+RANGE_BEGIN 0 100
+	ADDRESS 1.2.3.4
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR NOERROR
+SECTION QUESTION
+example.com. IN NS
+SECTION ANSWER
+example.com.    IN NS   ns.example.com.
+example.com.    3600    IN      RRSIG   NS 3 2 3600 20070926134150 20070829134150 2854 example.com. MC0CFQCN+qHdJxoI/2tNKwsb08pra/G7aAIUAWA5sDdJTbrXA1/3OaesGBAO3sI= ;{id = 2854}
+SECTION ADDITIONAL
+ns.example.com.         IN      A       1.2.3.4
+ns.example.com. 3600    IN      RRSIG   A 3 3 3600 20070926135752 20070829135752 2854 example.com. MC0CFQCMSWxVehgOQLoYclB9PIAbNP229AIUeH0vNNGJhjnZiqgIOKvs1EhzqAo= ;{id = 2854}
+ENTRY_END
+
+; response to DNSKEY priming query
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR NOERROR
+SECTION QUESTION
+example.com. IN DNSKEY
+SECTION ANSWER
+example.com.    3600    IN      DNSKEY  256 3 3 ALXLUsWqUrY3JYER3T4TBJII s70j+sDS/UT2QRp61SE7S3E EXopNXoFE73JLRmvpi/UrOO/Vz4Se 6wXv/CYCKjGw06U4WRgR YXcpEhJROyNapmdIKSx hOzfLVE1gqA0PweZR8d tY3aNQSRn3sPpwJr6Mi /PqQKAMMrZ9ckJpf1+b QMOOvxgzz2U1GS18b3y ZKcgTMEaJzd/GZYzi/B N2DzQ0MsrSwYXfsNLFO Bbs8PJMW4LYIxeeOe6rUgkWOF 7CC9Dh/dduQ1QrsJhmZAEFfd6ByYV+ ;{id = 2854 (zsk), size = 1688b}
+example.com.    3600    IN      RRSIG   DNSKEY 3 2 3600 20070926134802 20070829134802 2854 example.com. MCwCFG1yhRNtTEa3Eno2zhVVuy2EJX3wAhQeLyUp6+UXcpC5qGNu9tkrTEgPUg== ;{id = 2854}
+SECTION AUTHORITY
+example.com.	IN NS	ns.example.com.
+example.com.    3600    IN      RRSIG   NS 3 2 3600 20070926134150 20070829134150 2854 example.com. MC0CFQCN+qHdJxoI/2tNKwsb08pra/G7aAIUAWA5sDdJTbrXA1/3OaesGBAO3sI= ;{id = 2854}
+SECTION ADDITIONAL
+ns.example.com.		IN 	A	1.2.3.4
+ns.example.com. 3600    IN      RRSIG   A 3 3 3600 20070926135752 20070829135752 2854 example.com. MC0CFQCMSWxVehgOQLoYclB9PIAbNP229AIUeH0vNNGJhjnZiqgIOKvs1EhzqAo= ;{id = 2854}
+ENTRY_END
+
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR AA NOERROR
+SECTION QUESTION
+www.example.com. IN A
+SECTION ANSWER
+www.example.com. IN A	10.20.30.40
+www.example.com.        3600    IN      RRSIG   A 3 3 3600 20070926134150 20070829134150 2854 example.com. MC0CFC99iE9K5y2WNgI0gFvBWaTi9wm6AhUAoUqOpDtG5Zct+Qr9F3mSdnbc6V4= ;{id = 2854}
+ENTRY_END
+
+ENTRY_BEGIN
+MATCH opcode subdomain
+ADJUST copy_id copy_query
+REPLY QR NOERROR
+SECTION QUESTION
+sub1.example.com. IN A
+SECTION ANSWER
+SECTION AUTHORITY
+sub1.example.com.	IN NS	ns.sub1.example.com.
+
+sub1.example.com.	IN	DS	20 13 2 c3bd4c6000cff93b4ce8ca6c934d7f46ab1f2bb7283e40493798395627c9ca41
+sub1.example.com.	IN	DS	3539 13 2 2e33e1da915795ab2412fa116cab8b219707135aa6bcc48a5f8b1ca097c5a297
+sub1.example.com.	IN	DS	12688 13 2 87a10b8df44945b7dae0c12c98f82d04992587a8e0a2ed823b0789dd48fe889f
+sub1.example.com.	IN	DS	13058 13 2 e8f15b542b537cb7b4a2370575988d5e6dc58c495fe695961fc482be580396fa
+sub1.example.com.	IN	DS	18006 13 2 2a35a6f7d086c11493d34712ac819f74baaa674399d5d478fd056d0227c17b83
+sub1.example.com.	IN	DS	18279 13 2 4a4c9053b35a89d4ba1453fb8c0df658c6f473aa9042dabc9269f00e888751be
+sub1.example.com.	IN	DS	20669 13 2 6958b937ef837d76361e03eb11e780de5ee65e44faac5ec19daecdb9e4722b0d
+sub1.example.com.	IN	DS	25106 13 2 56bbbbaee440eb3649afebdd6a806105bdc345613bffa156b9b5f708cddb44cf
+sub1.example.com.	IN	DS	25932 13 2 76c6e7506e9b7306e547913d35e4cc9162c2cf3000b9b62cc0acb21c5e85b960
+sub1.example.com.	IN	DS	27845 13 2 ed630a116a6049eb5ccdd3f46aa09228bde76a0f3c43ac40731d3ebcdb65c161
+sub1.example.com.	IN	DS	29183 13 2 2a573047cd9945ec15aa6278dc3cd908d59732fa253ebffed6b35485e4e3d6f9
+sub1.example.com.	IN	DS	30380 13 2 a1dac7f7185404ca826ce62c5ec57b50f5584ee86e762c809af3f5ebc207f0a8
+sub1.example.com.	IN	DS	31753 13 2 c811dca5f7cfb8d82be1c145b1bf0f5f6275bed42f31ffdec45fb7ba54d76564
+sub1.example.com.	IN	DS	32621 13 2 4ba7774dbfa9115c6a188dce790b6b45480e0aa5c39602be08ccc139c68492de
+sub1.example.com.	IN	DS	33127 13 2 d45c3cbcc4cb71d53c80374efe2b6081e9d1add53bae66fb6bf61028b68d3cf9
+sub1.example.com.	IN	DS	37404 13 2 2480a04461a7425a5d897921eb6b493428abaf46ed6809f3fac53fd1465415ab
+sub1.example.com.	IN	DS	38693 13 2 ad6a97280b20cf4eac60c9e70db9712a5357d12166993f55c201b91d2b4c1ff5
+sub1.example.com.	IN	DS	40580 13 2 93ace4ec403fd790d1debb05f539f58797822fc75ac3dd0d7e2f8b1d3fdb126d
+sub1.example.com.	IN	DS	43985 13 2 2c8f7712ebd5fd18df7e6e58995b13d8204b258322078f473d5c28a76c03b8d7
+sub1.example.com.	IN	DS	44725 13 2 9e6631ddbc09355f8891c7713d8703c4e213d8c51b1126826d31c05a4b7991be
+sub1.example.com.	IN	DS	44975 13 2 4ea12a0336c18766537d195c608ce76a7ab7cbb5cce873a65fe0d9a662fcd9aa
+sub1.example.com.	IN	DS	49819 13 2 c7f1a7b39c26ffab7ff3775624a2e40aa73af44c84ebd80442c52cdb1abb991e
+sub1.example.com.	IN	DS	56088 13 2 653cff8afa5cda5d6efda676c2a73eccc3301f7e32437bff72a8b761fa1b6379
+sub1.example.com.	IN	DS	58926 13 2 39000f49e8914dee8602795fd559ac2b0b4d434da4c8d1908936e9acc0e42485
+sub1.example.com.	3600	IN	RRSIG	DS 3 3 3600 20070926134150 20070829134150 2854 example.com. AA2wcVQsxCw2VQcgrSp2zjxYP5ElbMVNMMdc/pMU77k5VkMThtZKygE=
+SECTION ADDITIONAL
+ns.sub1.example.com.		IN 	A	1.2.3.5
+ENTRY_END
+
+ENTRY_BEGIN
+MATCH opcode subdomain
+ADJUST copy_id copy_query
+REPLY QR NOERROR
+SECTION QUESTION
+sub2.example.com. IN A
+SECTION ANSWER
+SECTION AUTHORITY
+sub2.example.com.	IN NS	ns.sub2.example.com.
+
+; With this one DS record it works for sub2.example.com, since not that
+; many DNSKEY to RRSIG attempts are made.
+;sub2.example.com.	3600	IN	RRSIG	DS 3 3 3600 20070926134150 20070829134150 2854 example.com. AHyR2q4kMaOs9/SFLRgftMXPMu0CQRjRk8z2+3M7VAcnKzIck7VAcl0=
+; Here with 8 DS records, that match.
+sub2.example.com.	3600	IN	DS	3539 13 2 e94cf5357bdb8ce5423a0a5eacf564105ea1935fbf813c76bcc13eb34594167c
+sub2.example.com.	3600	IN	DS	12688 13 2 73d5613cba9bfe510ffa8241c20277d78b57a28d9b1d3c8ad23c2032fbe86a78
+sub2.example.com.	3600	IN	DS	13058 13 2 12e107e5a4c72620cfcdfe7c4186eccaf1b46501afb7bb3ca9e395a083e16fea
+sub2.example.com.	3600	IN	DS	18006 13 2 7a3525ee9385e36a2819a3b0e650f0aff4788b787d6ef7870d4956692b1d6feb
+sub2.example.com.	3600	IN	DS	18279 13 2 8a900772c1ff65553343920868996b2cf3be2dc5bdf182e962cb996dbd3f1682
+sub2.example.com.	3600	IN	DS	20669 13 2 54ad32be8029ce48cb6d45ffbdba918c11e70fbd416c2f3501321a4fcc2692c8
+sub2.example.com.	3600	IN	DS	25106 13 2 a6c125c2be2f301888e16255405d994c1b31ccc3ca72217399ae2a16c721cbeb
+sub2.example.com.	3600	IN	DS	20 13 2 87f0229abc95a9a463e15e572c52869224ac07098e72ec7bacf0b3e358e44674
+sub2.example.com.	3600	IN	RRSIG	DS 3 3 3600 20070926134150 20070829134150 2854 example.com. AFluwWeqE8NSEI+u1S+pDZBfgdBvbXBeGez5Wf35ojP0HIW+MIFCWL4=
+
+SECTION ADDITIONAL
+ns.sub2.example.com.		IN 	A	1.2.3.6
+ENTRY_END
+
+ENTRY_BEGIN
+MATCH opcode subdomain
+ADJUST copy_id copy_query
+REPLY QR NOERROR
+SECTION QUESTION
+sub3.example.com. IN A
+SECTION ANSWER
+SECTION AUTHORITY
+sub3.example.com.	IN NS	ns.sub3.example.com.
+sub3.example.com.	3600	IN	DS	20 13 2 64d2a1243b619ba0b1f14912fd560f3e9d27b0ae6f4df35625c74fe3015fb1d3
+sub3.example.com.	3600	IN	RRSIG	DS 3 3 3600 20070926134150 20070829134150 2854 example.com. AE7A38rpBCyGBEkqyQVqLHwFnjSmoIwOVEm5oh9bErGhqdB0fIF2ddw=
+SECTION ADDITIONAL
+ns.sub3.example.com.		IN 	A	1.2.3.7
+ENTRY_END
+RANGE_END
+
+; ns.sub1.example.com.
+; 24 DSes and 24 DNSKEYs
+RANGE_BEGIN 0 100
+	ADDRESS 1.2.3.5
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR AA NOERROR
+SECTION QUESTION
+ns.sub1.example.com. IN AAAA
+SECTION ANSWER
+SECTION AUTHORITY
+sub1.example.com. IN SOA a. b. 3600 3600 3600 3600 3600
+sub1.example.com.	3600	IN	RRSIG	SOA 13 3 3600 20070926134150 20070829134150 20 sub1.example.com. PyHa+O9jyNBtKuVilpPoqQGDKHdMCrfhm6A7GDj0+ZPXZAax/+hl10CVIUhl5YqCS3xGc3Zae/WNbD+1w3cIUQ==
+ENTRY_END
+
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR NOERROR
+SECTION QUESTION
+sub1.example.com. IN DNSKEY
+SECTION ANSWER
+; These keys actually match the DS record, but to have more match attempts they
+; are altered, below.
+;sub1.example.com.	IN	DNSKEY	257 3 13 n2P99SKaAUDt50U/cToH/0TmGJKG8+Pbiwl1WY/f5EVWZD/auO5QEyY6Tm9kLHzAEOcjWR701V74ZgyFPirxIA== ;{id = 20 (ksk), size = 256b}
+;sub1.example.com.	IN	DNSKEY	257 3 13 2biK+rkC8P/MV/UMDbksGCov08Tya5wrtrjeDOSez5W1qFqqPKXzxuMxecGSXIYgNM8Y/m8XdlwOd8Q6vUuw5A== ;{id = 3539 (ksk), size = 256b}
+;sub1.example.com.	IN	DNSKEY	257 3 13 UeL+mKovo+r7+B3egif1JxCHPfmbR4SU4m3s0Fp42ozze0FiMzEwRM85O4aYViPOmu0AKgfwuRjEM5aEM1pBug== ;{id = 12688 (ksk), size = 256b}
+;sub1.example.com.	IN	DNSKEY	257 3 13 iFe//OnLHLGXpE9i+4y3H+NefdDTZAEwYzDv0U+OIzs37lnOEMYTVqBxkLA82JDKMtnjupCOtSXMoru7lQcckw== ;{id = 13058 (ksk), size = 256b}
+;sub1.example.com.	IN	DNSKEY	257 3 13 0/lAWEpW94Rkjion6aUxepvCO6MxoRRJ5aIX9fdEPjUJXCGeHviFLmeDnNzTB0egvC5CgthSnQfyxqMqbbuMAQ== ;{id = 18006 (ksk), size = 256b}
+;sub1.example.com.	IN	DNSKEY	257 3 13 P1rwuvxZ8tQOxtOHsbzHAIpMNkleGRtg7gynoesq2gSJT+NAmYRrk+BzEGvHWTHKWd5KnusSt2BpBBlWw5pLiw== ;{id = 18279 (ksk), size = 256b}
+;sub1.example.com.	IN	DNSKEY	257 3 13 WraqJ/JvyS8xQZOKpVscbAUuYU8lVCiuEHjekR0kADMP/eWOvdJkaPZ++REeHclBejqXp+NcP0dnyweObnZDsA== ;{id = 20669 (ksk), size = 256b}
+;sub1.example.com.	IN	DNSKEY	257 3 13 /fci65ankZ0cKOPdJAJBIyXHYGzjngEyqGbBVmeDk2RwAqxmyUB5OORRmlPMY80ipMU+e8Pt3itKpglwpT7qSA== ;{id = 25106 (ksk), size = 256b}
+;sub1.example.com.	IN	DNSKEY	257 3 13 MEfZQnvjQI/L/0QlglQ2YrxSCQ6fRruKF2aQ+nD5JV9ecE1AhA/RujbKkg9UrG4ScjqC7f0fhCW+eUqsSoUcTg== ;{id = 25932 (ksk), size = 256b}
+;sub1.example.com.	IN	DNSKEY	257 3 13 KbKK1C8ZtHNsBicJnjrvTB56BoTTjL9pvNEbRVwCKIcWYdNP8l3dpsvVEAZ/ujxmKRA/ToA7ua4/IBDtALFWvg== ;{id = 27845 (ksk), size = 256b}
+;sub1.example.com.	IN	DNSKEY	257 3 13 G3I9nIlyTOrn12D8luAgZR4ZTK+iNegzz9UG8b5YsC9IV4UtgbdZkoEDRsH2uu429qvezzlUsjTzR+fu/74Saw== ;{id = 29183 (ksk), size = 256b}
+;sub1.example.com.	IN	DNSKEY	257 3 13 fBgVewGRqRmvJUVm/ZQqPLynt1lM6ilPdENMd9uESPh30CzUsi8Q7tbGZoH52CJjpcb17z3zSjJv40ASVEBhNw== ;{id = 30380 (ksk), size = 256b}
+;sub1.example.com.	IN	DNSKEY	257 3 13 3LbmoAShX4cKq4qyIqHLI7+UH4/EVOaXCF7AhJHaRJsgbyCEwn4Ofjh6l15Pxbk/UH851tR8MBaaOz8+ROcL2A== ;{id = 31753 (ksk), size = 256b}
+;sub1.example.com.	IN	DNSKEY	257 3 13 xMfArWljU25/0ePkuncQHH8U+/NMLIqy3IpJ7IqcOKRXmR7hrY2dQ6MgBN1rUBW8Q7Uq3mFbozdJbr3oDeZcdQ== ;{id = 32621 (ksk), size = 256b}
+;sub1.example.com.	IN	DNSKEY	257 3 13 YsXykW60iTTY+1DY7CG9izDd+RAzx+oPUk2UBiHBPengMUmu3R9rgsJHYfjwWgYWB60sy0CPcdAeu+jD2tB4eA== ;{id = 33127 (ksk), size = 256b}
+;sub1.example.com.	IN	DNSKEY	257 3 13 wzS1uBaSWR+bTTYgtLm3jNxNnLSNv6abvnHABXQD5yDFs17rGqDCdvkk6JM3qI4BJ+npNLdADJZt118PWlQ7eQ== ;{id = 37404 (ksk), size = 256b}
+;sub1.example.com.	IN	DNSKEY	257 3 13 9nDuSJ9wRTsvFYubQ7KQyOmzlY+UzG1cESD8NK9eOj9VMX1O71d5GxBwzc4UtBs+kZBi49BLjZIV5qWbD9FbXQ== ;{id = 38693 (ksk), size = 256b}
+;sub1.example.com.	IN	DNSKEY	257 3 13 EFDgOhEi43zsVaJdytsq3HjtAh6dVDaAnR0PY7O0S4q/svucxOVxmJsG/2rXYMHTej9jRTg/qWWbW4gdReDoSQ== ;{id = 40580 (ksk), size = 256b}
+;sub1.example.com.	IN	DNSKEY	257 3 13 wq8UI3DydI9svWJEQ1G0JHGVHykgo3YXFF8CRG055gshZAVyfIiTRwCemG0mbziuobOeZSpCtK05KGp20NHRTA== ;{id = 43985 (ksk), size = 256b}
+;sub1.example.com.	IN	DNSKEY	257 3 13 wRMENWFMd+9c4p9agfd/3qLnum1SS555CP9lgJKtU0t7Q689SrAUwBJP7ymXTDGtWSjlFBzbts6SUARX47SK1Q== ;{id = 44725 (ksk), size = 256b}
+;sub1.example.com.	IN	DNSKEY	257 3 13 zeWh2eFjuwp9K9yaJq16XMVNC8Ys0TOk91eYkGa0Dgez59aG/PvPYV1qi9pxbmG/c4tuXcRV9Z9cxcVev9DdYw== ;{id = 44975 (ksk), size = 256b}
+;sub1.example.com.	IN	DNSKEY	257 3 13 O/y794Mc/kIwRltqnqj+puIS1ejFQeE9Xmjz1NVU82x+UyEvx2InNpwaU2TFNKaT7aned72CE1u//CahV6zeEg== ;{id = 49819 (ksk), size = 256b}
+;sub1.example.com.	IN	DNSKEY	257 3 13 edr2Ai2uObWeVfFjvCF01Xa9SQD706baatsttcUuI4MblMTNG4blOSN1pMpZJ/wymkqt4c7eQSCETlD/mPeWPQ== ;{id = 56088 (ksk), size = 256b}
+;sub1.example.com.	IN	DNSKEY	257 3 13 PlfsudScPXH3VdDVv6nnuBEXQpP6coF6F2w99u4Es5VbJHZrgFhvxL9os0jnfiGCL6VJ0Q+bNKnzfoP3ByP1Kg== ;{id = 58926 (ksk), size = 256b}
+;sub1.example.com.	3600	IN	RRSIG	DNSKEY 13 3 3600 20070926134150 20070829134150 20 sub1.example.com. p6ScxBgybYLIhpD9SVDSquhPsytpehEUVncg2zRoXTxkuKXUsQIDKUuLhZxgeHNAnkKQn8e3xnoDWCGQbqA7tA==
+
+; The altered keys, with 'AAAA' at the end.
+sub1.example.com.	IN	DNSKEY	257 3 13 n2P99SKaAUDt50U/cToH/0TmGJKG8+Pbiwl1WY/f5EVWZD/auO5QEyY6Tm9kLHzAEOcjWR701V74ZgyFPiAAAA== ;{id = 20 (ksk), size = 256b}
+sub1.example.com.	IN	DNSKEY	257 3 13 2biK+rkC8P/MV/UMDbksGCov08Tya5wrtrjeDOSez5W1qFqqPKXzxuMxecGSXIYgNM8Y/m8XdlwOd8Q6vAAAAA== ;{id = 3539 (ksk), size = 256b}
+sub1.example.com.	IN	DNSKEY	257 3 13 UeL+mKovo+r7+B3egif1JxCHPfmbR4SU4m3s0Fp42ozze0FiMzEwRM85O4aYViPOmu0AKgfwuRjEM5aEM1AAAA== ;{id = 12688 (ksk), size = 256b}
+sub1.example.com.	IN	DNSKEY	257 3 13 iFe//OnLHLGXpE9i+4y3H+NefdDTZAEwYzDv0U+OIzs37lnOEMYTVqBxkLA82JDKMtnjupCOtSXMoru7lQAAAA== ;{id = 13058 (ksk), size = 256b}
+sub1.example.com.	IN	DNSKEY	257 3 13 0/lAWEpW94Rkjion6aUxepvCO6MxoRRJ5aIX9fdEPjUJXCGeHviFLmeDnNzTB0egvC5CgthSnQfyxqMqbbAAAA== ;{id = 18006 (ksk), size = 256b}
+sub1.example.com.	IN	DNSKEY	257 3 13 P1rwuvxZ8tQOxtOHsbzHAIpMNkleGRtg7gynoesq2gSJT+NAmYRrk+BzEGvHWTHKWd5KnusSt2BpBBlWw5AAAA== ;{id = 18279 (ksk), size = 256b}
+sub1.example.com.	IN	DNSKEY	257 3 13 WraqJ/JvyS8xQZOKpVscbAUuYU8lVCiuEHjekR0kADMP/eWOvdJkaPZ++REeHclBejqXp+NcP0dnyweObnAAAA== ;{id = 20669 (ksk), size = 256b}
+sub1.example.com.	IN	DNSKEY	257 3 13 /fci65ankZ0cKOPdJAJBIyXHYGzjngEyqGbBVmeDk2RwAqxmyUB5OORRmlPMY80ipMU+e8Pt3itKpglwpTAAAA== ;{id = 25106 (ksk), size = 256b}
+sub1.example.com.	IN	DNSKEY	257 3 13 MEfZQnvjQI/L/0QlglQ2YrxSCQ6fRruKF2aQ+nD5JV9ecE1AhA/RujbKkg9UrG4ScjqC7f0fhCW+eUqsSoAAAA== ;{id = 25932 (ksk), size = 256b}
+sub1.example.com.	IN	DNSKEY	257 3 13 KbKK1C8ZtHNsBicJnjrvTB56BoTTjL9pvNEbRVwCKIcWYdNP8l3dpsvVEAZ/ujxmKRA/ToA7ua4/IBDtALAAAA== ;{id = 27845 (ksk), size = 256b}
+sub1.example.com.	IN	DNSKEY	257 3 13 G3I9nIlyTOrn12D8luAgZR4ZTK+iNegzz9UG8b5YsC9IV4UtgbdZkoEDRsH2uu429qvezzlUsjTzR+fu/7AAAA== ;{id = 29183 (ksk), size = 256b}
+sub1.example.com.	IN	DNSKEY	257 3 13 fBgVewGRqRmvJUVm/ZQqPLynt1lM6ilPdENMd9uESPh30CzUsi8Q7tbGZoH52CJjpcb17z3zSjJv40ASVEAAAA== ;{id = 30380 (ksk), size = 256b}
+sub1.example.com.	IN	DNSKEY	257 3 13 3LbmoAShX4cKq4qyIqHLI7+UH4/EVOaXCF7AhJHaRJsgbyCEwn4Ofjh6l15Pxbk/UH851tR8MBaaOz8+ROAAAA== ;{id = 31753 (ksk), size = 256b}
+sub1.example.com.	IN	DNSKEY	257 3 13 xMfArWljU25/0ePkuncQHH8U+/NMLIqy3IpJ7IqcOKRXmR7hrY2dQ6MgBN1rUBW8Q7Uq3mFbozdJbr3oDeAAAA== ;{id = 32621 (ksk), size = 256b}
+sub1.example.com.	IN	DNSKEY	257 3 13 YsXykW60iTTY+1DY7CG9izDd+RAzx+oPUk2UBiHBPengMUmu3R9rgsJHYfjwWgYWB60sy0CPcdAeu+jD2tAAAA== ;{id = 33127 (ksk), size = 256b}
+sub1.example.com.	IN	DNSKEY	257 3 13 wzS1uBaSWR+bTTYgtLm3jNxNnLSNv6abvnHABXQD5yDFs17rGqDCdvkk6JM3qI4BJ+npNLdADJZt118PWlAAAA== ;{id = 37404 (ksk), size = 256b}
+sub1.example.com.	IN	DNSKEY	257 3 13 9nDuSJ9wRTsvFYubQ7KQyOmzlY+UzG1cESD8NK9eOj9VMX1O71d5GxBwzc4UtBs+kZBi49BLjZIV5qWbD9AAAA== ;{id = 38693 (ksk), size = 256b}
+sub1.example.com.	IN	DNSKEY	257 3 13 EFDgOhEi43zsVaJdytsq3HjtAh6dVDaAnR0PY7O0S4q/svucxOVxmJsG/2rXYMHTej9jRTg/qWWbW4gdReAAAA== ;{id = 40580 (ksk), size = 256b}
+sub1.example.com.	IN	DNSKEY	257 3 13 wq8UI3DydI9svWJEQ1G0JHGVHykgo3YXFF8CRG055gshZAVyfIiTRwCemG0mbziuobOeZSpCtK05KGp20NAAAA== ;{id = 43985 (ksk), size = 256b}
+sub1.example.com.	IN	DNSKEY	257 3 13 wRMENWFMd+9c4p9agfd/3qLnum1SS555CP9lgJKtU0t7Q689SrAUwBJP7ymXTDGtWSjlFBzbts6SUARX47AAAA== ;{id = 44725 (ksk), size = 256b}
+sub1.example.com.	IN	DNSKEY	257 3 13 zeWh2eFjuwp9K9yaJq16XMVNC8Ys0TOk91eYkGa0Dgez59aG/PvPYV1qi9pxbmG/c4tuXcRV9Z9cxcVev9AAAA== ;{id = 44975 (ksk), size = 256b}
+sub1.example.com.	IN	DNSKEY	257 3 13 O/y794Mc/kIwRltqnqj+puIS1ejFQeE9Xmjz1NVU82x+UyEvx2InNpwaU2TFNKaT7aned72CE1u//CahV6AAAA== ;{id = 49819 (ksk), size = 256b}
+sub1.example.com.	IN	DNSKEY	257 3 13 edr2Ai2uObWeVfFjvCF01Xa9SQD706baatsttcUuI4MblMTNG4blOSN1pMpZJ/wymkqt4c7eQSCETlD/mPAAAA== ;{id = 56088 (ksk), size = 256b}
+sub1.example.com.	IN	DNSKEY	257 3 13 PlfsudScPXH3VdDVv6nnuBEXQpP6coF6F2w99u4Es5VbJHZrgFhvxL9os0jnfiGCL6VJ0Q+bNKnzfoP3ByAAAA== ;{id = 58926 (ksk), size = 256b}
+sub1.example.com.	3600	IN	RRSIG	DNSKEY 13 3 3600 20070926134150 20070829134150 20 sub1.example.com. p6ScxBgybYLIhpD9SVDSquhPsytpehEUVncg2zRoXTxkuKXUsQIDKUuLhZxgeHNAnkKQn8e3xnoDWCGQbqA7tA==
+ENTRY_END
+
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR AA NOERROR
+SECTION QUESTION
+www.sub1.example.com. IN A
+SECTION ANSWER
+www.sub1.example.com. IN A	10.20.30.41
+www.sub1.example.com.	3600	IN	RRSIG	A 13 4 3600 20070926134150 20070829134150 20 sub1.example.com. utG2+wuHSbmyQCaIjL7ElDe3DJCMqZGrPqsOEyJj8ljGGa5JaTY+KdYvZ6oGmprV7utRPNyRormou1zRWoG8ew==
+ENTRY_END
+RANGE_END
+
+; ns.sub2.example.com.
+; 24 DNSKEYs with 24 RRSIGs on DNSKEY, that works with one DS.
+; 8 DS with 24 DNSKEYs with 40 RRSIGs on DNSKEY.
+RANGE_BEGIN 0 100
+	ADDRESS 1.2.3.6
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR AA NOERROR
+SECTION QUESTION
+ns.sub2.example.com. IN AAAA
+SECTION ANSWER
+SECTION AUTHORITY
+sub2.example.com. IN SOA a. b. 3600 3600 3600 3600 3600
+sub2.example.com.	3600	IN	RRSIG	SOA 13 3 3600 20070926134150 20070829134150 20 sub2.example.com. Uzdsj01UwK807QiRzTxZffHYpd7uEDEfPwbH4XsVilR238gk/fObaNBVij8Y2HiZHmch8I7GeNqB6RXpKQKU1w==
+ENTRY_END
+
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR AA NOERROR
+SECTION QUESTION
+sub2.example.com. IN DNSKEY
+SECTION ANSWER
+sub2.example.com.	IN	DNSKEY	257 3 13 n2P99SKaAUDt50U/cToH/0TmGJKG8+Pbiwl1WY/f5EVWZD/auO5QEyY6Tm9kLHzAEOcjWR701V74ZgyFPirxIA== ;{id = 20 (ksk), size = 256b}
+sub2.example.com.	IN	DNSKEY	257 3 13 2biK+rkC8P/MV/UMDbksGCov08Tya5wrtrjeDOSez5W1qFqqPKXzxuMxecGSXIYgNM8Y/m8XdlwOd8Q6vUuw5A== ;{id = 3539 (ksk), size = 256b}
+sub2.example.com.	IN	DNSKEY	257 3 13 UeL+mKovo+r7+B3egif1JxCHPfmbR4SU4m3s0Fp42ozze0FiMzEwRM85O4aYViPOmu0AKgfwuRjEM5aEM1pBug== ;{id = 12688 (ksk), size = 256b}
+sub2.example.com.	IN	DNSKEY	257 3 13 iFe//OnLHLGXpE9i+4y3H+NefdDTZAEwYzDv0U+OIzs37lnOEMYTVqBxkLA82JDKMtnjupCOtSXMoru7lQcckw== ;{id = 13058 (ksk), size = 256b}
+sub2.example.com.	IN	DNSKEY	257 3 13 0/lAWEpW94Rkjion6aUxepvCO6MxoRRJ5aIX9fdEPjUJXCGeHviFLmeDnNzTB0egvC5CgthSnQfyxqMqbbuMAQ== ;{id = 18006 (ksk), size = 256b}
+sub2.example.com.	IN	DNSKEY	257 3 13 P1rwuvxZ8tQOxtOHsbzHAIpMNkleGRtg7gynoesq2gSJT+NAmYRrk+BzEGvHWTHKWd5KnusSt2BpBBlWw5pLiw== ;{id = 18279 (ksk), size = 256b}
+sub2.example.com.	IN	DNSKEY	257 3 13 WraqJ/JvyS8xQZOKpVscbAUuYU8lVCiuEHjekR0kADMP/eWOvdJkaPZ++REeHclBejqXp+NcP0dnyweObnZDsA== ;{id = 20669 (ksk), size = 256b}
+sub2.example.com.	IN	DNSKEY	257 3 13 /fci65ankZ0cKOPdJAJBIyXHYGzjngEyqGbBVmeDk2RwAqxmyUB5OORRmlPMY80ipMU+e8Pt3itKpglwpT7qSA== ;{id = 25106 (ksk), size = 256b}
+sub2.example.com.	IN	DNSKEY	257 3 13 MEfZQnvjQI/L/0QlglQ2YrxSCQ6fRruKF2aQ+nD5JV9ecE1AhA/RujbKkg9UrG4ScjqC7f0fhCW+eUqsSoUcTg== ;{id = 25932 (ksk), size = 256b}
+sub2.example.com.	IN	DNSKEY	257 3 13 KbKK1C8ZtHNsBicJnjrvTB56BoTTjL9pvNEbRVwCKIcWYdNP8l3dpsvVEAZ/ujxmKRA/ToA7ua4/IBDtALFWvg== ;{id = 27845 (ksk), size = 256b}
+sub2.example.com.	IN	DNSKEY	257 3 13 G3I9nIlyTOrn12D8luAgZR4ZTK+iNegzz9UG8b5YsC9IV4UtgbdZkoEDRsH2uu429qvezzlUsjTzR+fu/74Saw== ;{id = 29183 (ksk), size = 256b}
+sub2.example.com.	IN	DNSKEY	257 3 13 fBgVewGRqRmvJUVm/ZQqPLynt1lM6ilPdENMd9uESPh30CzUsi8Q7tbGZoH52CJjpcb17z3zSjJv40ASVEBhNw== ;{id = 30380 (ksk), size = 256b}
+sub2.example.com.	IN	DNSKEY	257 3 13 3LbmoAShX4cKq4qyIqHLI7+UH4/EVOaXCF7AhJHaRJsgbyCEwn4Ofjh6l15Pxbk/UH851tR8MBaaOz8+ROcL2A== ;{id = 31753 (ksk), size = 256b}
+sub2.example.com.	IN	DNSKEY	257 3 13 xMfArWljU25/0ePkuncQHH8U+/NMLIqy3IpJ7IqcOKRXmR7hrY2dQ6MgBN1rUBW8Q7Uq3mFbozdJbr3oDeZcdQ== ;{id = 32621 (ksk), size = 256b}
+sub2.example.com.	IN	DNSKEY	257 3 13 YsXykW60iTTY+1DY7CG9izDd+RAzx+oPUk2UBiHBPengMUmu3R9rgsJHYfjwWgYWB60sy0CPcdAeu+jD2tB4eA== ;{id = 33127 (ksk), size = 256b}
+sub2.example.com.	IN	DNSKEY	257 3 13 wzS1uBaSWR+bTTYgtLm3jNxNnLSNv6abvnHABXQD5yDFs17rGqDCdvkk6JM3qI4BJ+npNLdADJZt118PWlQ7eQ== ;{id = 37404 (ksk), size = 256b}
+sub2.example.com.	IN	DNSKEY	257 3 13 9nDuSJ9wRTsvFYubQ7KQyOmzlY+UzG1cESD8NK9eOj9VMX1O71d5GxBwzc4UtBs+kZBi49BLjZIV5qWbD9FbXQ== ;{id = 38693 (ksk), size = 256b}
+sub2.example.com.	IN	DNSKEY	257 3 13 EFDgOhEi43zsVaJdytsq3HjtAh6dVDaAnR0PY7O0S4q/svucxOVxmJsG/2rXYMHTej9jRTg/qWWbW4gdReDoSQ== ;{id = 40580 (ksk), size = 256b}
+sub2.example.com.	IN	DNSKEY	257 3 13 wq8UI3DydI9svWJEQ1G0JHGVHykgo3YXFF8CRG055gshZAVyfIiTRwCemG0mbziuobOeZSpCtK05KGp20NHRTA== ;{id = 43985 (ksk), size = 256b}
+sub2.example.com.	IN	DNSKEY	257 3 13 wRMENWFMd+9c4p9agfd/3qLnum1SS555CP9lgJKtU0t7Q689SrAUwBJP7ymXTDGtWSjlFBzbts6SUARX47SK1Q== ;{id = 44725 (ksk), size = 256b}
+sub2.example.com.	IN	DNSKEY	257 3 13 zeWh2eFjuwp9K9yaJq16XMVNC8Ys0TOk91eYkGa0Dgez59aG/PvPYV1qi9pxbmG/c4tuXcRV9Z9cxcVev9DdYw== ;{id = 44975 (ksk), size = 256b}
+sub2.example.com.	IN	DNSKEY	257 3 13 O/y794Mc/kIwRltqnqj+puIS1ejFQeE9Xmjz1NVU82x+UyEvx2InNpwaU2TFNKaT7aned72CE1u//CahV6zeEg== ;{id = 49819 (ksk), size = 256b}
+sub2.example.com.	IN	DNSKEY	257 3 13 edr2Ai2uObWeVfFjvCF01Xa9SQD706baatsttcUuI4MblMTNG4blOSN1pMpZJ/wymkqt4c7eQSCETlD/mPeWPQ== ;{id = 56088 (ksk), size = 256b}
+sub2.example.com.	IN	DNSKEY	257 3 13 PlfsudScPXH3VdDVv6nnuBEXQpP6coF6F2w99u4Es5VbJHZrgFhvxL9os0jnfiGCL6VJ0Q+bNKnzfoP3ByP1Kg== ;{id = 58926 (ksk), size = 256b}
+
+; 44 invalid signatures, modified with different tags.
+sub2.example.com.	3600	IN	RRSIG	DNSKEY 13 3 3600 20070926134150 20070829134150 22 sub2.example.com. fu5MNWhUdr7xd3u3PENBOdg3sZiaOo+TAoj+ZIc2E+6p4SMZYya64a/gdppEqd2kCCPsW0FyxhUlfi9mGmgjcw==
+sub2.example.com.	3600	IN	RRSIG	DNSKEY 13 3 3600 20070926134150 20070829134150 23 sub2.example.com. fu5MNWhUdr7xd3u3PENBOdg3sZiaOo+TAoj+ZIc2E+6p4SMZYya64a/gdppEqd2kCCPsW0FyxhUlfi9mGmgjcw==
+sub2.example.com.	3600	IN	RRSIG	DNSKEY 13 3 3600 20070926134150 20070829134150 24 sub2.example.com. fu5MNWhUdr7xd3u3PENBOdg3sZiaOo+TAoj+ZIc2E+6p4SMZYya64a/gdppEqd2kCCPsW0FyxhUlfi9mGmgjcw==
+sub2.example.com.	3600	IN	RRSIG	DNSKEY 13 3 3600 20070926134150 20070829134150 25 sub2.example.com. fu5MNWhUdr7xd3u3PENBOdg3sZiaOo+TAoj+ZIc2E+6p4SMZYya64a/gdppEqd2kCCPsW0FyxhUlfi9mGmgjcw==
+sub2.example.com.	3600	IN	RRSIG	DNSKEY 13 3 3600 20070926134150 20070829134150 26 sub2.example.com. fu5MNWhUdr7xd3u3PENBOdg3sZiaOo+TAoj+ZIc2E+6p4SMZYya64a/gdppEqd2kCCPsW0FyxhUlfi9mGmgjcw==
+sub2.example.com.	3600	IN	RRSIG	DNSKEY 13 3 3600 20070926134150 20070829134150 27 sub2.example.com. fu5MNWhUdr7xd3u3PENBOdg3sZiaOo+TAoj+ZIc2E+6p4SMZYya64a/gdppEqd2kCCPsW0FyxhUlfi9mGmgjcw==
+sub2.example.com.	3600	IN	RRSIG	DNSKEY 13 3 3600 20070926134150 20070829134150 28 sub2.example.com. fu5MNWhUdr7xd3u3PENBOdg3sZiaOo+TAoj+ZIc2E+6p4SMZYya64a/gdppEqd2kCCPsW0FyxhUlfi9mGmgjcw==
+sub2.example.com.	3600	IN	RRSIG	DNSKEY 13 3 3600 20070926134150 20070829134150 29 sub2.example.com. fu5MNWhUdr7xd3u3PENBOdg3sZiaOo+TAoj+ZIc2E+6p4SMZYya64a/gdppEqd2kCCPsW0FyxhUlfi9mGmgjcw==
+sub2.example.com.	3600	IN	RRSIG	DNSKEY 13 3 3600 20070926134150 20070829134150 30 sub2.example.com. fu5MNWhUdr7xd3u3PENBOdg3sZiaOo+TAoj+ZIc2E+6p4SMZYya64a/gdppEqd2kCCPsW0FyxhUlfi9mGmgjcw==
+sub2.example.com.	3600	IN	RRSIG	DNSKEY 13 3 3600 20070926134150 20070829134150 31 sub2.example.com. fu5MNWhUdr7xd3u3PENBOdg3sZiaOo+TAoj+ZIc2E+6p4SMZYya64a/gdppEqd2kCCPsW0FyxhUlfi9mGmgjcw==
+sub2.example.com.	3600	IN	RRSIG	DNSKEY 13 3 3600 20070926134150 20070829134150 32 sub2.example.com. fu5MNWhUdr7xd3u3PENBOdg3sZiaOo+TAoj+ZIc2E+6p4SMZYya64a/gdppEqd2kCCPsW0FyxhUlfi9mGmgjcw==
+sub2.example.com.	3600	IN	RRSIG	DNSKEY 13 3 3600 20070926134150 20070829134150 33 sub2.example.com. fu5MNWhUdr7xd3u3PENBOdg3sZiaOo+TAoj+ZIc2E+6p4SMZYya64a/gdppEqd2kCCPsW0FyxhUlfi9mGmgjcw==
+sub2.example.com.	3600	IN	RRSIG	DNSKEY 13 3 3600 20070926134150 20070829134150 34 sub2.example.com. fu5MNWhUdr7xd3u3PENBOdg3sZiaOo+TAoj+ZIc2E+6p4SMZYya64a/gdppEqd2kCCPsW0FyxhUlfi9mGmgjcw==
+sub2.example.com.	3600	IN	RRSIG	DNSKEY 13 3 3600 20070926134150 20070829134150 35 sub2.example.com. fu5MNWhUdr7xd3u3PENBOdg3sZiaOo+TAoj+ZIc2E+6p4SMZYya64a/gdppEqd2kCCPsW0FyxhUlfi9mGmgjcw==
+sub2.example.com.	3600	IN	RRSIG	DNSKEY 13 3 3600 20070926134150 20070829134150 36 sub2.example.com. fu5MNWhUdr7xd3u3PENBOdg3sZiaOo+TAoj+ZIc2E+6p4SMZYya64a/gdppEqd2kCCPsW0FyxhUlfi9mGmgjcw==
+sub2.example.com.	3600	IN	RRSIG	DNSKEY 13 3 3600 20070926134150 20070829134150 37 sub2.example.com. fu5MNWhUdr7xd3u3PENBOdg3sZiaOo+TAoj+ZIc2E+6p4SMZYya64a/gdppEqd2kCCPsW0FyxhUlfi9mGmgjcw==
+sub2.example.com.	3600	IN	RRSIG	DNSKEY 13 3 3600 20070926134150 20070829134150 38 sub2.example.com. fu5MNWhUdr7xd3u3PENBOdg3sZiaOo+TAoj+ZIc2E+6p4SMZYya64a/gdppEqd2kCCPsW0FyxhUlfi9mGmgjcw==
+sub2.example.com.	3600	IN	RRSIG	DNSKEY 13 3 3600 20070926134150 20070829134150 39 sub2.example.com. fu5MNWhUdr7xd3u3PENBOdg3sZiaOo+TAoj+ZIc2E+6p4SMZYya64a/gdppEqd2kCCPsW0FyxhUlfi9mGmgjcw==
+sub2.example.com.	3600	IN	RRSIG	DNSKEY 13 3 3600 20070926134150 20070829134150 40 sub2.example.com. fu5MNWhUdr7xd3u3PENBOdg3sZiaOo+TAoj+ZIc2E+6p4SMZYya64a/gdppEqd2kCCPsW0FyxhUlfi9mGmgjcw==
+sub2.example.com.	3600	IN	RRSIG	DNSKEY 13 3 3600 20070926134150 20070829134150 41 sub2.example.com. fu5MNWhUdr7xd3u3PENBOdg3sZiaOo+TAoj+ZIc2E+6p4SMZYya64a/gdppEqd2kCCPsW0FyxhUlfi9mGmgjcw==
+sub2.example.com.	3600	IN	RRSIG	DNSKEY 13 3 3600 20070926134150 20070829134150 42 sub2.example.com. fu5MNWhUdr7xd3u3PENBOdg3sZiaOo+TAoj+ZIc2E+6p4SMZYya64a/gdppEqd2kCCPsW0FyxhUlfi9mGmgjcw==
+sub2.example.com.	3600	IN	RRSIG	DNSKEY 13 3 3600 20070926134150 20070829134150 43 sub2.example.com. fu5MNWhUdr7xd3u3PENBOdg3sZiaOo+TAoj+ZIc2E+6p4SMZYya64a/gdppEqd2kCCPsW0FyxhUlfi9mGmgjcw==
+sub2.example.com.	3600	IN	RRSIG	DNSKEY 13 3 3600 20070926134150 20070829134150 44 sub2.example.com. fu5MNWhUdr7xd3u3PENBOdg3sZiaOo+TAoj+ZIc2E+6p4SMZYya64a/gdppEqd2kCCPsW0FyxhUlfi9mGmgjcw==
+sub2.example.com.	3600	IN	RRSIG	DNSKEY 13 3 3600 20070926134150 20070829134150 45 sub2.example.com. fu5MNWhUdr7xd3u3PENBOdg3sZiaOo+TAoj+ZIc2E+6p4SMZYya64a/gdppEqd2kCCPsW0FyxhUlfi9mGmgjcw==
+
+sub2.example.com.	3600	IN	RRSIG	DNSKEY 13 3 3600 20070926134150 20070829134150 46 sub2.example.com. fu5MNWhUdr7xd3u3PENBOdg3sZiaOo+TAoj+ZIc2E+6p4SMZYya64a/gdppEqd2kCCPsW0FyxhUlfi9mGmgjcw==
+sub2.example.com.	3600	IN	RRSIG	DNSKEY 13 3 3600 20070926134150 20070829134150 47 sub2.example.com. fu5MNWhUdr7xd3u3PENBOdg3sZiaOo+TAoj+ZIc2E+6p4SMZYya64a/gdppEqd2kCCPsW0FyxhUlfi9mGmgjcw==
+sub2.example.com.	3600	IN	RRSIG	DNSKEY 13 3 3600 20070926134150 20070829134150 48 sub2.example.com. fu5MNWhUdr7xd3u3PENBOdg3sZiaOo+TAoj+ZIc2E+6p4SMZYya64a/gdppEqd2kCCPsW0FyxhUlfi9mGmgjcw==
+sub2.example.com.	3600	IN	RRSIG	DNSKEY 13 3 3600 20070926134150 20070829134150 49 sub2.example.com. fu5MNWhUdr7xd3u3PENBOdg3sZiaOo+TAoj+ZIc2E+6p4SMZYya64a/gdppEqd2kCCPsW0FyxhUlfi9mGmgjcw==
+sub2.example.com.	3600	IN	RRSIG	DNSKEY 13 3 3600 20070926134150 20070829134150 50 sub2.example.com. fu5MNWhUdr7xd3u3PENBOdg3sZiaOo+TAoj+ZIc2E+6p4SMZYya64a/gdppEqd2kCCPsW0FyxhUlfi9mGmgjcw==
+sub2.example.com.	3600	IN	RRSIG	DNSKEY 13 3 3600 20070926134150 20070829134150 51 sub2.example.com. fu5MNWhUdr7xd3u3PENBOdg3sZiaOo+TAoj+ZIc2E+6p4SMZYya64a/gdppEqd2kCCPsW0FyxhUlfi9mGmgjcw==
+sub2.example.com.	3600	IN	RRSIG	DNSKEY 13 3 3600 20070926134150 20070829134150 52 sub2.example.com. fu5MNWhUdr7xd3u3PENBOdg3sZiaOo+TAoj+ZIc2E+6p4SMZYya64a/gdppEqd2kCCPsW0FyxhUlfi9mGmgjcw==
+sub2.example.com.	3600	IN	RRSIG	DNSKEY 13 3 3600 20070926134150 20070829134150 53 sub2.example.com. fu5MNWhUdr7xd3u3PENBOdg3sZiaOo+TAoj+ZIc2E+6p4SMZYya64a/gdppEqd2kCCPsW0FyxhUlfi9mGmgjcw==
+sub2.example.com.	3600	IN	RRSIG	DNSKEY 13 3 3600 20070926134150 20070829134150 54 sub2.example.com. fu5MNWhUdr7xd3u3PENBOdg3sZiaOo+TAoj+ZIc2E+6p4SMZYya64a/gdppEqd2kCCPsW0FyxhUlfi9mGmgjcw==
+sub2.example.com.	3600	IN	RRSIG	DNSKEY 13 3 3600 20070926134150 20070829134150 55 sub2.example.com. fu5MNWhUdr7xd3u3PENBOdg3sZiaOo+TAoj+ZIc2E+6p4SMZYya64a/gdppEqd2kCCPsW0FyxhUlfi9mGmgjcw==
+sub2.example.com.	3600	IN	RRSIG	DNSKEY 13 3 3600 20070926134150 20070829134150 56 sub2.example.com. fu5MNWhUdr7xd3u3PENBOdg3sZiaOo+TAoj+ZIc2E+6p4SMZYya64a/gdppEqd2kCCPsW0FyxhUlfi9mGmgjcw==
+sub2.example.com.	3600	IN	RRSIG	DNSKEY 13 3 3600 20070926134150 20070829134150 57 sub2.example.com. fu5MNWhUdr7xd3u3PENBOdg3sZiaOo+TAoj+ZIc2E+6p4SMZYya64a/gdppEqd2kCCPsW0FyxhUlfi9mGmgjcw==
+sub2.example.com.	3600	IN	RRSIG	DNSKEY 13 3 3600 20070926134150 20070829134150 58 sub2.example.com. fu5MNWhUdr7xd3u3PENBOdg3sZiaOo+TAoj+ZIc2E+6p4SMZYya64a/gdppEqd2kCCPsW0FyxhUlfi9mGmgjcw==
+sub2.example.com.	3600	IN	RRSIG	DNSKEY 13 3 3600 20070926134150 20070829134150 59 sub2.example.com. fu5MNWhUdr7xd3u3PENBOdg3sZiaOo+TAoj+ZIc2E+6p4SMZYya64a/gdppEqd2kCCPsW0FyxhUlfi9mGmgjcw==
+sub2.example.com.	3600	IN	RRSIG	DNSKEY 13 3 3600 20070926134150 20070829134150 60 sub2.example.com. fu5MNWhUdr7xd3u3PENBOdg3sZiaOo+TAoj+ZIc2E+6p4SMZYya64a/gdppEqd2kCCPsW0FyxhUlfi9mGmgjcw==
+sub2.example.com.	3600	IN	RRSIG	DNSKEY 13 3 3600 20070926134150 20070829134150 61 sub2.example.com. fu5MNWhUdr7xd3u3PENBOdg3sZiaOo+TAoj+ZIc2E+6p4SMZYya64a/gdppEqd2kCCPsW0FyxhUlfi9mGmgjcw==
+sub2.example.com.	3600	IN	RRSIG	DNSKEY 13 3 3600 20070926134150 20070829134150 62 sub2.example.com. fu5MNWhUdr7xd3u3PENBOdg3sZiaOo+TAoj+ZIc2E+6p4SMZYya64a/gdppEqd2kCCPsW0FyxhUlfi9mGmgjcw==
+sub2.example.com.	3600	IN	RRSIG	DNSKEY 13 3 3600 20070926134150 20070829134150 63 sub2.example.com. fu5MNWhUdr7xd3u3PENBOdg3sZiaOo+TAoj+ZIc2E+6p4SMZYya64a/gdppEqd2kCCPsW0FyxhUlfi9mGmgjcw==
+sub2.example.com.	3600	IN	RRSIG	DNSKEY 13 3 3600 20070926134150 20070829134150 64 sub2.example.com. fu5MNWhUdr7xd3u3PENBOdg3sZiaOo+TAoj+ZIc2E+6p4SMZYya64a/gdppEqd2kCCPsW0FyxhUlfi9mGmgjcw==
+sub2.example.com.	3600	IN	RRSIG	DNSKEY 13 3 3600 20070926134150 20070829134150 65 sub2.example.com. fu5MNWhUdr7xd3u3PENBOdg3sZiaOo+TAoj+ZIc2E+6p4SMZYya64a/gdppEqd2kCCPsW0FyxhUlfi9mGmgjcw==
+
+; this signature is valid
+sub2.example.com.	3600	IN	RRSIG	DNSKEY 13 3 3600 20070926134150 20070829134150 20 sub2.example.com. fu5MNWhUdr7xd3u3PENBOdg3sZiaOo+TAoj+ZIc2E+6p4SMZYya64a/gdppEqd2kCCPsW0FyxhUlfi9mGmgjcw==
+ENTRY_END
+
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR AA NOERROR
+SECTION QUESTION
+www.sub2.example.com. IN A
+SECTION ANSWER
+www.sub2.example.com. IN A	10.20.30.42
+www.sub2.example.com.	3600	IN	RRSIG	A 13 4 3600 20070926134150 20070829134150 20 sub2.example.com. VCy6Ggk2HZ+fQ8Bube9UIVDXfF6iWo6Gm5MFRVikWdgqTNizrP5F/z2HzgYFPd+K9WNzsWbi4n+9m4sgYRHAnA==
+ENTRY_END
+RANGE_END
+
+; ns.sub3.example.com.
+; 24 DNSKEYs and 24 RRSIGs on A
+RANGE_BEGIN 0 100
+	ADDRESS 1.2.3.7
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR AA NOERROR
+SECTION QUESTION
+ns.sub3.example.com. IN AAAA
+SECTION ANSWER
+SECTION AUTHORITY
+sub3.example.com. IN SOA a. b. 3600 3600 3600 3600 3600
+sub3.example.com.	3600	IN	RRSIG	SOA 13 3 3600 20070926134150 20070829134150 20 sub3.example.com. ghR8Y1uUeoJaADEVdXMkNTE2/LtCBt/lmnTX5TOYZSWsT2+Ut6RclRrR9gi771T8IihYwvcf3ZsNyfjfEENSfw==
+ENTRY_END
+
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR AA NOERROR
+SECTION QUESTION
+sub3.example.com. IN DNSKEY
+SECTION ANSWER
+sub3.example.com.	IN	DNSKEY	257 3 13 n2P99SKaAUDt50U/cToH/0TmGJKG8+Pbiwl1WY/f5EVWZD/auO5QEyY6Tm9kLHzAEOcjWR701V74ZgyFPirxIA== ;{id = 20 (ksk), size = 256b}
+sub3.example.com.	IN	DNSKEY	257 3 13 2biK+rkC8P/MV/UMDbksGCov08Tya5wrtrjeDOSez5W1qFqqPKXzxuMxecGSXIYgNM8Y/m8XdlwOd8Q6vUuw5A== ;{id = 3539 (ksk), size = 256b}
+sub3.example.com.	IN	DNSKEY	257 3 13 UeL+mKovo+r7+B3egif1JxCHPfmbR4SU4m3s0Fp42ozze0FiMzEwRM85O4aYViPOmu0AKgfwuRjEM5aEM1pBug== ;{id = 12688 (ksk), size = 256b}
+sub3.example.com.	IN	DNSKEY	257 3 13 iFe//OnLHLGXpE9i+4y3H+NefdDTZAEwYzDv0U+OIzs37lnOEMYTVqBxkLA82JDKMtnjupCOtSXMoru7lQcckw== ;{id = 13058 (ksk), size = 256b}
+sub3.example.com.	IN	DNSKEY	257 3 13 0/lAWEpW94Rkjion6aUxepvCO6MxoRRJ5aIX9fdEPjUJXCGeHviFLmeDnNzTB0egvC5CgthSnQfyxqMqbbuMAQ== ;{id = 18006 (ksk), size = 256b}
+sub3.example.com.	IN	DNSKEY	257 3 13 P1rwuvxZ8tQOxtOHsbzHAIpMNkleGRtg7gynoesq2gSJT+NAmYRrk+BzEGvHWTHKWd5KnusSt2BpBBlWw5pLiw== ;{id = 18279 (ksk), size = 256b}
+sub3.example.com.	IN	DNSKEY	257 3 13 WraqJ/JvyS8xQZOKpVscbAUuYU8lVCiuEHjekR0kADMP/eWOvdJkaPZ++REeHclBejqXp+NcP0dnyweObnZDsA== ;{id = 20669 (ksk), size = 256b}
+sub3.example.com.	IN	DNSKEY	257 3 13 /fci65ankZ0cKOPdJAJBIyXHYGzjngEyqGbBVmeDk2RwAqxmyUB5OORRmlPMY80ipMU+e8Pt3itKpglwpT7qSA== ;{id = 25106 (ksk), size = 256b}
+sub3.example.com.	IN	DNSKEY	257 3 13 MEfZQnvjQI/L/0QlglQ2YrxSCQ6fRruKF2aQ+nD5JV9ecE1AhA/RujbKkg9UrG4ScjqC7f0fhCW+eUqsSoUcTg== ;{id = 25932 (ksk), size = 256b}
+sub3.example.com.	IN	DNSKEY	257 3 13 KbKK1C8ZtHNsBicJnjrvTB56BoTTjL9pvNEbRVwCKIcWYdNP8l3dpsvVEAZ/ujxmKRA/ToA7ua4/IBDtALFWvg== ;{id = 27845 (ksk), size = 256b}
+sub3.example.com.	IN	DNSKEY	257 3 13 G3I9nIlyTOrn12D8luAgZR4ZTK+iNegzz9UG8b5YsC9IV4UtgbdZkoEDRsH2uu429qvezzlUsjTzR+fu/74Saw== ;{id = 29183 (ksk), size = 256b}
+sub3.example.com.	IN	DNSKEY	257 3 13 fBgVewGRqRmvJUVm/ZQqPLynt1lM6ilPdENMd9uESPh30CzUsi8Q7tbGZoH52CJjpcb17z3zSjJv40ASVEBhNw== ;{id = 30380 (ksk), size = 256b}
+sub3.example.com.	IN	DNSKEY	257 3 13 3LbmoAShX4cKq4qyIqHLI7+UH4/EVOaXCF7AhJHaRJsgbyCEwn4Ofjh6l15Pxbk/UH851tR8MBaaOz8+ROcL2A== ;{id = 31753 (ksk), size = 256b}
+sub3.example.com.	IN	DNSKEY	257 3 13 xMfArWljU25/0ePkuncQHH8U+/NMLIqy3IpJ7IqcOKRXmR7hrY2dQ6MgBN1rUBW8Q7Uq3mFbozdJbr3oDeZcdQ== ;{id = 32621 (ksk), size = 256b}
+sub3.example.com.	IN	DNSKEY	257 3 13 YsXykW60iTTY+1DY7CG9izDd+RAzx+oPUk2UBiHBPengMUmu3R9rgsJHYfjwWgYWB60sy0CPcdAeu+jD2tB4eA== ;{id = 33127 (ksk), size = 256b}
+sub3.example.com.	IN	DNSKEY	257 3 13 wzS1uBaSWR+bTTYgtLm3jNxNnLSNv6abvnHABXQD5yDFs17rGqDCdvkk6JM3qI4BJ+npNLdADJZt118PWlQ7eQ== ;{id = 37404 (ksk), size = 256b}
+sub3.example.com.	IN	DNSKEY	257 3 13 9nDuSJ9wRTsvFYubQ7KQyOmzlY+UzG1cESD8NK9eOj9VMX1O71d5GxBwzc4UtBs+kZBi49BLjZIV5qWbD9FbXQ== ;{id = 38693 (ksk), size = 256b}
+sub3.example.com.	IN	DNSKEY	257 3 13 EFDgOhEi43zsVaJdytsq3HjtAh6dVDaAnR0PY7O0S4q/svucxOVxmJsG/2rXYMHTej9jRTg/qWWbW4gdReDoSQ== ;{id = 40580 (ksk), size = 256b}
+sub3.example.com.	IN	DNSKEY	257 3 13 wq8UI3DydI9svWJEQ1G0JHGVHykgo3YXFF8CRG055gshZAVyfIiTRwCemG0mbziuobOeZSpCtK05KGp20NHRTA== ;{id = 43985 (ksk), size = 256b}
+sub3.example.com.	IN	DNSKEY	257 3 13 wRMENWFMd+9c4p9agfd/3qLnum1SS555CP9lgJKtU0t7Q689SrAUwBJP7ymXTDGtWSjlFBzbts6SUARX47SK1Q== ;{id = 44725 (ksk), size = 256b}
+sub3.example.com.	IN	DNSKEY	257 3 13 zeWh2eFjuwp9K9yaJq16XMVNC8Ys0TOk91eYkGa0Dgez59aG/PvPYV1qi9pxbmG/c4tuXcRV9Z9cxcVev9DdYw== ;{id = 44975 (ksk), size = 256b}
+sub3.example.com.	IN	DNSKEY	257 3 13 O/y794Mc/kIwRltqnqj+puIS1ejFQeE9Xmjz1NVU82x+UyEvx2InNpwaU2TFNKaT7aned72CE1u//CahV6zeEg== ;{id = 49819 (ksk), size = 256b}
+sub3.example.com.	IN	DNSKEY	257 3 13 edr2Ai2uObWeVfFjvCF01Xa9SQD706baatsttcUuI4MblMTNG4blOSN1pMpZJ/wymkqt4c7eQSCETlD/mPeWPQ== ;{id = 56088 (ksk), size = 256b}
+sub3.example.com.	IN	DNSKEY	257 3 13 PlfsudScPXH3VdDVv6nnuBEXQpP6coF6F2w99u4Es5VbJHZrgFhvxL9os0jnfiGCL6VJ0Q+bNKnzfoP3ByP1Kg== ;{id = 58926 (ksk), size = 256b}
+sub3.example.com.	3600	IN	RRSIG	DNSKEY 13 3 3600 20070926134150 20070829134150 20 sub3.example.com. bHMk1YyEhCSaG4zvIeEyy0CKrMVKx+LctpKLCGWhfFGmItIlEdsT/GPwpWUPrTpp990tSSzUFvxkRc+unavAVA==
+ENTRY_END
+
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR AA NOERROR
+SECTION QUESTION
+www.sub3.example.com. IN A
+SECTION ANSWER
+www.sub3.example.com. IN A	10.20.30.43
+; invalid signatures, with wrong keytag.
+www.sub3.example.com.	3600	IN	RRSIG	A 13 4 3600 20070926134150 20070829134150 22 sub3.example.com. mqnO7+cyQw79Lt+TwcZhvt5ybNidAjIaap2/NuNnYZeJhluveSoiwzyT+vvLLluD97nuGHym6+d4vrdFLaFYFw==
+www.sub3.example.com.	3600	IN	RRSIG	A 13 4 3600 20070926134150 20070829134150 23 sub3.example.com. mqnO7+cyQw79Lt+TwcZhvt5ybNidAjIaap2/NuNnYZeJhluveSoiwzyT+vvLLluD97nuGHym6+d4vrdFLaFYFw==
+www.sub3.example.com.	3600	IN	RRSIG	A 13 4 3600 20070926134150 20070829134150 24 sub3.example.com. mqnO7+cyQw79Lt+TwcZhvt5ybNidAjIaap2/NuNnYZeJhluveSoiwzyT+vvLLluD97nuGHym6+d4vrdFLaFYFw==
+www.sub3.example.com.	3600	IN	RRSIG	A 13 4 3600 20070926134150 20070829134150 25 sub3.example.com. mqnO7+cyQw79Lt+TwcZhvt5ybNidAjIaap2/NuNnYZeJhluveSoiwzyT+vvLLluD97nuGHym6+d4vrdFLaFYFw==
+www.sub3.example.com.	3600	IN	RRSIG	A 13 4 3600 20070926134150 20070829134150 26 sub3.example.com. mqnO7+cyQw79Lt+TwcZhvt5ybNidAjIaap2/NuNnYZeJhluveSoiwzyT+vvLLluD97nuGHym6+d4vrdFLaFYFw==
+www.sub3.example.com.	3600	IN	RRSIG	A 13 4 3600 20070926134150 20070829134150 27 sub3.example.com. mqnO7+cyQw79Lt+TwcZhvt5ybNidAjIaap2/NuNnYZeJhluveSoiwzyT+vvLLluD97nuGHym6+d4vrdFLaFYFw==
+www.sub3.example.com.	3600	IN	RRSIG	A 13 4 3600 20070926134150 20070829134150 28 sub3.example.com. mqnO7+cyQw79Lt+TwcZhvt5ybNidAjIaap2/NuNnYZeJhluveSoiwzyT+vvLLluD97nuGHym6+d4vrdFLaFYFw==
+www.sub3.example.com.	3600	IN	RRSIG	A 13 4 3600 20070926134150 20070829134150 29 sub3.example.com. mqnO7+cyQw79Lt+TwcZhvt5ybNidAjIaap2/NuNnYZeJhluveSoiwzyT+vvLLluD97nuGHym6+d4vrdFLaFYFw==
+www.sub3.example.com.	3600	IN	RRSIG	A 13 4 3600 20070926134150 20070829134150 30 sub3.example.com. mqnO7+cyQw79Lt+TwcZhvt5ybNidAjIaap2/NuNnYZeJhluveSoiwzyT+vvLLluD97nuGHym6+d4vrdFLaFYFw==
+www.sub3.example.com.	3600	IN	RRSIG	A 13 4 3600 20070926134150 20070829134150 31 sub3.example.com. mqnO7+cyQw79Lt+TwcZhvt5ybNidAjIaap2/NuNnYZeJhluveSoiwzyT+vvLLluD97nuGHym6+d4vrdFLaFYFw==
+www.sub3.example.com.	3600	IN	RRSIG	A 13 4 3600 20070926134150 20070829134150 32 sub3.example.com. mqnO7+cyQw79Lt+TwcZhvt5ybNidAjIaap2/NuNnYZeJhluveSoiwzyT+vvLLluD97nuGHym6+d4vrdFLaFYFw==
+www.sub3.example.com.	3600	IN	RRSIG	A 13 4 3600 20070926134150 20070829134150 33 sub3.example.com. mqnO7+cyQw79Lt+TwcZhvt5ybNidAjIaap2/NuNnYZeJhluveSoiwzyT+vvLLluD97nuGHym6+d4vrdFLaFYFw==
+www.sub3.example.com.	3600	IN	RRSIG	A 13 4 3600 20070926134150 20070829134150 34 sub3.example.com. mqnO7+cyQw79Lt+TwcZhvt5ybNidAjIaap2/NuNnYZeJhluveSoiwzyT+vvLLluD97nuGHym6+d4vrdFLaFYFw==
+www.sub3.example.com.	3600	IN	RRSIG	A 13 4 3600 20070926134150 20070829134150 35 sub3.example.com. mqnO7+cyQw79Lt+TwcZhvt5ybNidAjIaap2/NuNnYZeJhluveSoiwzyT+vvLLluD97nuGHym6+d4vrdFLaFYFw==
+www.sub3.example.com.	3600	IN	RRSIG	A 13 4 3600 20070926134150 20070829134150 36 sub3.example.com. mqnO7+cyQw79Lt+TwcZhvt5ybNidAjIaap2/NuNnYZeJhluveSoiwzyT+vvLLluD97nuGHym6+d4vrdFLaFYFw==
+www.sub3.example.com.	3600	IN	RRSIG	A 13 4 3600 20070926134150 20070829134150 37 sub3.example.com. mqnO7+cyQw79Lt+TwcZhvt5ybNidAjIaap2/NuNnYZeJhluveSoiwzyT+vvLLluD97nuGHym6+d4vrdFLaFYFw==
+www.sub3.example.com.	3600	IN	RRSIG	A 13 4 3600 20070926134150 20070829134150 38 sub3.example.com. mqnO7+cyQw79Lt+TwcZhvt5ybNidAjIaap2/NuNnYZeJhluveSoiwzyT+vvLLluD97nuGHym6+d4vrdFLaFYFw==
+www.sub3.example.com.	3600	IN	RRSIG	A 13 4 3600 20070926134150 20070829134150 39 sub3.example.com. mqnO7+cyQw79Lt+TwcZhvt5ybNidAjIaap2/NuNnYZeJhluveSoiwzyT+vvLLluD97nuGHym6+d4vrdFLaFYFw==
+www.sub3.example.com.	3600	IN	RRSIG	A 13 4 3600 20070926134150 20070829134150 40 sub3.example.com. mqnO7+cyQw79Lt+TwcZhvt5ybNidAjIaap2/NuNnYZeJhluveSoiwzyT+vvLLluD97nuGHym6+d4vrdFLaFYFw==
+www.sub3.example.com.	3600	IN	RRSIG	A 13 4 3600 20070926134150 20070829134150 41 sub3.example.com. mqnO7+cyQw79Lt+TwcZhvt5ybNidAjIaap2/NuNnYZeJhluveSoiwzyT+vvLLluD97nuGHym6+d4vrdFLaFYFw==
+www.sub3.example.com.	3600	IN	RRSIG	A 13 4 3600 20070926134150 20070829134150 42 sub3.example.com. mqnO7+cyQw79Lt+TwcZhvt5ybNidAjIaap2/NuNnYZeJhluveSoiwzyT+vvLLluD97nuGHym6+d4vrdFLaFYFw==
+www.sub3.example.com.	3600	IN	RRSIG	A 13 4 3600 20070926134150 20070829134150 43 sub3.example.com. mqnO7+cyQw79Lt+TwcZhvt5ybNidAjIaap2/NuNnYZeJhluveSoiwzyT+vvLLluD97nuGHym6+d4vrdFLaFYFw==
+www.sub3.example.com.	3600	IN	RRSIG	A 13 4 3600 20070926134150 20070829134150 44 sub3.example.com. mqnO7+cyQw79Lt+TwcZhvt5ybNidAjIaap2/NuNnYZeJhluveSoiwzyT+vvLLluD97nuGHym6+d4vrdFLaFYFw==
+www.sub3.example.com.	3600	IN	RRSIG	A 13 4 3600 20070926134150 20070829134150 45 sub3.example.com. mqnO7+cyQw79Lt+TwcZhvt5ybNidAjIaap2/NuNnYZeJhluveSoiwzyT+vvLLluD97nuGHym6+d4vrdFLaFYFw==
+
+; valid signature.
+www.sub3.example.com.	3600	IN	RRSIG	A 13 4 3600 20070926134150 20070829134150 20 sub3.example.com. mqnO7+cyQw79Lt+TwcZhvt5ybNidAjIaap2/NuNnYZeJhluveSoiwzyT+vvLLluD97nuGHym6+d4vrdFLaFYFw==
+
+ENTRY_END
+RANGE_END
+
+STEP 1 QUERY
+ENTRY_BEGIN
+REPLY RD DO
+SECTION QUESTION
+www.example.com. IN A
+ENTRY_END
+
+; recursion happens here.
+STEP 10 CHECK_ANSWER
+ENTRY_BEGIN
+MATCH all
+REPLY QR RD RA AD DO NOERROR
+SECTION QUESTION
+www.example.com. IN A
+SECTION ANSWER
+www.example.com. IN A	10.20.30.40
+www.example.com.        3600    IN      RRSIG   A 3 3 3600 20070926134150 20070829134150 2854 example.com. MC0CFC99iE9K5y2WNgI0gFvBWaTi9wm6AhUAoUqOpDtG5Zct+Qr9F3mSdnbc6V4= ;{id = 2854}
+ENTRY_END
+
+; sub1.example.com.
+STEP 20 QUERY
+ENTRY_BEGIN
+REPLY RD DO
+SECTION QUESTION
+www.sub1.example.com. IN A
+ENTRY_END
+
+; recursion happens here.
+STEP 30 CHECK_ANSWER
+ENTRY_BEGIN
+MATCH all ednsdata
+REPLY QR RD RA DO SERVFAIL
+SECTION QUESTION
+www.sub1.example.com. IN A
+SECTION ANSWER
+;www.sub1.example.com. IN A	10.20.30.41
+SECTION ADDITIONAL
+HEX_EDNSDATA_BEGIN
+; EDE: DNSSEC Bogus "validation failure <www.sub1.example.com. A IN>: DS verify has too many tag matches from 1.2.3.5 for key sub1.example.com. while building chain of trust"
+000F009A000676616C69646174696F6E206661696C757265203C7777772E737562312E
+6578616D706C652E636F6D2E204120494E3E3A20445320766572696679206861732074
+6F6F206D616E7920746167206D6174636865732066726F6D20312E322E332E3520666F
+72206B657920737562312E6578616D706C652E636F6D2E207768696C65206275696C64
+696E6720636861696E206F66207472757374
+HEX_EDNSDATA_END
+ENTRY_END
+
+; sub2.example.com.
+STEP 40 QUERY
+ENTRY_BEGIN
+REPLY RD DO
+SECTION QUESTION
+www.sub2.example.com. IN A
+ENTRY_END
+
+STEP 50 CHECK_ANSWER
+ENTRY_BEGIN
+MATCH all ede=6
+;ednsdata
+REPLY QR RD RA DO SERVFAIL
+SECTION QUESTION
+www.sub2.example.com. IN A
+SECTION ANSWER
+;www.sub2.example.com. IN A	10.20.30.42
+;www.sub2.example.com.	3600	IN	RRSIG	A 13 4 3600 20070926134150 20070829134150 20 sub2.example.com. VCy6Ggk2HZ+fQ8Bube9UIVDXfF6iWo6Gm5MFRVikWdgqTNizrP5F/z2HzgYFPd+K9WNzsWbi4n+9m4sgYRHAnA==
+SECTION ADDITIONAL
+;HEX_EDNSDATA_BEGIN
+;; EDE: DNSSEC Bogus "validation failure <www.sub2.example.com. A IN>: DS verify has too many DNSKEY to RRSIG tag matches from 1.2.3.6 for key sub2.example.com. while building chain of trust"
+;000F00AA000676616C69646174696F6E206661696C757265203C7777772E737562322E
+;6578616D706C652E636F6D2E204120494E3E3A20445320766572696679206861732074
+;6F6F206D616E7920444E534B455920746F20525253494720746167206D617463686573
+;2066726F6D20312E322E332E3620666F72206B657920737562322E6578616D706C652E
+;636F6D2E207768696C65206275696C64696E6720636861696E206F66207472757374
+;HEX_EDNSDATA_END
+ENTRY_END
+
+; sub3.example.com.
+STEP 60 QUERY
+ENTRY_BEGIN
+REPLY RD DO
+SECTION QUESTION
+www.sub3.example.com. IN A
+ENTRY_END
+
+STEP 70 CHECK_ANSWER
+ENTRY_BEGIN
+MATCH all ede=9
+;ednsdata
+REPLY QR RD RA DO SERVFAIL
+SECTION QUESTION
+www.sub3.example.com. IN A
+SECTION ANSWER
+;www.sub3.example.com. IN A	10.20.30.43
+SECTION ADDITIONAL
+;HEX_EDNSDATA_BEGIN
+;; EDE: DNSSEC Bogus "validation failure <www.sub3.example.com. A IN>: too many tag matches from 1.2.3.7"
+;000F0054000676616C69646174696F6E206661696C757265203C7777772E737562332E
+;6578616D706C652E636F6D2E204120494E3E3A20746F6F206D616E7920746167206D61
+;74636865732066726F6D20312E322E332E37
+;HEX_EDNSDATA_END
+ENTRY_END
+
+SCENARIO_END

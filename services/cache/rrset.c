@@ -239,9 +239,13 @@ rrset_cache_update(struct rrset_cache* r, struct rrset_ref* ref,
 			equal, (rrset_type==LDNS_RR_TYPE_NS),
 			(rrset_type==LDNS_RR_TYPE_A || rrset_type==LDNS_RR_TYPE_AAAA))) {
 			/* cache is superior, return that value */
+			if(equal) {
+				ub_packed_rrset_parsedelete(k, alloc);
+				/* return readlocked item. */
+				return 2;
+			}
 			lock_rw_unlock(&e->lock);
 			ub_packed_rrset_parsedelete(k, alloc);
-			if(equal) return 2;
 			return 1;
 		}
 		lock_rw_unlock(&e->lock);
@@ -267,6 +271,15 @@ rrset_cache_update(struct rrset_cache* r, struct rrset_ref* ref,
 		return 1;
 	}
 	return 0;
+}
+
+void rrset_cache_update_unlock(struct rrset_cache* r, struct rrset_ref* ref,
+	struct alloc_cache* alloc, time_t timenow)
+{
+	int ret = rrset_cache_update(r, ref, alloc, timenow);
+	if(ret == 2) {
+		lock_rw_unlock(&ref->key->entry.lock);
+	}
 }
 
 /** See if the name is a within signer authority */
@@ -333,8 +346,8 @@ void rrset_cache_update_wildcard(struct rrset_cache* rrset_cache,
 	rrset->entry.hash = rrset_key_hash(&rrset->rk);
 	ref.key = rrset;
 	ref.id = rrset->id;
-	/* ignore ret: if it was in the cache, ref updated */
-	(void)rrset_cache_update(rrset_cache, &ref, alloc, timenow);
+	/* if it was in the cache, ref updated */
+	rrset_cache_update_unlock(rrset_cache, &ref, alloc, timenow);
 }
 
 /** Grace period in seconds for TTL=0 DNAME rrsets (RFC 2308: do not cache).

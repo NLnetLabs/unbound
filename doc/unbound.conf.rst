@@ -1838,13 +1838,15 @@ These options are part of the ``server:`` section.
 
 
 @@UAHL@unbound.conf@harden-short-bufsize@@: *<yes or no>*
-    Very small EDNS buffer sizes from queries are ignored.
+    Very small EDNS buffer sizes from queries are ignored and are instead
+    set to the normal UDP packet size (512 bytes).
 
     Default: yes (per :rfc:`6891`)
 
 
 @@UAHL@unbound.conf@harden-large-queries@@: *<yes or no>*
     Very large queries are ignored.
+    The cutoff value is chosen to be the normal UDP packet size (512 bytes).
     Default is no, since it is legal protocol wise to send these, and could be
     necessary for operation if TSIG or EDNS payload is very large.
 
@@ -1950,6 +1952,17 @@ These options are part of the ``server:`` section.
     records.
 
     Default: no
+
+
+@@UAHL@unbound.conf@harden-cname-follow@@: *<yes or no>*
+    Harden CNAME redirections by following them.
+    If no, then upstream CNAME and DNAME redirections are allowed in a
+    response without checking with further messages if those are valid.
+    It can only really be disabled safely on localhost net or encrypted
+    connectivity.
+    Default is on to protect the cache integrity.
+
+    Default: yes
 
 
 @@UAHL@unbound.conf@use-caps-for-id@@: *<yes or no>*
@@ -2077,7 +2090,10 @@ These options are part of the ``server:`` section.
 @@UAHL@unbound.conf@do-not-query-localhost@@: *<yes or no>*
     If yes, localhost is added to the
     :ref:`do-not-query-address<unbound.conf.do-not-query-address>` entries,
-    both IPv6 ``::1`` and IPv4 ``127.0.0.1/8``.
+    both IPv4 ``127.0.0.1/8`` (also ``::ffff:127.0.0.0/104``) and IPv6 ``::1``.
+    Additionally, the zero subnets ``0.0.0.0/8`` (also ``::ffff:0:0/96``) and
+    ``::`` are added to the list since on some systems they route to
+    localhost as well.
     If no, then localhost can be used to send queries to.
 
     Default: yes
@@ -2226,6 +2242,9 @@ These options are part of the ``server:`` section.
     It is possible to use wildcards with this statement, the wildcard is
     expanded on start and on reload.
 
+    A wildcard that matches no files is not an error: the entry loads no
+    trust anchors, and the condition is logged at operational verbosity.
+
     Default: "" (no trusted keys file)
 
 
@@ -2320,7 +2339,7 @@ These options are part of the ``server:`` section.
     Use this setting to protect the users that rely on this validator for
     authentication from potentially bad data in the additional section.
 
-    Default: yes
+    Default: no
 
 
 @@UAHL@unbound.conf@val-log-level@@: *<number>*
@@ -3356,6 +3375,26 @@ These options are part of the ``server:`` section.
     same zone as a spoofed packet.
 
     Default: yes
+
+
+@@UAHL@unbound.conf@val-validation-attempts@@: *<number>*
+    Limit on the number of DNSSEC validation attempts for a query.
+    This protects against too large numbers of cryptographic operations,
+    like for a deep delegation chain.
+    This counts attempts to validate RRSIGs.
+    When it is exceeded, the query fails.
+
+    Default: 32
+
+
+@@UAHL@unbound.conf@val-hash-attempts@@: *<number>*
+    Limit on the number of DNSSEC hash attempts for a query.
+    This protects against too large numbers of cryptographic operations,
+    like for a deep delegation chain.
+    This counts DS hash attempts to match DNSKEYs.
+    When it is exceeded, the query fails.
+
+    Default: 32
 
 
 @@UAHL@unbound.conf@fast-server-permil@@: *<number>*

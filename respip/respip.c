@@ -734,6 +734,7 @@ respip_data_answer(enum respip_action action,
 	if(!new_rep)
 		return -1;
 	rp->rk.flags |= PACKED_RRSET_FIXEDTTL; /* avoid adjusting TTL */
+	rp->entry.hash = rrset_key_hash(&rp->rk);
 	new_rep->rrsets[rrset_id] = rp;
 
 	*redirect_rrsetp = rp;
