@@ -5365,8 +5365,7 @@ xfr_apply_http(uint8_t* name, size_t namelen, const char* host,
 	}
 	if(!eof) {
 		verbose(VERB_ALGO, "error parsing line [%s:%d] %s",
-			xfr->task_transfer->master->file,
-			pstate.lineno,
+			file, pstate.lineno,
 			sldns_buffer_begin(scratch_buffer));
 		return 0;
 	}
@@ -6534,6 +6533,7 @@ xfr_process_loaded_transfer(struct auth_xfer* xfr, struct module_env* env,
 	size_t chunks_total)
 {
 	struct auth_zone* z = NULL;
+	struct auth_chunk* chunk_list;
 	verbose(VERB_ALGO, "xfr_process_loaded_transfer");
 	lock_basic_unlock(&xfr->lock);
 	if(!xfr_process_reacquire_locks(xfr, env, &z)) {
@@ -6650,7 +6650,9 @@ xfr_process_loaded_transfer(struct auth_xfer* xfr, struct module_env* env,
 	}
 	verbose(VERB_ALGO, "xfr_process_loaded_transfer: write after update");
 	/* see if we need to write to a zonefile */
-	xfr_write_after_update(xfr, env);
+	chunk_list = xfr->task_transfer->chunks_first;
+	xfr->task_transfer->chunks_first = NULL;
+	xfr_write_after_update(xfr, env, chunk_list);
 
 	return 1;
 }
