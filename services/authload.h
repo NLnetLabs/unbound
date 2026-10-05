@@ -57,6 +57,14 @@ struct auth_load_general_info {
 	lock_basic_type lock;
 	/** The number of active auth load threads. */
 	int num_auth_load_threads;
+	/** The number of active downloads, zone transfers in progress.
+	 * These are going to need an auth load thread when done. The counter
+	 * is decremented when the thread and transfer have completed. */
+	int num_auth_transfers;
+	/** The auth zone xfer transfer wait list */
+	struct auth_xfer* wait_transfer_list;
+	/** The last item of the wait_transfer list. */
+	struct auth_xfer* wait_transfer_last;
 };
 
 /**
@@ -199,5 +207,44 @@ int auth_load_info_grab_thread(struct module_env* env);
  * @param env: with auth_load_info with the active thread count.
  */
 void auth_load_info_release_thread(struct module_env* env);
+
+/**
+ * Grab a new transfer in progress, this is limited by the auth load count.
+ * @param env: with auth_load_info with the active transfer number.
+ *	and config file, with configured maximum.
+ * @return false on failure, like too many active, true if successful.
+ */
+int auth_load_info_grab_transfer_in_progress(struct module_env* env);
+
+/**
+ * Release transfer from active count. It is done.
+ * @param env: with auth_load_info with the active transfer count.
+ */
+void auth_load_info_release_transfer_in_progress(struct module_env* env);
+
+/**
+ * Make transfer active in the in progress transfer count.
+ * @param xfr: the xfr is in progress
+ * @return false if not possible.
+ */
+int xfr_transfer_grab_active(struct auth_xfer* xfr);
+
+/**
+ * Release active transfer from in progress transfer count.
+ * @param xfr: the xfr is no longer in progress.
+ */
+void xfr_transfer_release_active(struct auth_xfer* xfr);
+
+/**
+ * Add transfer to wait_transfer list. It can not become active right now.
+ * @param xfr: the xfr is put on the wait_transfer list.
+ */
+void xfr_transfer_wait_active(struct auth_xfer* xfr);
+
+/**
+ * Remove xfr from wait_transfer list
+ * @param xfr: the xfr is removed from the wait_transfer list.
+ */
+void xfr_transfer_remove_wait_transfer_list(struct auth_xfer* xfr);
 
 #endif /* SERVICES_AUTHLOAD_H */

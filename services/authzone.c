@@ -5716,6 +5716,8 @@ xfr_transfer_disown(struct auth_xfer* xfr)
 			xfr->task_transfer->lookup_aaaa, xfr->dclass,
 			xfr->task_transfer->env->mesh,
 			&auth_xfer_transfer_lookup_callback, xfr);
+	xfr_transfer_remove_wait_transfer_list(xfr);
+	xfr_transfer_release_active(xfr);
 	/* we don't own this item anymore */
 	xfr->task_transfer->worker = NULL;
 	xfr->task_transfer->env = NULL;
@@ -5934,11 +5936,26 @@ xfr_transfer_nexttarget_or_end(struct auth_xfer* xfr, struct module_env* env)
 	/* and set timeout on it */
 	while(!xfr_transfer_end_of_list(xfr)) {
 		xfr->task_transfer->master = xfr_transfer_current_master(xfr);
+		if(xfr->task_transfer->master &&
+			!xfr->task_transfer->master->allow_notify &&
+			env->cfg->auth_task_threads != 0) {
+			if(!xfr_transfer_grab_active(xfr)) {
+				/* Can not get another transfer to have in
+				 * progress, wait to do this later, when other
+				 * transfers are done. */
+				xfr_transfer_wait_active(xfr);
+				lock_basic_unlock(&xfr->lock);
+				return;
+			}
+		}
 		if(xfr_transfer_init_fetch(xfr, env)) {
 			/* successfully started, wait for callback */
 			lock_basic_unlock(&xfr->lock);
 			return;
 		}
+		xfr_transfer_remove_wait_transfer_list(xfr);
+		xfr_transfer_release_active(xfr);
+
 		/* failed to fetch, next master */
 		xfr_transfer_nextmaster(xfr);
 	}
@@ -6522,6 +6539,8 @@ process_list_end_transfer(struct auth_xfer* xfr, struct module_env* env)
 	}
 	/* when done, delete data from list */
 	auth_chunks_delete(xfr->task_transfer);
+	xfr_transfer_remove_wait_transfer_list(xfr);
+	xfr_transfer_release_active(xfr);
 	xfr_process_transfer_failed(xfr, env, ixfr_fail);
 }
 
@@ -6674,6 +6693,8 @@ void xfr_process_load_end_transfer(struct auth_xfer* xfr,
 				/* the zone is gone from the authzones. */
 				lock_basic_unlock(&xfr->lock);
 				auth_chunks_delete(xfr->task_transfer);
+				xfr_transfer_remove_wait_transfer_list(xfr);
+				xfr_transfer_release_active(xfr);
 				return;
 			}
 		}
@@ -6689,6 +6710,8 @@ void xfr_process_load_end_transfer(struct auth_xfer* xfr,
 	}
 	/* The transfer failed */
 	verbose(VERB_ALGO, "xfr_process_load_end_transfer: failed");
+	xfr_transfer_remove_wait_transfer_list(xfr);
+	xfr_transfer_release_active(xfr);
 	xfr_process_transfer_failed(xfr, env, ixfr_fail);
 }
 
@@ -6785,6 +6808,8 @@ auth_xfer_transfer_tcp_callback(struct comm_point* c, void* arg, int err,
 		auth_chunks_delete(xfr->task_transfer);
 		comm_point_delete(xfr->task_transfer->cp);
 		xfr->task_transfer->cp = NULL;
+		xfr_transfer_remove_wait_transfer_list(xfr);
+		xfr_transfer_release_active(xfr);
 		if(gonextonfail)
 			xfr_transfer_nextmaster(xfr);
 		xfr_transfer_nexttarget_or_end(xfr, env);

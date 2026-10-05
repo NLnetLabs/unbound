@@ -880,6 +880,15 @@ struct auth_load_general_info* auth_load_info_create(void)
 	lock_protect(&auth_load_info->lock,
 		&auth_load_info->num_auth_load_threads,
 		sizeof(auth_load_info->num_auth_load_threads));
+	lock_protect(&auth_load_info->lock,
+		&auth_load_info->num_auth_transfers,
+		sizeof(auth_load_info->num_auth_transfers));
+	lock_protect(&auth_load_info->lock,
+		&auth_load_info->wait_transfer_list,
+		sizeof(auth_load_info->wait_transfer_list));
+	lock_protect(&auth_load_info->lock,
+		&auth_load_info->wait_transfer_last,
+		sizeof(auth_load_info->wait_transfer_last));
 	return auth_load_info;
 }
 
@@ -918,4 +927,123 @@ void auth_load_info_release_thread(struct module_env* env)
 		auth_load_info->num_auth_load_threads--;
 	}
 	lock_basic_unlock(&auth_load_info->lock);
+}
+
+int auth_load_info_grab_transfer_in_progress(struct module_env* env)
+{
+	struct auth_load_general_info* auth_load_info =
+		env->worker->daemon->auth_load_info;
+	struct config_file* cfg = env->cfg;
+	int ret = 0;
+	lock_basic_lock(&auth_load_info->lock);
+	if(auth_load_info->num_auth_transfers < cfg->auth_task_threads) {
+		ret = 1;
+		auth_load_info->num_auth_transfers++;
+	}
+	lock_basic_unlock(&auth_load_info->lock);
+	return ret;
+}
+
+void auth_load_info_release_transfer_in_progress(struct module_env* env)
+{
+	struct auth_load_general_info* auth_load_info =
+		env->worker->daemon->auth_load_info;
+	lock_basic_lock(&auth_load_info->lock);
+	if(auth_load_info->num_auth_transfers == 0) {
+		verbose(VERB_ALGO, "release of auth load transfer, but "
+			"num_auth_transfers not > 0.");
+	} else {
+		auth_load_info->num_auth_transfers--;
+	}
+	lock_basic_unlock(&auth_load_info->lock);
+}
+
+int
+xfr_transfer_grab_active(struct auth_xfer* xfr)
+{
+	if(xfr->task_transfer->active_transfer) {
+		char zname[LDNS_MAX_DOMAINLEN];
+		dname_str(xfr->name, zname);
+		log_err("task transfer already active when activated transfer "
+			"%s", zname);
+		return 1;
+	}
+	xfr->task_transfer->active_transfer = 1;
+	return auth_load_info_grab_transfer_in_progress(
+		xfr->task_transfer->env);
+}
+
+/** Schedule pick up of waiting transfers. */
+static void
+xfr_transfer_schedule_waiting_pickup(struct auth_xfer* xfr)
+{
+	struct auth_load_general_info* auth_load_info =
+		env->worker->daemon->auth_load_info;
+	int waiting = 0;
+	lock_basic_lock(&auth_load_info->lock);
+	if(auth_load_info->wait_transfer_list)
+		waiting = 1;
+	lock_basic_unlock(&auth_load_info->lock);
+
+	if(waiting) {
+	}
+}
+
+void
+xfr_transfer_release_active(struct auth_xfer* xfr)
+{
+	if(!xfr->task_transfer->active_transfer)
+		return;
+	auth_load_info_release_transfer_in_progress(xfr->task_transfer->env);
+	xfr->task_transfer->active_transfer = 0;
+
+	/* Since a transfer is no longer in progress, see if there are
+	 * waiting transfers. If so, schedule them to get picked up. */
+	xfr_transfer_schedule_waiting_pickup(xfr);
+}
+
+void
+xfr_transfer_wait_active(struct auth_xfer* xfr)
+{
+	struct auth_load_general_info* auth_load_info =
+		xfr->task_transfer->env->worker->daemon->auth_load_info;
+	if(xfr->task_transfer->on_wait_transfer_list)
+		return;
+	lock_basic_lock(&auth_load_info->lock);
+	xfr->task_transfer->wait_transfer_prev =
+		auth_load_info->wait_transfer_last;
+	xfr->task_transfer->wait_transfer_next = NULL;
+	if(auth_load_info->wait_transfer_last)
+		auth_load_info->wait_transfer_last->task_transfer->
+			wait_transfer_next = xfr;
+	else	auth_load_info->wait_transfer_list = xfr;
+	auth_load_info->wait_transfer_last = xfr;
+	lock_basic_unlock(&auth_load_info->lock);
+	xfr->task_transfer->on_wait_transfer_list = 1;
+}
+
+void
+xfr_transfer_remove_wait_transfer_list(struct auth_xfer* xfr)
+{
+	struct auth_load_general_info* auth_load_info =
+		xfr->task_transfer->env->worker->daemon->auth_load_info;
+	if(!xfr->task_transfer->on_wait_transfer_list)
+		return;
+	lock_basic_lock(&auth_load_info->lock);
+	if(xfr->task_transfer->wait_transfer_prev)
+		xfr->task_transfer->wait_transfer_prev->task_transfer->
+			wait_transfer_next =
+			xfr->task_transfer->wait_transfer_next;
+	else	auth_load_info->wait_transfer_list =
+			xfr->task_transfer->wait_transfer_next;
+	if(xfr->task_transfer->wait_transfer_next)
+		xfr->task_transfer->wait_transfer_next->task_transfer->
+			wait_transfer_prev =
+			xfr->task_transfer->wait_transfer_prev;
+	else	auth_load_info->wait_transfer_last =
+			xfr->task_transfer->wait_transfer_prev;
+	lock_basic_unlock(&auth_load_info->lock);
+	xfr->task_transfer->wait_transfer_prev = NULL;
+	xfr->task_transfer->wait_transfer_next = NULL;
+	xfr->task_transfer->on_wait_transfer_list = 0;
 }

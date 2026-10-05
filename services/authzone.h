@@ -405,6 +405,15 @@ struct auth_transfer {
 	size_t chunks_total;
 	/** start time of the transfer */
 	struct timeval start_time;
+	/** if the transfer is active and in the in progress count. */
+	int active_transfer;
+	/** if the transfer is on the wait_transfer list (it waits to
+	 * become active). */
+	int on_wait_transfer_list;
+	/** If on the wait_transfer list, the previous list item. */
+	struct auth_xfer* wait_transfer_prev;
+	/** If on the wait_transfer list, the next list item. */
+	struct auth_xfer* wait_transfer_next;
 
 	/** list of upstream masters for this zone, from config */
 	struct auth_master* masters;
