@@ -6,6 +6,13 @@
 
 PRE="../.."
 . ../common.sh
+# if no threads; exit
+if grep -e "define HAVE_PTHREAD 1" -e "define HAVE_SOLARIS_THREADS 1" -e "define HAVE_WINDOWS_THREADS 1" $PRE/config.h; then
+	echo "have threads"
+else
+	skip_test "no threads"
+fi
+
 get_random_port 2
 UNBOUND_PORT=$RND_PORT
 PETAL_PORT=$(($RND_PORT + 1))

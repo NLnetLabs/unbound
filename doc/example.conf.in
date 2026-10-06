@@ -1171,6 +1171,8 @@ server:
 	# Timeout in milliseconds for TCP queries to auth servers.
 	# tcp-auth-query-timeout: 3000
 
+	# Number of threads to use to load auth-zones (and RPZ). 0 disables.
+	# auth-task-threads: 0
 
 # Python config section. To enable:
 # o use --with-pythonmodule to configure before compiling.
