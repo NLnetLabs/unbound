@@ -143,6 +143,7 @@ auth_load_task_pickup_xfr(struct auth_load_task* task, struct auth_xfer* xfr)
 		xfr->task_transfer->chunks_last = 0;
 		xfr->task_transfer->chunks_total = 0;
 	}
+	task->is_rpz = xfr->is_rpz;
 
 	if(task->on_http)
 		task->task_type = AUTH_LOAD_TASK_HTTPCHUNKS;
@@ -303,6 +304,11 @@ auth_zone_create_proxy(uint8_t* nm, size_t nmlen, uint16_t dclass)
 		return NULL;
 	}
 	rbtree_init(&z->data, &auth_data_cmp);
+	if(!(z->rpz = rpz_create_empty())) {
+		free(z->name);
+		free(z);
+		return NULL;
+	}
 	return z;
 }
 
@@ -343,13 +349,39 @@ auth_load_calc_mem(struct auth_load_task* task, struct auth_zone* z,
 	task->mem_used = m;
 }
 
+/** Swap the data contents of the rpz structure. */
+static void
+auth_load_swap_rpz(struct rpz* rpz, struct rpz* proxyrpz)
+{
+	struct local_zones* local_zones = proxyrpz->local_zones;
+	struct respip_set* respip_set = proxyrpz->respip_set;
+	struct clientip_synthesized_rrset* client_set = proxyrpz->client_set;
+	struct clientip_synthesized_rrset* ns_set = proxyrpz->ns_set;
+	struct local_zones* nsdname_zones = proxyrpz->nsdname_zones;
+
+	proxyrpz->local_zones = rpz->local_zones;
+	proxyrpz->respip_set = rpz->respip_set;
+	proxyrpz->client_set = rpz->client_set;
+	proxyrpz->ns_set = rpz->ns_set;
+	proxyrpz->nsdname_zones = rpz->nsdname_zones;
+
+	rpz->local_zones = local_zones;
+	rpz->respip_set = respip_set;
+	rpz->client_set = client_set;
+	rpz->ns_set = ns_set;
+	rpz->nsdname_zones = nsdname_zones;
+}
+
 /** Swap the final zone contents with the live zone */
 static void
 auth_load_swap_zone(struct auth_load_thread* thr, struct auth_zone* proxyz)
 {
 	rbtree_type data;
-	struct rpz* rpz;
 	struct auth_zone* z;
+	struct timeval start, end;
+	if(gettimeofday(&start, NULL) < 0)
+		log_err("gettimeofday: %s", strerror(errno));
+
 	lock_rw_rdlock(&thr->task->worker->env.auth_zones->lock);
 	z = auth_zone_find(thr->task->worker->env.auth_zones,
 		thr->task->name, thr->task->namelen, thr->task->dclass);
@@ -365,11 +397,14 @@ auth_load_swap_zone(struct auth_load_thread* thr, struct auth_zone* proxyz)
 	proxyz->data = z->data;
 	z->data = data;
 
-	rpz = proxyz->rpz;
-	proxyz->rpz = z->rpz;
-	z->rpz = rpz;
+	if(z->rpz && proxyz->rpz)
+		auth_load_swap_rpz(z->rpz, proxyz->rpz);
 
 	lock_rw_unlock(&z->lock);
+
+	if(gettimeofday(&end, NULL) < 0)
+		log_err("gettimeofday: %s", strerror(errno));
+	timeval_subtract(&thr->task->time_reload, &end, &start);
 }
 
 /** Process http transfer */
@@ -723,7 +758,7 @@ worker_auth_load_service_cb(int ATTR_UNUSED(fd), short ATTR_UNUSED(bits),
 	struct auth_chunk* chunk_list;
 	struct module_env* env = &thr->task->worker->env;
 	int ixfr_fail;
-	struct timeval time_taken;
+	struct timeval time_taken, time_reload;
 	size_t mem_used, chunks_total;
 
 	log_assert(thr->commpair[0] >= 0);
@@ -777,6 +812,7 @@ worker_auth_load_service_cb(int ATTR_UNUSED(fd), short ATTR_UNUSED(bits),
 	lock_rw_unlock(&thr->task->worker->env.auth_zones->lock);
 	ixfr_fail = thr->task->ixfr_fail;
 	time_taken = thr->task->time_taken;
+	time_reload = thr->task->time_reload;
 	mem_used = thr->task->mem_used;
 	chunks_total = thr->task->chunks_total;
 	if(thr->task->on_http) {
@@ -790,7 +826,7 @@ worker_auth_load_service_cb(int ATTR_UNUSED(fd), short ATTR_UNUSED(bits),
 	auth_load_thread_delete(thr);
 	auth_load_info_release_thread(env);
 	xfr_process_load_end_transfer(xfr, env, recv_item, ixfr_fail,
-		&time_taken, mem_used, chunks_total, chunk_list);
+		&time_taken, &time_reload, mem_used, chunks_total, chunk_list);
 }
 
 /** Attach worker to the auth load thread. */

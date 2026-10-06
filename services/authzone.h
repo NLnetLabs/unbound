@@ -888,8 +888,8 @@ void xfr_pick_up_transfer(struct auth_xfer* xfr, struct module_env* env);
 /** Handle the end of an auth load task. */
 void xfr_process_load_end_transfer(struct auth_xfer* xfr,
 	struct module_env* env, uint8_t status, int ixfr_fail,
-	struct timeval* time_taken, size_t mem_used, size_t chunks_total,
-	struct auth_chunk* chunk_list);
+	struct timeval* time_taken, struct timeval* time_reload,
+	size_t mem_used, size_t chunks_total, struct auth_chunk* chunk_list);
 
 /** Log preview of http transfer */
 void xfr_http_preview(const char* file, struct auth_chunk* chunk_list);

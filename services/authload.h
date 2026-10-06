@@ -160,6 +160,8 @@ struct auth_load_task {
 	int on_ixfr;
 	/** Set if the transfer is an IXFR but we detected an AXFR contents */
 	int on_ixfr_is_axfr;
+	/** The zone is an rpz zone. */
+	int is_rpz;
 
 	/** Set if the ixfr failed. (So that there can be backoff to AXFR). */
 	int ixfr_fail;
@@ -177,6 +179,8 @@ struct auth_load_task {
 
 	/** time taken for the task */
 	struct timeval time_taken;
+	/** time taken for the reload part of the task */
+	struct timeval time_reload;
 	/** memory used for the task */
 	size_t mem_used;
 };

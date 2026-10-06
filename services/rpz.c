@@ -588,16 +588,11 @@ rpz_apply_cfg_elements(struct rpz* r, struct config_auth* p)
 }
 
 struct rpz*
-rpz_create(struct config_auth* p)
+rpz_create_empty(void)
 {
 	struct rpz* r = calloc(1, sizeof(*r));
 	if(!r)
-		goto err;
-
-	r->region = regional_create_custom(sizeof(struct regional));
-	if(!r->region) {
-		goto err;
-	}
+		return NULL;
 
 	if(!(r->local_zones = local_zones_create())){
 		goto err;
@@ -619,6 +614,34 @@ rpz_create(struct config_auth* p)
 
 	r->ns_set = rpz_clientip_synthesized_set_create();
 	if(r->ns_set == NULL) {
+		goto err;
+	}
+	return r;
+err:
+	if(r) {
+		if(r->local_zones)
+			local_zones_delete(r->local_zones);
+		if(r->nsdname_zones)
+			local_zones_delete(r->nsdname_zones);
+		if(r->respip_set)
+			respip_set_delete(r->respip_set);
+		if(r->client_set != NULL)
+			rpz_clientip_synthesized_set_delete(r->client_set);
+		if(r->ns_set != NULL)
+			rpz_clientip_synthesized_set_delete(r->ns_set);
+	}
+	return NULL;
+}
+
+struct rpz*
+rpz_create(struct config_auth* p)
+{
+	struct rpz* r = rpz_create_empty();
+	if(!r)
+		goto err;
+
+	r->region = regional_create_custom(sizeof(struct regional));
+	if(!r->region) {
 		goto err;
 	}
 
@@ -2870,7 +2893,8 @@ size_t rpz_get_mem(struct rpz* r)
 		m += r->taglistlen;
 	if(r->log_name)
 		m += strlen(r->log_name) + 1;
-	m += regional_get_mem(r->region);
+	if(r->region)
+		m += regional_get_mem(r->region);
 	m += local_zones_get_mem(r->local_zones);
 	m += local_zones_get_mem(r->nsdname_zones);
 	m += respip_set_get_mem(r->respip_set);

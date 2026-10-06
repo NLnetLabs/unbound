@@ -6567,8 +6567,8 @@ process_list_end_transfer(struct auth_xfer* xfr, struct module_env* env)
  * ends holding xfr lock. */
 static int
 xfr_process_loaded_transfer(struct auth_xfer* xfr, struct module_env* env,
-	int* gone, struct timeval* time_taken, size_t mem_used,
-	size_t chunks_total)
+	int* gone, struct timeval* time_taken, struct timeval* time_reload,
+	size_t mem_used, size_t chunks_total)
 {
 	struct auth_zone* z = NULL;
 	struct auth_chunk* chunk_list;
@@ -6679,10 +6679,14 @@ xfr_process_loaded_transfer(struct auth_xfer* xfr, struct module_env* env,
 					(unsigned)xfr->serial);
 			}
 			verbose(VERB_ALGO, "auth zone %s details %s thread "
-				"time was %d.%6.6ds and used %lu bytes of "
-				"memory", zname, taskline,
+				"time was %d.%6.6ds, of which "
+				"the reload time was %d.%6.6ds, "
+				"and used %lu bytes of memory", zname,
+				taskline,
 				(int)time_taken->tv_sec,
 				(int)time_taken->tv_usec,
+				(int)time_reload->tv_sec,
+				(int)time_reload->tv_usec,
 				(unsigned long)mem_used);
 		}
 	}
@@ -6697,8 +6701,8 @@ xfr_process_loaded_transfer(struct auth_xfer* xfr, struct module_env* env,
 
 void xfr_process_load_end_transfer(struct auth_xfer* xfr,
 	struct module_env* env, uint8_t status, int ixfr_fail,
-	struct timeval* time_taken, size_t mem_used, size_t chunks_total,
-	struct auth_chunk* chunk_list)
+	struct timeval* time_taken, struct timeval* time_reload,
+	size_t mem_used, size_t chunks_total, struct auth_chunk* chunk_list)
 {
 	/* Chunks are put here for the auth zone write for the http case. */
 	verbose(VERB_ALGO, "xfr_process_load_end_transfer");
@@ -6706,7 +6710,7 @@ void xfr_process_load_end_transfer(struct auth_xfer* xfr,
 	if(status) {
 		int gone = 0;
 		if(!xfr_process_loaded_transfer(xfr, env, &gone, time_taken,
-			mem_used, chunks_total)) {
+			time_reload, mem_used, chunks_total)) {
 			status = 0;
 			if(gone) {
 				/* the zone is gone from the authzones. */
