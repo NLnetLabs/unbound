@@ -44,7 +44,9 @@
 #ifndef SERVICES_AUTHLOAD_H
 #define SERVICES_AUTHLOAD_H
 #include "util/locks.h"
+#include "util/rbtree.h"
 struct worker;
+struct daemon;
 struct auth_xfer;
 struct module_env;
 struct auth_load_task;
@@ -118,6 +120,8 @@ struct auth_load_thread {
 
 	/** the worker that the auth load is connected to */
 	struct worker* worker;
+	/** the rbtree node for the worker tree of auth load threads. */
+	rbnode_type node;
 
 	/** The task that the thread is working on */
 	struct auth_load_task* task;
@@ -280,5 +284,16 @@ void auth_load_resume_timer_cb(void* arg);
 
 /** Schedule pick up of waiting transfers. */
 void auth_load_schedule_waiting_pickup(struct module_env* env);
+
+/** Compare auth load tree entries, in the worker auth load tree. */
+int auth_load_tree_cmp(const void* a, const void* b);
+
+/** Delete tasks for the zone. The write and xfr tasks for that name, class
+ * are sent a quit signal, and the thread is joined, as it exits. */
+void auth_load_del_zone_tasks(struct worker* worker, uint8_t* name,
+	size_t namelen, uint16_t dclass);
+
+/** Stop all the auth load threads. */
+void auth_load_stop_threads(struct daemon* daemon);
 
 #endif /* SERVICES_AUTHLOAD_H */

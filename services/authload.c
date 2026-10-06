@@ -764,6 +764,10 @@ auth_load_thread_delete(struct auth_load_thread* thr)
 {
 	if(!thr)
 		return;
+	if(thr->worker) {
+		rbtree_delete(&thr->worker->auth_load_tree, &thr->node);
+		thr->worker = NULL;
+	}
 	if(thr->service_event && thr->service_event_is_added) {
 		ub_event_del(thr->service_event);
 		thr->service_event_is_added = 0;
@@ -924,6 +928,14 @@ auth_load_thread_attach(struct auth_load_thread* thr, struct worker* worker)
 		return 0;
 	}
 	thr->service_event_is_added = 1;
+
+	thr->node.key = thr;
+	thr->worker = worker;
+	if(!rbtree_insert(&worker->auth_load_tree, &thr->node)) {
+		log_err("can not insert thread struct in tree, duplicate");
+		thr->worker = NULL;
+		return 0;
+	}
 	return 1;
 }
 
@@ -1288,4 +1300,222 @@ xfr_transfer_remove_wait_transfer_list(struct auth_xfer* xfr)
 	xfr->task_transfer->wait_transfer_prev = NULL;
 	xfr->task_transfer->wait_transfer_next = NULL;
 	xfr->task_transfer->on_wait_transfer_list = 0;
+}
+
+int auth_load_tree_cmp(const void* a, const void* b)
+{
+	struct auth_load_thread* ta = (struct auth_load_thread*)a;
+	struct auth_load_thread* tb = (struct auth_load_thread*)b;
+	int r;
+	/* compare the task name and type by preference, so it can be
+	 * searched for */
+	if(!ta->task || !tb->task) {
+		if(!ta->task && !tb->task) {
+			if(!a && !b)
+				return 0;
+			if(!a) return 1;
+			if(!b) return -1;
+			if(a > b)
+				return 1;
+			if(a < b)
+				return -1;
+			return 0;
+		}
+		if(!ta->task)
+			return -1;
+		return 1;
+	}
+	if(ta->task->dclass != tb->task->dclass)
+		return (int)tb->task->dclass - (int)ta->task->dclass;
+	r = query_dname_compare(ta->task->name, tb->task->name);
+	if(r != 0)
+		return r;
+	/* Name and class are the same, NULL worker ptr is sorted larger than
+	 * the ones with tasks, so that it can find with smaller_or_equal
+	 * the tasks in the tree with that name. */
+	if(!ta->worker && !tb->worker)
+		return 0;
+	if(!ta->worker)
+		return 1;
+	if(!tb->worker)
+		return -1;
+	/* If name, class are the same, there can be more threads, such as
+	 * a write thread that takes a while, and a later started xfr thread.*/
+	if(a > b)
+		return 1;
+	if(a < b)
+		return -1;
+	return 0;
+}
+
+/** auth load thread, poll for and handle cmd from auth load thread. */
+static int
+authload_check_cmd_from_thread(struct auth_load_thread* thr)
+{
+	int inevent = 0;
+	ssize_t ret;
+	uint8_t cmd = 0;
+	while(1) {
+		if(!sock_poll_timeout(thr->commpair[0], 0, 1, 0, &inevent)) {
+			log_err("check for cmd from auth load thread: "
+				"poll failed");
+#ifdef USE_WINSOCK
+			ub_winsock_tcp_wouldblock(worker->daemon->
+				thr->service_event, UB_EV_READ);
+#endif
+			return 0;
+		}
+		if(!inevent) {
+#ifdef USE_WINSOCK
+			ub_winsock_tcp_wouldblock(worker->daemon->
+				thr->service_event, UB_EV_READ);
+#endif
+			return 0;
+		}
+		ret = recv(thr->commpair[0], &cmd, 1, 0);
+		if(ret == -1) {
+			if(
+#ifndef USE_WINSOCK
+				errno == EINTR || errno == EAGAIN
+#  ifdef EWOULDBLOCK
+				|| errno == EWOULDBLOCK
+#  endif
+#else
+				WSAGetLastError() == WSAEINTR ||
+				WSAGetLastError() == WSAEINPROGRESS
+#endif
+				)
+				return 0; /* Continue later. */
+#ifdef USE_WINSOCK
+			if(WSAGetLastError() == WSAEWOULDBLOCK) {
+				ub_winsock_tcp_wouldblock(thr->service_event,
+					UB_EV_READ);
+				return 0; /* Continue later. */
+			}
+#endif
+			log_err("read status from auth load thread, recv: %s",
+				sock_strerror(errno));
+			return 0;
+		} else if(ret == 0) {
+			verbose(VERB_ALGO, "closed connection from auth load thread");
+			return 1;
+		/* ret<1: No short read on 1 byte, to continue later on */
+		}
+
+		/* Deal with the result of auth load thread */
+		verbose(VERB_ALGO, "auth load status is %d", (int)cmd);
+		/* It intends to quit, we want to send it quit */
+		break;
+	}
+	return 1;
+}
+
+/**
+ * Auth load thread, send quit command to the thread. It is blocking, since used
+ * on quit and change of auth zones in fastreload.
+ * It handles received input from the thread, if any is received.
+ */
+static void
+authload_send_quit_to(struct auth_load_thread* thr)
+{
+	int outevent, loopexit = 0;
+	uint8_t cmd;
+	ssize_t ret;
+	verbose(VERB_ALGO, "send quit to auth load thread");
+	cmd = auth_load_notification_exit;
+	while(1) {
+		if(++loopexit > 200) {
+			log_err("send notification to auth load thread: could not send notification: loop");
+			return;
+		}
+		if(authload_check_cmd_from_thread(thr))
+			return; /* thread already exiting */
+		/* wait for socket to become writable */
+		if(!sock_poll_timeout(thr->commpair[0],
+			-1 /* blocking */,
+			0, 1, &outevent)) {
+			log_err("send notification to auth load thread: poll failed");
+			return;
+		}
+		if(!outevent)
+			continue;
+		/* keep static analyzer happy; send(-1,..) */
+		log_assert(thr->commpair[0] >= 0);
+		ret = send(thr->commpair[0], &cmd, 1, 0);
+		if(ret == -1) {
+			if(
+#ifndef USE_WINSOCK
+				errno == EINTR || errno == EAGAIN
+#  ifdef EWOULDBLOCK
+				|| errno == EWOULDBLOCK
+#  endif
+#else
+				WSAGetLastError() == WSAEINTR ||
+				WSAGetLastError() == WSAEINPROGRESS ||
+				WSAGetLastError() == WSAEWOULDBLOCK
+#endif
+				)
+				continue; /* Try again. */
+			log_err("send notification to auth load thread: send: %s",
+				sock_strerror(errno));
+			return;
+		}
+		break;
+	}
+}
+
+void auth_load_del_zone_tasks(struct worker* worker, uint8_t* name,
+	size_t namelen, uint16_t dclass)
+{
+	struct auth_load_thread* thr;
+	struct auth_load_thread key;
+	struct auth_load_task kt;
+	memset(&key, 0, sizeof(key));
+	memset(&kt, 0, sizeof(kt));
+	key.task = &kt;
+	key.worker = NULL; /* this finds entries smallerorequal that are the
+		same name and class */
+	key.node.key = &key;
+	kt.name = name;
+	kt.namelen = namelen;
+	kt.dclass = dclass;
+
+	while(1) {
+		rbnode_type* result = NULL;
+		(void)rbtree_find_less_equal(&worker->auth_load_tree, &key,
+			&result);
+		if(!result)
+			break;
+		/* Check if the same name and class. If not, there are no
+		 * elements of that name and class. */
+		thr = (struct auth_load_thread*)result->key;
+		if(!thr->task ||
+			query_dname_compare(thr->task->name, name) != 0 ||
+			thr->task->dclass != dclass)
+			break;
+		authload_send_quit_to(thr);
+		ub_thread_join(thr->tid);
+		auth_load_thread_delete(thr);
+	}
+}
+
+/** Stop the auth load threads for a worker */
+static void
+auth_load_stop_worker_threads(struct worker* worker)
+{
+	struct auth_load_thread* thr;
+	RBTREE_FOR(thr, struct auth_load_thread*, &worker->auth_load_tree) {
+		authload_send_quit_to(thr);
+		ub_thread_join(thr->tid);
+		thr->worker = NULL; /* no need to delete from the tree */
+		auth_load_thread_delete(thr);
+	}
+}
+
+void auth_load_stop_threads(struct daemon* daemon)
+{
+	int i;
+	for(i=0; i<daemon->num; i++) {
+		auth_load_stop_worker_threads(daemon->workers[i]);
+	}
 }

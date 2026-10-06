@@ -5455,13 +5455,16 @@ zone_write_after_update(struct auth_zone* z, struct module_env* env,
 	}
 
 	/* write to tempfile first */
-	if((size_t)strlen(zfilename) + 16 > sizeof(tmpfile)) {
+	if((size_t)strlen(zfilename) + 16 + (thr?20:0) > sizeof(tmpfile)) {
 		verbose(VERB_ALGO, "tmpfilename too long, cannot update "
 			" zonefile %s", zfilename);
 		auth_chunk_list_delete(chunk_list);
 		return;
 	}
-	snprintf(tmpfile, sizeof(tmpfile), "%s.tmp%u", zfilename,
+	if(thr)
+	     snprintf(tmpfile, sizeof(tmpfile), "%s.tmp%u.%lu", zfilename,
+		(unsigned)getpid(), (unsigned long)thr);
+	else snprintf(tmpfile, sizeof(tmpfile), "%s.tmp%u", zfilename,
 		(unsigned)getpid());
 	if(thr && auth_load_thread_poll_for_quit(thr)) {
 		auth_chunk_list_delete(chunk_list);

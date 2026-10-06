@@ -7533,6 +7533,8 @@ fr_worker_auth_del(struct worker* worker, struct fast_reload_auth_change* item,
 			released = 1;
 			xfr_disown_tasks(xfr, worker);
 		}
+		auth_load_del_zone_tasks(worker, xfr->name, xfr->namelen,
+			xfr->dclass);
 		lock_basic_unlock(&xfr->lock);
 	}
 

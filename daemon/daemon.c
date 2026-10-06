@@ -1176,6 +1176,7 @@ daemon_fork(struct daemon* daemon)
 
 	/* we exited! a signal happened! Stop other threads */
 	daemon_stop_others(daemon);
+	auth_load_stop_threads(daemon);
 
 	/* Shutdown SHM */
 	shm_main_shutdown(daemon);

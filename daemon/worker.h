@@ -47,6 +47,7 @@
 #include "util/netevent.h"
 #include "util/locks.h"
 #include "util/alloc.h"
+#include "util/rbtree.h"
 #include "util/data/msgreply.h"
 #include "util/data/msgparse.h"
 #include "daemon/stats.h"
@@ -135,6 +136,8 @@ struct worker {
 #endif
 	/** reuse existing cache on reload if other conditions allow it. */
 	int reuse_cache;
+	/** tree of auth load threads, attached to this worker. */
+	rbtree_type auth_load_tree;
 };
 
 /**
