@@ -4,6 +4,7 @@
 # use .tpkg.var.test for in test variable passing
 [ -f .tpkg.var.test ] && source .tpkg.var.test
 
+PRE="../.."
 . ../common.sh
 # if no threads; exit
 if grep -e "define HAVE_PTHREAD 1" -e "define HAVE_SOLARIS_THREADS 1" -e "define HAVE_WINDOWS_THREADS 1" $PRE/config.h; then
@@ -27,7 +28,6 @@ echo "FWD_PID=$FWD_PID" >> .tpkg.var.test
 # make config file
 sed -e 's/@PORT\@/'$UNBOUND_PORT'/' -e 's/@TOPORT\@/'$FWD_PORT'/' < auth_load_rpz.conf > ub.conf
 # start unbound in the background
-PRE="../.."
 $PRE/unbound -d -c ub.conf >unbound.log 2>&1 &
 #valgrind --leak-check=full --show-reachable=yes $PRE/unbound -d -c ub.conf >unbound.log 2>&1 &
 UNBOUND_PID=$!

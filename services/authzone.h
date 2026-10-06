@@ -151,6 +151,8 @@ struct auth_zone {
 	int zonemd_callback_perform_write;
 	/** chunklist to write for chunked transfer. */
 	struct auth_chunk* perform_write_chunk_list;
+	/** The zonemd transfer is an active transfer (for auth load info) */
+	int zonemd_transfer_active;
 	/** zone has been deleted */
 	int zone_deleted;
 	/** deletelist pointer, unused normally except during delete */
@@ -557,6 +559,13 @@ void auth_zones_delete(struct auth_zones* az);
  */
 int auth_zone_write_file(struct auth_zone* z, const char* fname);
 
+/** write to zonefile after zone has updated, reacquires z readlock.
+ * The chunk list is freed on return.
+ * If the zone is gone, chunk_list is freed (if non NULL). */
+void zone_write_after_update_reacq(uint8_t* name, size_t namelen,
+	uint16_t dclass, struct module_env* env,
+	struct auth_chunk* chunk_list);
+
 /**
  * Use auth zones to lookup the answer to a query.
  * The query is from the iterator.  And the auth zones attempts to provide
@@ -890,6 +899,9 @@ void xfr_process_load_end_transfer(struct auth_xfer* xfr,
 	struct module_env* env, uint8_t status, int ixfr_fail,
 	struct timeval* time_taken, struct timeval* time_reload,
 	size_t mem_used, size_t chunks_total, struct auth_chunk* chunk_list);
+
+/** Handle the end of an auth load task to write. */
+void auth_zone_process_load_end_write(struct module_env* env);
 
 /** Log preview of http transfer */
 void xfr_http_preview(const char* file, struct auth_chunk* chunk_list);

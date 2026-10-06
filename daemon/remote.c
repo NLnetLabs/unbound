@@ -73,6 +73,7 @@
 #include "services/mesh.h"
 #include "services/localzone.h"
 #include "services/authzone.h"
+#include "services/authload.h"
 #include "services/rpz.h"
 #include "util/storage/slabhash.h"
 #include "util/fptr_wlist.h"
@@ -7444,6 +7445,13 @@ auth_zone_zonemd_stop_lookup(struct auth_zone* z, struct mesh_area* mesh)
 {
 	struct query_info qinfo;
 	uint16_t qflags = BIT_RD;
+	if(z->zonemd_transfer_active) {
+		auth_load_info_release_transfer_in_progress(
+			z->zonemd_callback_env);
+		auth_load_schedule_waiting_pickup(z->zonemd_callback_env);
+		z->zonemd_transfer_active = 0;
+	}
+
 	qinfo.qname_len = z->namelen;
 	qinfo.qname = z->name;
 	qinfo.qclass = z->dclass;

@@ -151,6 +151,22 @@ auth_load_task_pickup_xfr(struct auth_load_task* task, struct auth_xfer* xfr)
 	return 1;
 }
 
+/** Pick up the work content of task transfer of auth zonefile write */
+static int
+auth_load_task_pickup_write(struct auth_load_task* task, uint8_t* name,
+	size_t namelen, uint16_t dclass, struct auth_chunk* chunk_list)
+{
+	task->name = memdup(name, namelen);
+	if(!task->name)
+		return 0;
+	task->namelen = namelen;
+	task->dclass = dclass;
+	task->chunks_first = chunk_list;
+
+	task->task_type = AUTH_LOAD_TASK_ZONEFILE_WRITE;
+	return 1;
+}
+
 /** Create xfr task */
 static struct auth_load_task*
 auth_load_task_create_xfr(struct auth_xfer* xfr, struct worker* worker)
@@ -158,10 +174,30 @@ auth_load_task_create_xfr(struct auth_xfer* xfr, struct worker* worker)
 	struct auth_load_task* task = auth_load_task_create();
 	if(!task) {
 		log_err("out of memory");
-		return 0;
+		return NULL;
 	}
 	task->worker = worker;
 	if(!auth_load_task_pickup_xfr(task, xfr)) {
+		log_err("out of memory");
+		auth_load_task_delete(task);
+		return NULL;
+	}
+	return task;
+}
+
+/** Create write task */
+static struct auth_load_task*
+auth_load_task_create_write(uint8_t* name, size_t namelen, uint16_t dclass,
+	struct module_env* env, struct auth_chunk* chunk_list)
+{
+	struct auth_load_task* task = auth_load_task_create();
+	if(!task) {
+		log_err("out of memory");
+		return 0;
+	}
+	task->worker = env->worker;
+	if(!auth_load_task_pickup_write(task, name, namelen, dclass,
+		chunk_list)) {
 		log_err("out of memory");
 		auth_load_task_delete(task);
 		return 0;
@@ -405,6 +441,24 @@ auth_load_swap_zone(struct auth_load_thread* thr, struct auth_zone* proxyz)
 	if(gettimeofday(&end, NULL) < 0)
 		log_err("gettimeofday: %s", strerror(errno));
 	timeval_subtract(&thr->task->time_reload, &end, &start);
+}
+
+/** Process zonefile write task */
+static int
+auth_load_process_write(struct auth_load_thread* thr)
+{
+	struct auth_load_task* task = thr->task;
+	struct auth_chunk* chunk_list;
+
+	chunk_list = task->chunks_first;
+	task->chunks_first = NULL;
+
+	/* Finds the zone, gets a readlock, writes chunks or zonefile,
+	 * and deletes chunk_list if any. */
+	zone_write_after_update_reacq(task->name, task->namelen, task->dclass,
+		&task->worker->env, chunk_list);
+
+	return 1;
 }
 
 /** Process http transfer */
@@ -656,7 +710,10 @@ auth_load_thread_process(struct auth_load_thread* thr)
 		log_err("gettimeofday: %s", strerror(errno));
 
 	/* apply data */
-	if(task->on_http) {
+	if(task->task_type == AUTH_LOAD_TASK_ZONEFILE_WRITE) {
+		if(!auth_load_process_write(thr))
+			return 0;
+	} else if(task->on_http) {
 		if(!auth_load_process_http(thr))
 			return 0;
 	} else if(task->on_ixfr && !task->on_ixfr_is_axfr) {
@@ -754,12 +811,13 @@ worker_auth_load_service_cb(int ATTR_UNUSED(fd), short ATTR_UNUSED(bits),
 	struct auth_load_thread* thr = (struct auth_load_thread*)arg;
 	uint8_t recv_item;
 	ssize_t ret;
-	struct auth_xfer* xfr;
+	struct auth_xfer* xfr = NULL;
 	struct auth_chunk* chunk_list;
 	struct module_env* env = &thr->task->worker->env;
 	int ixfr_fail;
 	struct timeval time_taken, time_reload;
 	size_t mem_used, chunks_total;
+	enum auth_load_task_type task_type;
 
 	log_assert(thr->commpair[0] >= 0);
 	ret = recv(thr->commpair[0], &recv_item, 1, 0);
@@ -798,18 +856,22 @@ worker_auth_load_service_cb(int ATTR_UNUSED(fd), short ATTR_UNUSED(bits),
 	verbose(VERB_ALGO, "join with auth load thread");
 	ub_thread_join(thr->tid);
 	verbose(VERB_ALGO, "joined with auth load thread");
-	lock_rw_rdlock(&thr->task->worker->env.auth_zones->lock);
-	xfr = auth_xfer_find(thr->task->worker->env.auth_zones,
-		thr->task->name, thr->task->namelen, thr->task->dclass);
-	if(!xfr) {
+
+	task_type = thr->task->task_type;
+	if(task_type != AUTH_LOAD_TASK_ZONEFILE_WRITE) {
+		lock_rw_rdlock(&thr->task->worker->env.auth_zones->lock);
+		xfr = auth_xfer_find(thr->task->worker->env.auth_zones,
+			thr->task->name, thr->task->namelen, thr->task->dclass);
+		if(!xfr) {
+			lock_rw_unlock(&thr->task->worker->env.auth_zones->lock);
+			verbose(VERB_ALGO, "auth load: xfr is gone");
+			auth_load_thread_delete(thr);
+			auth_load_info_release_thread(env);
+			return;
+		}
+		lock_basic_lock(&xfr->lock);
 		lock_rw_unlock(&thr->task->worker->env.auth_zones->lock);
-		verbose(VERB_ALGO, "auth load: xfr is gone");
-		auth_load_thread_delete(thr);
-		auth_load_info_release_thread(env);
-		return;
 	}
-	lock_basic_lock(&xfr->lock);
-	lock_rw_unlock(&thr->task->worker->env.auth_zones->lock);
 	ixfr_fail = thr->task->ixfr_fail;
 	time_taken = thr->task->time_taken;
 	time_reload = thr->task->time_reload;
@@ -825,8 +887,12 @@ worker_auth_load_service_cb(int ATTR_UNUSED(fd), short ATTR_UNUSED(bits),
 	}
 	auth_load_thread_delete(thr);
 	auth_load_info_release_thread(env);
-	xfr_process_load_end_transfer(xfr, env, recv_item, ixfr_fail,
-		&time_taken, &time_reload, mem_used, chunks_total, chunk_list);
+	if(task_type == AUTH_LOAD_TASK_ZONEFILE_WRITE)
+		auth_zone_process_load_end_write(env);
+	else
+		xfr_process_load_end_transfer(xfr, env, recv_item, ixfr_fail,
+			&time_taken, &time_reload, mem_used, chunks_total,
+			chunk_list);
 }
 
 /** Attach worker to the auth load thread. */
@@ -885,26 +951,37 @@ auth_load_start_thread(struct auth_load_task* task)
 int auth_load_add_task_xfr(struct auth_xfer* xfr, struct worker* worker)
 {
 	struct auth_load_task* task;
-	int can_run = 0;
 	verbose(VERB_ALGO, "auth load add task");
-
-	/* Check auth load count */
-	can_run = 1;
 
 	/* Create new thread */
 	task = auth_load_task_create_xfr(xfr, worker);
 	if(!task)
 		return 0;
-	if(can_run) {
-		verbose(VERB_ALGO, "auth load start thread");
-		if(!auth_load_start_thread(task))
-			return 0;
-		verbose(VERB_ALGO, "auth load thread started");
-		return 1;
-	}
 
-	/* Make wait item */
-	return 0;
+	verbose(VERB_ALGO, "auth load start thread");
+	if(!auth_load_start_thread(task))
+		return 0;
+	verbose(VERB_ALGO, "auth load thread started");
+	return 1;
+}
+
+int auth_load_add_task_write(uint8_t* name, size_t namelen, uint16_t dclass,
+	struct module_env* env, struct auth_chunk* chunk_list)
+{
+	struct auth_load_task* task;
+	verbose(VERB_ALGO, "auth load add task for zonefile write");
+
+	/* Create new thread */
+	task = auth_load_task_create_write(name, namelen, dclass, env,
+		chunk_list);
+	if(!task)
+		return 0;
+
+	verbose(VERB_ALGO, "auth load start thread");
+	if(!auth_load_start_thread(task))
+		return 0;
+	verbose(VERB_ALGO, "auth load thread started");
+	return 1;
 }
 
 struct auth_load_general_info* auth_load_info_create(void)
@@ -1055,12 +1132,11 @@ auth_load_wait_transfer_pop_first(struct auth_load_general_info* auth_load_info)
 	return xfr;
 }
 
-/** Schedule pick up of waiting transfers. */
-static void
-xfr_transfer_schedule_waiting_pickup(struct auth_xfer* xfr)
+void
+auth_load_schedule_waiting_pickup(struct module_env* env)
 {
 	struct auth_load_general_info* auth_load_info =
-		xfr->task_transfer->env->worker->daemon->auth_load_info;
+		env->worker->daemon->auth_load_info;
 	lock_basic_lock(&auth_load_info->lock);
 	if(auth_load_info->wait_transfer_list &&
 		!auth_load_info->resume_timer_enabled) {
@@ -1069,7 +1145,7 @@ xfr_transfer_schedule_waiting_pickup(struct auth_xfer* xfr)
 		 * in the event loop, outside of these callback functions.
 		 * There it can handle the waiting xfr task. */
 		auth_load_info->resume_timer_enabled = 1;
-		auth_load_info->resume_env = xfr->task_transfer->env;
+		auth_load_info->resume_env = env;
 		auth_load_info->resume_timer = comm_timer_create(
 			auth_load_info->resume_env->worker_base,
 			auth_load_resume_timer_cb, auth_load_info->resume_env);
@@ -1165,7 +1241,7 @@ xfr_transfer_release_active(struct auth_xfer* xfr)
 
 	/* Since a transfer is no longer in progress, see if there are
 	 * waiting transfers. If so, schedule them to get picked up. */
-	xfr_transfer_schedule_waiting_pickup(xfr);
+	auth_load_schedule_waiting_pickup(xfr->task_transfer->env);
 }
 
 void

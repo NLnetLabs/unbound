@@ -5473,19 +5473,19 @@ zone_write_after_update(struct auth_zone* z, struct module_env* env,
 }
 
 /** write to zonefile after zone has updated, reacquires z readlock. */
-static void
-zone_write_after_update_reacq(uint8_t* bakname, size_t baknamelen,
-	uint16_t bakdclass, struct module_env* env,
-	struct auth_chunk* chunk_list)
+void
+zone_write_after_update_reacq(uint8_t* name, size_t namelen, uint16_t dclass,
+	struct module_env* env, struct auth_chunk* chunk_list)
 {
 	struct auth_zone* z;
 	/* get lock again, so it is a readlock and concurrently queries
 	 * can be answered */
 	lock_rw_rdlock(&env->auth_zones->lock);
-	z = auth_zone_find(env->auth_zones, bakname, baknamelen, bakdclass);
+	z = auth_zone_find(env->auth_zones, name, namelen, dclass);
 	if(!z) {
 		lock_rw_unlock(&env->auth_zones->lock);
 		/* the zone is gone, ignore xfr results */
+		auth_chunk_list_delete(chunk_list);
 		return;
 	}
 	lock_rw_rdlock(&z->lock);
@@ -5647,9 +5647,21 @@ xfr_process_chunk_list(struct auth_xfer* xfr, struct module_env* env,
 			xfr->task_transfer->chunks_first = NULL;
 			auth_chunks_delete(xfr->task_transfer);
 		}
+		if(xfr->task_transfer->active_transfer) {
+			/* Move the active transfer notice from the
+			 * task_transfer to the zonemd lookup task. So that
+			 * the zonemd lookup task can spawn a thread when
+			 * it is done. It can then release it from the active
+			 * count. */
+			z->zonemd_transfer_active = 1;
+			xfr->task_transfer->active_transfer = 0;
+		} else {
+			z->zonemd_transfer_active = 0;
+		}
 	} else {
 		zonemd_in_progress = 0;
 		z->zonemd_callback_perform_write = 0;
+		z->zonemd_transfer_active = 0;
 		if(xfr->task_transfer->master->http) {
 			current_chunk_list = xfr->task_transfer->chunks_first;
 			xfr->task_transfer->chunks_first = NULL;
@@ -6690,10 +6702,21 @@ xfr_process_loaded_transfer(struct auth_xfer* xfr, struct module_env* env,
 				(unsigned long)mem_used);
 		}
 	}
-	verbose(VERB_ALGO, "xfr_process_loaded_transfer: write after update");
-	/* see if we need to write to a zonefile */
+
 	chunk_list = xfr->task_transfer->chunks_first;
 	xfr->task_transfer->chunks_first = NULL;
+	if(xfr->task_transfer->active_transfer) {
+		/* Attempt to start a thread for the write. */
+		if(auth_load_add_task_write(xfr->name, xfr->namelen,
+			xfr->dclass, env, chunk_list)) {
+			/* Thread was started, it can release the active. */
+			xfr->task_transfer->active_transfer = 0;
+			return 1;
+		}
+		/* On failure, write without a thread. */
+	}
+	verbose(VERB_ALGO, "xfr_process_loaded_transfer: write after update");
+	/* see if we need to write to a zonefile */
 	xfr_write_after_update(xfr, env, chunk_list);
 
 	return 1;
@@ -6736,6 +6759,17 @@ void xfr_process_load_end_transfer(struct auth_xfer* xfr,
 	xfr_transfer_remove_wait_transfer_list(xfr);
 	xfr_transfer_release_active(xfr);
 	xfr_process_transfer_failed(xfr, env, ixfr_fail);
+}
+
+void
+auth_zone_process_load_end_write(struct module_env* env)
+{
+	/* Release the active task counter that it was holding. */
+	/* There is no other bookkeeping to perform, so the auth_zone or
+	 * auth_xfer is not passed to this routine. */
+	verbose(VERB_ALGO, "auth zone write task completed");
+	auth_load_info_release_transfer_in_progress(env);
+	auth_load_schedule_waiting_pickup(env);
 }
 
 /** callback for the task_transfer timer */
@@ -9001,7 +9035,7 @@ void auth_zonemd_dnskey_lookup_callback(void* arg, int rcode, sldns_buffer* buf,
 	char reasonbuf[256];
 	char* reason = NULL, *ds_bogus = NULL, *typestr="DNSKEY";
 	struct ub_packed_rrset_key* dnskey = NULL, *ds = NULL;
-	int is_insecure = 0, downprot, perform_write = 0;
+	int is_insecure = 0, downprot, perform_write = 0, release_active = 0;
 	struct ub_packed_rrset_key keystorage;
 	uint8_t sigalg[ALGO_NEEDS_MAX+1];
 	uint8_t bakname[LDNS_MAX_DOMAINLEN];
@@ -9015,7 +9049,16 @@ void auth_zonemd_dnskey_lookup_callback(void* arg, int rcode, sldns_buffer* buf,
 	 * ZONEMD verification task if it wants to */
 	z->zonemd_callback_env = NULL;
 	if(!env || env->outnet->want_to_quit || z->zone_deleted) {
+		if(env && z->zonemd_transfer_active) {
+			/* if zone deleted, release active */
+			release_active = 1;
+			z->zonemd_transfer_active = 0;
+		}
 		lock_rw_unlock(&z->lock);
+		if(release_active) {
+			auth_load_info_release_transfer_in_progress(env);
+			auth_load_schedule_waiting_pickup(env);
+		}
 		return; /* stop on quit */
 	}
 	if(z->zonemd_callback_qtype == LDNS_RR_TYPE_DS)
@@ -9122,8 +9165,17 @@ void auth_zonemd_dnskey_lookup_callback(void* arg, int rcode, sldns_buffer* buf,
 
 	if(reason) {
 		auth_zone_zonemd_fail(z, env, reason, ds_bogus, NULL);
+		if(z->zonemd_transfer_active) {
+			/* if zone deleted, release active */
+			release_active = 1;
+			z->zonemd_transfer_active = 0;
+		}
 		lock_rw_unlock(&z->lock);
 		regional_free_all(env->scratch);
+		if(release_active) {
+			auth_load_info_release_transfer_in_progress(env);
+			auth_load_schedule_waiting_pickup(env);
+		}
 		return;
 	}
 
@@ -9153,13 +9205,31 @@ void auth_zonemd_dnskey_lookup_callback(void* arg, int rcode, sldns_buffer* buf,
 			auth_chunk_list_delete(z->perform_write_chunk_list);
 			z->perform_write_chunk_list = NULL;
 		}
+		if(z->zonemd_transfer_active) {
+			release_active = 1;
+			z->zonemd_transfer_active = 0;
+		}
 		z->zonemd_callback_perform_write = 0;
 	}
 	lock_rw_unlock(&z->lock);
 
 	if(perform_write) {
+		if(release_active) {
+			/* Attempt to start a thread */
+			if(auth_load_add_task_write(bakname, baknamelen,
+				bakdclass, env, chunk_list)) {
+				/* The thread can remove the active number
+				 * when done with the write */
+				return;
+			}
+			/* If that failed, write without a thread */
+		}
 		zone_write_after_update_reacq(bakname, baknamelen, bakdclass,
 			env, chunk_list);
+	}
+	if(release_active) {
+		auth_load_info_release_transfer_in_progress(env);
+		auth_load_schedule_waiting_pickup(env);
 	}
 }
 

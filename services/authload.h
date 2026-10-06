@@ -187,12 +187,25 @@ struct auth_load_task {
 
 /**
  * Add a new task to be performed by the auth load thread.
- * It starts a thread, or makes a wait list item.
+ * It starts a thread.
  * @param xfr: zone transfer to start for.
  * @param worker: worker that is connected to the task.
  * @return false on failure.
  */
 int auth_load_add_task_xfr(struct auth_xfer* xfr, struct worker* worker);
+
+/**
+ * Add a new task to be performed by the auth load thread.
+ * It starts a thread. This writes to zonefile.
+ * @param name: name of zone, wireformat.
+ * @param namelen: length of name.
+ * @param dclass: class of the zone.
+ * @param env: the module env.
+ * @param chunk_list: for writes after http, the chunk list with data.
+ * @return false on failure to create the thread.
+ */
+int auth_load_add_task_write(uint8_t* name, size_t namelen, uint16_t dclass,
+	struct module_env* env, struct auth_chunk* chunk_list);
 
 /** See if there is a quit signal, true if so. */
 int auth_load_thread_poll_for_quit(struct auth_load_thread* thr);
@@ -264,5 +277,8 @@ void xfr_transfer_remove_wait_transfer_list(struct auth_xfer* xfr);
 
 /** The timer callback for the wait_transfer resume timer. */
 void auth_load_resume_timer_cb(void* arg);
+
+/** Schedule pick up of waiting transfers. */
+void auth_load_schedule_waiting_pickup(struct module_env* env);
 
 #endif /* SERVICES_AUTHLOAD_H */

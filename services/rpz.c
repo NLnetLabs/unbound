@@ -629,6 +629,7 @@ err:
 			rpz_clientip_synthesized_set_delete(r->client_set);
 		if(r->ns_set != NULL)
 			rpz_clientip_synthesized_set_delete(r->ns_set);
+		free(r);
 	}
 	return NULL;
 }

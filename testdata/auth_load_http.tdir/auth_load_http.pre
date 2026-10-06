@@ -31,7 +31,6 @@ wait_petal_up petal.log
 # make config file
 sed -e 's/@PORT\@/'$UNBOUND_PORT'/' -e 's/@TOPORT\@/'$PETAL_PORT'/' < auth_load_http.conf > ub.conf
 # start unbound in the background
-PRE="../.."
 $PRE/unbound -d -c ub.conf >unbound.log 2>&1 &
 #valgrind --leak-check=full --show-reachable=yes $PRE/unbound -d -c ub.conf >unbound.log 2>&1 &
 UNBOUND_PID=$!
