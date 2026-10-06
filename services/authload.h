@@ -48,12 +48,14 @@ struct worker;
 struct auth_xfer;
 struct module_env;
 struct auth_load_task;
+struct comm_timer;
 
 /**
  * General information for auth load threads. The number of active threads.
  */
 struct auth_load_general_info {
-	/** lock on this structure */
+	/** lock on this structure. It is after the auth_zones lock, and
+	 * after the auth_xfer locks. */
 	lock_basic_type lock;
 	/** The number of active auth load threads. */
 	int num_auth_load_threads;
@@ -65,6 +67,15 @@ struct auth_load_general_info {
 	struct auth_xfer* wait_transfer_list;
 	/** The last item of the wait_transfer list. */
 	struct auth_xfer* wait_transfer_last;
+	/** To resume from a waiting item, the callback, at zero timeout is
+	 * used. That breaks out of callbacks and handles the items there.
+	 * If the timer is set, this is true. */
+	int resume_timer_enabled;
+	/** The resume timer for the wait_transfer list. */
+	struct comm_timer* resume_timer;
+	/** The worker env for the resume timer. It is set in the event base
+	 * of that worker. */
+	struct module_env* resume_env;
 };
 
 /**
@@ -246,5 +257,8 @@ void xfr_transfer_wait_active(struct auth_xfer* xfr);
  * @param xfr: the xfr is removed from the wait_transfer list.
  */
 void xfr_transfer_remove_wait_transfer_list(struct auth_xfer* xfr);
+
+/** The timer callback for the wait_transfer resume timer. */
+void auth_load_resume_timer_cb(void* arg);
 
 #endif /* SERVICES_AUTHLOAD_H */

@@ -889,6 +889,15 @@ struct auth_load_general_info* auth_load_info_create(void)
 	lock_protect(&auth_load_info->lock,
 		&auth_load_info->wait_transfer_last,
 		sizeof(auth_load_info->wait_transfer_last));
+	lock_protect(&auth_load_info->lock,
+		&auth_load_info->resume_timer_enabled,
+		sizeof(auth_load_info->resume_timer_enabled));
+	lock_protect(&auth_load_info->lock,
+		&auth_load_info->resume_timer,
+		sizeof(auth_load_info->resume_timer));
+	lock_protect(&auth_load_info->lock,
+		&auth_load_info->resume_env,
+		sizeof(auth_load_info->resume_env));
 	return auth_load_info;
 }
 
@@ -897,6 +906,8 @@ void auth_load_info_delete(struct auth_load_general_info* auth_load_info)
 	if(!auth_load_info)
 		return;
 	lock_basic_destroy(&auth_load_info->lock);
+	comm_timer_delete(auth_load_info->resume_timer);
+	auth_load_info->resume_timer = NULL;
 	free(auth_load_info);
 }
 
@@ -973,19 +984,134 @@ xfr_transfer_grab_active(struct auth_xfer* xfr)
 		xfr->task_transfer->env);
 }
 
+/** Disable resume timer. */
+static void
+auth_load_disable_resume_timer(struct auth_load_general_info* auth_load_info)
+{
+	lock_basic_lock(&auth_load_info->lock);
+	comm_timer_delete(auth_load_info->resume_timer);
+	auth_load_info->resume_timer = NULL;
+	auth_load_info->resume_env = NULL;
+	auth_load_info->resume_timer_enabled = 0;
+	lock_basic_unlock(&auth_load_info->lock);
+}
+
+/** Pop the first item from the wait_transfer list */
+static struct auth_xfer*
+auth_load_wait_transfer_pop_first(struct auth_load_general_info* auth_load_info)
+{
+	struct auth_xfer* xfr = auth_load_info->wait_transfer_list;
+	if(xfr) {
+		auth_load_info->wait_transfer_list =
+			xfr->task_transfer->wait_transfer_next;
+		if(xfr->task_transfer->wait_transfer_next)
+			xfr->task_transfer->wait_transfer_next->task_transfer->
+			wait_transfer_prev = NULL;
+		else	auth_load_info->wait_transfer_last = NULL;
+		xfr->task_transfer->on_wait_transfer_list = 0;
+		xfr->task_transfer->wait_transfer_prev = NULL;
+		xfr->task_transfer->wait_transfer_next = NULL;
+	}
+	return xfr;
+}
+
 /** Schedule pick up of waiting transfers. */
 static void
 xfr_transfer_schedule_waiting_pickup(struct auth_xfer* xfr)
 {
 	struct auth_load_general_info* auth_load_info =
-		env->worker->daemon->auth_load_info;
-	int waiting = 0;
+		xfr->task_transfer->env->worker->daemon->auth_load_info;
 	lock_basic_lock(&auth_load_info->lock);
-	if(auth_load_info->wait_transfer_list)
-		waiting = 1;
+	if(auth_load_info->wait_transfer_list &&
+		!auth_load_info->resume_timer_enabled) {
+		struct timeval tv;
+		/* Set a timer for zero time, that makes the callback run
+		 * in the event loop, outside of these callback functions.
+		 * There it can handle the waiting xfr task. */
+		auth_load_info->resume_timer_enabled = 1;
+		auth_load_info->resume_env = xfr->task_transfer->env;
+		auth_load_info->resume_timer = comm_timer_create(
+			auth_load_info->resume_env->worker_base,
+			auth_load_resume_timer_cb, auth_load_info->resume_env);
+		if(!auth_load_info->resume_timer) {
+			char zname[LDNS_MAX_DOMAINLEN];
+			dname_str(auth_load_info->wait_transfer_list->name,
+				zname);
+			log_err("out of memory: schedule zone transfer %s",
+				zname);
+			lock_basic_unlock(&auth_load_info->lock);
+			/* The server is still running, but there is no
+			 * auth zone update. */
+			return;
+		}
+		memset(&tv, 0, sizeof(tv));
+		comm_timer_set(auth_load_info->resume_timer, &tv);
+	}
 	lock_basic_unlock(&auth_load_info->lock);
+}
 
-	if(waiting) {
+/** Pick up a waiting transfer */
+static int
+auth_load_resume_transfer(struct auth_load_general_info* auth_load_info,
+	struct module_env* env)
+{
+	struct auth_xfer* xfr;
+	/* Lock the auth zone tree, so that the xfr can not be
+	 * deleted while it is picked up from the auth load info.
+	 * It can then be locked. The xfr can not be locked while
+	 * the auth_load_info is locked, because that lock is
+	 * after the xfr lock, and it would create a lock cycle. */
+	lock_rw_rdlock(&env->auth_zones->lock);
+	lock_basic_lock(&auth_load_info->lock);
+
+	/* If there is no space to start another transfer, do not
+	 * pick up another one. */
+	if(env->cfg->auth_task_threads != 0 &&
+		auth_load_info->num_auth_transfers >=
+		env->cfg->auth_task_threads) {
+		lock_basic_unlock(&auth_load_info->lock);
+		lock_rw_unlock(&env->auth_zones->lock);
+		/* There is at least one transfer that is picked up
+		 * and in progress. That, when done, is going to
+		 * check for a waiting list, and schedule another
+		 * resume timer, if needed. */
+		return 0;
+	}
+
+	xfr = auth_load_wait_transfer_pop_first(auth_load_info);
+	lock_basic_unlock(&auth_load_info->lock);
+	if(xfr) {
+		/* Lock the xfr, after the auth_load_info is unlocked.
+		 * It has not been deleted, since the auth_zones lock
+		 * is held. */
+		lock_basic_lock(&xfr->lock);
+	}
+	lock_rw_unlock(&env->auth_zones->lock);
+
+	if(xfr) {
+		/* Pick up this transfer. */
+		xfr_pick_up_transfer(xfr, env);
+		/* The xfr is unlocked by the pick up call. */
+	} else {
+		return 0; /* no more transfers to pick up */
+	}
+	return 1;
+}
+
+/** The timer callback for the auth load wait_transfer resume timer. */
+void auth_load_resume_timer_cb(void* arg)
+{
+	struct module_env* env = (struct module_env*)arg;
+	struct auth_load_general_info* auth_load_info =
+		env->worker->daemon->auth_load_info;
+
+	/* Disable the timer */
+	auth_load_disable_resume_timer(auth_load_info);
+
+	/* If there are waiting xfrs on the wait_transfer list, pick one up. */
+	while(1) {
+		if(!auth_load_resume_transfer(auth_load_info, env))
+			break;
 	}
 }
 

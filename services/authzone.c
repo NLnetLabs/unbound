@@ -5944,6 +5944,15 @@ xfr_transfer_nexttarget_or_end(struct auth_xfer* xfr, struct module_env* env)
 				 * progress, wait to do this later, when other
 				 * transfers are done. */
 				xfr_transfer_wait_active(xfr);
+				/* Drop stuff that connects to the event
+				 * base in this worker. Because after the wait
+				 * a worker is going to pick this xfr up. */
+				comm_timer_delete(xfr->task_transfer->timer);
+				xfr->task_transfer->timer = NULL;
+				comm_point_delete(xfr->task_transfer->cp);
+				xfr->task_transfer->cp = NULL;
+				/* But we keep env, because authload references
+				 * it to get, eg. config. */
 				lock_basic_unlock(&xfr->lock);
 				return;
 			}
@@ -6457,6 +6466,16 @@ xfer_link_data(sldns_buffer* pkt, struct auth_xfer* xfr)
 	xfr->task_transfer->chunks_last = e;
 	xfr->task_transfer->chunks_total += e->len;
 	return 1;
+}
+
+void
+xfr_pick_up_transfer(struct auth_xfer* xfr, struct module_env* env)
+{
+	/* The item is picked up by the worker from the env. */
+	xfr->task_transfer->worker = env->worker;
+	xfr->task_transfer->env = env;
+	xfr_transfer_nexttarget_or_end(xfr, env);
+	/* xfr is unlocked by the xfr_transfer_nexttarget_or_end call */
 }
 
 /** task transfer, process the failure to process the zone transfer.

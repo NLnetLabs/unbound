@@ -881,6 +881,10 @@ struct auth_data* az_domain_create(struct auth_zone* z, uint8_t* nm,
 /** helper traverse to delete zones */
 void auth_data_del(rbnode_type* n, void* arg);
 
+/** Pick up xfr task from wait_transfer resumption. xfr is locked on entry,
+ * unlocked at return. */
+void xfr_pick_up_transfer(struct auth_xfer* xfr, struct module_env* env);
+
 /** Handle the end of an auth load task. */
 void xfr_process_load_end_transfer(struct auth_xfer* xfr,
 	struct module_env* env, uint8_t status, int ixfr_fail,

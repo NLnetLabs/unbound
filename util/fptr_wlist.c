@@ -51,6 +51,7 @@
 #include "services/mesh.h"
 #include "services/localzone.h"
 #include "services/authzone.h"
+#include "services/authload.h"
 #include "services/cache/infra.h"
 #include "services/cache/rrset.h"
 #include "services/view.h"
@@ -147,6 +148,7 @@ fptr_whitelist_comm_timer(void (*fptr)(void*))
 	else if(fptr == &auth_xfer_timer) return 1;
 	else if(fptr == &auth_xfer_probe_timer_callback) return 1;
 	else if(fptr == &auth_xfer_transfer_timer_callback) return 1;
+	else if(fptr == &auth_load_resume_timer_cb) return 1;
 	else if(fptr == &mesh_serve_expired_callback) return 1;
 	else if(fptr == &serviced_timer_cb) return 1;
 #ifdef USE_DNSTAP
