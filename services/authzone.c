@@ -1765,11 +1765,16 @@ auth_rr_to_string(uint8_t* nm, size_t nmlen, uint16_t tp, uint16_t cl,
 /** write rrset to file */
 static int
 auth_zone_write_rrset(struct auth_zone* z, struct auth_data* node,
-	struct auth_rrset* r, FILE* out)
+	struct auth_rrset* r, FILE* out, struct auth_load_thread* thr,
+	int* rrcount)
 {
 	size_t i, count = r->data->count + r->data->rrsig_count;
 	char buf[LDNS_RR_BUF_SIZE];
 	for(i=0; i<count; i++) {
+		if(thr && ((*rrcount)++)%NUM_RECORDS_BEFORE_SIGNAL_CHECK==0) {
+			if(auth_load_thread_poll_for_quit(thr))
+				return 0;
+		}
 		if(!auth_rr_to_string(node->name, node->namelen, r->type,
 			z->dclass, r->data, i, buf, sizeof(buf))) {
 			verbose(VERB_ALGO, "failed to rr2str rr %d", (int)i);
@@ -1783,14 +1788,15 @@ auth_zone_write_rrset(struct auth_zone* z, struct auth_data* node,
 
 /** write domain to file */
 static int
-auth_zone_write_domain(struct auth_zone* z, struct auth_data* n, FILE* out)
+auth_zone_write_domain(struct auth_zone* z, struct auth_data* n, FILE* out,
+	struct auth_load_thread* thr, int* count)
 {
 	struct auth_rrset* r;
 	/* if this is zone apex, write SOA first */
 	if(z->namelen == n->namelen) {
 		struct auth_rrset* soa = az_domain_rrset(n, LDNS_RR_TYPE_SOA);
 		if(soa) {
-			if(!auth_zone_write_rrset(z, n, soa, out))
+			if(!auth_zone_write_rrset(z, n, soa, out, thr, count))
 				return 0;
 		}
 	}
@@ -1799,23 +1805,25 @@ auth_zone_write_domain(struct auth_zone* z, struct auth_data* n, FILE* out)
 		if(z->namelen == n->namelen &&
 			r->type == LDNS_RR_TYPE_SOA)
 			continue; /* skip SOA here */
-		if(!auth_zone_write_rrset(z, n, r, out))
+		if(!auth_zone_write_rrset(z, n, r, out, thr, count))
 			return 0;
 	}
 	return 1;
 }
 
-int auth_zone_write_file(struct auth_zone* z, const char* fname)
+int auth_zone_write_file(struct auth_zone* z, const char* fname,
+	struct auth_load_thread* thr)
 {
 	FILE* out;
 	struct auth_data* n;
+	int count = 0;
 	out = fopen(fname, "w");
 	if(!out) {
 		log_err("could not open %s: %s", fname, strerror(errno));
 		return 0;
 	}
 	RBTREE_FOR(n, struct auth_data*, &z->data) {
-		if(!auth_zone_write_domain(z, n, out)) {
+		if(!auth_zone_write_domain(z, n, out, thr, &count)) {
 			log_err("could not write domain to %s", fname);
 			fclose(out);
 			return 0;
@@ -5396,10 +5404,12 @@ apply_http(struct auth_xfer* xfr, struct auth_zone* z,
 
 /** write http chunks to zonefile to create downloaded file */
 static int
-auth_zone_write_chunks(struct auth_chunk* chunk_list, const char* fname)
+auth_zone_write_chunks(struct auth_chunk* chunk_list, const char* fname,
+	struct auth_load_thread* thr)
 {
 	FILE* out;
 	struct auth_chunk* p;
+	int count = 0;
 	out = fopen(fname, "w");
 	if(!out) {
 		log_err("could not open %s: %s", fname, strerror(errno));
@@ -5411,6 +5421,10 @@ auth_zone_write_chunks(struct auth_chunk* chunk_list, const char* fname)
 			fclose(out);
 			return 0;
 		}
+		if(thr && (count++)%100 == 0) {
+			if(auth_load_thread_poll_for_quit(thr))
+				return 0;
+		}
 	}
 	fclose(out);
 	return 1;
@@ -5419,7 +5433,7 @@ auth_zone_write_chunks(struct auth_chunk* chunk_list, const char* fname)
 /** write to zonefile after zone has been updated, z has rdlock by caller. */
 static void
 zone_write_after_update(struct auth_zone* z, struct module_env* env,
-	struct auth_chunk* chunk_list)
+	struct auth_chunk* chunk_list, struct auth_load_thread* thr)
 {
 	struct config_file* cfg = env->cfg;
 	char tmpfile[1024];
@@ -5449,15 +5463,19 @@ zone_write_after_update(struct auth_zone* z, struct module_env* env,
 	}
 	snprintf(tmpfile, sizeof(tmpfile), "%s.tmp%u", zfilename,
 		(unsigned)getpid());
+	if(thr && auth_load_thread_poll_for_quit(thr)) {
+		auth_chunk_list_delete(chunk_list);
+		return;
+	}
 	if(chunk_list) {
 		/* use the stored chunk list to write them */
-		if(!auth_zone_write_chunks(chunk_list, tmpfile)) {
+		if(!auth_zone_write_chunks(chunk_list, tmpfile, thr)) {
 			unlink(tmpfile);
 			auth_chunk_list_delete(chunk_list);
 			return;
 		}
 		auth_chunk_list_delete(chunk_list);
-	} else if(!auth_zone_write_file(z, tmpfile)) {
+	} else if(!auth_zone_write_file(z, tmpfile, thr)) {
 		unlink(tmpfile);
 		return;
 	}
@@ -5475,7 +5493,8 @@ zone_write_after_update(struct auth_zone* z, struct module_env* env,
 /** write to zonefile after zone has updated, reacquires z readlock. */
 void
 zone_write_after_update_reacq(uint8_t* name, size_t namelen, uint16_t dclass,
-	struct module_env* env, struct auth_chunk* chunk_list)
+	struct module_env* env, struct auth_chunk* chunk_list,
+	struct auth_load_thread* thr)
 {
 	struct auth_zone* z;
 	/* get lock again, so it is a readlock and concurrently queries
@@ -5491,7 +5510,7 @@ zone_write_after_update_reacq(uint8_t* name, size_t namelen, uint16_t dclass,
 	lock_rw_rdlock(&z->lock);
 	lock_rw_unlock(&env->auth_zones->lock);
 
-	zone_write_after_update(z, env, chunk_list);
+	zone_write_after_update(z, env, chunk_list, thr);
 	lock_rw_unlock(&z->lock);
 }
 
@@ -5518,7 +5537,7 @@ xfr_write_after_update(struct auth_xfer* xfr, struct module_env* env,
 	lock_basic_lock(&xfr->lock);
 	lock_rw_unlock(&env->auth_zones->lock);
 
-	zone_write_after_update(z, env, chunk_list);
+	zone_write_after_update(z, env, chunk_list, NULL);
 	lock_rw_unlock(&z->lock);
 }
 
@@ -9225,7 +9244,7 @@ void auth_zonemd_dnskey_lookup_callback(void* arg, int rcode, sldns_buffer* buf,
 			/* If that failed, write without a thread */
 		}
 		zone_write_after_update_reacq(bakname, baknamelen, bakdclass,
-			env, chunk_list);
+			env, chunk_list, NULL);
 	}
 	if(release_active) {
 		auth_load_info_release_transfer_in_progress(env);

@@ -557,14 +557,15 @@ void auth_zones_delete(struct auth_zones* az);
 /**
  * Write auth zone data to file, in zonefile format.
  */
-int auth_zone_write_file(struct auth_zone* z, const char* fname);
+int auth_zone_write_file(struct auth_zone* z, const char* fname,
+	struct auth_load_thread* thr);
 
 /** write to zonefile after zone has updated, reacquires z readlock.
  * The chunk list is freed on return.
  * If the zone is gone, chunk_list is freed (if non NULL). */
 void zone_write_after_update_reacq(uint8_t* name, size_t namelen,
 	uint16_t dclass, struct module_env* env,
-	struct auth_chunk* chunk_list);
+	struct auth_chunk* chunk_list, struct auth_load_thread* thr);
 
 /**
  * Use auth zones to lookup the answer to a query.

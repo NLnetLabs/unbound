@@ -456,7 +456,7 @@ auth_load_process_write(struct auth_load_thread* thr)
 	/* Finds the zone, gets a readlock, writes chunks or zonefile,
 	 * and deletes chunk_list if any. */
 	zone_write_after_update_reacq(task->name, task->namelen, task->dclass,
-		&task->worker->env, chunk_list);
+		&task->worker->env, chunk_list, thr);
 
 	return 1;
 }
