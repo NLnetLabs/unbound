@@ -1490,22 +1490,32 @@ void auth_load_del_zone_tasks(struct worker* worker, uint8_t* name,
 			thr->task->dclass != dclass)
 			break;
 		authload_send_quit_to(thr);
+		verbose(VERB_ALGO, "join with auth load thread");
 		ub_thread_join(thr->tid);
+		verbose(VERB_ALGO, "joined with auth load thread");
 		auth_load_thread_delete(thr);
 	}
+}
+
+/** Function to stop and delete a thread in the worker tree */
+static void
+auth_load_stop_del_thr(rbnode_type* node, void* ATTR_UNUSED(arg))
+{
+	struct auth_load_thread* thr = (struct auth_load_thread*)node->key;
+	authload_send_quit_to(thr);
+	verbose(VERB_ALGO, "join with auth load thread");
+	ub_thread_join(thr->tid);
+	verbose(VERB_ALGO, "joined with auth load thread");
+	thr->tree_inserted = 0; /* no need to delete from the tree */
+	auth_load_thread_delete(thr);
 }
 
 /** Stop the auth load threads for a worker */
 static void
 auth_load_stop_worker_threads(struct worker* worker)
 {
-	struct auth_load_thread* thr;
-	RBTREE_FOR(thr, struct auth_load_thread*, &worker->auth_load_tree) {
-		authload_send_quit_to(thr);
-		ub_thread_join(thr->tid);
-		thr->tree_inserted = 0; /* no need to delete from the tree */
-		auth_load_thread_delete(thr);
-	}
+	traverse_postorder(&worker->auth_load_tree, auth_load_stop_del_thr,
+		NULL);
 	rbtree_init(&worker->auth_load_tree, auth_load_tree_cmp);
 }
 
