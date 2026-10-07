@@ -1506,6 +1506,7 @@ auth_load_stop_worker_threads(struct worker* worker)
 		thr->tree_inserted = 0; /* no need to delete from the tree */
 		auth_load_thread_delete(thr);
 	}
+	rbtree_init(&worker->auth_load_tree, auth_load_tree_cmp);
 }
 
 void auth_load_stop_threads(struct daemon* daemon)
