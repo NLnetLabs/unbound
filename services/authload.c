@@ -765,7 +765,7 @@ auth_load_thread_delete(struct auth_load_thread* thr)
 	if(!thr)
 		return;
 	if(thr->tree_inserted) {
-		rbtree_delete(&thr->worker->auth_load_tree, &thr->node);
+		rbtree_delete(&thr->worker->auth_load_tree, thr);
 		thr->tree_inserted = 0;
 	}
 	if(thr->service_event && thr->service_event_is_added) {

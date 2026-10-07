@@ -6606,6 +6606,7 @@ xfr_process_loaded_transfer(struct auth_xfer* xfr, struct module_env* env,
 {
 	struct auth_zone* z = NULL;
 	struct auth_chunk* chunk_list;
+	int has_zonefile;
 	verbose(VERB_ALGO, "xfr_process_loaded_transfer");
 	lock_basic_unlock(&xfr->lock);
 	if(!xfr_process_reacquire_locks(xfr, env, &z)) {
@@ -6678,6 +6679,11 @@ xfr_process_loaded_transfer(struct auth_xfer* xfr, struct module_env* env,
 	verbose(VERB_ALGO, "xfr_process_loaded_transfer: lease");
 	if(xfr->have_zone)
 		xfr->lease_time = *env->now;
+
+	if(z->zonefile == NULL || z->zonefile[0] == 0)
+		has_zonefile = 0;
+	else	has_zonefile = 1;
+
 	/* unlock */
 	lock_rw_unlock(&z->lock);
 
@@ -6727,20 +6733,28 @@ xfr_process_loaded_transfer(struct auth_xfer* xfr, struct module_env* env,
 
 	chunk_list = xfr->task_transfer->chunks_first;
 	xfr->task_transfer->chunks_first = NULL;
+
+	if(!has_zonefile) {
+		/* Write to zonefile is not needed. */
+		auth_chunk_list_delete(chunk_list);
+		return 1;
+	}
 	if(xfr->task_transfer->active_transfer) {
 		/* Attempt to start a thread for the write. */
-		if(auth_load_add_task_write(xfr->name, xfr->namelen,
-			xfr->dclass, env, chunk_list)) {
-			/* Thread was started, it can release the active. */
-			xfr->task_transfer->active_transfer = 0;
-			return 1;
+		if(auth_load_info_grab_thread(env)) {
+			if(auth_load_add_task_write(xfr->name, xfr->namelen,
+				xfr->dclass, env, chunk_list)) {
+				/* Thread was started, it can release the active. */
+				xfr->task_transfer->active_transfer = 0;
+				return 1;
+			}
+			auth_load_info_release_thread(env);
 		}
 		/* On failure, write without a thread. */
 	}
 	verbose(VERB_ALGO, "xfr_process_loaded_transfer: write after update");
 	/* see if we need to write to a zonefile */
 	xfr_write_after_update(xfr, env, chunk_list);
-
 	return 1;
 }
 
@@ -9232,17 +9246,26 @@ void auth_zonemd_dnskey_lookup_callback(void* arg, int rcode, sldns_buffer* buf,
 			z->zonemd_transfer_active = 0;
 		}
 		z->zonemd_callback_perform_write = 0;
+
+		if(z->zonefile == NULL || z->zonefile[0] == 0) {
+			/* Write to zonefile is not needed. */
+			perform_write = 0;
+			auth_chunk_list_delete(chunk_list);
+		}
 	}
 	lock_rw_unlock(&z->lock);
 
 	if(perform_write) {
 		if(release_active) {
 			/* Attempt to start a thread */
-			if(auth_load_add_task_write(bakname, baknamelen,
-				bakdclass, env, chunk_list)) {
-				/* The thread can remove the active number
-				 * when done with the write */
-				return;
+			if(auth_load_info_grab_thread(env)) {
+				if(auth_load_add_task_write(bakname, baknamelen,
+					bakdclass, env, chunk_list)) {
+					/* The thread can remove the active number
+					 * when done with the write */
+					return;
+				}
+				auth_load_info_release_thread(env);
 			}
 			/* If that failed, write without a thread */
 		}
