@@ -764,9 +764,9 @@ auth_load_thread_delete(struct auth_load_thread* thr)
 {
 	if(!thr)
 		return;
-	if(thr->worker) {
+	if(thr->tree_inserted) {
 		rbtree_delete(&thr->worker->auth_load_tree, &thr->node);
-		thr->worker = NULL;
+		thr->tree_inserted = 0;
 	}
 	if(thr->service_event && thr->service_event_is_added) {
 		ub_event_del(thr->service_event);
@@ -933,9 +933,9 @@ auth_load_thread_attach(struct auth_load_thread* thr, struct worker* worker)
 	thr->worker = worker;
 	if(!rbtree_insert(&worker->auth_load_tree, &thr->node)) {
 		log_err("can not insert thread struct in tree, duplicate");
-		thr->worker = NULL;
 		return 0;
 	}
+	thr->tree_inserted = 1;
 	return 1;
 }
 
@@ -1311,10 +1311,6 @@ int auth_load_tree_cmp(const void* a, const void* b)
 	 * searched for */
 	if(!ta->task || !tb->task) {
 		if(!ta->task && !tb->task) {
-			if(!a && !b)
-				return 0;
-			if(!a) return 1;
-			if(!b) return -1;
 			if(a > b)
 				return 1;
 			if(a < b)
@@ -1507,7 +1503,7 @@ auth_load_stop_worker_threads(struct worker* worker)
 	RBTREE_FOR(thr, struct auth_load_thread*, &worker->auth_load_tree) {
 		authload_send_quit_to(thr);
 		ub_thread_join(thr->tid);
-		thr->worker = NULL; /* no need to delete from the tree */
+		thr->tree_inserted = 0; /* no need to delete from the tree */
 		auth_load_thread_delete(thr);
 	}
 }

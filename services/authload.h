@@ -120,6 +120,8 @@ struct auth_load_thread {
 
 	/** the worker that the auth load is connected to */
 	struct worker* worker;
+	/** if the thread is inserted in the tree at the worker. */
+	int tree_inserted;
 	/** the rbtree node for the worker tree of auth load threads. */
 	rbnode_type node;
 
