@@ -796,3 +796,9 @@ void tcp_more_read_again_cb(void* ATTR_UNUSED(arg))
 {
 	/* nothing */
 }
+
+void comm_point_doc_callback(int ATTR_UNUSED(fd), short ATTR_UNUSED(event),
+	void* ATTR_UNUSED(arg))
+{
+	/* nothing */
+}
