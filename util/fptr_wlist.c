@@ -51,6 +51,7 @@
 #include "services/mesh.h"
 #include "services/localzone.h"
 #include "services/authzone.h"
+#include "services/authload.h"
 #include "services/cache/infra.h"
 #include "services/cache/rrset.h"
 #include "services/view.h"
@@ -72,6 +73,7 @@
 #include "libunbound/libworker.h"
 #include "libunbound/context.h"
 #include "libunbound/worker.h"
+#include "libunbound/authload.h"
 #include "util/tube.h"
 #include "util/config_file.h"
 #include "daemon/remote.h"
@@ -146,6 +148,7 @@ fptr_whitelist_comm_timer(void (*fptr)(void*))
 	else if(fptr == &auth_xfer_timer) return 1;
 	else if(fptr == &auth_xfer_probe_timer_callback) return 1;
 	else if(fptr == &auth_xfer_transfer_timer_callback) return 1;
+	else if(fptr == &auth_load_resume_timer_cb) return 1;
 	else if(fptr == &mesh_serve_expired_callback) return 1;
 	else if(fptr == &serviced_timer_cb) return 1;
 #ifdef USE_DNSTAP
@@ -193,6 +196,7 @@ fptr_whitelist_event(void (*fptr)(int, short, void *))
 	else if(fptr == &comm_point_doq_callback) return 1;
 #endif
 	else if(fptr == &fast_reload_service_cb) return 1;
+	else if(fptr == &worker_auth_load_service_cb) return 1;
 #ifdef USE_DNSTAP
 	else if(fptr == &dtio_output_cb) return 1;
 	else if(fptr == &dtio_cmd_cb) return 1;
@@ -264,6 +268,7 @@ fptr_whitelist_rbtree_cmp(int (*fptr) (const void *, const void *))
 	else if(fptr == &auth_zone_cmp) return 1;
 	else if(fptr == &auth_data_cmp) return 1;
 	else if(fptr == &auth_xfer_cmp) return 1;
+	else if(fptr == &auth_load_tree_cmp) return 1;
 #ifdef HAVE_NGTCP2
 	else if(fptr == &doq_conn_cmp) return 1;
 	else if(fptr == &doq_conid_cmp) return 1;

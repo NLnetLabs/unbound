@@ -3520,6 +3520,24 @@ These options are part of the ``server:`` section.
 
     Default: no
 
+
+@@UAHL@unbound.conf@auth-task-threads@@: *<number of threads>*
+    If nonzero, the number of threads to start to process zone transfers
+    for authority zones, and also RPZ zones.
+    The zone transfer is processed in a thread, that does not interrupt
+    the resolver.
+    For RPZ zones that means the old RPZ zone continues to be used, while
+    the task is processed.
+    The thread allocates the new zone data, and this keeps another copy of
+    the zone data in memory during processing.
+    The result is swapped into the resolver when the thread is done.
+
+    The value 0 disables the threading, one of the worker threads performs
+    the processing. Without threading enabled, use the value 0.
+
+    Default: 0
+
+
 .. _unbound.conf.remote:
 
 Remote Control Options

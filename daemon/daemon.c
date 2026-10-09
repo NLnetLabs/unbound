@@ -86,6 +86,7 @@
 #include "services/view.h"
 #include "services/modstack.h"
 #include "services/authzone.h"
+#include "services/authload.h"
 #include "util/module.h"
 #include "util/random.h"
 #include "util/tube.h"
@@ -581,6 +582,17 @@ daemon_init(void)
 		return NULL;
 	}
 	if(!(daemon->env->edns_strings = edns_strings_create())) {
+		auth_zones_delete(daemon->env->auth_zones);
+		acl_list_delete(daemon->acl_interface);
+		acl_list_delete(daemon->acl);
+		tcl_list_delete(daemon->tcl);
+		edns_known_options_delete(daemon->env);
+		free(daemon->env);
+		free(daemon);
+		return NULL;
+	}
+	if(!(daemon->auth_load_info = auth_load_info_create())) {
+		edns_strings_delete(daemon->env->edns_strings);
 		auth_zones_delete(daemon->env->auth_zones);
 		acl_list_delete(daemon->acl_interface);
 		acl_list_delete(daemon->acl);
@@ -1164,6 +1176,7 @@ daemon_fork(struct daemon* daemon)
 
 	/* we exited! a signal happened! Stop other threads */
 	daemon_stop_others(daemon);
+	auth_load_stop_threads(daemon);
 
 	/* Shutdown SHM */
 	shm_main_shutdown(daemon);
@@ -1262,6 +1275,7 @@ daemon_delete(struct daemon* daemon)
 		edns_strings_delete(daemon->env->edns_strings);
 		auth_zones_delete(daemon->env->auth_zones);
 	}
+	auth_load_info_delete(daemon->auth_load_info);
 	ub_randfree(daemon->rand);
 	alloc_clear(&daemon->superalloc);
 	acl_list_delete(daemon->acl);

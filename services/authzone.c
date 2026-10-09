@@ -60,6 +60,7 @@
 #include "services/outside_network.h"
 #include "services/listen_dnsport.h"
 #include "services/mesh.h"
+#include "services/authload.h"
 #include "sldns/rrdef.h"
 #include "sldns/pkthdr.h"
 #include "sldns/sbuffer.h"
@@ -98,6 +99,10 @@
 #define NUM_TIMEOUTS_FALLBACK_IXFR 3
 /** number of IXFRs before an AXFR is performed, to consolidate RPZ memory. */
 #define NUM_IXFR_BEFORE_AXFR 5
+/** number of records before polling if the auth-load-thread has to quit.
+ * It polls on the socket, once for this number of processed records, so
+ * it can quit when the signal is sent over the socket. */
+#define NUM_RECORDS_BEFORE_SIGNAL_CHECK 10000
 
 /** pick up nextprobe task to start waiting to perform transfer actions */
 static void xfr_set_timeout(struct auth_xfer* xfr, struct module_env* env,
@@ -385,7 +390,7 @@ auth_data_delete(struct auth_data* n)
 }
 
 /** helper traverse to delete zones */
-static void
+void
 auth_data_del(rbnode_type* n, void* ATTR_UNUSED(arg))
 {
 	struct auth_data* z = (struct auth_data*)n->key;
@@ -612,7 +617,7 @@ auth_zone_set_fallback(struct auth_zone* z, char* fallbackstr)
 }
 
 /** create domain with the given name */
-static struct auth_data*
+struct auth_data*
 az_domain_create(struct auth_zone* z, uint8_t* nm, size_t nmlen)
 {
 	struct auth_data* n = (struct auth_data*)malloc(sizeof(*n));
@@ -1760,11 +1765,16 @@ auth_rr_to_string(uint8_t* nm, size_t nmlen, uint16_t tp, uint16_t cl,
 /** write rrset to file */
 static int
 auth_zone_write_rrset(struct auth_zone* z, struct auth_data* node,
-	struct auth_rrset* r, FILE* out)
+	struct auth_rrset* r, FILE* out, struct auth_load_thread* thr,
+	int* rrcount)
 {
 	size_t i, count = r->data->count + r->data->rrsig_count;
 	char buf[LDNS_RR_BUF_SIZE];
 	for(i=0; i<count; i++) {
+		if(thr && ((*rrcount)++)%NUM_RECORDS_BEFORE_SIGNAL_CHECK==0) {
+			if(auth_load_thread_poll_for_quit(thr))
+				return 0;
+		}
 		if(!auth_rr_to_string(node->name, node->namelen, r->type,
 			z->dclass, r->data, i, buf, sizeof(buf))) {
 			verbose(VERB_ALGO, "failed to rr2str rr %d", (int)i);
@@ -1778,14 +1788,15 @@ auth_zone_write_rrset(struct auth_zone* z, struct auth_data* node,
 
 /** write domain to file */
 static int
-auth_zone_write_domain(struct auth_zone* z, struct auth_data* n, FILE* out)
+auth_zone_write_domain(struct auth_zone* z, struct auth_data* n, FILE* out,
+	struct auth_load_thread* thr, int* count)
 {
 	struct auth_rrset* r;
 	/* if this is zone apex, write SOA first */
 	if(z->namelen == n->namelen) {
 		struct auth_rrset* soa = az_domain_rrset(n, LDNS_RR_TYPE_SOA);
 		if(soa) {
-			if(!auth_zone_write_rrset(z, n, soa, out))
+			if(!auth_zone_write_rrset(z, n, soa, out, thr, count))
 				return 0;
 		}
 	}
@@ -1794,23 +1805,25 @@ auth_zone_write_domain(struct auth_zone* z, struct auth_data* n, FILE* out)
 		if(z->namelen == n->namelen &&
 			r->type == LDNS_RR_TYPE_SOA)
 			continue; /* skip SOA here */
-		if(!auth_zone_write_rrset(z, n, r, out))
+		if(!auth_zone_write_rrset(z, n, r, out, thr, count))
 			return 0;
 	}
 	return 1;
 }
 
-int auth_zone_write_file(struct auth_zone* z, const char* fname)
+int auth_zone_write_file(struct auth_zone* z, const char* fname,
+	struct auth_load_thread* thr)
 {
 	FILE* out;
 	struct auth_data* n;
+	int count = 0;
 	out = fopen(fname, "w");
 	if(!out) {
 		log_err("could not open %s: %s", fname, strerror(errno));
 		return 0;
 	}
 	RBTREE_FOR(n, struct auth_data*, &z->data) {
-		if(!auth_zone_write_domain(z, n, out)) {
+		if(!auth_zone_write_domain(z, n, out, thr, &count)) {
 			log_err("could not write domain to %s", fname);
 			fclose(out);
 			return 0;
@@ -4771,7 +4784,8 @@ chunkline_non_comment_RR(struct auth_chunk** chunk, size_t* chunk_pos,
  * failure and return a string in the scratch buffer (first RR string)
  * on failure. */
 static int
-http_zonefile_syntax_check(struct auth_xfer* xfr, sldns_buffer* buf)
+http_zonefile_syntax_check(uint8_t* name, size_t namelen, uint16_t dclass,
+	struct auth_chunk* chunk_list, struct sldns_buffer* buf)
 {
 	uint8_t rr[LDNS_RR_BUF_SIZE];
 	size_t rr_len, dname_len = 0;
@@ -4781,11 +4795,11 @@ http_zonefile_syntax_check(struct auth_xfer* xfr, sldns_buffer* buf)
 	int e;
 	memset(&pstate, 0, sizeof(pstate));
 	pstate.default_ttl = 3600;
-	if(xfr->namelen < sizeof(pstate.origin)) {
-		pstate.origin_len = xfr->namelen;
-		memmove(pstate.origin, xfr->name, xfr->namelen);
+	if(namelen < sizeof(pstate.origin)) {
+		pstate.origin_len = namelen;
+		memmove(pstate.origin, name, namelen);
 	}
-	chunk = xfr->task_transfer->chunks_first;
+	chunk = chunk_list;
 	chunk_pos = 0;
 	if(!chunkline_non_comment_RR(&chunk, &chunk_pos, buf, &pstate)) {
 		return 0;
@@ -4802,7 +4816,7 @@ http_zonefile_syntax_check(struct auth_xfer* xfr, sldns_buffer* buf)
 		return 0;
 	}
 	/* check that class is correct */
-	if(sldns_wirerr_get_class(rr, rr_len, dname_len) != xfr->dclass) {
+	if(sldns_wirerr_get_class(rr, rr_len, dname_len) != dclass) {
 		log_err("parse failure: first record in downloaded zonefile "
 			"from wrong RR class");
 		return 0;
@@ -4824,7 +4838,7 @@ chunklist_sum(struct auth_chunk* list)
 
 /** for http download, parse and add RR to zone */
 static int
-http_parse_add_rr(struct auth_xfer* xfr, struct auth_zone* z,
+http_parse_add_rr(const char* host, const char* file, struct auth_zone* z,
 	sldns_buffer* buf, struct sldns_file_parse_state* pstate)
 {
 	uint8_t rr[LDNS_RR_BUF_SIZE];
@@ -4838,9 +4852,7 @@ http_parse_add_rr(struct auth_xfer* xfr, struct auth_zone* z,
 		pstate->prev_rr_len?pstate->prev_rr:NULL, pstate->prev_rr_len);
 	if(e != 0) {
 		log_err("%s/%s parse failure RR[%d]: %s in '%s'",
-			xfr->task_transfer->master->host,
-			xfr->task_transfer->master->file,
-			LDNS_WIREPARSE_OFFSET(e),
+			host, file, LDNS_WIREPARSE_OFFSET(e),
 			sldns_get_errorstr_parse(LDNS_WIREPARSE_ERROR(e)),
 			line);
 		return 0;
@@ -4860,10 +4872,10 @@ http_parse_add_rr(struct auth_xfer* xfr, struct auth_zone* z,
 /** RR list iterator, returns RRs from answer section one by one from the
  * dns packets in the chunklist */
 static void
-chunk_rrlist_start(struct auth_xfer* xfr, struct auth_chunk** rr_chunk,
+chunk_rrlist_start(struct auth_chunk* chunk_list, struct auth_chunk** rr_chunk,
 	int* rr_num, size_t* rr_pos)
 {
-	*rr_chunk = xfr->task_transfer->chunks_first;
+	*rr_chunk = chunk_list;
 	*rr_num = 0;
 	*rr_pos = 0;
 }
@@ -5030,9 +5042,10 @@ ixfr_start_serial(struct auth_chunk* rr_chunk, int rr_num, size_t rr_pos,
 }
 
 /** apply IXFR to zone in memory. z is locked. false on failure(mallocfail) */
-static int
-apply_ixfr(struct auth_xfer* xfr, struct auth_zone* z,
-	struct sldns_buffer* scratch_buffer)
+int
+xfr_apply_ixfr(struct auth_chunk* chunk_list, uint32_t xfr_serial,
+	struct auth_zone* z, struct sldns_buffer* scratch_buffer,
+	struct auth_load_thread* thr)
 {
 	struct auth_chunk* rr_chunk;
 	int rr_num;
@@ -5047,10 +5060,8 @@ apply_ixfr(struct auth_xfer* xfr, struct auth_zone* z,
 	int delmode = 0;
 	int softfail = 0;
 
-	xfr->num_ixfrs++;
-
 	/* start RR iterator over chunklist of packets */
-	chunk_rrlist_start(xfr, &rr_chunk, &rr_num, &rr_pos);
+	chunk_rrlist_start(chunk_list, &rr_chunk, &rr_num, &rr_pos);
 	while(!chunk_rrlist_end(rr_chunk, rr_num)) {
 		if(!chunk_rrlist_get_current(rr_chunk, rr_num, rr_pos,
 			&rr_dname, &rr_type, &rr_class, &rr_ttl, &rr_rdlen,
@@ -5081,7 +5092,7 @@ apply_ixfr(struct auth_xfer* xfr, struct auth_zone* z,
 				if(!ixfr_start_serial(rr_chunk, rr_num, rr_pos,
 					rr_dname, rr_type, rr_class, rr_ttl,
 					rr_rdlen, rr_rdata, rr_nextpos,
-					transfer_serial, xfr->serial)) {
+					transfer_serial, xfr_serial)) {
 					return 0;
 				}
 			} else if(transfer_serial == serial) {
@@ -5102,7 +5113,8 @@ apply_ixfr(struct auth_xfer* xfr, struct auth_zone* z,
 					 *  SOA 3 followed by add
 					 *  SOA 3 end */
 					/* ended by SOA record */
-					xfr->serial = transfer_serial;
+					/* xfr->serial is set by xfr_find_soa
+					 * after this function. */
 					break;
 				}
 			}
@@ -5159,6 +5171,10 @@ apply_ixfr(struct auth_xfer* xfr, struct auth_zone* z,
 		}
 
 		rr_counter++;
+		if(thr && rr_counter % NUM_RECORDS_BEFORE_SIGNAL_CHECK == 0) {
+			if(auth_load_thread_poll_for_quit(thr))
+				return 0;
+		}
 		chunk_rrlist_gonext(&rr_chunk, &rr_num, &rr_pos, rr_nextpos);
 	}
 	if(softfail) {
@@ -5168,10 +5184,21 @@ apply_ixfr(struct auth_xfer* xfr, struct auth_zone* z,
 	return 1;
 }
 
-/** apply AXFR to zone in memory. z is locked. false on failure(mallocfail) */
+/** apply IXFR to zone in memory. z is locked. false on failure(mallocfail) */
 static int
-apply_axfr(struct auth_xfer* xfr, struct auth_zone* z,
+apply_ixfr(struct auth_xfer* xfr, struct auth_zone* z,
 	struct sldns_buffer* scratch_buffer)
+{
+	xfr->num_ixfrs++;
+
+	return xfr_apply_ixfr(xfr->task_transfer->chunks_first, xfr->serial, z,
+		scratch_buffer, NULL);
+}
+
+/** apply AXFR to zone in memory. z is locked. false on failure(mallocfail) */
+int
+xfr_apply_axfr(struct auth_chunk* chunk_list, struct auth_zone* z,
+	struct sldns_buffer* scratch_buffer, struct auth_load_thread* thr)
 {
 	struct auth_chunk* rr_chunk;
 	int rr_num;
@@ -5179,21 +5206,16 @@ apply_axfr(struct auth_xfer* xfr, struct auth_zone* z,
 	uint8_t* rr_dname, *rr_rdata;
 	uint16_t rr_type, rr_class, rr_rdlen;
 	uint32_t rr_ttl;
-	uint32_t serial = 0;
 	size_t rr_nextpos;
 	size_t rr_counter = 0;
 	int have_end_soa = 0;
 
 	auth_zone_clear_data(z);
-	xfr->have_zone = 0;
-	xfr->serial = 0;
-	xfr->soa_zone_acquired = 0;
-	xfr->num_ixfrs = 0;
 
 	/* insert all RRs in to the zone */
 	/* insert the SOA only once, skip the last one */
 	/* start RR iterator over chunklist of packets */
-	chunk_rrlist_start(xfr, &rr_chunk, &rr_num, &rr_pos);
+	chunk_rrlist_start(chunk_list, &rr_chunk, &rr_num, &rr_pos);
 	while(!chunk_rrlist_end(rr_chunk, rr_num)) {
 		if(!chunk_rrlist_get_current(rr_chunk, rr_num, rr_pos,
 			&rr_dname, &rr_type, &rr_class, &rr_ttl, &rr_rdlen,
@@ -5210,7 +5232,7 @@ apply_axfr(struct auth_xfer* xfr, struct auth_zone* z,
 				break;
 			}
 			if(rr_rdlen < 22) return 0; /* bad SOA rdlen */
-			serial = sldns_read_uint32(rr_rdata+rr_rdlen-20);
+			/* serial is at sldns_read_uint32(rr_rdata+rr_rdlen-20); */
 		}
 
 		/* add this RR */
@@ -5222,21 +5244,75 @@ apply_axfr(struct auth_xfer* xfr, struct auth_zone* z,
 		}
 
 		rr_counter++;
+		if(thr && rr_counter % NUM_RECORDS_BEFORE_SIGNAL_CHECK == 0) {
+			if(auth_load_thread_poll_for_quit(thr))
+				return 0;
+		}
 		chunk_rrlist_gonext(&rr_chunk, &rr_num, &rr_pos, rr_nextpos);
 	}
 	if(!have_end_soa) {
 		log_err("no end SOA record for AXFR");
 		return 0;
 	}
+	/* xfr->serial and xfr->have_zone are set by xfr_find_soa
+	 * after this function. */
+	return 1;
+}
 
-	xfr->serial = serial;
+/** apply AXFR to zone in memory. z is locked. false on failure(mallocfail) */
+static int
+apply_axfr(struct auth_xfer* xfr, struct auth_zone* z,
+	struct sldns_buffer* scratch_buffer)
+{
+	xfr->have_zone = 0;
+	xfr->serial = 0;
+	xfr->soa_zone_acquired = 0;
+	xfr->num_ixfrs = 0;
+	return xfr_apply_axfr(xfr->task_transfer->chunks_first, z,
+		scratch_buffer, NULL);
+}
+
+void
+xfr_http_preview(const char* file, struct auth_chunk* chunk_list)
+{
+	if(verbosity >= VERB_ALGO)
+		verbose(VERB_ALGO, "http download %s of size %d",
+		file, (int)chunklist_sum(chunk_list));
+	if(chunk_list && verbosity >= VERB_ALGO) {
+		char preview[1024];
+		if(chunk_list->len+1 > sizeof(preview)) {
+			memmove(preview, chunk_list->data, sizeof(preview)-1);
+			preview[sizeof(preview)-1]=0;
+		} else {
+			memmove(preview, chunk_list->data, chunk_list->len);
+			preview[chunk_list->len]=0;
+		}
+		log_info("auth zone http downloaded content preview: %s",
+			preview);
+	}
+}
+
+int
+xfr_http_syntax_check(uint8_t* name, size_t namelen, uint16_t dclass,
+	const char* host, const char* file, struct auth_chunk* chunk_list,
+	struct sldns_buffer* scratch_buffer)
+{
+	/* perhaps a little syntax check before we try to apply the data? */
+	if(!http_zonefile_syntax_check(name, namelen, dclass, chunk_list,
+		scratch_buffer)) {
+		log_err("http download %s/%s does not contain a zonefile, "
+			"but got '%s'", host, file,
+			sldns_buffer_begin(scratch_buffer));
+		return 0;
+	}
 	return 1;
 }
 
 /** apply HTTP to zone in memory. z is locked. false on failure(mallocfail) */
-static int
-apply_http(struct auth_xfer* xfr, struct auth_zone* z,
-	struct sldns_buffer* scratch_buffer)
+int
+xfr_apply_http(uint8_t* name, size_t namelen, const char* host,
+	const char* file, struct auth_chunk* chunk_list, struct auth_zone* z,
+	struct sldns_buffer* scratch_buffer, struct auth_load_thread* thr)
 {
 	/* parse data in chunks */
 	/* parse RR's and read into memory. ignore $INCLUDE from the
@@ -5247,46 +5323,14 @@ apply_http(struct auth_xfer* xfr, struct auth_zone* z,
 	int ret, eof=0;
 	memset(&pstate, 0, sizeof(pstate));
 	pstate.default_ttl = 3600;
-	if(xfr->namelen < sizeof(pstate.origin)) {
-		pstate.origin_len = xfr->namelen;
-		memmove(pstate.origin, xfr->name, xfr->namelen);
-	}
-
-	if(verbosity >= VERB_ALGO)
-		verbose(VERB_ALGO, "http download %s of size %d",
-		xfr->task_transfer->master->file,
-		(int)chunklist_sum(xfr->task_transfer->chunks_first));
-	if(xfr->task_transfer->chunks_first && verbosity >= VERB_ALGO) {
-		char preview[1024];
-		if(xfr->task_transfer->chunks_first->len+1 > sizeof(preview)) {
-			memmove(preview, xfr->task_transfer->chunks_first->data,
-				sizeof(preview)-1);
-			preview[sizeof(preview)-1]=0;
-		} else {
-			memmove(preview, xfr->task_transfer->chunks_first->data,
-				xfr->task_transfer->chunks_first->len);
-			preview[xfr->task_transfer->chunks_first->len]=0;
-		}
-		log_info("auth zone http downloaded content preview: %s",
-			preview);
-	}
-
-	/* perhaps a little syntax check before we try to apply the data? */
-	if(!http_zonefile_syntax_check(xfr, scratch_buffer)) {
-		log_err("http download %s/%s does not contain a zonefile, "
-			"but got '%s'", xfr->task_transfer->master->host,
-			xfr->task_transfer->master->file,
-			sldns_buffer_begin(scratch_buffer));
-		return 0;
+	if(namelen < sizeof(pstate.origin)) {
+		pstate.origin_len = namelen;
+		memmove(pstate.origin, name, namelen);
 	}
 
 	auth_zone_clear_data(z);
-	xfr->have_zone = 0;
-	xfr->serial = 0;
-	xfr->soa_zone_acquired = 0;
-	xfr->num_ixfrs = 0;
 
-	chunk = xfr->task_transfer->chunks_first;
+	chunk = chunk_list;
 	chunk_pos = 0;
 	pstate.lineno = 0;
 	while(chunkline_get_line_collated(&chunk, &chunk_pos, scratch_buffer,
@@ -5294,6 +5338,10 @@ apply_http(struct auth_xfer* xfr, struct auth_zone* z,
 		/* process this line */
 		pstate.lineno++;
 		chunkline_newline_removal(scratch_buffer);
+		if(thr && pstate.lineno % NUM_RECORDS_BEFORE_SIGNAL_CHECK == 0) {
+			if(auth_load_thread_poll_for_quit(thr))
+				return 0;
+		}
 		if(chunkline_is_comment_line_or_empty(scratch_buffer)) {
 			continue;
 		}
@@ -5301,8 +5349,7 @@ apply_http(struct auth_xfer* xfr, struct auth_zone* z,
 		if((ret=http_parse_origin(scratch_buffer, &pstate))!=0) {
 			if(ret == 2) {
 				verbose(VERB_ALGO, "error parsing ORIGIN on line [%s:%d] %s",
-					xfr->task_transfer->master->file,
-					pstate.lineno,
+					file, pstate.lineno,
 					sldns_buffer_begin(scratch_buffer));
 				return 0;
 			}
@@ -5311,37 +5358,58 @@ apply_http(struct auth_xfer* xfr, struct auth_zone* z,
 		if((ret=http_parse_ttl(scratch_buffer, &pstate))!=0) {
 			if(ret == 2) {
 				verbose(VERB_ALGO, "error parsing TTL on line [%s:%d] %s",
-					xfr->task_transfer->master->file,
-					pstate.lineno,
+					file, pstate.lineno,
 					sldns_buffer_begin(scratch_buffer));
 				return 0;
 			}
 			continue; /* $TTL has been handled */
 		}
-		if(!http_parse_add_rr(xfr, z, scratch_buffer, &pstate)) {
+		if(!http_parse_add_rr(host, file, z, scratch_buffer, &pstate)) {
 			verbose(VERB_ALGO, "error parsing line [%s:%d] %s",
-				xfr->task_transfer->master->file,
-				pstate.lineno,
+				file, pstate.lineno,
 				sldns_buffer_begin(scratch_buffer));
 			return 0;
 		}
 	}
 	if(!eof) {
 		verbose(VERB_ALGO, "error parsing line [%s:%d] %s",
-			xfr->task_transfer->master->file,
-			pstate.lineno,
+			file, pstate.lineno,
 			sldns_buffer_begin(scratch_buffer));
 		return 0;
 	}
 	return 1;
 }
 
+/** apply HTTP to zone in memory. z is locked. false on failure(mallocfail) */
+static int
+apply_http(struct auth_xfer* xfr, struct auth_zone* z,
+	struct sldns_buffer* scratch_buffer)
+{
+	xfr_http_preview(xfr->task_transfer->master->file,
+		xfr->task_transfer->chunks_first);
+	if(!xfr_http_syntax_check(xfr->name, xfr->namelen, xfr->dclass,
+		xfr->task_transfer->master->host,
+		xfr->task_transfer->master->file,
+		xfr->task_transfer->chunks_first, scratch_buffer))
+		return 0;
+	xfr->have_zone = 0;
+	xfr->serial = 0;
+	xfr->soa_zone_acquired = 0;
+	xfr->num_ixfrs = 0;
+	return xfr_apply_http(xfr->name, xfr->namelen,
+		xfr->task_transfer->master->host,
+		xfr->task_transfer->master->file,
+		xfr->task_transfer->chunks_first, z, scratch_buffer, NULL);
+}
+
 /** write http chunks to zonefile to create downloaded file */
 static int
-auth_zone_write_chunks(struct auth_chunk* chunk_list, const char* fname)
+auth_zone_write_chunks(struct auth_chunk* chunk_list, const char* fname,
+	struct auth_load_thread* thr)
 {
 	FILE* out;
 	struct auth_chunk* p;
+	int count = 0;
 	out = fopen(fname, "w");
 	if(!out) {
 		log_err("could not open %s: %s", fname, strerror(errno));
@@ -5353,6 +5421,10 @@ auth_zone_write_chunks(struct auth_chunk* chunk_list, const char* fname)
 			fclose(out);
 			return 0;
 		}
+		if(thr && (count++)%100 == 0) {
+			if(auth_load_thread_poll_for_quit(thr))
+				return 0;
+		}
 	}
 	fclose(out);
 	return 1;
@@ -5361,7 +5433,7 @@ auth_zone_write_chunks(struct auth_chunk* chunk_list, const char* fname)
 /** write to zonefile after zone has been updated, z has rdlock by caller. */
 static void
 zone_write_after_update(struct auth_zone* z, struct module_env* env,
-	struct auth_chunk* chunk_list)
+	struct auth_chunk* chunk_list, struct auth_load_thread* thr)
 {
 	struct config_file* cfg = env->cfg;
 	char tmpfile[1024];
@@ -5383,23 +5455,30 @@ zone_write_after_update(struct auth_zone* z, struct module_env* env,
 	}
 
 	/* write to tempfile first */
-	if((size_t)strlen(zfilename) + 16 > sizeof(tmpfile)) {
+	if((size_t)strlen(zfilename) + 16 + (thr?20:0) > sizeof(tmpfile)) {
 		verbose(VERB_ALGO, "tmpfilename too long, cannot update "
 			" zonefile %s", zfilename);
 		auth_chunk_list_delete(chunk_list);
 		return;
 	}
-	snprintf(tmpfile, sizeof(tmpfile), "%s.tmp%u", zfilename,
+	if(thr)
+	     snprintf(tmpfile, sizeof(tmpfile), "%s.tmp%u.%lu", zfilename,
+		(unsigned)getpid(), (unsigned long)thr);
+	else snprintf(tmpfile, sizeof(tmpfile), "%s.tmp%u", zfilename,
 		(unsigned)getpid());
+	if(thr && auth_load_thread_poll_for_quit(thr)) {
+		auth_chunk_list_delete(chunk_list);
+		return;
+	}
 	if(chunk_list) {
 		/* use the stored chunk list to write them */
-		if(!auth_zone_write_chunks(chunk_list, tmpfile)) {
+		if(!auth_zone_write_chunks(chunk_list, tmpfile, thr)) {
 			unlink(tmpfile);
 			auth_chunk_list_delete(chunk_list);
 			return;
 		}
 		auth_chunk_list_delete(chunk_list);
-	} else if(!auth_zone_write_file(z, tmpfile)) {
+	} else if(!auth_zone_write_file(z, tmpfile, thr)) {
 		unlink(tmpfile);
 		return;
 	}
@@ -5415,25 +5494,26 @@ zone_write_after_update(struct auth_zone* z, struct module_env* env,
 }
 
 /** write to zonefile after zone has updated, reacquires z readlock. */
-static void
-zone_write_after_update_reacq(uint8_t* bakname, size_t baknamelen,
-	uint16_t bakdclass, struct module_env* env,
-	struct auth_chunk* chunk_list)
+void
+zone_write_after_update_reacq(uint8_t* name, size_t namelen, uint16_t dclass,
+	struct module_env* env, struct auth_chunk* chunk_list,
+	struct auth_load_thread* thr)
 {
 	struct auth_zone* z;
 	/* get lock again, so it is a readlock and concurrently queries
 	 * can be answered */
 	lock_rw_rdlock(&env->auth_zones->lock);
-	z = auth_zone_find(env->auth_zones, bakname, baknamelen, bakdclass);
+	z = auth_zone_find(env->auth_zones, name, namelen, dclass);
 	if(!z) {
 		lock_rw_unlock(&env->auth_zones->lock);
 		/* the zone is gone, ignore xfr results */
+		auth_chunk_list_delete(chunk_list);
 		return;
 	}
 	lock_rw_rdlock(&z->lock);
 	lock_rw_unlock(&env->auth_zones->lock);
 
-	zone_write_after_update(z, env, chunk_list);
+	zone_write_after_update(z, env, chunk_list, thr);
 	lock_rw_unlock(&z->lock);
 }
 
@@ -5460,7 +5540,7 @@ xfr_write_after_update(struct auth_xfer* xfr, struct module_env* env,
 	lock_basic_lock(&xfr->lock);
 	lock_rw_unlock(&env->auth_zones->lock);
 
-	zone_write_after_update(z, env, chunk_list);
+	zone_write_after_update(z, env, chunk_list, NULL);
 	lock_rw_unlock(&z->lock);
 }
 
@@ -5589,9 +5669,21 @@ xfr_process_chunk_list(struct auth_xfer* xfr, struct module_env* env,
 			xfr->task_transfer->chunks_first = NULL;
 			auth_chunks_delete(xfr->task_transfer);
 		}
+		if(xfr->task_transfer->active_transfer) {
+			/* Move the active transfer notice from the
+			 * task_transfer to the zonemd lookup task. So that
+			 * the zonemd lookup task can spawn a thread when
+			 * it is done. It can then release it from the active
+			 * count. */
+			z->zonemd_transfer_active = 1;
+			xfr->task_transfer->active_transfer = 0;
+		} else {
+			z->zonemd_transfer_active = 0;
+		}
 	} else {
 		zonemd_in_progress = 0;
 		z->zonemd_callback_perform_write = 0;
+		z->zonemd_transfer_active = 0;
 		if(xfr->task_transfer->master->http) {
 			current_chunk_list = xfr->task_transfer->chunks_first;
 			xfr->task_transfer->chunks_first = NULL;
@@ -5658,6 +5750,8 @@ xfr_transfer_disown(struct auth_xfer* xfr)
 			xfr->task_transfer->lookup_aaaa, xfr->dclass,
 			xfr->task_transfer->env->mesh,
 			&auth_xfer_transfer_lookup_callback, xfr);
+	xfr_transfer_remove_wait_transfer_list(xfr);
+	xfr_transfer_release_active(xfr);
 	/* we don't own this item anymore */
 	xfr->task_transfer->worker = NULL;
 	xfr->task_transfer->env = NULL;
@@ -5876,11 +5970,35 @@ xfr_transfer_nexttarget_or_end(struct auth_xfer* xfr, struct module_env* env)
 	/* and set timeout on it */
 	while(!xfr_transfer_end_of_list(xfr)) {
 		xfr->task_transfer->master = xfr_transfer_current_master(xfr);
+		if(xfr->task_transfer->master &&
+			!xfr->task_transfer->master->allow_notify &&
+			env->cfg->auth_task_threads != 0) {
+			if(!xfr_transfer_grab_active(xfr)) {
+				/* Can not get another transfer to have in
+				 * progress, wait to do this later, when other
+				 * transfers are done. */
+				xfr_transfer_wait_active(xfr);
+				/* Drop stuff that connects to the event
+				 * base in this worker. Because after the wait
+				 * a worker is going to pick this xfr up. */
+				comm_timer_delete(xfr->task_transfer->timer);
+				xfr->task_transfer->timer = NULL;
+				comm_point_delete(xfr->task_transfer->cp);
+				xfr->task_transfer->cp = NULL;
+				/* But we keep env, because authload references
+				 * it to get, eg. config. */
+				lock_basic_unlock(&xfr->lock);
+				return;
+			}
+		}
 		if(xfr_transfer_init_fetch(xfr, env)) {
 			/* successfully started, wait for callback */
 			lock_basic_unlock(&xfr->lock);
 			return;
 		}
+		xfr_transfer_remove_wait_transfer_list(xfr);
+		xfr_transfer_release_active(xfr);
+
 		/* failed to fetch, next master */
 		xfr_transfer_nextmaster(xfr);
 	}
@@ -6384,56 +6502,315 @@ xfer_link_data(sldns_buffer* pkt, struct auth_xfer* xfr)
 	return 1;
 }
 
-/** task transfer.  the list of data is complete. process it and if failed
- * move to next master, if succeeded, end the task transfer */
-static void
-process_list_end_transfer(struct auth_xfer* xfr, struct module_env* env)
+void
+xfr_pick_up_transfer(struct auth_xfer* xfr, struct module_env* env)
 {
-	int ixfr_fail = 0;
-	if(xfr_process_chunk_list(xfr, env, &ixfr_fail)) {
-		/* it worked! */
-		auth_chunks_delete(xfr->task_transfer);
-
-		/* we fetched the zone, move to wait task */
-		xfr_transfer_disown(xfr);
-
-		if(xfr->notify_received && (!xfr->notify_has_serial ||
-			(xfr->notify_has_serial && 
-			xfr_serial_means_update(xfr, xfr->notify_serial)))) {
-			uint32_t sr = xfr->notify_serial;
-			int has_sr = xfr->notify_has_serial;
-			/* we received a notify while probe/transfer was
-			 * in progress.  start a new probe and transfer */
-			xfr->notify_received = 0;
-			xfr->notify_has_serial = 0;
-			xfr->notify_serial = 0;
-			if(!xfr_start_probe(xfr, env, NULL)) {
-				/* if we couldn't start it, already in
-				 * progress; restore notify serial,
-				 * while xfr still locked */
-				xfr->notify_received = 1;
-				xfr->notify_has_serial = has_sr;
-				xfr->notify_serial = sr;
-				lock_basic_unlock(&xfr->lock);
-			}
-			return;
-		} else {
-			/* pick up the nextprobe task and wait (normail wait time) */
-			if(xfr->task_nextprobe->worker == NULL)
-				xfr_set_timeout(xfr, env, 0, 0);
-		}
-		lock_basic_unlock(&xfr->lock);
-		return;
+	if(verbosity >= VERB_ALGO) {
+		char zname[LDNS_MAX_DOMAINLEN];
+		dname_str(xfr->name, zname);
+		verbose(VERB_ALGO, "pick up transfer %s", zname);
 	}
+	/* The item is picked up by the worker from the env. */
+	xfr->task_transfer->worker = env->worker;
+	xfr->task_transfer->env = env;
+	xfr_transfer_nexttarget_or_end(xfr, env);
+	/* xfr is unlocked by the xfr_transfer_nexttarget_or_end call */
+}
+
+/** task transfer, process the failure to process the zone transfer.
+ * It continues with the task transfer, possibly. */
+static void
+xfr_process_transfer_failed(struct auth_xfer* xfr, struct module_env* env,
+	int ixfr_fail)
+{
 	/* processing failed */
-	/* when done, delete data from list */
-	auth_chunks_delete(xfr->task_transfer);
 	if(ixfr_fail) {
 		xfr->task_transfer->ixfr_fail = 1;
 	} else {
 		xfr_transfer_nextmaster(xfr);
 	}
 	xfr_transfer_nexttarget_or_end(xfr, env);
+}
+
+/** task transfer, process the success to process the zone transfer.
+ * It continues with the task probe, possibly, due to notify. Or nextprobe. */
+static void
+xfr_process_transfer_success(struct auth_xfer* xfr, struct module_env* env)
+{
+	/* we fetched the zone, move to wait task */
+	xfr_transfer_disown(xfr);
+
+	if(xfr->notify_received && (!xfr->notify_has_serial ||
+		(xfr->notify_has_serial &&
+		xfr_serial_means_update(xfr, xfr->notify_serial)))) {
+		uint32_t sr = xfr->notify_serial;
+		int has_sr = xfr->notify_has_serial;
+		/* we received a notify while probe/transfer was
+		 * in progress.  start a new probe and transfer */
+		xfr->notify_received = 0;
+		xfr->notify_has_serial = 0;
+		xfr->notify_serial = 0;
+		if(!xfr_start_probe(xfr, env, NULL)) {
+			/* if we couldn't start it, already in
+			 * progress; restore notify serial,
+			 * while xfr still locked */
+			xfr->notify_received = 1;
+			xfr->notify_has_serial = has_sr;
+			xfr->notify_serial = sr;
+			lock_basic_unlock(&xfr->lock);
+		}
+		return;
+	} else {
+		/* pick up the nextprobe task and wait (normail wait time) */
+		if(xfr->task_nextprobe->worker == NULL)
+			xfr_set_timeout(xfr, env, 0, 0);
+	}
+	lock_basic_unlock(&xfr->lock);
+}
+
+/** task transfer.  the list of data is complete. process it and if failed
+ * move to next master, if succeeded, end the task transfer */
+static void
+process_list_end_transfer(struct auth_xfer* xfr, struct module_env* env)
+{
+	int ixfr_fail = 0;
+	if(env->cfg->auth_task_threads != 0 /* auth load enabled */) {
+		if(auth_load_info_grab_thread(env)) {
+			/* Create auth load thread task to process the data. */
+			if(auth_load_add_task_xfr(xfr, env->worker)) {
+				/* Task is created, wait for it to be done. The worker
+				 * is signalled with the result. */
+				/* When it is done, the xfr_process_load_end_transfer
+				 * routine is called. */
+				lock_basic_unlock(&xfr->lock);
+				return;
+			}
+			auth_load_info_release_thread(env);
+		} else {
+			verbose(VERB_ALGO, "Auth load threads at capacity, not creating a new thread");
+		}
+	} else if(xfr_process_chunk_list(xfr, env, &ixfr_fail)) {
+		/* it worked! */
+		auth_chunks_delete(xfr->task_transfer);
+		xfr_process_transfer_success(xfr, env);
+		return;
+	}
+	/* when done, delete data from list */
+	auth_chunks_delete(xfr->task_transfer);
+	xfr_transfer_remove_wait_transfer_list(xfr);
+	xfr_transfer_release_active(xfr);
+	xfr_process_transfer_failed(xfr, env, ixfr_fail);
+}
+
+/** deal with successful load end, starts holding xfr lock,
+ * ends holding xfr lock. */
+static int
+xfr_process_loaded_transfer(struct auth_xfer* xfr, struct module_env* env,
+	int* gone, struct timeval* time_taken, struct timeval* time_reload,
+	size_t mem_used, size_t chunks_total)
+{
+	struct auth_zone* z = NULL;
+	struct auth_chunk* chunk_list;
+	int has_zonefile;
+	verbose(VERB_ALGO, "xfr_process_loaded_transfer");
+	lock_basic_unlock(&xfr->lock);
+	if(!xfr_process_reacquire_locks(xfr, env, &z)) {
+		/* the zone is gone, ignore xfr results */
+		*gone = 1;
+		return 0;
+	}
+	/* holding xfr and z locks */
+
+	verbose(VERB_ALGO, "xfr_process_loaded_transfer: num_ixfrs");
+	if(xfr->task_transfer->master->http) {
+		xfr->num_ixfrs = 0;
+		xfr->have_zone = 0;
+		xfr->serial = 0;
+	} else if(xfr->task_transfer->on_ixfr &&
+		!xfr->task_transfer->on_ixfr_is_axfr) {
+		xfr->num_ixfrs++;
+	} else {
+		/* AXFR */
+		xfr->num_ixfrs = 0;
+		xfr->have_zone = 0;
+		xfr->serial = 0;
+	}
+
+	verbose(VERB_ALGO, "xfr_process_loaded_transfer: find_soa");
+	xfr->zone_expired = 0;
+	z->zone_expired = 0;
+	if(!xfr_find_soa(z, xfr)) {
+		verbose(VERB_ALGO, "xfr from %s: no SOA in zone after update"
+			" (or malformed RR)", xfr->task_transfer->master->host);
+		return 0;
+	}
+	z->soa_zone_acquired = *env->now;
+	xfr->soa_zone_acquired = *env->now;
+	xfr->is_rpz = (z->rpz!=NULL);
+
+	/* release xfr lock while verifying zonemd because it may have
+	 * to spawn lookups in the state machines */
+	lock_basic_unlock(&xfr->lock);
+	verbose(VERB_ALGO, "xfr_process_loaded_transfer: verify_zonemd");
+	/* holding z lock */
+	auth_zone_verify_zonemd(z, env, &env->mesh->mods, NULL, 0, 0);
+	if(z->zone_expired) {
+		char zname[LDNS_MAX_DOMAINLEN];
+		/* ZONEMD must have failed */
+		/* reacquire locks, so we hold xfr lock on exit of routine,
+		 * and both xfr and z again after releasing xfr for potential
+		 * state machine mesh callbacks */
+		lock_rw_unlock(&z->lock);
+		if(!xfr_process_reacquire_locks(xfr, env, &z)) {
+			*gone = 1;
+			return 0;
+		}
+		dname_str(xfr->name, zname);
+		verbose(VERB_ALGO, "xfr from %s: ZONEMD failed for %s, transfer is failed", xfr->task_transfer->master->host, zname);
+		xfr->zone_expired = 1;
+		lock_rw_unlock(&z->lock);
+		return 0;
+	}
+	/* reacquire locks, so we hold xfr lock on exit of routine,
+	 * and both xfr and z again after releasing xfr for potential
+	 * state machine mesh callbacks */
+	lock_rw_unlock(&z->lock);
+	if(!xfr_process_reacquire_locks(xfr, env, &z)) {
+		*gone = 1;
+		return 0;
+	}
+	/* holding xfr and z locks */
+
+	verbose(VERB_ALGO, "xfr_process_loaded_transfer: lease");
+	if(xfr->have_zone)
+		xfr->lease_time = *env->now;
+
+	if(z->zonefile == NULL || z->zonefile[0] == 0)
+		has_zonefile = 0;
+	else	has_zonefile = 1;
+
+	/* unlock */
+	lock_rw_unlock(&z->lock);
+
+	if(verbosity >= VERB_QUERY && xfr->have_zone) {
+		char zname[LDNS_MAX_DOMAINLEN];
+		dname_str(xfr->name, zname);
+		verbose(VERB_QUERY, "auth zone %s updated to serial %u",
+			zname, (unsigned)xfr->serial);
+		if(verbosity >= 8) {
+			char taskline[1024];
+			if(xfr->task_transfer->master->http) {
+				snprintf(taskline, sizeof(taskline),
+					"http transfer from %s/%s of %lu "
+					"bytes serial %u",
+					xfr->task_transfer->master->host,
+					xfr->task_transfer->master->file,
+					(unsigned long)chunks_total,
+					(unsigned)xfr->serial);
+			} else if(xfr->task_transfer->on_ixfr &&
+				!xfr->task_transfer->on_ixfr_is_axfr) {
+				snprintf(taskline, sizeof(taskline),
+					"IXFR transfer from %s of %lu "
+					"bytes serial %u",
+					xfr->task_transfer->master->host,
+					(unsigned long)chunks_total,
+					(unsigned)xfr->serial);
+			} else {
+				snprintf(taskline, sizeof(taskline),
+					"AXFR transfer from %s of %lu "
+					"bytes serial %u",
+					xfr->task_transfer->master->host,
+					(unsigned long)chunks_total,
+					(unsigned)xfr->serial);
+			}
+			verbose(VERB_ALGO, "auth zone %s details %s thread "
+				"time was %d.%6.6ds, of which "
+				"the reload time was %d.%6.6ds, "
+				"and used %lu bytes of memory", zname,
+				taskline,
+				(int)time_taken->tv_sec,
+				(int)time_taken->tv_usec,
+				(int)time_reload->tv_sec,
+				(int)time_reload->tv_usec,
+				(unsigned long)mem_used);
+		}
+	}
+
+	chunk_list = xfr->task_transfer->chunks_first;
+	xfr->task_transfer->chunks_first = NULL;
+
+	if(!has_zonefile) {
+		/* Write to zonefile is not needed. */
+		auth_chunk_list_delete(chunk_list);
+		return 1;
+	}
+	if(xfr->task_transfer->active_transfer) {
+		/* Attempt to start a thread for the write. */
+		if(auth_load_info_grab_thread(env)) {
+			if(auth_load_add_task_write(xfr->name, xfr->namelen,
+				xfr->dclass, env, chunk_list)) {
+				/* Thread was started, it can release the active. */
+				xfr->task_transfer->active_transfer = 0;
+				return 1;
+			}
+			auth_load_info_release_thread(env);
+		}
+		/* On failure, write without a thread. */
+	}
+	verbose(VERB_ALGO, "xfr_process_loaded_transfer: write after update");
+	/* see if we need to write to a zonefile */
+	xfr_write_after_update(xfr, env, chunk_list);
+	return 1;
+}
+
+void xfr_process_load_end_transfer(struct auth_xfer* xfr,
+	struct module_env* env, uint8_t status, int ixfr_fail,
+	struct timeval* time_taken, struct timeval* time_reload,
+	size_t mem_used, size_t chunks_total, struct auth_chunk* chunk_list)
+{
+	/* Chunks are put here for the auth zone write for the http case. */
+	verbose(VERB_ALGO, "xfr_process_load_end_transfer");
+	xfr->task_transfer->chunks_first = chunk_list;
+	if(status) {
+		int gone = 0;
+		if(!xfr_process_loaded_transfer(xfr, env, &gone, time_taken,
+			time_reload, mem_used, chunks_total)) {
+			status = 0;
+			if(gone) {
+				/* the zone is gone from the authzones. */
+				lock_basic_unlock(&xfr->lock);
+				auth_chunks_delete(xfr->task_transfer);
+				xfr_transfer_remove_wait_transfer_list(xfr);
+				xfr_transfer_release_active(xfr);
+				return;
+			}
+		}
+	}
+	verbose(VERB_ALGO, "xfr_process_load_end_transfer: chunks delete");
+	auth_chunks_delete(xfr->task_transfer);
+
+	if(status) {
+		/* it worked! */
+		verbose(VERB_ALGO, "xfr_process_load_end_transfer: success");
+		xfr_process_transfer_success(xfr, env);
+		return;
+	}
+	/* The transfer failed */
+	verbose(VERB_ALGO, "xfr_process_load_end_transfer: failed");
+	xfr_transfer_remove_wait_transfer_list(xfr);
+	xfr_transfer_release_active(xfr);
+	xfr_process_transfer_failed(xfr, env, ixfr_fail);
+}
+
+void
+auth_zone_process_load_end_write(struct module_env* env)
+{
+	/* Release the active task counter that it was holding. */
+	/* There is no other bookkeeping to perform, so the auth_zone or
+	 * auth_xfer is not passed to this routine. */
+	verbose(VERB_ALGO, "auth zone write task completed");
+	auth_load_info_release_transfer_in_progress(env);
+	auth_load_schedule_waiting_pickup(env);
 }
 
 /** callback for the task_transfer timer */
@@ -6529,6 +6906,8 @@ auth_xfer_transfer_tcp_callback(struct comm_point* c, void* arg, int err,
 		auth_chunks_delete(xfr->task_transfer);
 		comm_point_delete(xfr->task_transfer->cp);
 		xfr->task_transfer->cp = NULL;
+		xfr_transfer_remove_wait_transfer_list(xfr);
+		xfr_transfer_release_active(xfr);
 		if(gonextonfail)
 			xfr_transfer_nextmaster(xfr);
 		xfr_transfer_nexttarget_or_end(xfr, env);
@@ -8697,7 +9076,7 @@ void auth_zonemd_dnskey_lookup_callback(void* arg, int rcode, sldns_buffer* buf,
 	char reasonbuf[256];
 	char* reason = NULL, *ds_bogus = NULL, *typestr="DNSKEY";
 	struct ub_packed_rrset_key* dnskey = NULL, *ds = NULL;
-	int is_insecure = 0, downprot, perform_write = 0;
+	int is_insecure = 0, downprot, perform_write = 0, release_active = 0;
 	struct ub_packed_rrset_key keystorage;
 	uint8_t sigalg[ALGO_NEEDS_MAX+1];
 	uint8_t bakname[LDNS_MAX_DOMAINLEN];
@@ -8711,7 +9090,16 @@ void auth_zonemd_dnskey_lookup_callback(void* arg, int rcode, sldns_buffer* buf,
 	 * ZONEMD verification task if it wants to */
 	z->zonemd_callback_env = NULL;
 	if(!env || env->outnet->want_to_quit || z->zone_deleted) {
+		if(env && z->zonemd_transfer_active) {
+			/* if zone deleted, release active */
+			release_active = 1;
+			z->zonemd_transfer_active = 0;
+		}
 		lock_rw_unlock(&z->lock);
+		if(release_active) {
+			auth_load_info_release_transfer_in_progress(env);
+			auth_load_schedule_waiting_pickup(env);
+		}
 		return; /* stop on quit */
 	}
 	if(z->zonemd_callback_qtype == LDNS_RR_TYPE_DS)
@@ -8818,8 +9206,17 @@ void auth_zonemd_dnskey_lookup_callback(void* arg, int rcode, sldns_buffer* buf,
 
 	if(reason) {
 		auth_zone_zonemd_fail(z, env, reason, ds_bogus, NULL);
+		if(z->zonemd_transfer_active) {
+			/* if zone deleted, release active */
+			release_active = 1;
+			z->zonemd_transfer_active = 0;
+		}
 		lock_rw_unlock(&z->lock);
 		regional_free_all(env->scratch);
+		if(release_active) {
+			auth_load_info_release_transfer_in_progress(env);
+			auth_load_schedule_waiting_pickup(env);
+		}
 		return;
 	}
 
@@ -8849,13 +9246,40 @@ void auth_zonemd_dnskey_lookup_callback(void* arg, int rcode, sldns_buffer* buf,
 			auth_chunk_list_delete(z->perform_write_chunk_list);
 			z->perform_write_chunk_list = NULL;
 		}
+		if(z->zonemd_transfer_active) {
+			release_active = 1;
+			z->zonemd_transfer_active = 0;
+		}
 		z->zonemd_callback_perform_write = 0;
+
+		if(z->zonefile == NULL || z->zonefile[0] == 0) {
+			/* Write to zonefile is not needed. */
+			perform_write = 0;
+			auth_chunk_list_delete(chunk_list);
+		}
 	}
 	lock_rw_unlock(&z->lock);
 
 	if(perform_write) {
+		if(release_active) {
+			/* Attempt to start a thread */
+			if(auth_load_info_grab_thread(env)) {
+				if(auth_load_add_task_write(bakname, baknamelen,
+					bakdclass, env, chunk_list)) {
+					/* The thread can remove the active number
+					 * when done with the write */
+					return;
+				}
+				auth_load_info_release_thread(env);
+			}
+			/* If that failed, write without a thread */
+		}
 		zone_write_after_update_reacq(bakname, baknamelen, bakdclass,
-			env, chunk_list);
+			env, chunk_list, NULL);
+	}
+	if(release_active) {
+		auth_load_info_release_transfer_in_progress(env);
+		auth_load_schedule_waiting_pickup(env);
 	}
 }
 
@@ -9070,7 +9494,7 @@ auth_data_get_mem(struct auth_data* node)
 }
 
 /** Get memory usage of auth zone */
-static size_t
+size_t
 auth_zone_get_mem(struct auth_zone* z)
 {
 	size_t m = sizeof(*z) + z->namelen;

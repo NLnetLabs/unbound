@@ -264,6 +264,9 @@ setup_config(FILE* in, int* lineno, int* pass_argc, char* pass_argv[])
 	fprintf(cfg, "		pidfile: \"\"\n");
 	fprintf(cfg, "		val-log-level: 2\n");
 	fprintf(cfg, "		log-servfail: yes\n");
+	/* the extra thread needs pipe communication that is not available
+	 * from fake_event calls. So auth-task-threads: 0 disables them. */
+	fprintf(cfg, "		auth-task-threads: 0\n");
 	fprintf(cfg, "remote-control:	control-enable: no\n");
 	while(fgets(line, MAX_LINE_LEN-1, in)) {
 		parse = line;

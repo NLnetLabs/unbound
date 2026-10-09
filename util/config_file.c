@@ -243,6 +243,7 @@ config_create(void)
 	cfg->views = NULL;
 	cfg->acls = NULL;
 	cfg->tcp_connection_limits = NULL;
+	cfg->auth_task_threads = 0;
 	cfg->harden_short_bufsize = 1;
 	cfg->harden_large_queries = 0;
 	cfg->harden_glue = 1;
@@ -460,6 +461,7 @@ struct config_file* config_create_forlib(void)
 	cfg->neg_cache_size = 100 * 1024;
 	cfg->donotquery_localhost = 0; /* allow, so that you can ask a
 		forward nameserver running on localhost */
+	cfg->auth_task_threads = 0; /* no extra threads to spawn in library */
 	cfg->val_log_level = 2; /* to fill why_bogus with */
 	cfg->val_log_squelch = 1;
 	cfg->minimal_responses = 0;
@@ -746,6 +748,7 @@ int config_set_option(struct config_file* cfg, const char* opt,
 	else S_SIZET_OR_ZERO("unwanted-reply-threshold:", unwanted_threshold)
 	else S_STRLIST("private-address:", private_address)
 	else S_STRLIST("private-domain:", private_domain)
+	else S_NUMBER_OR_ZERO("auth-task-threads:", auth_task_threads)
 	else S_YNO("do-not-query-localhost:", donotquery_localhost)
 	else S_STRLIST("do-not-query-address:", donotqueryaddrs)
 	else S_STRLIST("auto-trust-anchor-file:", auto_trust_anchor_file_list)
@@ -1293,6 +1296,7 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_LST(opt, "root-hints", root_hints)
 	else O_LS2(opt, "access-control", acls)
 	else O_LS2(opt, "tcp-connection-limit", tcp_connection_limits)
+	else O_DEC(opt, "auth-task-threads", auth_task_threads)
 	else O_LST(opt, "do-not-query-address", donotqueryaddrs)
 	else O_LST(opt, "private-address", private_address)
 	else O_LST(opt, "private-domain", private_domain)
