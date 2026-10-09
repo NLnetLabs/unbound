@@ -891,12 +891,21 @@ worker_auth_load_service_cb(int ATTR_UNUSED(fd), short ATTR_UNUSED(bits),
 	}
 	auth_load_thread_delete(thr);
 	auth_load_info_release_thread(env);
-	if(task_type == AUTH_LOAD_TASK_ZONEFILE_WRITE)
+	if(task_type == AUTH_LOAD_TASK_ZONEFILE_WRITE) {
 		auth_zone_process_load_end_write(env);
-	else
+	} else if(task_type == AUTH_LOAD_TASK_HTTPCHUNKS ||
+		task_type == AUTH_LOAD_TASK_TRANSFER) {
 		xfr_process_load_end_transfer(xfr, env, recv_item, ixfr_fail,
 			&time_taken, &time_reload, mem_used, chunks_total,
 			chunk_list);
+	} else {
+		log_err("unknown auth load thread result, task type %d",
+			(int)task_type);
+		if(xfr) {
+			lock_basic_unlock(&xfr->lock);
+		}
+		auth_chunk_list_delete(chunk_list);
+	}
 }
 
 /** Attach worker to the auth load thread. */
