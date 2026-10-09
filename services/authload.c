@@ -1110,6 +1110,7 @@ void auth_load_info_release_transfer_in_progress(struct module_env* env)
 int
 xfr_transfer_grab_active(struct auth_xfer* xfr)
 {
+	int ret;
 	if(xfr->task_transfer->active_transfer) {
 		char zname[LDNS_MAX_DOMAINLEN];
 		dname_str(xfr->name, zname);
@@ -1117,9 +1118,11 @@ xfr_transfer_grab_active(struct auth_xfer* xfr)
 			"%s", zname);
 		return 1;
 	}
-	xfr->task_transfer->active_transfer = 1;
-	return auth_load_info_grab_transfer_in_progress(
+	ret = auth_load_info_grab_transfer_in_progress(
 		xfr->task_transfer->env);
+	if(ret)
+		xfr->task_transfer->active_transfer = 1;
+	return ret;
 }
 
 /** Disable resume timer. */
@@ -1165,6 +1168,7 @@ auth_load_schedule_waiting_pickup(struct module_env* env)
 		/* Set a timer for zero time, that makes the callback run
 		 * in the event loop, outside of these callback functions.
 		 * There it can handle the waiting xfr task. */
+		verbose(VERB_ALGO, "schedule auth load resume timer");
 		auth_load_info->resume_timer_enabled = 1;
 		auth_load_info->resume_env = env;
 		auth_load_info->resume_timer = comm_timer_create(
@@ -1245,6 +1249,7 @@ void auth_load_resume_timer_cb(void* arg)
 	/* Disable the timer */
 	auth_load_disable_resume_timer(auth_load_info);
 
+	verbose(VERB_ALGO, "auth load resume timer");
 	/* If there are waiting xfrs on the wait_transfer list, pick one up. */
 	while(1) {
 		if(!auth_load_resume_transfer(auth_load_info, env))

@@ -6505,6 +6505,11 @@ xfer_link_data(sldns_buffer* pkt, struct auth_xfer* xfr)
 void
 xfr_pick_up_transfer(struct auth_xfer* xfr, struct module_env* env)
 {
+	if(verbosity >= VERB_ALGO) {
+		char zname[LDNS_MAX_DOMAINLEN];
+		dname_str(xfr->name, zname);
+		verbose(VERB_ALGO, "pick up transfer %s", zname);
+	}
 	/* The item is picked up by the worker from the env. */
 	xfr->task_transfer->worker = env->worker;
 	xfr->task_transfer->env = env;
