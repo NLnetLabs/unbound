@@ -457,6 +457,83 @@ rtt_test(void)
 	unit_assert(UB_STATS_BUCKET_NUM == NUM_BUCKETS_HIST);
 }
 
+#include "iterator/iter_utils.h"
+#include "iterator/iter_delegpt.h"
+#include "services/cache/infra.h"
+#include "util/regional.h"
+/** build a delegation point with one ip4 and one ip6 address, both
+ * on the result list, ready for iter_server_selection */
+static struct delegpt*
+no_route_family_test_dp(struct regional* region)
+{
+	struct delegpt* dp = delegpt_create(region);
+	struct sockaddr_storage addr4, addr6;
+	socklen_t addr4len, addr6len;
+	struct delegpt_addr* a;
+	int additions;
+	unit_assert(dp);
+	unit_assert(ipstrtoaddr("192.0.2.1", 53, &addr4, &addr4len));
+	unit_assert(ipstrtoaddr("2001:db8::1", 53, &addr6, &addr6len));
+	unit_assert(delegpt_add_addr(dp, region, &addr4, addr4len, 0, 0,
+		NULL, -1, &additions));
+	unit_assert(delegpt_add_addr(dp, region, &addr6, addr6len, 0, 0,
+		NULL, -1, &additions));
+	unit_assert((a=delegpt_find_addr(dp, &addr4, addr4len)));
+	delegpt_add_to_result_list(dp, a);
+	unit_assert((a=delegpt_find_addr(dp, &addr6, addr6len)));
+	delegpt_add_to_result_list(dp, a);
+	return dp;
+}
+
+/** test that iter_server_selection skips a family already proven to
+ * have no route for the current query */
+static void
+no_route_family_test(void)
+{
+	struct iter_env ie;
+	struct module_env env;
+	struct config_file* cfg = config_create();
+	struct regional* region = regional_create();
+	int dnssec_lame = 0, chase_to_rd = 0;
+	time_t now = 0;
+	struct delegpt_addr* target;
+
+	unit_show_func("iterator/iter_utils.c", "iter_server_selection");
+	config_auto_slab_values(cfg);
+	memset(&ie, 0, sizeof(ie));
+	unit_assert(iter_apply_cfg(&ie, cfg));
+	memset(&env, 0, sizeof(env));
+	env.cfg = cfg;
+	env.now = &now;
+	env.infra_cache = infra_create(cfg);
+
+	/* neither family excluded: some target is picked */
+	target = iter_server_selection(&ie, &env,
+		no_route_family_test_dp(region), (uint8_t*)"", 1,
+		LDNS_RR_TYPE_A, &dnssec_lame, &chase_to_rd, 0, NULL, 0, 0);
+	unit_assert(target != NULL);
+
+	/* ip6 has no route: the ip4 address is picked */
+	target = iter_server_selection(&ie, &env,
+		no_route_family_test_dp(region), (uint8_t*)"", 1,
+		LDNS_RR_TYPE_A, &dnssec_lame, &chase_to_rd, 0, NULL, 0,
+		AF_INET6);
+	unit_assert(target != NULL);
+	unit_assert(!addr_is_ip6(&target->addr, target->addrlen));
+
+	/* ip4 has no route: the ip6 address is picked */
+	target = iter_server_selection(&ie, &env,
+		no_route_family_test_dp(region), (uint8_t*)"", 1,
+		LDNS_RR_TYPE_A, &dnssec_lame, &chase_to_rd, 0, NULL, 0,
+		AF_INET);
+	unit_assert(target != NULL);
+	unit_assert(addr_is_ip6(&target->addr, target->addrlen));
+
+	regional_destroy(region);
+	infra_delete(env.infra_cache);
+	config_delete(cfg);
+}
+
 #include "util/edns.h"
 /* Complete version-invalid client cookie; needs a new one.
  * Based on edns_cookie_rfc9018_a2 */
@@ -1481,6 +1558,7 @@ main(int argc, char* argv[])
 	config_tag_test();
 	dname_test();
 	rtt_test();
+	no_route_family_test();
 	anchors_test();
 	alloc_test();
 	regional_test();
