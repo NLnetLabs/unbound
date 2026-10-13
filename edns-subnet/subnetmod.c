@@ -1167,7 +1167,8 @@ subnetmod_operate(struct module_qstate *qstate, enum module_ev event,
 			subnet_ecs_opt_list_append(&sq->ecs_client_out,
 				&qstate->edns_opts_front_out, qstate,
 				qstate->region);
-			qstate->is_subnet_answer = 1;
+			if(sq->subnet_sent || sq->subnet_sent_no_subnet)
+				qstate->is_subnet_answer = 1;
 			if(verbosity >= VERB_ALGO) {
 				subnet_log_print("reply has edns subnet",
 					edns_opt_list_find(
