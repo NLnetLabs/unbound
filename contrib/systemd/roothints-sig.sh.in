@@ -1,0 +1,10 @@
+#!/bin/bash
+
+if [ "$(md5sum '@UNBOUND_RUN_DIR@/root.hints' | cut -d' ' -f1)" = "$(cat '@UNBOUND_RUN_DIR@/root-hints.md5')" ]; then
+    exit 0
+else
+    command logger "Error (unbound-roothints): root-hints.md5 does not match root.hint's signature!"
+    # This line adds a notification when the sigs don't match!
+    # notify-send "Error (unbound-roothints): root-hints.md5 does not match root.hint's signature!"
+    exit 1
+fi
