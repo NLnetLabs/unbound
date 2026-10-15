@@ -52,6 +52,7 @@
 #include "util/ub_event.h"
 #include "util/timeval_func.h"
 #include "util/data/dname.h"
+#include "util/regional.h"
 
 /** Get memory use of buffer. */
 static size_t
@@ -544,6 +545,411 @@ rrset_append_copy(struct auth_data* domain, struct auth_rrset* rrset,
 	return 1;
 }
 
+/** Copy local rrset data */
+static struct packed_rrset_data*
+copy_local_rrset_data(struct regional* region, struct packed_rrset_data* pd)
+{
+	struct packed_rrset_data* npd;
+	size_t i;
+	npd = (struct packed_rrset_data*)regional_alloc_zero(region,
+		sizeof(*npd));
+	if(!npd)
+		return NULL;
+	npd->trust = pd->trust;
+	npd->security = pd->security;
+	npd->ttl_add = pd->ttl_add;
+	npd->ttl = pd->ttl;
+	npd->count = pd->count;
+	npd->rrsig_count = pd->rrsig_count;
+	npd->rr_len = regional_alloc_init(region, pd->rr_len,
+		sizeof(*npd->rr_len)*(npd->count+npd->rrsig_count));
+	if(!npd->rr_len)
+		return NULL;
+	npd->rr_ttl = regional_alloc_init(region, pd->rr_ttl,
+		sizeof(*npd->rr_ttl)*(npd->count+npd->rrsig_count));
+	if(!npd->rr_ttl)
+		return NULL;
+	npd->rr_data = regional_alloc_zero(region,
+		sizeof(*npd->rr_data)*(npd->count+npd->rrsig_count));
+	for(i=0; i<npd->count+npd->rrsig_count; i++) {
+		npd->rr_data[i] = regional_alloc_init(region, pd->rr_data[i],
+			npd->rr_len[i]);
+		if(!npd->rr_data[i])
+			return NULL;
+	}
+	return npd;
+}
+
+/** Copy local rrset information */
+static struct local_rrset*
+copy_local_rrset(struct regional* region, uint8_t* dname, size_t dname_len,
+	struct local_rrset* rrset)
+{
+	struct local_rrset* nr;
+	struct packed_rrset_data* pd;
+	nr = (struct local_rrset*)regional_alloc_zero(region,
+		sizeof(*rrset));
+	if(!nr)
+		return NULL;
+	nr->rrset = (struct ub_packed_rrset_key*)regional_alloc_zero(region,
+		sizeof(*nr->rrset));
+	if(!nr->rrset)
+		return NULL;
+	nr->rrset->entry.key = nr->rrset;
+	pd = copy_local_rrset_data(region, rrset->rrset->entry.data);
+	if(!pd)
+		return NULL;
+	nr->rrset->entry.data = pd;
+	nr->rrset->rk.dname = dname;
+	nr->rrset->rk.dname_len = dname_len;
+	nr->rrset->rk.type = rrset->rrset->rk.type;
+	nr->rrset->rk.rrset_class = rrset->rrset->rk.rrset_class;
+	nr->rrset->rk.flags = rrset->rrset->rk.flags;
+	return nr;
+}
+
+/** Copy local data information */
+static struct local_data*
+copy_local_data(struct local_zone* nz, struct local_data* d)
+{
+	struct local_data* nd = regional_alloc_zero(nz->region, sizeof(*nd));
+	struct local_rrset* r, *prev = NULL, *nr;
+	if(!nd)
+		return NULL;
+	nd->name = regional_alloc_init(nz->region, d->name, d->namelen);
+	if(!nd->name)
+		return NULL;
+	nd->namelen = d->namelen;
+	nd->namelabs = d->namelabs;
+	nd->node.key = nd;
+	log_nametypeclass(0, "copy local data", nd->name, 0, 0);
+
+	for(r = d->rrsets; r; r = r->next) {
+		nr = copy_local_rrset(nz->region, nd->name, nd->namelen, r);
+		if(!nr)
+			return NULL;
+		if(prev)
+			prev->next = nr;
+		else	nd->rrsets = nr;
+		prev = nr;
+
+		if(query_dname_compare(nd->name, nz->name) == 0) {
+			if(ntohs(nr->rrset->rk.type) == LDNS_RR_TYPE_NSEC)
+				nr->rrset->rk.flags = PACKED_RRSET_NSEC_AT_APEX;
+			if(ntohs(nr->rrset->rk.type) == LDNS_RR_TYPE_SOA) {
+				struct packed_rrset_data* soad =
+					(struct packed_rrset_data*)
+					nr->rrset->entry.data;
+				if(soad && soad->count > 0 &&
+					soad->rr_data[0] &&
+					!lz_mark_soa_for_zone(nz, nr->rrset,
+						soad->rr_data[0],
+						soad->rr_len[0],
+						soad->rr_ttl[0],
+						"RPZ SOA"))
+					return NULL;
+			}
+
+		}
+	}
+	return nd;
+}
+
+/** Copy local zone information */
+static struct local_zone*
+copy_local_zone(struct local_zone* z)
+{
+	struct local_zone* c;
+	uint8_t* nname;
+	nname = memdup(z->name, z->namelen);
+	if(!nname)
+		return NULL;
+	c = local_zone_create(nname, z->namelen, z->namelabs, z->type,
+		z->dclass);
+	if(!c) {
+		free(nname);
+		return NULL;
+	}
+	if(z->taglist) {
+		c->taglist = memdup(z->taglist, z->taglen);
+		if(!c->taglist) {
+			local_zone_delete(c);
+			return NULL;
+		}
+	}
+	c->taglen = z->taglen;
+	if(z->override_tree) {
+		struct local_zone_override* o;
+		c->override_tree = (struct rbtree_type*)regional_alloc_zero(
+			c->region, sizeof(*c->override_tree));
+		if(!c->override_tree) {
+			local_zone_delete(c);
+			return NULL;
+		}
+		addr_tree_init(c->override_tree);
+		RBTREE_FOR(o, struct local_zone_override*, z->override_tree) {
+			struct local_zone_override* n;
+			n = (struct local_zone_override*)regional_alloc_zero(
+				c->region, sizeof(*n));
+			if(!n) {
+				local_zone_delete(c);
+				return NULL;
+			}
+			n->type = o->type;
+			if(!addr_tree_insert(c->override_tree,
+				(struct addr_tree_node*)n, &o->node.addr,
+				o->node.addrlen, o->node.net)) {
+				/* n is in the region */
+				local_zone_delete(c);
+				return NULL;
+			}
+		}
+	}
+	if(z->data.count) {
+		struct local_data* d;
+		RBTREE_FOR(d, struct local_data*, &z->data) {
+			struct local_data* nd;
+			nd = copy_local_data(c, d);
+			if(!nd) {
+				local_zone_delete(c);
+				return NULL;
+			}
+			if(!rbtree_insert(&c->data, &nd->node)) {
+				/* nd is in the region */
+				local_zone_delete(c);
+				return NULL;
+			}
+		}
+	}
+	return c;
+}
+
+/** Copy the existing local_zones for modification */
+static int
+copy_local_zones(struct auth_load_thread* thr, struct local_zones* proxy_zones,
+	struct local_zones* zones)
+{
+	struct local_zone* z, *copy_z;
+	int count = 0;
+	lock_rw_wrlock(&proxy_zones->lock);
+	lock_rw_rdlock(&zones->lock);
+
+	RBTREE_FOR(z, struct local_zone*, &zones->ztree) {
+		if((count++)%1000 == 0) {
+			if(auth_load_thread_poll_for_quit(thr)) {
+				lock_rw_unlock(&proxy_zones->lock);
+				lock_rw_unlock(&zones->lock);
+				return 0;
+			}
+		}
+
+		lock_rw_rdlock(&z->lock);
+		copy_z = copy_local_zone(z);
+		if(!copy_z) {
+			log_err("out of memory");
+			lock_rw_unlock(&z->lock);
+			lock_rw_unlock(&proxy_zones->lock);
+			lock_rw_unlock(&zones->lock);
+			return 0;
+		}
+		if(!rbtree_insert(&proxy_zones->ztree, &copy_z->node)) {
+			log_err("duplicate local zone");
+			local_zone_delete(copy_z);
+			lock_rw_unlock(&z->lock);
+			lock_rw_unlock(&proxy_zones->lock);
+			lock_rw_unlock(&zones->lock);
+			return 0;
+		}
+		lock_rw_unlock(&z->lock);
+	}
+
+	lock_rw_unlock(&proxy_zones->lock);
+	lock_rw_unlock(&zones->lock);
+	lz_init_parents(proxy_zones);
+	return 1;
+}
+
+/** Copy the resp_addr */
+static struct resp_addr*
+copy_resp_addr(struct regional* region, struct resp_addr* r)
+{
+	struct resp_addr* nr;
+	nr = regional_alloc_zero(region, sizeof(*nr));
+	if(!nr)
+		return NULL;
+	lock_rw_init(&nr->lock);
+	nr->action = r->action;
+	if(r->taglist) {
+		nr->taglist = regional_alloc_init(region, r->taglist,
+			r->taglen);
+		if(!nr->taglist)
+			return NULL;
+	}
+	nr->taglen = r->taglen;
+	nr->data = respip_copy_rrset(r->data, region);
+	if(!nr->data)
+		return NULL;
+	return nr;
+}
+
+/** Copy the existing respip_set for modification */
+static int
+copy_respip_set(struct auth_load_thread* thr,
+	struct respip_set* proxy_respip_set, struct respip_set* respip_set)
+{
+	struct resp_addr* r;
+	int count = 0;
+	lock_rw_wrlock(&proxy_respip_set->lock);
+	lock_rw_rdlock(&respip_set->lock);
+	proxy_respip_set->tagname = respip_set->tagname;
+	proxy_respip_set->num_tags = respip_set->num_tags;
+
+	RBTREE_FOR(r, struct resp_addr*, &respip_set->ip_tree) {
+		struct resp_addr* nr;
+		if((count++)%1000 == 0) {
+			if(auth_load_thread_poll_for_quit(thr)) {
+				lock_rw_unlock(&proxy_respip_set->lock);
+				lock_rw_unlock(&respip_set->lock);
+				return 0;
+			}
+		}
+
+		lock_rw_rdlock(&r->lock);
+		nr = copy_resp_addr(proxy_respip_set->region, r);
+		if(!nr) {
+			log_err("out of memory");
+			lock_rw_unlock(&r->lock);
+			lock_rw_unlock(&proxy_respip_set->lock);
+			lock_rw_unlock(&respip_set->lock);
+			return 0;
+		}
+		if(!addr_tree_insert(&proxy_respip_set->ip_tree, &nr->node,
+			&r->node.addr, r->node.addrlen, r->node.net)) {
+			log_err("duplicate respip address");
+			lock_rw_unlock(&r->lock);
+			lock_rw_unlock(&proxy_respip_set->lock);
+			lock_rw_unlock(&respip_set->lock);
+			return 0;
+		}
+		lock_rw_unlock(&r->lock);
+	}
+
+	lock_rw_unlock(&proxy_respip_set->lock);
+	lock_rw_unlock(&respip_set->lock);
+	return 1;
+}
+
+/** Copy the clientip_synthesized_rr */
+static struct clientip_synthesized_rr*
+copy_clientip_synthesized_rr(struct regional* region,
+	struct clientip_synthesized_rr* rr)
+{
+	struct clientip_synthesized_rr* nrr;
+	struct local_rrset* rrset, *prev = NULL, *nrrset;
+	uint8_t* dname;
+	nrr = regional_alloc_zero(region, sizeof(*nrr));
+	if(!nrr)
+		return NULL;
+	lock_rw_init(&nrr->lock);
+	nrr->action = rr->action;
+	for(rrset = rr->data; rrset; rrset=rrset->next) {
+		dname = regional_alloc_zero(region, 1);
+		if(!dname)
+			return NULL;
+		nrrset = copy_local_rrset(region, dname, 1, rr->data);
+		if(!nrrset)
+			return NULL;
+		if(prev)
+			prev->next = nrrset;
+		else	nrr->data = nrrset;
+		prev = nrrset;
+	}
+	return nrr;
+}
+
+/** Copy the existing clientip_synthesized_rrset for modification */
+static int
+copy_clientip_synthesized_rrset(struct auth_load_thread* thr,
+	struct clientip_synthesized_rrset* proxy_set,
+	struct clientip_synthesized_rrset* set)
+{
+	struct clientip_synthesized_rr* rr;
+	int count = 0;
+	lock_rw_wrlock(&proxy_set->lock);
+	lock_rw_rdlock(&set->lock);
+
+	RBTREE_FOR(rr, struct clientip_synthesized_rr*, &set->entries) {
+		struct clientip_synthesized_rr* nrr;
+		if((count++)%1000 == 0) {
+			if(auth_load_thread_poll_for_quit(thr)) {
+				lock_rw_unlock(&proxy_set->lock);
+				lock_rw_unlock(&set->lock);
+				return 0;
+			}
+		}
+
+		lock_rw_rdlock(&rr->lock);
+		nrr = copy_clientip_synthesized_rr(proxy_set->region, rr);
+		if(!nrr) {
+			log_err("out of memory");
+			lock_rw_unlock(&rr->lock);
+			lock_rw_unlock(&proxy_set->lock);
+			lock_rw_unlock(&set->lock);
+			return 0;
+		}
+		if(!addr_tree_insert(&proxy_set->entries, &nrr->node,
+			&rr->node.addr, rr->node.addrlen, rr->node.net)) {
+			log_err("duplicate clientip synthesized rr");
+			lock_rw_unlock(&rr->lock);
+			lock_rw_unlock(&proxy_set->lock);
+			lock_rw_unlock(&set->lock);
+			return 0;
+		}
+		lock_rw_unlock(&rr->lock);
+	}
+
+	lock_rw_unlock(&proxy_set->lock);
+	lock_rw_unlock(&set->lock);
+	return 1;
+}
+
+/** Copy the existing rpz data for modification */
+static int
+copy_rpz_data(struct auth_load_thread* thr, struct auth_zone* proxyz,
+	struct auth_zone* z)
+{
+	if(auth_load_thread_poll_for_quit(thr))
+		return 0;
+	if(!copy_local_zones(thr, proxyz->rpz->local_zones,
+		z->rpz->local_zones))
+		return 0;
+
+	if(auth_load_thread_poll_for_quit(thr))
+		return 0;
+	if(!copy_respip_set(thr, proxyz->rpz->respip_set,
+		z->rpz->respip_set))
+		return 0;
+
+	if(auth_load_thread_poll_for_quit(thr))
+		return 0;
+	if(!copy_clientip_synthesized_rrset(thr,
+		proxyz->rpz->client_set, z->rpz->client_set))
+		return 0;
+
+	if(auth_load_thread_poll_for_quit(thr))
+		return 0;
+	if(!copy_clientip_synthesized_rrset(thr, proxyz->rpz->ns_set,
+		z->rpz->ns_set))
+		return 0;
+
+	if(auth_load_thread_poll_for_quit(thr))
+		return 0;
+	if(!copy_local_zones(thr, proxyz->rpz->nsdname_zones,
+		z->rpz->nsdname_zones))
+		return 0;
+	return 1;
+}
+
 /** Copy the existing zone for modification */
 static int
 auth_load_copy_into_zone(struct auth_load_thread* thr, struct auth_zone* proxyz)
@@ -590,6 +996,13 @@ auth_load_copy_into_zone(struct auth_load_thread* thr, struct auth_zone* proxyz)
 				lock_rw_unlock(&z->lock);
 				return 0;
 			}
+		}
+	}
+
+	if(z->rpz) {
+		if(!copy_rpz_data(thr, proxyz, z)) {
+			lock_rw_unlock(&z->lock);
+			return 0;
 		}
 	}
 
