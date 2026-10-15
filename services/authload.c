@@ -1005,6 +1005,18 @@ int auth_load_add_task_write(uint8_t* name, size_t namelen, uint16_t dclass,
 	return 1;
 }
 
+/** Disable resume timer. */
+static void
+auth_load_disable_resume_timer(struct auth_load_general_info* auth_load_info)
+{
+	lock_basic_lock(&auth_load_info->lock);
+	comm_timer_delete(auth_load_info->resume_timer);
+	auth_load_info->resume_timer = NULL;
+	auth_load_info->resume_env = NULL;
+	auth_load_info->resume_timer_enabled = 0;
+	lock_basic_unlock(&auth_load_info->lock);
+}
+
 struct auth_load_general_info* auth_load_info_create(void)
 {
 	struct auth_load_general_info* auth_load_info =
@@ -1047,6 +1059,15 @@ void auth_load_info_delete(struct auth_load_general_info* auth_load_info)
 	comm_timer_delete(auth_load_info->resume_timer);
 	auth_load_info->resume_timer = NULL;
 	free(auth_load_info);
+}
+
+void auth_load_info_cleanup(struct auth_load_general_info* auth_load_info)
+{
+	if(!auth_load_info)
+		return;
+	if(auth_load_info->resume_timer) {
+		auth_load_disable_resume_timer(auth_load_info);
+	}
 }
 
 int auth_load_info_grab_thread(struct module_env* env)
@@ -1123,18 +1144,6 @@ xfr_transfer_grab_active(struct auth_xfer* xfr)
 	if(ret)
 		xfr->task_transfer->active_transfer = 1;
 	return ret;
-}
-
-/** Disable resume timer. */
-static void
-auth_load_disable_resume_timer(struct auth_load_general_info* auth_load_info)
-{
-	lock_basic_lock(&auth_load_info->lock);
-	comm_timer_delete(auth_load_info->resume_timer);
-	auth_load_info->resume_timer = NULL;
-	auth_load_info->resume_env = NULL;
-	auth_load_info->resume_timer_enabled = 0;
-	lock_basic_unlock(&auth_load_info->lock);
 }
 
 /** Pop the first item from the wait_transfer list */
@@ -1516,12 +1525,14 @@ static void
 auth_load_stop_del_thr(rbnode_type* node, void* ATTR_UNUSED(arg))
 {
 	struct auth_load_thread* thr = (struct auth_load_thread*)node->key;
+	struct module_env* env = &thr->worker->env;
 	authload_send_quit_to(thr);
 	verbose(VERB_ALGO, "join with auth load thread");
 	ub_thread_join(thr->tid);
 	verbose(VERB_ALGO, "joined with auth load thread");
 	thr->tree_inserted = 0; /* no need to delete from the tree */
 	auth_load_thread_delete(thr);
+	auth_load_info_release_thread(env);
 }
 
 /** Stop the auth load threads for a worker */

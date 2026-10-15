@@ -229,6 +229,12 @@ struct auth_load_general_info* auth_load_info_create(void);
 void auth_load_info_delete(struct auth_load_general_info* auth_load_info);
 
 /**
+ * Clean up the auth load info. Removes pending timer, if that is enabled.
+ * @param auth_load_info: to clean up.
+ */
+void auth_load_info_cleanup(struct auth_load_general_info* auth_load_info);
+
+/**
  * Grab a new thread from the auth load count.
  * @param env: with auth_load_info with the active thread count.
  *	and config file, with configured maximum.

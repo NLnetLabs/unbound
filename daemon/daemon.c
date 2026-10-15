@@ -1217,6 +1217,7 @@ daemon_cleanup(struct daemon* daemon)
 	daemon->env->views = NULL;
 	if(daemon->env->auth_zones)
 		auth_zones_cleanup(daemon->env->auth_zones);
+	auth_load_info_cleanup(daemon->auth_load_info);
 	/* key cache is cleared by module deinit during next daemon_fork() */
 	daemon_remote_clear(daemon->rc);
 	if(daemon->fast_reload_thread)
