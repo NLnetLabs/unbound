@@ -1824,7 +1824,8 @@ int auth_zone_write_file(struct auth_zone* z, const char* fname,
 	}
 	RBTREE_FOR(n, struct auth_data*, &z->data) {
 		if(!auth_zone_write_domain(z, n, out, thr, &count)) {
-			log_err("could not write domain to %s", fname);
+			if(!(thr && thr->need_to_quit))
+				log_err("could not write domain to %s", fname);
 			fclose(out);
 			return 0;
 		}
