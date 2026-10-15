@@ -798,6 +798,7 @@ auth_load_thread_create(struct auth_load_task* task)
 	thr->commpair[0] = -1;
 	thr->commpair[1] = -1;
 	if(!create_socketpair(thr->commpair, task->worker->daemon->rand)) {
+		thr->task = NULL; /* task is deleted by caller. */
 		auth_load_thread_delete(thr);
 		return NULL;
 	}
