@@ -5422,8 +5422,10 @@ auth_zone_write_chunks(struct auth_chunk* chunk_list, const char* fname,
 			return 0;
 		}
 		if(thr && (count++)%100 == 0) {
-			if(auth_load_thread_poll_for_quit(thr))
+			if(auth_load_thread_poll_for_quit(thr)) {
+				fclose(out);
 				return 0;
+			}
 		}
 	}
 	fclose(out);
