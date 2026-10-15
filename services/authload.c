@@ -1518,6 +1518,7 @@ void auth_load_del_zone_tasks(struct worker* worker, uint8_t* name,
 		ub_thread_join(thr->tid);
 		verbose(VERB_ALGO, "joined with auth load thread");
 		auth_load_thread_delete(thr);
+		auth_load_info_release_thread(&worker->env);
 	}
 }
 
