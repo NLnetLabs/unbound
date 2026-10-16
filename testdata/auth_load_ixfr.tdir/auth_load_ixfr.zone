@@ -1,0 +1,5 @@
+rpz.example.com. IN SOA ns.example.com. hostmaster.example.com. 1 3600 900 86400 3600
+rpz.example.com.	IN NS	ns.example.net.
+www.example.com.rpz.example.com. IN A	1.2.3.4
+other.example.com.rpz.example.com. IN A	1.2.3.5
+o2.example.com.rpz.example.com. IN A	1.2.3.6

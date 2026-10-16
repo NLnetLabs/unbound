@@ -735,7 +735,7 @@ check_read_exact(const char* name, const char* zone)
 	z = authtest_addzone(az, name, fname);
 	unit_assert(z);
 	outf = create_tmp_file(NULL);
-	if(!auth_zone_write_file(z, outf)) {
+	if(!auth_zone_write_file(z, outf, NULL)) {
 		fatal_exit("write file failed for %s", fname);
 	}
 	checkfile(fname, outf);

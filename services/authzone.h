@@ -65,6 +65,7 @@ struct auth_probe;
 struct auth_transfer;
 struct auth_master;
 struct auth_chunk;
+struct auth_load_thread;
 
 /**
  * Authoritative zones, shared.
@@ -150,6 +151,8 @@ struct auth_zone {
 	int zonemd_callback_perform_write;
 	/** chunklist to write for chunked transfer. */
 	struct auth_chunk* perform_write_chunk_list;
+	/** The zonemd transfer is an active transfer (for auth load info) */
+	int zonemd_transfer_active;
 	/** zone has been deleted */
 	int zone_deleted;
 	/** deletelist pointer, unused normally except during delete */
@@ -404,6 +407,15 @@ struct auth_transfer {
 	size_t chunks_total;
 	/** start time of the transfer */
 	struct timeval start_time;
+	/** if the transfer is active and in the in progress count. */
+	int active_transfer;
+	/** if the transfer is on the wait_transfer list (it waits to
+	 * become active). */
+	int on_wait_transfer_list;
+	/** If on the wait_transfer list, the previous list item. */
+	struct auth_xfer* wait_transfer_prev;
+	/** If on the wait_transfer list, the next list item. */
+	struct auth_xfer* wait_transfer_next;
 
 	/** list of upstream masters for this zone, from config */
 	struct auth_master* masters;
@@ -545,7 +557,15 @@ void auth_zones_delete(struct auth_zones* az);
 /**
  * Write auth zone data to file, in zonefile format.
  */
-int auth_zone_write_file(struct auth_zone* z, const char* fname);
+int auth_zone_write_file(struct auth_zone* z, const char* fname,
+	struct auth_load_thread* thr);
+
+/** write to zonefile after zone has updated, reacquires z readlock.
+ * The chunk list is freed on return.
+ * If the zone is gone, chunk_list is freed (if non NULL). */
+void zone_write_after_update_reacq(uint8_t* name, size_t namelen,
+	uint16_t dclass, struct module_env* env,
+	struct auth_chunk* chunk_list, struct auth_load_thread* thr);
 
 /**
  * Use auth zones to lookup the answer to a query.
@@ -860,5 +880,50 @@ int chunkline_count_parens(struct sldns_buffer* buf, size_t start);
 
 /** Clear data in auth zone */
 void auth_zone_clear_data(struct auth_zone* z);
+
+/** Get memory usage of auth zone */
+size_t auth_zone_get_mem(struct auth_zone* z);
+
+/** create domain with the given name */
+struct auth_data* az_domain_create(struct auth_zone* z, uint8_t* nm,
+	size_t nmlen);
+
+/** helper traverse to delete zones */
+void auth_data_del(rbnode_type* n, void* arg);
+
+/** Pick up xfr task from wait_transfer resumption. xfr is locked on entry,
+ * unlocked at return. */
+void xfr_pick_up_transfer(struct auth_xfer* xfr, struct module_env* env);
+
+/** Handle the end of an auth load task. */
+void xfr_process_load_end_transfer(struct auth_xfer* xfr,
+	struct module_env* env, uint8_t status, int ixfr_fail,
+	struct timeval* time_taken, struct timeval* time_reload,
+	size_t mem_used, size_t chunks_total, struct auth_chunk* chunk_list);
+
+/** Handle the end of an auth load task to write. */
+void auth_zone_process_load_end_write(struct module_env* env);
+
+/** Log preview of http transfer */
+void xfr_http_preview(const char* file, struct auth_chunk* chunk_list);
+
+/** Check syntax of first part of the http download */
+int xfr_http_syntax_check(uint8_t* name, size_t namelen, uint16_t dclass,
+	const char* host, const char* file, struct auth_chunk* chunk_list,
+	struct sldns_buffer* scratch_buffer);
+
+/** Apply http transfer to auth_zone */
+int xfr_apply_http(uint8_t* name, size_t namelen, const char* host,
+	const char* file, struct auth_chunk* chunk_list, struct auth_zone* z,
+	struct sldns_buffer* scratch_buffer, struct auth_load_thread* thr);
+
+/** Apply IXFR transfer to auth_zone */
+int xfr_apply_ixfr(struct auth_chunk* chunk_list, uint32_t xfr_serial,
+	struct auth_zone* z, struct sldns_buffer* scratch_buffer,
+	struct auth_load_thread* thr);
+
+/** Apply AXFR transfer to auth_zone */
+int xfr_apply_axfr(struct auth_chunk* chunk_list, struct auth_zone* z,
+	struct sldns_buffer* scratch_buffer, struct auth_load_thread* thr);
 
 #endif /* SERVICES_AUTHZONE_H */

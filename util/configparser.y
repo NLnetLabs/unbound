@@ -193,6 +193,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_FALLBACK_ENABLED VAR_TLS_ADDITIONAL_PORT VAR_LOW_RTT VAR_LOW_RTT_PERMIL
 %token VAR_FAST_SERVER_PERMIL VAR_FAST_SERVER_NUM
 %token VAR_ALLOW_NOTIFY VAR_TLS_WIN_CERT VAR_TCP_CONNECTION_LIMIT
+%token VAR_AUTH_TASK_THREADS
 %token VAR_ANSWER_COOKIE VAR_COOKIE_SECRET VAR_IP_RATELIMIT_COOKIE
 %token VAR_FORWARD_NO_CACHE VAR_STUB_NO_CACHE VAR_LOG_SERVFAIL VAR_DENY_ANY
 %token VAR_UNKNOWN_SERVER_TIME_LIMIT VAR_LOG_TAG_QUERYREPLY
@@ -345,6 +346,7 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_tls_cert_bundle | server_tls_additional_port | server_low_rtt |
 	server_fast_server_permil | server_fast_server_num  | server_tls_win_cert |
 	server_tcp_connection_limit | server_log_servfail | server_deny_any |
+	server_auth_task_threads |
 	server_unknown_server_time_limit | server_log_tag_queryreply |
 	server_discard_timeout | server_wait_limit | server_wait_limit_cookie |
 	server_wait_limit_netblock | server_wait_limit_cookie_netblock |
@@ -4209,6 +4211,15 @@ server_tcp_connection_limit: VAR_TCP_CONNECTION_LIMIT STRING_ARG STRING_ARG
 			if(!cfg_str2list_insert(&cfg_parser->cfg->tcp_connection_limits, $2, $3))
 				yyerror("out of memory");
 		}
+	}
+	;
+server_auth_task_threads: VAR_AUTH_TASK_THREADS STRING_ARG
+	{
+		OUTYY(("P(server_auth_task_threads:%s)\n", $2));
+		if(atoi($2) == 0 && strcmp($2, "0") != 0)
+			yyerror("number expected");
+		else cfg_parser->cfg->auth_task_threads = atoi($2);
+		free($2);
 	}
 	;
 server_answer_cookie: VAR_ANSWER_COOKIE STRING_ARG
