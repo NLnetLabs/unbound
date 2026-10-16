@@ -1,0 +1,57 @@
+; Regression test: RPZ-triggered responses (NXDOMAIN, NODATA, local-data/
+; sinkhole override, CNAME override) should attach an EDE (RFC 8914) code
+; 15 (Blocked) when ede: yes is configured, so clients can distinguish a
+; genuine NXDOMAIN/NODATA from one caused by RPZ policy -- previously RPZ
+; never attached any EDE code at all, even with ede: yes set.
+
+; config options
+server:
+	module-config: "respip iterator"
+	target-fetch-policy: "0 0 0 0 0"
+	qname-minimisation: no
+	rrset-roundrobin: no
+	access-control: 192.0.0.0/8 allow
+	ede: yes
+
+rpz:
+	name: "rpz.example.com"
+	rpz-log: yes
+	rpz-log-name: "test-policy"
+	zonefile:
+TEMPFILE_NAME rpz.example.com
+TEMPFILE_CONTENTS rpz.example.com
+rpz.example.com. 3600 IN SOA ns.rpz.example.com. hostmaster.rpz.example.com. 1 3600 900 86400 3600
+rpz.example.com.	3600	IN	NS	ns.rpz.example.net.
+badname.rpz.example.com. CNAME .
+TEMPFILE_END
+
+CONFIG_END
+
+SCENARIO_BEGIN Test RPZ NXDOMAIN action attaches EDE 15 (Blocked)
+
+STEP 10 QUERY
+ENTRY_BEGIN
+REPLY RD
+SECTION QUESTION
+badname.	IN	A
+SECTION ADDITIONAL
+	HEX_EDNSDATA_BEGIN
+    HEX_EDNSDATA_END
+ENTRY_END
+
+; The RPZ zonefile above blocks "badname." with the rpz-nxdomain action.
+; The response should be NXDOMAIN, and now also carry EDE code 15
+; (Blocked) since ede: yes is configured -- this is the actual fix under
+; test; without it, no EDE option is attached at all.
+STEP 20 CHECK_ANSWER
+ENTRY_BEGIN
+MATCH all ede=15
+REPLY QR RD RA AA NXDOMAIN
+SECTION QUESTION
+badname.	IN	A
+SECTION ADDITIONAL
+	HEX_EDNSDATA_BEGIN
+    HEX_EDNSDATA_END
+ENTRY_END
+
+SCENARIO_END
