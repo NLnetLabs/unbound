@@ -1558,6 +1558,40 @@ These options are part of the ``server:`` section.
         options for targeted clients.
 
 
+@@UAHL@unbound.conf@mesh-isolate-client-tags@@: *<yes or no>*
+    If enabled, a client query never shares its in-flight resolution with
+    the same query from a client that has different tags or a different
+    view, for every query type.
+    The tags and view of a client come from
+    :ref:`access-control-tag<unbound.conf.access-control-tag>` and
+    :ref:`access-control-view<unbound.conf.access-control-view>`, or from
+    :ref:`interface-tag<unbound.conf.interface-tag>` and
+    :ref:`interface-view<unbound.conf.interface-view>`.
+    Queries from clients with the same tags and view still share one
+    resolution.
+
+    Without this option, a client that asks a query that is already being
+    resolved is attached to that resolution and receives the same answer.
+    Tags and views keep clients apart there only for A, AAAA and ANY
+    queries, and only when response-ip or RPZ is used.
+    That is a problem for a module that answers per client, such as a
+    Python module that applies a policy based on the client address: only
+    the client that started the resolution is seen by the module.
+    Give clients with a different policy different tags and enable this
+    option.
+
+    With this option, an RPZ zone restricted with
+    :ref:`tags<unbound.conf.rpz.tags>` also applies its nsdname, nsip and
+    CNAME target triggers to tagged clients for queries of every type, not
+    only for A, AAAA and ANY queries.
+
+    The message and RRset caches are not separated by tags or views.
+    A module that makes client-specific answers should not store them in
+    the cache.
+
+    Default: no
+
+
 @@UAHL@unbound.conf@chroot@@: *<directory>*
     If :ref:`chroot<unbound.conf.chroot>` is enabled, you should pass the
     configfile (from the commandline) as a full path from the original root.

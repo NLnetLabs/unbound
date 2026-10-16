@@ -790,6 +790,9 @@ struct config_file {
 	int ede;
 	/** serve EDE code 3 - Stale Answer (RFC8914) for expired entries */
 	int ede_serve_expired;
+	/** do not share a mesh state between clients with different tags
+	 * or views, for every query type */
+	int mesh_isolate_client_tags;
 	/** send DNS Error Reports to upstream reporting agent (RFC9567) */
 	int dns_error_reporting;
 	/** limit on NS RRs in RRset for the iterator scrubber. */

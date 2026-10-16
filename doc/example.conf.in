@@ -428,6 +428,11 @@ server:
 	# settings for targeted clients.
 	# interface-view: eth0@5003 viewname
 
+	# Do not share in-flight resolution of a query between clients with
+	# different tags or views (access-control-* or interface-*), for every
+	# query type. Clients with the same tags and view still share it.
+	# mesh-isolate-client-tags: no
+
 	# if given, a chroot(2) is done to the given directory.
 	# i.e. you can chroot to the working directory, for example,
 	# for extra security, but make sure all files are in that directory.
