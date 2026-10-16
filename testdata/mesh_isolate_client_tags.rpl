@@ -59,6 +59,10 @@ SECTION QUESTION
 www.a.	IN	TXT
 ENTRY_END
 
+; This also checks that the tag-restricted RPZ zone now applies to the
+; tagged client for a TXT query. Without the option, the client info is not
+; built for TXT, so the zone is skipped and the client attaches to the
+; untagged state.
 STEP 30 CHECK_ANSWER ADDRESS 192.0.0.1
 ENTRY_BEGIN
 MATCH all
@@ -151,7 +155,9 @@ www.b.	IN	TXT "same tags"
 ENTRY_END
 
 ; A client with a view does not share a state with an untagged client:
-; each state sends its own upstream query.
+; the two states show here as two upstream queries, because testbound does
+; not merge identical outbound queries. Unbound itself sends one query for
+; both states.
 STEP 210 QUERY ADDRESS 193.0.0.1
 ENTRY_BEGIN
 REPLY RD

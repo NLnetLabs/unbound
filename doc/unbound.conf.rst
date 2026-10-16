@@ -1559,35 +1559,34 @@ These options are part of the ``server:`` section.
 
 
 @@UAHL@unbound.conf@mesh-isolate-client-tags@@: *<yes or no>*
-    If enabled, a client query never shares its in-flight resolution with
-    the same query from a client that has different tags or a different
-    view, for every query type.
-    The tags and view of a client come from
-    :ref:`access-control-tag<unbound.conf.access-control-tag>` and
-    :ref:`access-control-view<unbound.conf.access-control-view>`, or from
+    If enabled, a client query shares its in-flight resolution with the
+    same query from another client, for every query type, only if both
+    clients have the same tags, tag actions, tag data and view.
+    Tag data counts as the same only within one access control element, so
+    clients of different elements that have tag data never share.
+    The tags, tag actions, tag data and view of a client come from its
+    :ref:`access-control<unbound.conf.access-control>` element
+    (:ref:`access-control-tag<unbound.conf.access-control-tag>`,
+    :ref:`access-control-tag-action<unbound.conf.access-control-tag-action>`,
+    :ref:`access-control-tag-data<unbound.conf.access-control-tag-data>` and
+    :ref:`access-control-view<unbound.conf.access-control-view>`).
+    Only if no access control element matches the client, they come from
+    the **interface-\*:** options of the interface, such as
     :ref:`interface-tag<unbound.conf.interface-tag>` and
     :ref:`interface-view<unbound.conf.interface-view>`.
-    Queries from clients with the same tags and view still share one
-    resolution.
-
-    Without this option, a client that asks a query that is already being
-    resolved is attached to that resolution and receives the same answer.
-    Tags and views keep clients apart there only for A, AAAA and ANY
-    queries, and only when response-ip or RPZ is used.
-    That is a problem for a module that answers per client, such as a
-    Python module that applies a policy based on the client address: only
-    the client that started the resolution is seen by the module.
-    Give clients with a different policy different tags and enable this
-    option.
+    For example, localhost clients always match the default 127.0.0.0/8
+    access control element.
+    Without this option, tags and views keep resolutions apart only for A,
+    AAAA and ANY queries, and only when response-ip or RPZ is used.
 
     With this option, an RPZ zone restricted with
     :ref:`tags<unbound.conf.rpz.tags>` also applies its nsdname, nsip and
     CNAME target triggers to tagged clients for queries of every type, not
     only for A, AAAA and ANY queries.
+    This happens when the query is resolved; answers from the cache are not
+    affected.
 
     The message and RRset caches are not separated by tags or views.
-    A module that makes client-specific answers should not store them in
-    the cache.
 
     Default: no
 

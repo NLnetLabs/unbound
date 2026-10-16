@@ -1,0 +1,247 @@
+; config options
+server:
+	module-config: "iterator"
+	target-fetch-policy: "0 0 0 0 0"
+	qname-minimisation: no
+	prefetch: yes
+	mesh-isolate-client-tags: yes
+	access-control: 192.0.0.0/8 allow
+	access-control: 193.0.0.0/8 allow
+	define-tag: "tagged"
+	access-control-tag: 192.0.0.0/8 "tagged"
+	; 193.0.0.0/8 has no tags and no view
+
+stub-zone:
+	name: "a."
+	stub-addr: 10.20.30.40
+CONFIG_END
+
+SCENARIO_BEGIN Test mesh-isolate-client-tags without RPZ or response-ip
+
+; A tagged and an untagged client ask the same TXT query while it is in
+; flight. They do not share a state, even though no RPZ or response-ip is
+; configured. The two states show here as two upstream queries, because
+; testbound does not merge identical outbound queries. Unbound itself sends
+; one query for both states.
+STEP 10 QUERY ADDRESS 193.0.0.1
+ENTRY_BEGIN
+REPLY RD
+SECTION QUESTION
+www.a.	IN	TXT
+ENTRY_END
+
+STEP 20 QUERY ADDRESS 192.0.0.1
+ENTRY_BEGIN
+REPLY RD
+SECTION QUESTION
+www.a.	IN	TXT
+ENTRY_END
+
+STEP 30 CHECK_OUT_QUERY
+ENTRY_BEGIN
+MATCH qname qtype opcode
+SECTION QUESTION
+www.a.	IN	TXT
+ENTRY_END
+
+STEP 40 REPLY
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR AA NOERROR
+SECTION QUESTION
+www.a.	IN	TXT
+SECTION ANSWER
+www.a.	IN	TXT "upstream"
+ENTRY_END
+
+STEP 50 CHECK_OUT_QUERY
+ENTRY_BEGIN
+MATCH qname qtype opcode
+SECTION QUESTION
+www.a.	IN	TXT
+ENTRY_END
+
+STEP 60 REPLY
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR AA NOERROR
+SECTION QUESTION
+www.a.	IN	TXT
+SECTION ANSWER
+www.a.	IN	TXT "upstream"
+ENTRY_END
+
+STEP 70 CHECK_ANSWER ADDRESS 193.0.0.1
+ENTRY_BEGIN
+MATCH all
+REPLY QR RD RA NOERROR
+SECTION QUESTION
+www.a.	IN	TXT
+SECTION ANSWER
+www.a.	IN	TXT "upstream"
+ENTRY_END
+
+STEP 80 CHECK_ANSWER ADDRESS 192.0.0.1
+ENTRY_BEGIN
+MATCH all
+REPLY QR RD RA NOERROR
+SECTION QUESTION
+www.a.	IN	TXT
+SECTION ANSWER
+www.a.	IN	TXT "upstream"
+ENTRY_END
+
+; Two untagged clients still share one state: a single upstream query
+; answers both. A second state would leave a query pending.
+STEP 110 QUERY ADDRESS 193.0.0.1
+ENTRY_BEGIN
+REPLY RD
+SECTION QUESTION
+www2.a.	IN	TXT
+ENTRY_END
+
+STEP 120 QUERY ADDRESS 193.0.0.2
+ENTRY_BEGIN
+REPLY RD
+SECTION QUESTION
+www2.a.	IN	TXT
+ENTRY_END
+
+STEP 130 CHECK_OUT_QUERY
+ENTRY_BEGIN
+MATCH qname qtype opcode
+SECTION QUESTION
+www2.a.	IN	TXT
+ENTRY_END
+
+STEP 140 REPLY
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR AA NOERROR
+SECTION QUESTION
+www2.a.	IN	TXT
+SECTION ANSWER
+www2.a.	IN	TXT "shared"
+ENTRY_END
+
+STEP 150 CHECK_ANSWER ADDRESS 193.0.0.1
+ENTRY_BEGIN
+MATCH all
+REPLY QR RD RA NOERROR
+SECTION QUESTION
+www2.a.	IN	TXT
+SECTION ANSWER
+www2.a.	IN	TXT "shared"
+ENTRY_END
+
+STEP 160 CHECK_ANSWER ADDRESS 193.0.0.2
+ENTRY_BEGIN
+MATCH all
+REPLY QR RD RA NOERROR
+SECTION QUESTION
+www2.a.	IN	TXT
+SECTION ANSWER
+www2.a.	IN	TXT "shared"
+ENTRY_END
+
+; An untagged client keeps no client info, so it still shares the state of
+; an internal query that has none, here a prefetch. If the client had its
+; own state, the prefetch query would stay pending.
+STEP 210 QUERY ADDRESS 193.0.0.1
+ENTRY_BEGIN
+REPLY RD
+SECTION QUESTION
+www3.a.	IN	TXT
+ENTRY_END
+
+STEP 220 CHECK_OUT_QUERY
+ENTRY_BEGIN
+MATCH qname qtype opcode
+SECTION QUESTION
+www3.a.	IN	TXT
+ENTRY_END
+
+STEP 230 REPLY
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR AA NOERROR
+SECTION QUESTION
+www3.a.	IN	TXT
+SECTION ANSWER
+www3.a.	100	IN	TXT	"first"
+ENTRY_END
+
+STEP 240 CHECK_ANSWER ADDRESS 193.0.0.1
+ENTRY_BEGIN
+MATCH all
+REPLY QR RD RA NOERROR
+SECTION QUESTION
+www3.a.	IN	TXT
+SECTION ANSWER
+www3.a.	IN	TXT	"first"
+ENTRY_END
+
+; Within the last 10% of the TTL, a cache answer starts a prefetch.
+STEP 250 TIME_PASSES ELAPSE 95
+
+STEP 260 QUERY ADDRESS 193.0.0.1
+ENTRY_BEGIN
+REPLY RD
+SECTION QUESTION
+www3.a.	IN	TXT
+ENTRY_END
+
+STEP 270 CHECK_ANSWER ADDRESS 193.0.0.1
+ENTRY_BEGIN
+MATCH all
+REPLY QR RD RA NOERROR
+SECTION QUESTION
+www3.a.	IN	TXT
+SECTION ANSWER
+www3.a.	IN	TXT	"first"
+ENTRY_END
+
+STEP 280 CHECK_OUT_QUERY
+ENTRY_BEGIN
+MATCH qname qtype opcode
+SECTION QUESTION
+www3.a.	IN	TXT
+ENTRY_END
+
+; The cached answer expires while the prefetch is in flight. Another
+; untagged client asks and attaches to the prefetch state.
+STEP 290 TIME_PASSES ELAPSE 10
+
+STEP 300 QUERY ADDRESS 193.0.0.2
+ENTRY_BEGIN
+REPLY RD
+SECTION QUESTION
+www3.a.	IN	TXT
+ENTRY_END
+
+STEP 310 REPLY
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR AA NOERROR
+SECTION QUESTION
+www3.a.	IN	TXT
+SECTION ANSWER
+www3.a.	100	IN	TXT	"prefetched"
+ENTRY_END
+
+STEP 320 CHECK_ANSWER ADDRESS 193.0.0.2
+ENTRY_BEGIN
+MATCH all
+REPLY QR RD RA NOERROR
+SECTION QUESTION
+www3.a.	IN	TXT
+SECTION ANSWER
+www3.a.	IN	TXT	"prefetched"
+ENTRY_END
+
+SCENARIO_END
