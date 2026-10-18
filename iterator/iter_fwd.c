@@ -256,7 +256,14 @@ read_fwds_addr(struct config_stub* s, struct delegpt* dp)
 	struct sockaddr_storage addr;
 	socklen_t addrlen;
 	char* tls_auth_name;
+	struct delegpt_addr* a;
+	int order = 0;
+	/* the config list is in reverse order, the last item is the first
+	 * configured one */
+	for(p = s->addrs; p; p = p->next)
+		order++;
 	for(p = s->addrs; p; p = p->next) {
+		order--;
 		log_assert(p->str);
 		if(!authextstrtoaddr(p->str, &addr, &addrlen, &tls_auth_name)) {
 			log_err("cannot parse forward %s ip address: '%s'", 
@@ -273,6 +280,11 @@ read_fwds_addr(struct config_stub* s, struct delegpt* dp)
 			log_err("out of memory");
 			return 0;
 		}
+		/* remember the config position, for forward-sequential.
+		 * a duplicate gets the position of its first occurrence,
+		 * that is visited last */
+		if((a = delegpt_find_addr(dp, &addr, addrlen)))
+			a->order = order;
 	}
 	return 1;
 }
@@ -302,6 +314,8 @@ read_forwards(struct iter_forwards* fwd, struct config_file* cfg)
 		dp->ssl_upstream = (uint8_t)s->ssl_upstream;
 		/* use TCP for queries to this forwarder */
 		dp->tcp_upstream = (uint8_t)s->tcp_upstream;
+		/* use the addresses in configured order */
+		dp->sequential = (uint8_t)s->sequential;
 		verbose(VERB_QUERY, "Forward zone server list:");
 		delegpt_log(VERB_QUERY, dp);
 		if(!forwards_insert(fwd, LDNS_RR_CLASS_IN, dp))

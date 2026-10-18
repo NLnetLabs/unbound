@@ -220,7 +220,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_MAX_GLOBAL_QUOTA VAR_HARDEN_UNVERIFIED_GLUE VAR_LOG_TIME_ISO
 %token VAR_VAL_VALIDATION_ATTEMPTS VAR_VAL_HASH_ATTEMPTS
 %token VAR_ITER_SCRUB_PROMISCUOUS VAR_LOG_THREAD_ID
-%token VAR_HARDEN_CNAME_FOLLOW
+%token VAR_HARDEN_CNAME_FOLLOW VAR_FORWARD_SEQUENTIAL
 
 %%
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
@@ -419,7 +419,8 @@ forwardstart: VAR_FORWARD_ZONE
 contents_forward: contents_forward content_forward
 	| ;
 content_forward: forward_name | forward_host | forward_addr | forward_first |
-	forward_no_cache | forward_ssl_upstream | forward_tcp_upstream
+	forward_no_cache | forward_ssl_upstream | forward_tcp_upstream |
+	forward_sequential
 	;
 view_clause: viewstart contents_view
 	{
@@ -3229,6 +3230,15 @@ forward_no_cache: VAR_FORWARD_NO_CACHE STRING_ARG
 		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
 			yyerror("expected yes or no.");
 		else cfg_parser->cfg->forwards->no_cache=(strcmp($2, "yes")==0);
+		free($2);
+	}
+	;
+forward_sequential: VAR_FORWARD_SEQUENTIAL STRING_ARG
+	{
+		OUTYY(("P(forward-sequential:%s)\n", $2));
+		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
+			yyerror("expected yes or no.");
+		else cfg_parser->cfg->forwards->sequential=(strcmp($2, "yes")==0);
 		free($2);
 	}
 	;

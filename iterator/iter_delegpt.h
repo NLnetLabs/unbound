@@ -99,6 +99,8 @@ struct delegpt {
 	uint8_t auth_dp;
 	/*** no cache */
 	int no_cache;
+	/** select targets in configured order, not by rtt */
+	uint8_t sequential;
 };
 
 /**
@@ -175,6 +177,9 @@ struct delegpt_addr {
 	uint8_t dnsseclame;
 	/** the TLS authentication name, (if not NULL) to use. */
 	char* tls_auth_name;
+	/** position in the configured address list, lowest is tried
+	 * first when the delegpt is sequential. -1 if not configured. */
+	int order;
 };
 
 /**
