@@ -622,7 +622,7 @@ copy_local_data(struct local_zone* nz, struct local_data* d)
 	nd->namelen = d->namelen;
 	nd->namelabs = d->namelabs;
 	nd->node.key = nd;
-	log_nametypeclass(0, "copy local data", nd->name, 0, 0);
+	log_nametypeclass(2, "copy local data", nd->name, 0, 0);
 
 	for(r = d->rrsets; r; r = r->next) {
 		nr = copy_local_rrset(nz->region, nd->name, nd->namelen, r);
