@@ -246,8 +246,10 @@ pkt_rrsig_covered(sldns_buffer* pkt, uint8_t* here, uint16_t* type)
 	size_t pos = sldns_buffer_position(pkt);
 	sldns_buffer_set_position(pkt, (size_t)(here-sldns_buffer_begin(pkt)));
 	/* ttl + len + size of small rrsig(rootlabel, no signature) */
-	if(sldns_buffer_remaining(pkt) < 4+2+19)
+	if(sldns_buffer_remaining(pkt) < 4+2+19) {
+		sldns_buffer_set_position(pkt, pos);
 		return 0;
+	}
 	sldns_buffer_skip(pkt, 4); /* ttl */
 	if(sldns_buffer_read_u16(pkt) < 19) /* too short */ {
 		sldns_buffer_set_position(pkt, pos);
