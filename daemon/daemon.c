@@ -1077,7 +1077,7 @@ daemon_fork(struct daemon* daemon)
 	daemon_setup_modules(daemon);
 
 	/* read auth zonefiles */
-	if(!auth_zones_apply_cfg(daemon->env->auth_zones, daemon->cfg, 1,
+	if(!auth_zones_apply_cfg(daemon->env->auth_zones, daemon->cfg, 1, 1,
 		&daemon->use_rpz, daemon->env, &daemon->mods))
 		fatal_exit("auth_zones could not be setup");
 
