@@ -786,9 +786,11 @@ copy_resp_addr(struct regional* region, struct resp_addr* r)
 			return NULL;
 	}
 	nr->taglen = r->taglen;
-	nr->data = respip_copy_rrset(r->data, region);
-	if(!nr->data)
-		return NULL;
+	if(r->data) {
+		nr->data = respip_copy_rrset(r->data, region);
+		if(!nr->data)
+			return NULL;
+	}
 	return nr;
 }
 

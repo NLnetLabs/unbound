@@ -3,3 +3,7 @@ rpz.example.com.	IN NS	ns.example.net.
 www.example.com.rpz.example.com. IN A	1.2.3.4
 other.example.com.rpz.example.com. IN A	1.2.3.5
 o2.example.com.rpz.example.com. IN A	1.2.3.6
+n.example.com.rpz.example.com IN CNAME .
+32.5.5.0.192.rpz-client-ip.rpz.example.com. A 1.2.3.5
+32.123.2.0.192.rpz-ip.rpz.example.com. A 203.0.113.123
+32.124.2.0.192.rpz-ip.rpz.example.com. CNAME .
