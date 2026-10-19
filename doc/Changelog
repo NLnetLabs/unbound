@@ -3,6 +3,8 @@
 	  short type bitmaps.
 	- Merge #1531 from nshopik: Fix dnstap queue registration race
 	  between worker threads.
+	- Merge #1532 from Ar-maan05: Fix packet position after a
+	  short RRSIG in pkt_rrsig_covered.
 
 16 October 2026: Wouter
 	- Fix unit test for root_zonemd with updated root key.
