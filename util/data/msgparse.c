@@ -134,11 +134,11 @@ nsec_at_apex(sldns_buffer* pkt)
 	}
 
 	/* see if SOA bit is set. */
-	if(sldns_buffer_position(pkt) < pos+4+rdatalen) {
+	if(sldns_buffer_position(pkt) < pos+6+rdatalen) {
 		/* nsec type bitmap contains items */
 		uint8_t win, blen, bits;
 		/* need: windownum, bitmap len, firstbyte */
-		if(sldns_buffer_position(pkt)+3 > pos+4+rdatalen) {
+		if(sldns_buffer_position(pkt)+3 > pos+6+rdatalen) {
 			sldns_buffer_set_position(pkt, pos);
 			return 0; /* malformed nsec */
 		}
