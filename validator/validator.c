@@ -231,6 +231,7 @@ val_init(struct module_env* env, int id)
 {
 	struct val_env* val_env = (struct val_env*)calloc(1,
 		sizeof(struct val_env));
+	struct trust_anchor* anchor = NULL;
 	if(!val_env) {
 		log_err("malloc failure");
 		return 0;
@@ -247,16 +248,21 @@ val_init(struct module_env* env, int id)
 		log_err("validator: could not apply configuration settings.");
 		return 0;
 	}
-	if(env->cfg->disable_edns_do) {
-		struct trust_anchor* anchor = anchors_find_any_noninsecure(
-			env->anchors);
-		if(anchor) {
+
+	anchor = anchors_find_any_noninsecure(env->anchors);
+	if(anchor) {
+		if(env->cfg->disable_edns_do) {
 			char b[LDNS_MAX_DOMAINLEN];
 			dname_str(anchor->name, b);
 			log_warn("validator: disable-edns-do is enabled, but there is a trust anchor for '%s'. Since DNSSEC could not work, the disable-edns-do setting is turned off. Continuing without it.", b);
-			lock_basic_unlock(&anchor->lock);
 			env->cfg->disable_edns_do = 0;
 		}
+		lock_basic_unlock(&anchor->lock);
+	} else {
+		log_warn("validator: no configured DNSSEC trust anchors. "
+			"DNSSEC validation is effectively DISABLED. Either "
+			"configure a trust anchor or remove the validator "
+			"from module-config.");
 	}
 
 	return 1;

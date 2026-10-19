@@ -672,6 +672,7 @@ server:
 	# most modules have to be listed at the beginning of the line,
 	# except cachedb(just before iterator), and python (at the beginning,
 	# or, just before the iterator).
+	# Note that validator needs configured trust-anchors to be of any use.
 	# module-config: "validator iterator"
 
 	# File with trusted keys, kept up-to-date using RFC5011 probes,
