@@ -4,6 +4,9 @@
 	  before server start in the presence of large zone files.
 	  And it is similar to how nsd-checkconf behaves.
 
+20 October 2026: Yorgos
+	- Add CONTRIBUTING.md, similar to other NLnet Labs projects.
+
 19 October 2026: Wouter
 	- Merge #1528 from Ar-maan05: Fix NSEC at apex detection for
 	  short type bitmaps.
