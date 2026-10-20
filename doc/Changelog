@@ -11,6 +11,7 @@
 	- Fix testbound so that it does not reference an already
 	  deleted pending packet, but its packet contents, when
 	  removing from the pending list.
+	- Fix to remove debug print from unit test.
 
 20 October 2026: Yorgos
 	- Add CONTRIBUTING.md, similar to other NLnet Labs projects.

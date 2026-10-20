@@ -215,8 +215,6 @@ pending_matches_current(struct replay_runtime* runtime,
 {
 	struct fake_pending* p;
 	struct entry* e;
-	log_info("pending_matches_current %s",
-		(runtime->pending_list?"pending_list":"null"));
 	if(!runtime->now || runtime->now->evt_type != repevt_back_query
 		|| !runtime->pending_list)
 		return 0;
