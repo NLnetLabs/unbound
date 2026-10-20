@@ -6,6 +6,8 @@
 
 20 October 2026: Yorgos
 	- Add CONTRIBUTING.md, similar to other NLnet Labs projects.
+	- Merge #1536: Better documentation and warning message for no
+	  configured trust anchors.
 
 19 October 2026: Wouter
 	- Merge #1528 from Ar-maan05: Fix NSEC at apex detection for
