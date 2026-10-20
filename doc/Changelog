@@ -1,4 +1,4 @@
-22 October 2026: Willem
+20 October 2026: Willem
 	- Merge #1539: Send along ETag with auth zone xfrs over http(s),
 	  so unbound will not fetch the whole zone every refresh time,
 	  but only when it has changed.
@@ -8,6 +8,9 @@
 	  are read with an option, '-a'. This speeds up the checkconf
 	  before server start in the presence of large zone files.
 	  And it is similar to how nsd-checkconf behaves.
+	- Fix testbound so that it does not reference an already
+	  deleted pending packet, but its packet contents, when
+	  removing from the pending list.
 
 20 October 2026: Yorgos
 	- Add CONTRIBUTING.md, similar to other NLnet Labs projects.
