@@ -514,13 +514,15 @@ struct auth_zones* auth_zones_create(void);
  * @param az: auth zones structure
  * @param cfg: config to apply.
  * @param setup: if true, also sets up values in the auth zones structure
+ * @param readauth: if true, reads zone files. False to omit zone file read,
+ *	for use by checkconf.
  * @param is_rpz: set to 1 if at least one RPZ zone is configured.
  * @param env: environment for offline verification.
  * @param mods: modules in environment.
  * @return false on failure.
  */
 int auth_zones_apply_cfg(struct auth_zones* az, struct config_file* cfg,
-	int setup, int* is_rpz, struct module_env* env,
+	int setup, int readauth, int* is_rpz, struct module_env* env,
 	struct module_stack* mods);
 
 /** initial pick up of worker timeouts, ties events to worker event loop

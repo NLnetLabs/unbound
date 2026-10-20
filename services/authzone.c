@@ -2350,7 +2350,7 @@ az_delete_deleted_zones(struct auth_zones* az)
 }
 
 int auth_zones_apply_cfg(struct auth_zones* az, struct config_file* cfg,
-	int setup, int* is_rpz, struct module_env* env,
+	int setup, int readauth, int* is_rpz, struct module_env* env,
 	struct module_stack* mods)
 {
 	struct config_auth* p;
@@ -2367,8 +2367,10 @@ int auth_zones_apply_cfg(struct auth_zones* az, struct config_file* cfg,
 		}
 	}
 	az_delete_deleted_zones(az);
-	if(!auth_zones_read_zones(az, cfg, env, mods))
-		return 0;
+	if(readauth) {
+		if(!auth_zones_read_zones(az, cfg, env, mods))
+			return 0;
+	}
 	if(setup) {
 		if(!auth_zones_setup_zones(az))
 			return 0;

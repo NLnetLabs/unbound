@@ -90,6 +90,7 @@ usage(void)
 	printf("Usage:	unbound-checkconf [file]\n");
 	printf("	Checks unbound configuration file for errors.\n");
 	printf("file	if omitted %s is used.\n", CONFIGFILE);
+	printf("-a		read zone files of auth-zones and RPZ.\n");
 	printf("-o option	print value of option to stdout.\n");
 	printf("-f 		output full pathname with chroot applied, eg. with -o pidfile.\n");
 	printf("-q 		quiet (suppress output on success).\n");
@@ -1166,11 +1167,12 @@ check_hints(struct config_file* cfg)
 
 /** check auth zones */
 static void
-check_auth(struct config_file* cfg)
+check_auth(struct config_file* cfg, int readauth)
 {
 	int is_rpz = 0;
 	struct auth_zones* az = auth_zones_create();
-	if(!az || !auth_zones_apply_cfg(az, cfg, 0, &is_rpz, NULL, NULL)) {
+	if(!az || !auth_zones_apply_cfg(az, cfg, 0, readauth, &is_rpz, NULL,
+		NULL)) {
 		fatal_exit("Could not setup authority zones");
 	}
 	if(is_rpz && !strstr(cfg->module_conf, "respip"))
@@ -1180,7 +1182,8 @@ check_auth(struct config_file* cfg)
 
 /** check config file */
 static void
-checkconf(const char* cfgfile, const char* opt, int final, int quiet)
+checkconf(const char* cfgfile, const char* opt, int final, int quiet,
+	int readauth)
 {
 	char oldwd[4096];
 	struct config_file* cfg = config_create();
@@ -1212,7 +1215,7 @@ checkconf(const char* cfgfile, const char* opt, int final, int quiet)
 #endif
 	check_fwd(cfg);
 	check_hints(cfg);
-	check_auth(cfg);
+	check_auth(cfg, readauth);
 	if(!quiet) { printf("unbound-checkconf: no errors in %s\n", cfgfile); }
 	config_delete(cfg);
 }
@@ -1228,6 +1231,7 @@ int main(int argc, char* argv[])
 	int c;
 	int final = 0;
 	int quiet = 0;
+	int readauth = 0;
 	const char* f;
 	const char* opt = NULL;
 	const char* cfgfile = CONFIGFILE;
@@ -1240,8 +1244,11 @@ int main(int argc, char* argv[])
 		cfgfile = CONFIGFILE;
 #endif /* USE_WINSOCK */
 	/* parse the options */
-	while( (c=getopt(argc, argv, "fhqo:")) != -1) {
+	while( (c=getopt(argc, argv, "afhqo:")) != -1) {
 		switch(c) {
+		case 'a':
+			readauth = 1;
+			break;
 		case 'f':
 			final = 1;
 			break;
@@ -1264,7 +1271,7 @@ int main(int argc, char* argv[])
 	if(argc == 1)
 		f = argv[0];
 	else	f = cfgfile;
-	checkconf(f, opt, final, quiet);
+	checkconf(f, opt, final, quiet, readauth);
 	checklock_stop();
 	return 0;
 }

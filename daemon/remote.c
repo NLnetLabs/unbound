@@ -5980,7 +5980,7 @@ fr_construct_from_config(struct fast_reload_thread* fr,
 		fr_construct_clear(ct);
 		return 0;
 	}
-	if(!auth_zones_apply_cfg(ct->auth_zones, newcfg, 1, &ct->use_rpz,
+	if(!auth_zones_apply_cfg(ct->auth_zones, newcfg, 1, 1, &ct->use_rpz,
 		fr->worker->daemon->env, &fr->worker->daemon->mods)) {
 		fr_construct_clear(ct);
 		return 0;
