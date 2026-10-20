@@ -125,6 +125,8 @@ struct auth_zone {
 	int zone_expired;
 	/** zone is a slave zone (it has masters) */
 	int zone_is_slave;
+	/** store etag */
+	char etag[128];
 	/** for downstream: this zone answers queries towards the downstream
 	 * clients */
 	int for_downstream;
