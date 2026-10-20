@@ -1,3 +1,8 @@
+22 October 2026: Willem
+	- Merge #1539: Send along ETag with auth zone xfrs over http(s),
+	  so unbound will not fetch the whole zone every refresh time,
+	  but only when it has changed.
+
 20 October 2026: Wouter
 	- Merge #1534: unbound-checkconf reads config, but zonefiles
 	  are read with an option, '-a'. This speeds up the checkconf
