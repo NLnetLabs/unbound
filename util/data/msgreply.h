@@ -668,7 +668,8 @@ struct edns_option* edns_opt_list_find(struct edns_option* list, uint16_t code);
  * @param region: region to store data.
  * @param start_time: the start time of recursion, when the packet arrived,
  * 	or the current time for cache responses.
- * @return false on failure (a callback function returned an error).
+ * @return false on failure (a callback function returned an error and further
+ *	callback processing was aborted).
  */
 int inplace_cb_reply_call(struct module_env* env, struct query_info* qinfo,
 	struct module_qstate* qstate, struct reply_info* rep, int rcode,
@@ -688,7 +689,8 @@ int inplace_cb_reply_call(struct module_env* env, struct query_info* qinfo,
  * @param region: region to store data.
  * @param start_time: the start time of recursion, when the packet arrived,
  * 	or the current time for cache responses.
- * @return false on failure (a callback function returned an error).
+ * @return false on failure (a callback function returned an error and further
+ *	callback processing was aborted).
  */
 int inplace_cb_reply_cache_call(struct module_env* env,
 	struct query_info* qinfo, struct module_qstate* qstate,
@@ -709,7 +711,8 @@ int inplace_cb_reply_cache_call(struct module_env* env,
  * @param region: region to store data.
  * @param start_time: the start time of recursion, when the packet arrived,
  * 	or the current time for cache responses.
- * @return false on failure (a callback function returned an error).
+ * @return false on failure (a callback function returned an error and further
+ *	callback processing was aborted).
  */
 int inplace_cb_reply_local_call(struct module_env* env,
 	struct query_info* qinfo, struct module_qstate* qstate,
@@ -731,7 +734,8 @@ int inplace_cb_reply_local_call(struct module_env* env,
  * @param region: region to store data.
  * @param start_time: the start time of recursion, when the packet arrived,
  * 	or the current time for cache responses.
- * @return false on failure (a callback function returned an error).
+ * @return false on failure (a callback function returned an error and further
+ *	callback processing was aborted).
  */
 int inplace_cb_reply_servfail_call(struct module_env* env,
 	struct query_info* qinfo, struct module_qstate* qstate,
@@ -754,7 +758,8 @@ int inplace_cb_reply_servfail_call(struct module_env* env,
  * @param zonelen: length of zone.
  * @param qstate: module qstate.
  * @param region: region to store data.
- * @return false on failure (a callback function returned an error).
+ * @return false on failure (a callback function returned an error and further
+ *	callback processing was aborted).
  */
 int inplace_cb_query_call(struct module_env* env, struct query_info* qinfo,
 	uint16_t flags, struct sockaddr_storage* addr, socklen_t addrlen,
@@ -767,9 +772,10 @@ int inplace_cb_query_call(struct module_env* env, struct query_info* qinfo,
  * reply from a nameserver.
  * @param env: module environment.
  * @param qstate: module qstate.
- * @return false on failure (a callback function returned an error).
+ * @return false on failure (a callback function returned an error and further
+ *	callback processing was aborted).
  */
-int inplace_cb_edns_back_parsed_call(struct module_env* env, 
+int inplace_cb_edns_back_parsed_call(struct module_env* env,
 	struct module_qstate* qstate);
 
 /**
@@ -779,7 +785,8 @@ int inplace_cb_edns_back_parsed_call(struct module_env* env,
  * @param env: module environment.
  * @param qstate: module qstate.
  * @param response: received response
- * @return false on failure (a callback function returned an error).
+ * @return false on failure (a callback function returned an error and further
+ *	callback processing was aborted).
  */
 int inplace_cb_query_response_call(struct module_env* env,
 	struct module_qstate* qstate, struct dns_msg* response);
