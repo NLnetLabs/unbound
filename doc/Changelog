@@ -1,6 +1,6 @@
 22 October 2026: Willem
 	- Merge #1539: Send along ETag with auth zone xfrs over http(s),
-	  so unbound will not fetch the whole zone every refresh time,
+	  so Unbound will not fetch the whole zone every refresh time,
 	  but only when it has changed.
 
 20 October 2026: Wouter
@@ -13,6 +13,8 @@
 	- Add CONTRIBUTING.md, similar to other NLnet Labs projects.
 	- Merge #1536: Better documentation and warning message for no
 	  configured trust anchors.
+	- Terminate inplace callback progression if one of them errors out;
+	  suggestion by Rio Fujita.
 
 19 October 2026: Wouter
 	- Merge #1528 from Ar-maan05: Fix NSEC at apex detection for
