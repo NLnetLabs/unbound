@@ -1,3 +1,9 @@
+20 October 2026: Wouter
+	- Merge #1534: unbound-checkconf reads config, but zonefiles
+	  are read with an option, '-a'. This speeds up the checkconf
+	  before server start in the presence of large zone files.
+	  And it is similar to how nsd-checkconf behaves.
+
 19 October 2026: Wouter
 	- Merge #1528 from Ar-maan05: Fix NSEC at apex detection for
 	  short type bitmaps.
