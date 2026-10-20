@@ -5334,11 +5334,11 @@ apply_http(struct auth_xfer* xfr, struct auth_zone* z,
 			pstate.lineno,
 			sldns_buffer_begin(scratch_buffer));
 		return 0;
-  }
+	}
 	if (etag) {
 		verbose(VERB_OPS, "etag %s stored", etag);
 		strcpy(z->etag, etag);
-  }
+  	}
 	return 1;
 }
 
