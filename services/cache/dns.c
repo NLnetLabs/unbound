@@ -43,6 +43,7 @@
 #include "iterator/iter_utils.h"
 #include "validator/val_nsec.h"
 #include "validator/val_utils.h"
+#include "iterator/iter_utils.h"
 #include "services/cache/dns.h"
 #include "services/cache/rrset.h"
 #include "util/data/msgparse.h"
@@ -94,7 +95,8 @@ store_rrsets(struct module_env* env, struct reply_info* rep, time_t now,
 		case 2: /* ref updated, cache is superior */
 			if(region) {
 				struct ub_packed_rrset_key* ck;
-				lock_rw_rdlock(&rep->ref[i].key->entry.lock);
+				/* the entry is already readlocked from the
+				 * check in rrset_cache_update. */
 				/* if deleted rrset, do not copy it */
 				if(rep->ref[i].key->id == 0 ||
 					rep->ref[i].id != rep->ref[i].key->id)
@@ -115,6 +117,8 @@ store_rrsets(struct module_env* env, struct reply_info* rep, time_t now,
 						qrep->serve_expired_ttl = qrep->ttl + SERVE_EXPIRED_TTL;
 					}
 				}
+			} else {
+				lock_rw_unlock(&rep->ref[i].key->entry.lock);
 			}
 			/* no break: also copy key item */
 			/* the line below is matched by gcc regex and silences
@@ -277,6 +281,8 @@ find_closest_of_type(struct module_env* env, uint8_t* qname, size_t qnamelen,
 
 		/* snip off front label */
 		lablen = *qname;
+		if(lablen == 0)
+			break;
 		qname += lablen + 1;
 		qnamelen -= lablen + 1;
 	}
@@ -584,8 +590,12 @@ dns_cache_find_delegation(struct module_env* env, uint8_t* qname,
 			return NULL;
 		}
 	}
-	if(!delegpt_rrset_add_ns(dp, region, nskey, 0))
+	if(!delegpt_rrset_add_ns(dp, region, nskey, 0,
+		deleg_port_number(env))) {
+		lock_rw_unlock(&nskey->entry.lock);
 		log_err("find_delegation: addns out of memory");
+		return NULL;
+	}
 	lock_rw_unlock(&nskey->entry.lock); /* first unlock before next lookup*/
 	/* find and add DS/NSEC (if any) */
 	if(msg)
@@ -670,7 +680,7 @@ tomsg(struct module_env* env, struct query_info* q, struct reply_info* r,
 		rrset_array_unlock(r->ref, r->rrset_count);
 		return NULL;
 	}
-	if(r->security == sec_status_secure && !reply_all_rrsets_secure(r)) {
+	if(r->security == sec_status_secure && !reply_an_ns_rrsets_secure(r)) {
 		/* message rrsets have changed status, revalidate */
 		rrset_array_unlock(r->ref, r->rrset_count);
 		return NULL;
@@ -712,10 +722,16 @@ struct dns_msg*
 dns_msg_deepcopy_region(struct dns_msg* origin, struct regional* region)
 {
 	size_t i;
+	struct ub_packed_rrset_key** saved_rrsets;
 	struct dns_msg* res = NULL;
+	size_t rep_alloc_size = sizeof(struct reply_info)
+		- sizeof(struct rrset_ref);  /* this is the size of res->rep
+						allocated in gen_dns_msg() */
 	res = gen_dns_msg(region, &origin->qinfo, origin->rep->rrset_count);
 	if(!res) return NULL;
-	*res->rep = *origin->rep;
+	saved_rrsets = res->rep->rrsets; /* save rrsets alloc by gen_dns_msg */
+	memcpy(res->rep, origin->rep, rep_alloc_size);
+	res->rep->rrsets = saved_rrsets;
 	if(origin->rep->reason_bogus_str) {
 		res->rep->reason_bogus_str = regional_strdup(region,
 			origin->rep->reason_bogus_str);
@@ -774,11 +790,16 @@ synth_dname_msg(struct ub_packed_rrset_key* rrset, struct regional* region,
 	uint8_t* newname, *dtarg = NULL;
 	size_t newlen, dtarglen;
 	time_t rr_ttl;
+	int graceperiod = 0;
 	if(TTL_IS_EXPIRED(d->ttl, now)) {
 		/* Allow TTL=0 DNAME from upstream within grace period */
 		if(!(rrset->rk.flags & PACKED_RRSET_UPSTREAM_0TTL))
 			return NULL;
 		rr_ttl = 0;
+		/* Since PACKED_RRSET_UPSTREAM_0TTL set the flag that
+		 * the grace period has been applied, this stops the rrset
+		 * from getting stored back into the cache with a bigger TTL.*/
+		graceperiod = 1;
 	} else {
 		rr_ttl = d->ttl - now;
 	}
@@ -806,6 +827,8 @@ synth_dname_msg(struct ub_packed_rrset_key* rrset, struct regional* region,
 	msg->rep->rrsets[0] = packed_rrset_copy_region(rrset, region, now);
 	if(!msg->rep->rrsets[0]) /* copy DNAME */
 		return NULL;
+	if(graceperiod)
+		msg->rep->rrsets[0]->rk.flags |= PACKED_RRSET_0TTL_GRACE;
 	/* synth CNAME rrset */
 	get_cname_target(rrset, &dtarg, &dtarglen);
 	if(!dtarg)
@@ -1059,7 +1082,7 @@ dns_cache_lookup(struct module_env* env,
 	if(env->cfg->harden_below_nxdomain) {
 		while(!dname_is_root(k.qname)) {
 			if(dpname && dpnamelen
-				&& !dname_subdomain_c(k.qname, dpname))
+				&& !dname_strict_subdomain_c(k.qname, dpname))
 				break; /* no synth nxdomain above the stub */
 			dname_remove_label(&k.qname, &k.qname_len);
 			h = query_info_hash(&k, flags);
@@ -1188,9 +1211,9 @@ dns_cache_store(struct module_env* env, struct query_info* msgqinf,
 				rep->rrsets[i]->entry.data, *env->now);
 			ref.key = rep->rrsets[i];
 			ref.id = rep->rrsets[i]->id;
-			/*ignore ret: it was in the cache, ref updated */
+			/* if it was in the cache, ref updated */
 			/* no leeway for typeNS */
-			(void)rrset_cache_update(env->rrset_cache, &ref, 
+			rrset_cache_update_unlock(env->rrset_cache, &ref,
 				env->alloc,
 				((ntohs(ref.key->rk.type)==LDNS_RR_TYPE_NS
 				 && !pside) ? qstarttime:*env->now + leeway));

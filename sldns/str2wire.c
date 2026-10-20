@@ -874,7 +874,14 @@ rrinternal_parse_rdata(sldns_buffer* strbuf, char* token, size_t token_len,
 
 		rdata_len -= 1;
 		rdata += 1;
-		return sldns_str2wire_check_svcbparams(rdata, rdata_len);
+		status = sldns_str2wire_check_svcbparams(rdata, rdata_len);
+		/* For RFC3597 generic-form input, preserve unprintable records.
+		 * Those could have appeared due to secondary zones, and also
+		 * unbound writing invalid-format records out in generic form.
+		 * If it can be parsed, it fixes the svcparam ordering. */
+		if(was_unknown_rr_format && status != LDNS_WIREPARSE_ERR_OK)
+			status = LDNS_WIREPARSE_ERR_OK;
+		return status;
 
 	}
 	return LDNS_WIREPARSE_ERR_OK;
@@ -1201,7 +1208,7 @@ sldns_str2wire_svcbparam_ipv4hint(const char* val, uint8_t* rd, size_t* rd_len)
 {
 	size_t count;
 	char ip_str[INET_ADDRSTRLEN+1];
-	char *next_ip_str;
+	const char *next_ip_str;
 	size_t i;
 
 	for (i = 0, count = 1; val[i]; i++) {
@@ -1256,7 +1263,7 @@ sldns_str2wire_svcbparam_ipv6hint(const char* val, uint8_t* rd, size_t* rd_len)
 {
 	size_t count;
 	char ip_str[INET6_ADDRSTRLEN+1];
-	char *next_ip_str;
+	const char *next_ip_str;
 	size_t i;
 
 	for (i = 0, count = 1; val[i]; i++) {
@@ -1317,7 +1324,7 @@ static int
 sldns_str2wire_svcbparam_mandatory(const char* val, uint8_t* rd, size_t* rd_len)
 {
 	size_t i, count, val_len;
-	char* next_key;
+	const char* next_key;
 
 	val_len = strlen(val);
 
@@ -1410,6 +1417,7 @@ sldns_str2wire_svcbparam_ech_value(const char* val, uint8_t* rd, size_t* rd_len)
 			return LDNS_WIREPARSE_ERR_BUFFER_TOO_SMALL;
 		sldns_write_uint16(rd, SVCB_KEY_ECH);
 		sldns_write_uint16(rd + 2, 0);
+		*rd_len = 4;
 
 		return LDNS_WIREPARSE_ERR_OK;
 	}
@@ -2302,6 +2310,8 @@ int sldns_str2wire_loc_buf(const char* str, uint8_t* rd, size_t* len)
 
 	if (isdigit((unsigned char) *my_str)) {
 		s = strtod(my_str, &my_str);
+		if(s > 60.0)
+			return LDNS_WIREPARSE_ERR_SYNTAX;
 	}
 
 	/* skip blanks before northerness */
@@ -2360,6 +2370,8 @@ north:
 
 	if (isdigit((unsigned char) *my_str)) {
 		s = strtod(my_str, &my_str);
+		if(s > 60.0)
+			return LDNS_WIREPARSE_ERR_SYNTAX;
 	}
 
 	/* skip blanks before easterness */
@@ -2392,8 +2404,17 @@ east:
 		longitude = equator - longitude;
 	}
 
-	altitude = (uint32_t)(strtod(my_str, &my_str)*100.0 +
-		10000000.0 + 0.5);
+	while (isblank((unsigned char) *my_str)) {
+		my_str++;
+	}
+
+	/* altitude */
+	if(!(isdigit((unsigned char) *my_str) || *my_str == '-'))
+		return LDNS_WIREPARSE_ERR_SYNTAX;
+	s = strtod(my_str, &my_str);
+	if(s < -100000.0 || s > 42849672.95)
+		return LDNS_WIREPARSE_ERR_SYNTAX;
+	altitude = (uint32_t)(s*100.0 + 10000000.0 + 0.5);
 	if (*my_str == 'm' || *my_str == 'M') {
 		my_str++;
 	}

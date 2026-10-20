@@ -408,6 +408,8 @@ Functions
         The **async_id** is returned so you can (at your option) decide to
         track it and cancel the request if needed.
         If you pass a NULL pointer the **async_id** is not returned.
+        The context, created via **ub_ctx_create**, is in use during but also
+        after the callback and it cannot be deleted during a callback.
 
     ub_cancel
         Cancel an async query in progress.

@@ -193,12 +193,21 @@ server:
 	# Limit on number of CNAME, DNAME records for incoming packets.
 	# iter-scrub-cname: 11
 
+	# Limit on number of RRSIGs for an RRset for incoming packets.
+	# iter-scrub-rrsig: 8
+
 	# Limit on upstream queries for an incoming query and its recursion.
 	# max-global-quota: 200
 
 	# Should the scrubber remove promiscuous NS from positive answers,
 	# protects against poison attempts.
 	# iter-scrub-promiscuous: yes
+
+	# Limit on number of DNSSEC validation attempts for a query.
+	# val-validation-attempts: 32
+
+	# Limit on number of DNSSEC hash attempts for a query.
+	# val-hash-attempts: 32
 
 	# msec for waiting for an unknown server to reply.  Increase if you
 	# are behind a slow satellite link, to eg. 1128.
@@ -579,6 +588,9 @@ server:
 	# additional section.
 	# harden-unknown-additional: no
 
+	# Harden CNAME redirections by following them.
+	# harden-cname-follow: yes
+
 	# Sent minimum amount of information to upstream servers to enhance
 	# privacy. Only sent minimum required labels of the QNAME and set QTYPE
 	# to A when possible.
@@ -660,6 +672,7 @@ server:
 	# most modules have to be listed at the beginning of the line,
 	# except cachedb(just before iterator), and python (at the beginning,
 	# or, just before the iterator).
+	# Note that validator needs configured trust-anchors to be of any use.
 	# module-config: "validator iterator"
 
 	# File with trusted keys, kept up-to-date using RFC5011 probes,
@@ -725,7 +738,7 @@ server:
 	# non-secure data. Useful to shield the users of this validator from
 	# potential bogus data in the additional section. All unsigned data
 	# in the additional section is removed from secure messages.
-	# val-clean-additional: yes
+	# val-clean-additional: no
 
 	# Turn permissive mode on to permit bogus messages. Thus, messages
 	# for which security checks failed will be returned to clients,
@@ -896,6 +909,10 @@ server:
 	#   that name
 	# o block_a resolves all records normally but returns
 	#   NODATA for A queries and ignores local data for that name
+	# o block_aaaa similarly to block_a, resolves all records normally but
+	#   returns NODATA for AAAA queries and ignores local data for that name
+	# o block_a_wdata like block_a but uses local data if present.
+	# o block_aaaa_wdata like block_aaaa but uses local data if present.
 	# o always_null returns 0.0.0.0 or ::0 for any name in the zone.
 	# o noview breaks out of that view towards global local-zones.
 	#
@@ -965,16 +982,12 @@ server:
 	# tls-ciphersuites: "TLS_AES_128_GCM_SHA256:TLS_AES_128_CCM_8_SHA256:TLS_AES_128_CCM_SHA256:TLS_AES_256_GCM_SHA384:TLS_CHACHA20_POLY1305_SHA256"
 
 	# Use the SNI extension for TLS connections.  Default is yes.
-	# Changing the value requires a reload.
+	# Changing the value requires a restart.
 	# tls-use-sni: yes
 
-	# Allow general-purpose version-flexible TLS server configuration that
-	# may be further restricted by the system's policy.
-	# Use only if you want to support legacy TLS client connections.
-	# Default is a compilation choice.
-	# With 'no' Unbound will only use the latest available TLS version.
-	# Changing the value requires a reload.
-	# tls-use-system-policy-versions: no
+	# TLS protocols.
+	# Changing the value requires a restart.
+	# tls-protocols: "TLSv1.2 TLSv1.3"
 
 	# Add the secret file for TLS Session Ticket.
 	# Secret file must be 80 bytes of random data.
@@ -1267,6 +1280,7 @@ remote-control:
 #	primary: 199.7.91.13          # d.root-servers.net
 #	primary: 192.5.5.241          # f.root-servers.net
 #	primary: 192.112.36.4         # g.root-servers.net
+#	primary: 198.97.190.53        # h.root-servers.net
 #	primary: 193.0.14.129         # k.root-servers.net
 #	primary: 192.0.47.132         # xfr.cjr.dns.icann.org
 #	primary: 192.0.32.132         # xfr.lax.dns.icann.org
@@ -1275,6 +1289,7 @@ remote-control:
 #	primary: 2001:500:2d::d       # d.root-servers.net
 #	primary: 2001:500:2f::f       # f.root-servers.net
 #	primary: 2001:500:12::d0d     # g.root-servers.net
+#	primary: 2001:500:1::53       # h.root-servers.net
 #	primary: 2001:7fd::1          # k.root-servers.net
 #	primary: 2620:0:2830:202::132 # xfr.cjr.dns.icann.org
 #	primary: 2620:0:2d0:202::132  # xfr.lax.dns.icann.org
@@ -1288,6 +1303,9 @@ remote-control:
 #	zonemd-check: no
 #	zonemd-reject-absence: no
 #	zonefile: "example.org.zone"
+#	max-transfer-size: 0
+#	max-transfer-time: 0
+
 
 # Views
 # Create named views. Name must be unique.
@@ -1454,3 +1472,5 @@ remote-control:
 #     rpz-signal-nxdomain-ra: no
 #     for-downstream: no
 #     tags: "example"
+#     max-transfer-size: 0
+#     max-transfer-time: 0

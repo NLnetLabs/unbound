@@ -45,6 +45,7 @@
 struct dns_msg;
 struct query_info;
 struct delegpt;
+struct config_file;
 
 /**
  * The response type is used to interpret the response.
@@ -115,15 +116,21 @@ enum response_type response_type_from_cache(struct dns_msg* msg,
  * detection, mostly).
  *
  * @param rdset: if RD bit was sent in query sent by unbound.
- * @param msg: the message from the cache.
+ * @param msg: the message.
  * @param request: the request that generated the response.
  * @param dp: The delegation point that was being queried
  *          when the response was returned.
  * @param empty_nodata_found: flag to keep track of empty nodata detection.
+ * @param msg_lame_empty: The scrubber indicates that this empty message
+ *	is lame, before it became empty.
+ * @param msg_lame_referral: returned true if the reply has a referral before
+ *	scrub.
+ * @param cfg: config with options.
  * @return the response type (CNAME or ANSWER).
  */
 enum response_type response_type_from_server(int rdset, 
 	struct dns_msg* msg, struct query_info* request, struct delegpt* dp,
-	int* empty_nodata_found);
+	int* empty_nodata_found, int msg_lame_empty, int msg_lame_referral,
+	struct config_file* cfg);
 
 #endif /* ITERATOR_ITER_RESPTYPE_H */

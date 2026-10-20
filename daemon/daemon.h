@@ -62,6 +62,7 @@ struct doq_table;
 struct cookie_secrets;
 struct fast_reload_thread;
 struct fast_reload_printq;
+struct shared_ports;
 
 #include "dnstap/dnstap_config.h"
 #ifdef USE_DNSTAP
@@ -97,6 +98,8 @@ struct daemon {
 	int rc_port;
 	/** listening ports for remote control */
 	struct listen_port* rc_ports;
+	/** the shared ports structure, with random ports numbers. */
+	struct shared_ports* shared_ports;
 	/** remote control connections management (for first worker) */
 	struct daemon_remote* rc;
 	/** ssl context for listening to dnstcp over ssl */
@@ -155,7 +158,14 @@ struct daemon {
 	/** the dnstap environment master value, copied and changed by threads*/
 	struct dt_env* dtenv;
 #endif
+	/** The SHM info for shared memory stats. */
 	struct shm_main_info* shm_info;
+	/** if the timeout for statistics is attempted at specific offset.
+	 * If it is true, the stat timeout is the interval+offset, and that
+	 * picks (roughly) the same time offset every time period. */
+	int stat_time_specific;
+	/** if the timeout is specific, what offset in the period. */
+	int stat_time_offset;
 	/** some response-ip tags or actions are configured if true */
 	int use_response_ip;
 	/** some RPZ policies are configured */

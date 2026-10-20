@@ -111,10 +111,15 @@ typedef int comm_point_callback_type(struct comm_point*, void*, int,
 
 /** timeout to slow accept calls when not possible, in msec. */
 #define NETEVENT_SLOW_ACCEPT_TIME 2000
+/** timeout to slow accept calls when tcp queue is full, in msec. */
+#define NETEVENT_SLOW_ACCEPT_QUEUE_TIME 50
 /** timeout to slow down log print, so it does not spam the logs, in sec */
 #define SLOW_LOG_TIME 10
 /** for doq, the maximum dcid length, in ngtcp2 it is 20. */
 #define DOQ_MAX_CIDLEN 24
+
+/** Size of an UDP datagram */
+#define NORMAL_UDP_SIZE	512 /* bytes */
 
 /**
  * A communication point dispatcher. Thread specific.
@@ -187,6 +192,8 @@ struct comm_reply {
 	/** port number for doq */
 	int doq_srcport;
 #endif /* HAVE_NGTCP2 */
+	/** The doq stream to register mesh states to. */
+	struct doq_stream* doq_stream;
 };
 
 /**
@@ -381,6 +388,9 @@ struct comm_point {
 	 * the callback cleans up netevent can see what it has to do.
 	 * Or leave NULL if it is not used at all. */
 	int* tcp_more_write_again;
+
+	/** resume timer for tcp_more_read_again */
+	struct comm_timer* tcp_more_read_again_timer;
 
 	/** if set, read/write completes:
 		read/write state of tcp is toggled.
@@ -1095,8 +1105,10 @@ struct doq_server_socket {
 	struct doq_pkt_addr* blocked_paddr;
 	/** timer for this worker on this comm_point to wait on. */
 	struct comm_timer* timer;
+#ifdef HAVE_NGTCP2
 	/** the timer that is marked by the doq_socket as waited on. */
-	struct timeval marked_time;
+	ngtcp2_tstamp marked_time;
+#endif
 	/** the current time for use by time functions, time_t. */
 	time_t* now_tt;
 	/** the current time for use by time functions, timeval. */
@@ -1128,6 +1140,12 @@ void doq_send_pkt(struct comm_point* c, struct doq_pkt_addr* paddr,
 
 /** doq timer callback function. */
 void doq_timer_cb(void* arg);
+
+/** tcp read again callback function. For tcp req info listen. */
+void tcp_read_again_cb(void* arg);
+
+/** tcp more read again callback function. For outside network. */
+void tcp_more_read_again_cb(void* arg);
 
 /**
  * This routine is published for checks and tests, and is only used internally.

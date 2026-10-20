@@ -73,6 +73,9 @@
 #ifdef HAVE_GLOB_H
 #include <glob.h>
 #endif
+#ifdef HAVE_FNMATCH_H
+#include <fnmatch.h>
+#endif
 #ifdef WITH_PYTHONMODULE
 #include "pythonmod/pythonmod.h"
 #endif
@@ -87,6 +90,7 @@ usage(void)
 	printf("Usage:	unbound-checkconf [file]\n");
 	printf("	Checks unbound configuration file for errors.\n");
 	printf("file	if omitted %s is used.\n", CONFIGFILE);
+	printf("-a		read zone files of auth-zones and RPZ.\n");
 	printf("-o option	print value of option to stdout.\n");
 	printf("-f 		output full pathname with chroot applied, eg. with -o pidfile.\n");
 	printf("-q 		quiet (suppress output on success).\n");
@@ -728,6 +732,122 @@ check_modules_exist(const char* module_conf)
 	}
 }
 
+#ifdef USE_IPSECMOD
+/** Compare filename with string, true if it matches the name. */
+static int
+file_string_matches(char* str, char* fname, struct config_file* cfg)
+{
+	char* f;
+	if(!str || str[0] == 0)
+		return 0;
+	/* compare name after chroot and working dir are applied */
+	f = fname_after_chroot(str, cfg, 1);
+	if(!f) fatal_exit("out of memory");
+	if(strcmp(fname, f) == 0) {
+		free(f);
+		return 1;
+	}
+	free(f);
+	return 0;
+}
+#endif /* USE_IPSECMOD */
+
+/** Compare filename with list of files, true if list contains the name. */
+static int
+file_list_contains(struct config_strlist* list, char* fname,
+	struct config_file* cfg)
+{
+	struct config_strlist* s;
+	char* f;
+	for(s = list; s; s = s->next) {
+		if(!s->str || s->str[0] == 0)
+			continue; /* skip if no file name */
+		/* compare names after chroot and working dir are applied */
+		f = fname_after_chroot(s->str, cfg, 1);
+		if(!f) fatal_exit("out of memory");
+		if(strcmp(fname, f) == 0) {
+			free(f);
+			return 1;
+		}
+		free(f);
+	}
+	return 0;
+}
+
+/** Compare filename with list of files, true if list contains the name,
+ * with glob compare. */
+static int
+file_list_contains_wild(struct config_strlist* list, char* fname,
+	struct config_file* cfg)
+{
+	struct config_strlist* s;
+	char* f;
+	for(s = list; s; s = s->next) {
+		if(!s->str || s->str[0] == 0)
+			continue; /* skip if no file name */
+		/* compare names after chroot and working dir are applied */
+		f = fname_after_chroot(s->str, cfg, 1);
+		if(!f) fatal_exit("out of memory");
+		if(strcmp(fname, f) == 0) {
+			free(f);
+			return 1;
+		}
+#ifdef HAVE_FNMATCH
+		if(fnmatch(f, fname, 0) == 0) {
+			log_err("trusted-keys-file: \"%s\" matches zonefile '%s'",
+				s->str, fname);
+			free(f);
+			return 1;
+		}
+#endif
+		free(f);
+	}
+	return 0;
+}
+
+/** Check if the auth-zone/rpz zonefile: conflicts with other files,
+ * so it would overwrite that file. Refuse it aliasing any read-side bootstrap
+ * file. */
+static void
+check_file_clobber(struct config_file* cfg)
+{
+	struct config_auth* p;
+	char* zfile, *sourceopt = NULL;
+	for(p = cfg->auths; p; p = p->next) {
+		if(!p->name || p->name[0] == 0)
+			continue; /* skip if no name */
+		if(!p->zonefile || p->zonefile[0]==0)
+			continue; /* no zone file */
+		zfile = fname_after_chroot(p->zonefile, cfg, 1);
+		if(!zfile) fatal_exit("out of memory");
+		if(file_list_contains(cfg->auto_trust_anchor_file_list, zfile,
+			cfg))
+			sourceopt = "auto-trust-anchor-file";
+		else if(file_list_contains(cfg->trust_anchor_file_list, zfile,
+			cfg))
+			sourceopt = "trust-anchor-file";
+		else if(file_list_contains_wild(cfg->trusted_keys_file_list,
+			zfile, cfg))
+			sourceopt = "trusted-keys-file";
+		else if(file_list_contains(cfg->root_hints, zfile, cfg))
+			sourceopt = "root-hints";
+		else if(file_list_contains(cfg->tls_session_ticket_keys.first,
+			zfile, cfg))
+			sourceopt = "tls-session-ticket-keys";
+#ifdef USE_IPSECMOD
+		if(cfg->ipsecmod_enabled &&
+			file_string_matches(cfg->ipsecmod_hook, zfile, cfg))
+			sourceopt = "ipsecmod-hook";
+#endif
+		if(sourceopt)
+			fatal_exit("auth-zone '%s': zonefile \"%s\" "
+				"is the same path as a %s option. "
+				"The auth-zone transfer would overwrite it.",
+				p->name, p->zonefile, sourceopt);
+		free(zfile);
+	}
+}
+
 /** check configuration for errors */
 static void
 morechecks(struct config_file* cfg)
@@ -822,6 +942,7 @@ morechecks(struct config_file* cfg)
 			cfg->chrootdir, cfg);
 	}
 #endif
+	check_file_clobber(cfg);
 	/* remove chroot setting so that modules are not stripping pathnames */
 	free(cfg->chrootdir);
 	cfg->chrootdir = NULL;
@@ -1046,11 +1167,12 @@ check_hints(struct config_file* cfg)
 
 /** check auth zones */
 static void
-check_auth(struct config_file* cfg)
+check_auth(struct config_file* cfg, int readauth)
 {
 	int is_rpz = 0;
 	struct auth_zones* az = auth_zones_create();
-	if(!az || !auth_zones_apply_cfg(az, cfg, 0, &is_rpz, NULL, NULL)) {
+	if(!az || !auth_zones_apply_cfg(az, cfg, 0, readauth, &is_rpz, NULL,
+		NULL)) {
 		fatal_exit("Could not setup authority zones");
 	}
 	if(is_rpz && !strstr(cfg->module_conf, "respip"))
@@ -1060,7 +1182,8 @@ check_auth(struct config_file* cfg)
 
 /** check config file */
 static void
-checkconf(const char* cfgfile, const char* opt, int final, int quiet)
+checkconf(const char* cfgfile, const char* opt, int final, int quiet,
+	int readauth)
 {
 	char oldwd[4096];
 	struct config_file* cfg = config_create();
@@ -1092,7 +1215,7 @@ checkconf(const char* cfgfile, const char* opt, int final, int quiet)
 #endif
 	check_fwd(cfg);
 	check_hints(cfg);
-	check_auth(cfg);
+	check_auth(cfg, readauth);
 	if(!quiet) { printf("unbound-checkconf: no errors in %s\n", cfgfile); }
 	config_delete(cfg);
 }
@@ -1108,6 +1231,7 @@ int main(int argc, char* argv[])
 	int c;
 	int final = 0;
 	int quiet = 0;
+	int readauth = 0;
 	const char* f;
 	const char* opt = NULL;
 	const char* cfgfile = CONFIGFILE;
@@ -1120,8 +1244,11 @@ int main(int argc, char* argv[])
 		cfgfile = CONFIGFILE;
 #endif /* USE_WINSOCK */
 	/* parse the options */
-	while( (c=getopt(argc, argv, "fhqo:")) != -1) {
+	while( (c=getopt(argc, argv, "afhqo:")) != -1) {
 		switch(c) {
+		case 'a':
+			readauth = 1;
+			break;
 		case 'f':
 			final = 1;
 			break;
@@ -1144,7 +1271,7 @@ int main(int argc, char* argv[])
 	if(argc == 1)
 		f = argv[0];
 	else	f = cfgfile;
-	checkconf(f, opt, final, quiet);
+	checkconf(f, opt, final, quiet, readauth);
 	checklock_stop();
 	return 0;
 }

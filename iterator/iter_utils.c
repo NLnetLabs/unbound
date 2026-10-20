@@ -1215,8 +1215,8 @@ iter_store_parentside_rrset(struct module_env* env,
 	rrset->entry.hash = rrset_key_hash(&rrset->rk);
 	ref.key = rrset;
 	ref.id = rrset->id;
-	/* ignore ret: if it was in the cache, ref updated */
-	(void)rrset_cache_update(env->rrset_cache, &ref, env->alloc, *env->now);
+	/* if it was in the cache, ref updated */
+	rrset_cache_update_unlock(env->rrset_cache, &ref, env->alloc, *env->now);
 }
 
 /** fetch NS record from reply, if any */
@@ -1313,7 +1313,8 @@ iter_lookup_parent_NS_from_cache(struct module_env* env, struct delegpt* dp,
 		log_rrset_key(VERB_ALGO, "found parent-side NS in cache", akey);
 		dp->has_parent_side_NS = 1;
 		/* and mark the new names as lame */
-		if(!delegpt_rrset_add_ns(dp, region, akey, 1)) {
+		if(!delegpt_rrset_add_ns(dp, region, akey, 1,
+			deleg_port_number(env))) {
 			lock_rw_unlock(&akey->entry.lock);
 			return 0;
 		}
@@ -1702,4 +1703,37 @@ iter_make_minimal(struct reply_info* rep)
 	rep->ns_numrrsets = 0;
 	rep->ar_numrrsets = 0;
 	rep->rrset_count -= rem;
+}
+
+int
+deleg_port_number(struct module_env* env)
+{
+	if(env->cfg->ssl_upstream)
+		return env->cfg->ssl_port;
+	return -1;
+}
+
+void
+shorten_answer_cname(struct reply_info* rep, uint8_t* cutoff)
+{
+	size_t i, found = 0, removenum;
+	uint8_t* sname = NULL;
+	size_t snamelen = 0;
+	for(i=0; i<rep->an_numrrsets; i++) {
+		if(query_dname_compare(rep->rrsets[i]->rk.dname, cutoff) == 0) {
+			found = 1;
+			removenum = i;
+			break;
+		}
+		if(ntohs(rep->rrsets[i]->rk.type) == LDNS_RR_TYPE_CNAME) {
+			get_cname_target(rep->rrsets[i], &sname, &snamelen);
+			if(query_dname_compare(sname, cutoff) == 0) {
+				found = 1;
+				removenum = i+1;
+				break;
+			}
+		}
+	}
+	if(!found) return; /* not found */
+	val_reply_remove_answers(rep, removenum, rep->an_numrrsets-removenum);
 }

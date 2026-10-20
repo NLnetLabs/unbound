@@ -331,6 +331,8 @@ void my_callback_function(void* my_arg, int err,
 The \fBasync_id\fP is returned so you can (at your option) decide to
 track it and cancel the request if needed.
 If you pass a NULL pointer the \fBasync_id\fP is not returned.
+The context, created via \fBub_ctx_create\fP, is in use during but also
+after the callback and it cannot be deleted during a callback.
 .TP
 .B ub_cancel
 Cancel an async query in progress.

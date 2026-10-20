@@ -148,8 +148,8 @@ struct config_file {
 	char* tls_ciphersuites;
 	/** if SNI is to be used */
 	int tls_use_sni;
-	/** if all TLS versions can be used; based on system policy (if any) */
-	int tls_use_system_policy_versions;
+	/** TLS protocols */
+	char* tls_protocols;
 
 	/** port on which to provide DNS over HTTPS service */
 	int https_port;
@@ -311,6 +311,8 @@ struct config_file {
 	/** harden against unknown records in the authority section and in
 	 * the additional section */
 	int harden_unknown_additional;
+	/** harden to follow cname redirections */
+	int harden_cname_follow;
 	/** use 0x20 bits in query as random ID bits */
 	int use_caps_bits_for_id;
 	/** 0x20 whitelist, domains that do not use capsforid */
@@ -794,8 +796,14 @@ struct config_file {
 	size_t iter_scrub_ns;
 	/** limit on CNAME, DNAME RRs in answer for the iterator scrubber. */
 	int iter_scrub_cname;
+	/** limit on RRSIGs for an RRset for the iterator scrubber. */
+	int iter_scrub_rrsig;
 	/** limit on upstream queries for an incoming query and subqueries. */
 	int max_global_quota;
+	/** limit on validator validation attempts. */
+	int val_validation_attempts;
+	/** limit on validator hash attempts. */
+	int val_hash_attempts;
 	/** Should the iterator scrub promiscuous NS rrsets, from positive
 	 * answers. */
 	int iter_scrub_promiscuous;
@@ -882,6 +890,10 @@ struct config_auth {
 	int zonemd_check;
 	/** Reject absence of ZONEMD records, zone must have one */
 	int zonemd_reject_absence;
+	/** The maximum auth zone transfer size, in bytes. */
+	size_t max_transfer_size;
+	/** The maximum auth zone transfer time taken, in msec. */
+	int max_transfer_time;
 };
 
 /**
@@ -1493,7 +1505,28 @@ size_t getmem_str(char* str);
  */
 int cfg_ports_list_contains(char* ports, int p);
 
+/**
+ * Check if the configured string contains supported TLS protocols.
+ * @param tls_protocols: String with TLS protocols.
+ * @return true if all options are valid, else false.
+ */
+int cfg_tls_protocols_is_valid(const char* tls_protocols);
+
+/**
+ * Based on the configured TLS protocols fill which ones are allowed.
+ * @param tls_protocols: String with TLS protocols.
+ * @param allow12: will be true if TLSv1.2 is configured.
+ * @param allow13: will be true if TLSv1.3 is configured.
+ */
+void cfg_tls_protocols_allowed(const char* tls_protocols, int* allow12, int* allow13);
+
 /** get the file mtime stat (or error, with errno and nonexist) */
 int file_get_mtime(const char* file, time_t* mtime, long* ns, int* nonexist);
+
+/** check local-zone type for correctness */
+int cfg_local_zone_type_value_check(const char* str);
+
+/** the list of local-zone types, for error printout. */
+const char* cfg_local_zone_type_list(void);
 
 #endif /* UTIL_CONFIG_FILE_H */
