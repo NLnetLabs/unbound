@@ -5039,7 +5039,7 @@ http_process_initial_header(struct comm_point* c)
 		c->http_is_chunked = 1;
 	} else if(strncasecmp(line, "ETag: ", 6) == 0) {
 		if (strlen(line + 6) < sizeof(c->etag)) {
-			strcpy(c->etag, line + 6);
+			strlcpy(c->etag, line + 6, sizeof(c->etag));
 		}
 	} else if(line[0] == 0) {
 		/* end of initial headers */

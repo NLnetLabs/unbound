@@ -3906,7 +3906,7 @@ setup_http_request(sldns_buffer* buf, char* host, char* path,
 	sldns_buffer_printf(buf, "GET /%s HTTP/1.1\r\n", path);
 	sldns_buffer_printf(buf, "Host: %s\r\n", host);
 	if (etag) {
-		verbose(VERB_OPS, "sending along ETag %s in http request", etag);
+		verbose(VERB_ALGO, "sending along ETag %s in http request", etag);
 		sldns_buffer_printf(buf, "If-None-Match: %s\r\n", etag);
 	}
 	setup_http_user_agent(buf, cfg);
