@@ -1513,7 +1513,12 @@ void comm_point_delete(struct comm_point* c)
 	log_assert(fc->typecode == FAKE_COMMPOINT_TYPECODE);
 	if(fc->type_tcp_out) {
 		/* remove tcp pending, so no more callbacks to it */
-		pending_list_delete_pkt(fc->runtime, fc->pkt, fc->pkt_len);
+		if(fc->pkt)
+			pending_list_delete_pkt(fc->runtime, fc->pkt, fc->pkt_len);
+	}
+	if(fc->pkt) {
+		free(fc->pkt);
+		fc->pkt = NULL;
 	}
 	free(c);
 }
