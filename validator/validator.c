@@ -259,10 +259,11 @@ val_init(struct module_env* env, int id)
 		}
 		lock_basic_unlock(&anchor->lock);
 	} else {
-		log_warn("validator: no configured DNSSEC trust anchors. "
-			"DNSSEC validation is effectively DISABLED. Either "
-			"configure a trust anchor or remove the validator "
-			"from module-config.");
+		log_warn("validator: no DNSSEC trust anchors configured. "
+			"DNSSEC validation is now effectively DISABLED. "
+			"Either configure a trust anchor to enable DNSSEC "
+			"validation or remove the validator from "
+			"module-config.");
 	}
 
 	return 1;
