@@ -5336,8 +5336,8 @@ apply_http(struct auth_xfer* xfr, struct auth_zone* z,
 		return 0;
 	}
 	if (etag) {
-		verbose(VERB_OPS, "etag %s stored", etag);
-		strcpy(z->etag, etag);
+		verbose(VERB_ALGO, "etag %s stored", etag);
+		strlcpy(z->etag, etag, sizeof(z->etag));
   	}
 	return 1;
 }
@@ -5806,7 +5806,7 @@ xfr_transfer_init_fetch(struct auth_xfer* xfr, struct module_env* env)
 			strlcpy(etag, z->etag, sizeof(etag));
 			etag_str = etag;
 		}
-		lock_rw_unlock(&z->lock);
+		if(z) { lock_rw_unlock(&z->lock); }
 		/* perform http fetch */
 		/* store http port number into sockaddr,
 		 * unless someone used unbound's host@port notation */
