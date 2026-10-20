@@ -288,6 +288,7 @@ if test "$1" = "config" ; then
 		p_config "rrset.cache.count" "rrset cache count" "GAUGE"
 		p_config "infra.cache.count" "infra cache count" "GAUGE"
 		p_config "key.cache.count" "key cache count" "GAUGE"
+		p_config "mem.auth_zones" "Auth/RPZ memory" "GAUGE"
 		echo "graph_info The memory used by unbound."
 		;;
 	by_type)
@@ -470,7 +471,7 @@ queue)
 memory)
 	for x in mem.cache.rrset mem.cache.message mem.mod.iterator \
 		mem.mod.validator msg.cache.count rrset.cache.count \
-		infra.cache.count key.cache.count; do
+		infra.cache.count key.cache.count mem.auth_zones; do
 		print_value $x
 	done
 	;;
