@@ -1524,6 +1524,49 @@ outnet_send_wait_udp(struct outside_network* outnet)
 	}
 }
 
+/** Clear out all pending requests that are on the port. */
+static void
+clear_pending_from_port(struct outside_network* outnet, struct comm_point* c)
+{
+	/* Otherwise, the clear the cache action of unwanted_threshold, can
+	 * have revealed this communication port. */
+	struct pending* p, *np, *list = NULL, *last = NULL;
+	/* First, remove the entries from the tree. */
+	/* The rbtree rbnode.right is used to build the temporary list here.
+	 * Otherwise the list could be malloced. */
+	p = (struct pending*)rbtree_first(outnet->pending);
+	while((rbnode_type*)p != RBTREE_NULL) {
+		np = (struct pending*)rbtree_next((rbnode_type*)p);
+		if(p->pc->cp == c) {
+			comm_timer_disable(p->timer);
+			(void)rbtree_delete(outnet->pending, p->node.key);
+			if(last)
+				last->node.right = (rbnode_type*)p;
+			else	list = p;
+			last = p;
+			p->node.right = NULL;
+		}
+		p = np;
+	}
+
+	/* The entries are removed from the tree, call their callbacks. */
+	p = list;
+	while(p) {
+		np = (struct pending*)p->node.right;
+		p->node.right = RBTREE_NULL;
+		/* callback error on pending */
+		if(p->cb) {
+			fptr_ok(fptr_whitelist_pending_udp(p->cb));
+			(void)(*p->cb)(p->pc->cp, p->cb_arg,
+				NETEVENT_CLOSED, NULL);
+		}
+		portcomm_loweruse(outnet, p->pc);
+		pending_delete(NULL, p);
+		outnet_send_wait_udp(outnet);
+		p = np;
+	}
+}
+
 int 
 outnet_udp_cb(struct comm_point* c, void* arg, int error,
 	struct comm_reply *reply_info)
@@ -1568,6 +1611,7 @@ outnet_udp_cb(struct comm_point* c, void* arg, int error,
 				outnet->unwanted_action));
 			(*outnet->unwanted_action)(outnet->unwanted_param);
 			outnet->unwanted_total = 0;
+			clear_pending_from_port(outnet, c);
 		}
 		return 0;
 	}
@@ -1588,6 +1632,7 @@ outnet_udp_cb(struct comm_point* c, void* arg, int error,
 				outnet->unwanted_action));
 			(*outnet->unwanted_action)(outnet->unwanted_param);
 			outnet->unwanted_total = 0;
+			clear_pending_from_port(outnet, c);
 		}
 		return 0;
 	}
@@ -3900,11 +3945,15 @@ setup_http_user_agent(sldns_buffer* buf, struct config_file* cfg)
 /** setup http request headers in buffer for sending query to destination */
 static int
 setup_http_request(sldns_buffer* buf, char* host, char* path,
-	struct config_file* cfg)
+	struct config_file* cfg, const char* etag)
 {
 	sldns_buffer_clear(buf);
 	sldns_buffer_printf(buf, "GET /%s HTTP/1.1\r\n", path);
 	sldns_buffer_printf(buf, "Host: %s\r\n", host);
+	if (etag) {
+		verbose(VERB_ALGO, "sending along ETag %s in http request", etag);
+		sldns_buffer_printf(buf, "If-None-Match: %s\r\n", etag);
+	}
 	setup_http_user_agent(buf, cfg);
 	/* We do not really do multiple queries per connection,
 	 * but this header setting is also not needed.
@@ -3921,7 +3970,7 @@ struct comm_point*
 outnet_comm_point_for_http(struct outside_network* outnet,
 	comm_point_callback_type* cb, void* cb_arg,
 	struct sockaddr_storage* to_addr, socklen_t to_addrlen, int timeout,
-	int ssl, char* host, char* path, struct config_file* cfg)
+	int ssl, char* host, char* path, struct config_file* cfg, char* etag)
 {
 	/* cp calls cb with err=NETEVENT_DONE when transfer is done */
 	struct comm_point* cp;
@@ -3959,7 +4008,7 @@ outnet_comm_point_for_http(struct outside_network* outnet,
 	comm_point_start_listening(cp, fd, timeout);
 
 	/* setup http request in cp->buffer */
-	if(!setup_http_request(cp->buffer, host, path, cfg)) {
+	if(!setup_http_request(cp->buffer, host, path, cfg, etag)) {
 		log_err("error setting up http request");
 		comm_point_delete(cp);
 		return NULL;

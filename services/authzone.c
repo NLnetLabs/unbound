@@ -99,6 +99,11 @@
 #define NUM_TIMEOUTS_FALLBACK_IXFR 3
 /** number of IXFRs before an AXFR is performed, to consolidate RPZ memory. */
 #define NUM_IXFR_BEFORE_AXFR 5
+/** The max number of decompression pointers that are allowed in a received
+ * xfr packet. The parse fails if the limit is exceeded.
+ * For a lot of PTR records, with compression for a deep zone, that is about
+ * 20x pointers per RR, of about 16 bytes, more than 4000*20 = 80000. */
+#define AUTH_XFR_DECOMPRESS_PACKET_LIMIT 128000
 /** number of records before polling if the auth-load-thread has to quit.
  * It polls on the socket, once for this number of processed records, so
  * it can quit when the signal is sent over the socket. */
@@ -1368,7 +1373,8 @@ az_remove_rr(struct auth_zone* z, uint8_t* rr, size_t rr_len,
 static int
 decompress_rr_into_buffer(struct sldns_buffer* buf, uint8_t* pkt,
 	size_t pktlen, uint8_t* dname, uint16_t rr_type, uint16_t rr_class,
-	uint32_t rr_ttl, uint8_t* rr_data, uint16_t rr_rdlen)
+	uint32_t rr_ttl, uint8_t* rr_data, uint16_t rr_rdlen, int* budget,
+	int limit)
 {
 	sldns_buffer pktbuf;
 	size_t dname_len = 0;
@@ -1382,7 +1388,7 @@ decompress_rr_into_buffer(struct sldns_buffer* buf, uint8_t* pkt,
 	/* decompress dname */
 	sldns_buffer_set_position(&pktbuf,
 		(size_t)(dname - sldns_buffer_current(&pktbuf)));
-	dname_len = pkt_dname_len(&pktbuf);
+	dname_len = pkt_dname_len_budget(&pktbuf, budget, limit);
 	if(dname_len == 0) return 0; /* parse fail on dname */
 	if(!sldns_buffer_available(buf, dname_len)) return 0;
 	dname_pkt_copy(&pktbuf, sldns_buffer_current(buf), dname);
@@ -1417,7 +1423,8 @@ decompress_rr_into_buffer(struct sldns_buffer* buf, uint8_t* pkt,
 				/* moves pktbuf to right after the
 				 * compressed dname, and returns uncompressed
 				 * dname length */
-				uncompressed_len = pkt_dname_len(&pktbuf);
+				uncompressed_len = pkt_dname_len_budget(
+					&pktbuf, budget, limit);
 				if(!uncompressed_len)
 					return 0; /* parse error in dname */
 				compressed_len = sldns_buffer_position(
@@ -1476,13 +1483,13 @@ static int
 az_insert_rr_decompress(struct auth_zone* z, uint8_t* pkt, size_t pktlen,
 	struct sldns_buffer* scratch_buffer, uint8_t* dname, uint16_t rr_type,
 	uint16_t rr_class, uint32_t rr_ttl, uint8_t* rr_data,
-	uint16_t rr_rdlen, int* duplicate)
+	uint16_t rr_rdlen, int* duplicate, int* budget, int limit)
 {
 	uint8_t* rr;
 	size_t rr_len;
 	size_t dname_len;
 	if(!decompress_rr_into_buffer(scratch_buffer, pkt, pktlen, dname,
-		rr_type, rr_class, rr_ttl, rr_data, rr_rdlen)) {
+		rr_type, rr_class, rr_ttl, rr_data, rr_rdlen, budget, limit)) {
 		log_err("could not decompress RR");
 		return 0;
 	}
@@ -1498,13 +1505,13 @@ static int
 az_remove_rr_decompress(struct auth_zone* z, uint8_t* pkt, size_t pktlen,
 	struct sldns_buffer* scratch_buffer, uint8_t* dname, uint16_t rr_type,
 	uint16_t rr_class, uint32_t rr_ttl, uint8_t* rr_data,
-	uint16_t rr_rdlen, int* nonexist)
+	uint16_t rr_rdlen, int* nonexist, int* budget, int limit)
 {
 	uint8_t* rr;
 	size_t rr_len;
 	size_t dname_len;
 	if(!decompress_rr_into_buffer(scratch_buffer, pkt, pktlen, dname,
-		rr_type, rr_class, rr_ttl, rr_data, rr_rdlen)) {
+		rr_type, rr_class, rr_ttl, rr_data, rr_rdlen, budget, limit)) {
 		log_err("could not decompress RR");
 		return 0;
 	}
@@ -2364,7 +2371,7 @@ az_delete_deleted_zones(struct auth_zones* az)
 }
 
 int auth_zones_apply_cfg(struct auth_zones* az, struct config_file* cfg,
-	int setup, int* is_rpz, struct module_env* env,
+	int setup, int readauth, int* is_rpz, struct module_env* env,
 	struct module_stack* mods)
 {
 	struct config_auth* p;
@@ -2381,8 +2388,10 @@ int auth_zones_apply_cfg(struct auth_zones* az, struct config_file* cfg,
 		}
 	}
 	az_delete_deleted_zones(az);
-	if(!auth_zones_read_zones(az, cfg, env, mods))
-		return 0;
+	if(readauth) {
+		if(!auth_zones_read_zones(az, cfg, env, mods))
+			return 0;
+	}
 	if(setup) {
 		if(!auth_zones_setup_zones(az))
 			return 0;
@@ -4901,7 +4910,7 @@ chunk_rrlist_end(struct auth_chunk* rr_chunk, int rr_num)
 /** RR list iterator, move to next RR */
 static void
 chunk_rrlist_gonext(struct auth_chunk** rr_chunk, int* rr_num,
-	size_t* rr_pos, size_t rr_nextpos)
+	size_t* rr_pos, size_t rr_nextpos, int* budget)
 {
 	/* already at end of chunks? */
 	if(!*rr_chunk)
@@ -4915,6 +4924,7 @@ chunk_rrlist_gonext(struct auth_chunk** rr_chunk, int* rr_num,
 	}
 	/* no more RRs in this chunk */
 	/* continue with next chunk, see if it has RRs */
+	*budget = 0; /* new budget for next packet */
 	if(*rr_chunk)
 		*rr_chunk = (*rr_chunk)->next;
 	while(*rr_chunk) {
@@ -4998,11 +5008,12 @@ static int
 ixfr_start_serial(struct auth_chunk* rr_chunk, int rr_num, size_t rr_pos,
 	uint8_t* rr_dname, uint16_t rr_type, uint16_t rr_class,
 	uint32_t rr_ttl, uint16_t rr_rdlen, uint8_t* rr_rdata,
-	size_t rr_nextpos, uint32_t transfer_serial, uint32_t xfr_serial)
+	size_t rr_nextpos, uint32_t transfer_serial, uint32_t xfr_serial,
+	int* budget)
 {
 	uint32_t startserial;
 	/* move forward on RR */
-	chunk_rrlist_gonext(&rr_chunk, &rr_num, &rr_pos, rr_nextpos);
+	chunk_rrlist_gonext(&rr_chunk, &rr_num, &rr_pos, rr_nextpos, budget);
 	if(chunk_rrlist_end(rr_chunk, rr_num)) {
 		/* no second SOA */
 		verbose(VERB_OPS, "IXFR has no second SOA record");
@@ -5060,6 +5071,7 @@ xfr_apply_ixfr(struct auth_chunk* chunk_list, uint32_t xfr_serial,
 	size_t rr_counter = 0;
 	int delmode = 0;
 	int softfail = 0;
+	int budget = 0, limit = AUTH_XFR_DECOMPRESS_PACKET_LIMIT;
 
 	/* start RR iterator over chunklist of packets */
 	chunk_rrlist_start(chunk_list, &rr_chunk, &rr_num, &rr_pos);
@@ -5093,7 +5105,8 @@ xfr_apply_ixfr(struct auth_chunk* chunk_list, uint32_t xfr_serial,
 				if(!ixfr_start_serial(rr_chunk, rr_num, rr_pos,
 					rr_dname, rr_type, rr_class, rr_ttl,
 					rr_rdlen, rr_rdata, rr_nextpos,
-					transfer_serial, xfr_serial)) {
+					transfer_serial, xfr->serial,
+					&budget)) {
 					return 0;
 				}
 			} else if(transfer_serial == serial) {
@@ -5138,7 +5151,7 @@ xfr_apply_ixfr(struct auth_chunk* chunk_list, uint32_t xfr_serial,
 			if(!az_remove_rr_decompress(z, rr_chunk->data,
 				rr_chunk->len, scratch_buffer, rr_dname,
 				rr_type, rr_class, rr_ttl, rr_rdata, rr_rdlen,
-				&nonexist)) {
+				&nonexist, &budget, limit)) {
 				/* failed, malloc error or so */
 				return 0;
 			}
@@ -5158,7 +5171,7 @@ xfr_apply_ixfr(struct auth_chunk* chunk_list, uint32_t xfr_serial,
 			if(!az_insert_rr_decompress(z, rr_chunk->data,
 				rr_chunk->len, scratch_buffer, rr_dname,
 				rr_type, rr_class, rr_ttl, rr_rdata, rr_rdlen,
-				&duplicate)) {
+				&duplicate, &budget, limit)) {
 				/* failed, malloc error or so */
 				return 0;
 			}
@@ -5176,7 +5189,8 @@ xfr_apply_ixfr(struct auth_chunk* chunk_list, uint32_t xfr_serial,
 			if(auth_load_thread_poll_for_quit(thr))
 				return 0;
 		}
-		chunk_rrlist_gonext(&rr_chunk, &rr_num, &rr_pos, rr_nextpos);
+		chunk_rrlist_gonext(&rr_chunk, &rr_num, &rr_pos, rr_nextpos,
+			&budget);
 	}
 	if(softfail) {
 		verbose(VERB_ALGO, "IXFR did not apply cleanly, fetching full zone");
@@ -5210,6 +5224,7 @@ xfr_apply_axfr(struct auth_chunk* chunk_list, struct auth_zone* z,
 	size_t rr_nextpos;
 	size_t rr_counter = 0;
 	int have_end_soa = 0;
+	int budget = 0, limit = AUTH_XFR_DECOMPRESS_PACKET_LIMIT;
 
 	auth_zone_clear_data(z);
 
@@ -5239,7 +5254,7 @@ xfr_apply_axfr(struct auth_chunk* chunk_list, struct auth_zone* z,
 		/* add this RR */
 		if(!az_insert_rr_decompress(z, rr_chunk->data, rr_chunk->len,
 			scratch_buffer, rr_dname, rr_type, rr_class, rr_ttl,
-			rr_rdata, rr_rdlen, NULL)) {
+			rr_rdata, rr_rdlen, NULL, &budget, limit)) {
 			/* failed, malloc error or so */
 			return 0;
 		}
@@ -5249,7 +5264,8 @@ xfr_apply_axfr(struct auth_chunk* chunk_list, struct auth_zone* z,
 			if(auth_load_thread_poll_for_quit(thr))
 				return 0;
 		}
-		chunk_rrlist_gonext(&rr_chunk, &rr_num, &rr_pos, rr_nextpos);
+		chunk_rrlist_gonext(&rr_chunk, &rr_num, &rr_pos, rr_nextpos,
+			&budget);
 	}
 	if(!have_end_soa) {
 		log_err("no end SOA record for AXFR");
@@ -5313,7 +5329,8 @@ xfr_http_syntax_check(uint8_t* name, size_t namelen, uint16_t dclass,
 int
 xfr_apply_http(uint8_t* name, size_t namelen, const char* host,
 	const char* file, struct auth_chunk* chunk_list, struct auth_zone* z,
-	struct sldns_buffer* scratch_buffer, struct auth_load_thread* thr)
+	struct sldns_buffer* scratch_buffer, char* etag,
+	struct auth_load_thread* thr)
 {
 	/* parse data in chunks */
 	/* parse RR's and read into memory. ignore $INCLUDE from the
@@ -5378,13 +5395,17 @@ xfr_apply_http(uint8_t* name, size_t namelen, const char* host,
 			sldns_buffer_begin(scratch_buffer));
 		return 0;
 	}
+	if (etag) {
+		verbose(VERB_ALGO, "etag %s stored", etag);
+		strlcpy(z->etag, etag, sizeof(z->etag));
+  	}
 	return 1;
 }
 
 /** apply HTTP to zone in memory. z is locked. false on failure(mallocfail) */
 static int
 apply_http(struct auth_xfer* xfr, struct auth_zone* z,
-	struct sldns_buffer* scratch_buffer)
+	struct sldns_buffer* scratch_buffer, char* etag)
 {
 	xfr_http_preview(xfr->task_transfer->master->file,
 		xfr->task_transfer->chunks_first);
@@ -5400,7 +5421,8 @@ apply_http(struct auth_xfer* xfr, struct auth_zone* z,
 	return xfr_apply_http(xfr->name, xfr->namelen,
 		xfr->task_transfer->master->host,
 		xfr->task_transfer->master->file,
-		xfr->task_transfer->chunks_first, z, scratch_buffer, NULL);
+		xfr->task_transfer->chunks_first, z, scratch_buffer, etag,
+		NULL);
 }
 
 /** write http chunks to zonefile to create downloaded file */
@@ -5573,7 +5595,7 @@ static int xfr_process_reacquire_locks(struct auth_xfer* xfr,
  * return false if it did not work */
 static int
 xfr_process_chunk_list(struct auth_xfer* xfr, struct module_env* env,
-	int* ixfr_fail)
+	int* ixfr_fail, char *etag)
 {
 	struct auth_zone* z;
 	int zonemd_in_progress;
@@ -5589,7 +5611,7 @@ xfr_process_chunk_list(struct auth_xfer* xfr, struct module_env* env,
 
 	/* apply data */
 	if(xfr->task_transfer->master->http) {
-		if(!apply_http(xfr, z, env->scratch_buffer)) {
+		if(!apply_http(xfr, z, env->scratch_buffer, etag)) {
 			auth_zone_clear_data(z);
 			lock_rw_unlock(&z->lock);
 			verbose(VERB_ALGO, "http from %s: could not store data",
@@ -5883,6 +5905,21 @@ xfr_transfer_init_fetch(struct auth_xfer* xfr, struct module_env* env)
 	xfr->task_transfer->start_time = *env->now_tv;
 
 	if(master->http) {
+		char etag[128], *etag_str = NULL;
+		struct auth_zone* z;
+		/* Obtain locks and structures. */
+		lock_basic_unlock(&xfr->lock);
+		if(!xfr_process_reacquire_locks(xfr, env, &z)) {
+			/* The zone is gone, ignore xfr transfer. */
+			return 1; /* Stop processing this xfr. */
+		}
+		/* Holding xfr and z locks. */
+
+		if(z && z->etag[0] && strlen(z->etag) < sizeof(etag)) {
+			strlcpy(etag, z->etag, sizeof(etag));
+			etag_str = etag;
+		}
+		if(z) { lock_rw_unlock(&z->lock); }
 		/* perform http fetch */
 		/* store http port number into sockaddr,
 		 * unless someone used unbound's host@port notation */
@@ -5892,7 +5929,7 @@ xfr_transfer_init_fetch(struct auth_xfer* xfr, struct module_env* env)
 		xfr->task_transfer->cp = outnet_comm_point_for_http(
 			env->outnet, auth_xfer_transfer_http_callback, xfr,
 			&addr, addrlen, -1, master->ssl, master->host,
-			master->file, env->cfg);
+			master->file, env->cfg, etag_str);
 		if(!xfr->task_transfer->cp) {
 			char zname[LDNS_MAX_DOMAINLEN], as[256];
 			dname_str(xfr->name, zname);
@@ -6193,7 +6230,7 @@ check_xfer_packet(sldns_buffer* pkt, struct auth_xfer* xfr,
 	int* gonextonfail, int* transferdone)
 {
 	uint8_t* wire = sldns_buffer_begin(pkt);
-	int i;
+	int i, budget = 0, limit = AUTH_XFR_DECOMPRESS_PACKET_LIMIT;
 	if(sldns_buffer_limit(pkt) < LDNS_HEADER_SIZE) {
 		verbose(VERB_ALGO, "xfr to %s failed, packet too small",
 			xfr->task_transfer->master->host);
@@ -6255,7 +6292,7 @@ check_xfer_packet(sldns_buffer* pkt, struct auth_xfer* xfr,
 	for(i=0; i<(int)LDNS_QDCOUNT(wire); i++) {
 		size_t pos = sldns_buffer_position(pkt);
 		uint16_t qtype, qclass;
-		if(pkt_dname_len(pkt) == 0) {
+		if(pkt_dname_len_budget(pkt, &budget, limit) == 0) {
 			verbose(VERB_ALGO, "xfr to %s failed, packet with "
 				"malformed dname",
 				xfr->task_transfer->master->host);
@@ -6305,7 +6342,7 @@ check_xfer_packet(sldns_buffer* pkt, struct auth_xfer* xfr,
 	for(i=0; i<(int)LDNS_ANCOUNT(wire); i++) {
 		size_t pos = sldns_buffer_position(pkt);
 		uint16_t tp, rdlen;
-		if(pkt_dname_len(pkt) == 0) {
+		if(pkt_dname_len_budget(pkt, &budget, limit) == 0) {
 			verbose(VERB_ALGO, "xfr to %s failed, packet with "
 				"malformed dname in answer section",
 				xfr->task_transfer->master->host);
@@ -6421,7 +6458,7 @@ check_xfer_packet(sldns_buffer* pkt, struct auth_xfer* xfr,
 	/* we skip over the RRs checking packet format */
 	for(i=0; i<(int)LDNS_NSCOUNT(wire); i++) {
 		uint16_t rdlen;
-		if(pkt_dname_len(pkt) == 0) {
+		if(pkt_dname_len_budget(pkt, &budget, limit) == 0) {
 			verbose(VERB_ALGO, "xfr to %s failed, packet with "
 				"malformed dname in authority section",
 				xfr->task_transfer->master->host);
@@ -6450,7 +6487,7 @@ check_xfer_packet(sldns_buffer* pkt, struct auth_xfer* xfr,
 	/* check additional section */
 	for(i=0; i<(int)LDNS_ARCOUNT(wire); i++) {
 		uint16_t rdlen;
-		if(pkt_dname_len(pkt) == 0) {
+		if(pkt_dname_len_budget(pkt, &budget, limit) == 0) {
 			verbose(VERB_ALGO, "xfr to %s failed, packet with "
 				"malformed dname in additional section",
 				xfr->task_transfer->master->host);
@@ -6944,9 +6981,15 @@ auth_xfer_transfer_tcp_callback(struct comm_point* c, void* arg, int err,
 	}
 	/* if the transfer is done now, disconnect and process the list */
 	if(transferdone) {
-		comm_point_delete(xfr->task_transfer->cp);
+		/* Convey etag (captured on the comm_point) to auth zone,
+		 * if there was any */
+		struct comm_point *cp;
+		cp = xfr->task_transfer->cp;
 		xfr->task_transfer->cp = NULL;
-		process_list_end_transfer(xfr, env);
+		process_list_end_transfer(xfr, env,
+			(  xfr->task_transfer->master->http && cp->etag[0]
+			?  cp->etag : NULL));
+		comm_point_delete(cp);
 		return 0;
 	}
 
@@ -7028,11 +7071,17 @@ auth_xfer_transfer_http_callback(struct comm_point* c, void* arg, int err,
 	}
 	/* if the transfer is done now, disconnect and process the list */
 	if(err == NETEVENT_DONE) {
+		/* Convey etag (captured on the comm_point) to auth zone,
+		 * if there was any */
+		struct comm_point *cp;
 		if(repinfo) repinfo->c = NULL; /* signal cp deleted to
 				the routine calling this callback */
-		comm_point_delete(xfr->task_transfer->cp);
+		cp = xfr->task_transfer->cp;
 		xfr->task_transfer->cp = NULL;
-		process_list_end_transfer(xfr, env);
+		process_list_end_transfer(xfr, env,
+			(  xfr->task_transfer->master->http && cp->etag[0]
+			?  cp->etag : NULL));
+		comm_point_delete(cp);
 		return 0;
 	}
 

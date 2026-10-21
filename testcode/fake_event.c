@@ -92,7 +92,9 @@ struct fake_commpoint {
 	/** runtime ptr */
 	struct replay_runtime* runtime;
 	/** the pending entry for this commpoint (if any) */
-	struct fake_pending* pending;
+	uint8_t* pkt;
+	/** the length of pkt */
+	size_t pkt_len;
 };
 
 /** Global variable: the scenario. Saved here for when event_init is done. */
@@ -306,6 +308,29 @@ pending_list_delete(struct replay_runtime* runtime, struct fake_pending* pend)
 		if(p == pend) {
 			*prev = p->next;
 			delete_fake_pending(pend);
+			return;
+		}
+
+		prev = &p->next;
+		p = p->next;
+	}
+}
+
+/**
+ * Remove the item from the pending list, by packet content.
+ */
+static void
+pending_list_delete_pkt(struct replay_runtime* runtime, uint8_t* pkt,
+	size_t pkt_len)
+{
+	struct fake_pending** prev = &runtime->pending_list;
+	struct fake_pending* p = runtime->pending_list;
+
+	while(p) {
+		if(p->pkt_len == pkt_len &&
+			memcmp(pkt, p->pkt, p->pkt_len) == 0) {
+			*prev = p->next;
+			delete_fake_pending(p);
 			return;
 		}
 
@@ -1488,7 +1513,12 @@ void comm_point_delete(struct comm_point* c)
 	log_assert(fc->typecode == FAKE_COMMPOINT_TYPECODE);
 	if(fc->type_tcp_out) {
 		/* remove tcp pending, so no more callbacks to it */
-		pending_list_delete(fc->runtime, fc->pending);
+		if(fc->pkt)
+			pending_list_delete_pkt(fc->runtime, fc->pkt, fc->pkt_len);
+	}
+	if(fc->pkt) {
+		free(fc->pkt);
+		fc->pkt = NULL;
 	}
 	free(c);
 }
@@ -1825,7 +1855,6 @@ struct comm_point* outnet_comm_point_for_tcp(struct outside_network* outnet,
 	fc->cb = cb;
 	fc->cb_arg = cb_arg;
 	fc->runtime = runtime;
-	fc->pending = pend;
 
 	/* used by authzone transfers */
 	/* create pending item */
@@ -1866,6 +1895,9 @@ struct comm_point* outnet_comm_point_for_tcp(struct outside_network* outnet,
 	pend->pkt_len = sldns_buffer_limit(pend->buffer);
 	pend->pkt = memdup(sldns_buffer_begin(pend->buffer), pend->pkt_len);
 	if(!pend->pkt) fatal_exit("out of memory");
+	fc->pkt_len = pend->pkt_len;
+	fc->pkt = memdup(pend->pkt, pend->pkt_len);
+	if(!fc->pkt) fatal_exit("out of memory");
 
 	log_info("testbound: created fake pending for tcp_out");
 
@@ -1879,7 +1911,7 @@ struct comm_point* outnet_comm_point_for_tcp(struct outside_network* outnet,
 struct comm_point* outnet_comm_point_for_http(struct outside_network* outnet,
 	comm_point_callback_type* cb, void* cb_arg,
 	struct sockaddr_storage* to_addr, socklen_t to_addrlen, int timeout,
-	int ssl, char* host, char* path, struct config_file* cfg)
+	int ssl, char* host, char* path, struct config_file* cfg, char* etag)
 {
 	struct replay_runtime* runtime = (struct replay_runtime*)
 		outnet->base;
@@ -1902,6 +1934,7 @@ struct comm_point* outnet_comm_point_for_http(struct outside_network* outnet,
 	(void)host;
 	(void)path;
 	(void)cfg;
+	(void)etag;
 
 	/* handle http comm point and return contents from test script */
 	return (struct comm_point*)fc;
@@ -1918,7 +1951,6 @@ int comm_point_send_udp_msg(struct comm_point *c, sldns_buffer* packet,
 		log_err("malloc failure");
 		return 0;
 	}
-	fc->pending = pend;
 	/* used by authzone transfers */
 	/* create pending item */
 	pend->buffer = sldns_buffer_new(sldns_buffer_limit(packet) + 10);
@@ -1957,6 +1989,9 @@ int comm_point_send_udp_msg(struct comm_point *c, sldns_buffer* packet,
 	pend->pkt_len = sldns_buffer_limit(pend->buffer);
 	pend->pkt = memdup(sldns_buffer_begin(pend->buffer), pend->pkt_len);
 	if(!pend->pkt) fatal_exit("out of memory");
+	fc->pkt_len = pend->pkt_len;
+	fc->pkt = memdup(pend->pkt, pend->pkt_len);
+	if(!fc->pkt) fatal_exit("out of memory");
 
 	log_info("testbound: created fake pending for send_udp_msg");
 
@@ -2043,6 +2078,10 @@ void doq_stream_add_meshstate(struct doq_stream* ATTR_UNUSED(stream),
 }
 
 void doq_stream_remove_mesh_state(struct doq_stream* ATTR_UNUSED(stream))
+{
+}
+
+void doq_find_stream_remove_mesh_state(struct comm_reply* ATTR_UNUSED(repinfo))
 {
 }
 

@@ -2171,11 +2171,12 @@ These options are part of the ``server:`` section.
         The ordering of the modules is significant, the order decides the order
         of processing.
 
-    Setting this to just "iterator" will result in a non-validating server.
-    Setting this to "validator iterator" will turn on DNSSEC validation.
+    Setting this to just ``"iterator"`` results in a non-validating server.
+    Setting this to ``"validator iterator"`` (default) enables the DNSSEC
+    validator module but not DNSSEC validation.
 
     .. note::
-        You must also set trust-anchors for validation to be useful.
+        To turn on DNSSEC validation you must configure trust-anchors.
 
     Adding ``respip`` to the front will cause RPZ processing to be done on all
     queries.

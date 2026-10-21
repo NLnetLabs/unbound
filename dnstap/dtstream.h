@@ -123,6 +123,8 @@ struct dt_io_thread {
 	int threadnum;
 	/** event base, for event handling */
 	void* event_base;
+	/** lock on io_list and io_list_iter */
+	lock_basic_type io_list_lock;
 	/** list of queues that is registered to get written */
 	struct dt_io_list_item* io_list;
 	/** iterator point in the io_list, to pick from them in a

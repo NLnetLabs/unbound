@@ -231,6 +231,7 @@ val_init(struct module_env* env, int id)
 {
 	struct val_env* val_env = (struct val_env*)calloc(1,
 		sizeof(struct val_env));
+	struct trust_anchor* anchor = NULL;
 	if(!val_env) {
 		log_err("malloc failure");
 		return 0;
@@ -247,16 +248,22 @@ val_init(struct module_env* env, int id)
 		log_err("validator: could not apply configuration settings.");
 		return 0;
 	}
-	if(env->cfg->disable_edns_do) {
-		struct trust_anchor* anchor = anchors_find_any_noninsecure(
-			env->anchors);
-		if(anchor) {
+
+	anchor = anchors_find_any_noninsecure(env->anchors);
+	if(anchor) {
+		if(env->cfg->disable_edns_do) {
 			char b[LDNS_MAX_DOMAINLEN];
 			dname_str(anchor->name, b);
 			log_warn("validator: disable-edns-do is enabled, but there is a trust anchor for '%s'. Since DNSSEC could not work, the disable-edns-do setting is turned off. Continuing without it.", b);
-			lock_basic_unlock(&anchor->lock);
 			env->cfg->disable_edns_do = 0;
 		}
+		lock_basic_unlock(&anchor->lock);
+	} else {
+		log_warn("validator: no DNSSEC trust anchors configured. "
+			"DNSSEC validation is now effectively DISABLED. "
+			"Either configure a trust anchor to enable DNSSEC "
+			"validation or remove the validator from "
+			"module-config.");
 	}
 
 	return 1;
@@ -1963,14 +1970,7 @@ processInit(struct module_qstate* qstate, struct val_qstate* vq,
 	lookup_name = vq->qchase.qname;
 	lookup_len = vq->qchase.qname_len;
 	/* for type DS look at the parent side for keys/trustanchor */
-	/* also for NSEC not at apex */
-	if(vq->qchase.qtype == LDNS_RR_TYPE_DS ||
-		(vq->qchase.qtype == LDNS_RR_TYPE_NSEC && 
-		 vq->orig_msg->rep->rrset_count > vq->rrset_skip &&
-		 ntohs(vq->orig_msg->rep->rrsets[vq->rrset_skip]->rk.type) ==
-		 LDNS_RR_TYPE_NSEC &&
-		 !(vq->orig_msg->rep->rrsets[vq->rrset_skip]->
-		 rk.flags&PACKED_RRSET_NSEC_AT_APEX))) {
+	if(vq->qchase.qtype == LDNS_RR_TYPE_DS) {
 		dname_remove_label(&lookup_name, &lookup_len);
 	}
 
@@ -2007,13 +2007,15 @@ processInit(struct module_qstate* qstate, struct val_qstate* vq,
 		anchor = anchors_lookup(qstate->env->anchors, 
 			lookup_name, lookup_len, vq->qchase.qclass);
 		if(!anchor) { /* unsigned parent denies anchor*/
-			verbose(VERB_QUERY, "unsigned parent zone denies"
-				" trust anchor, indeterminate");
-			vq->chase_reply->security = sec_status_indeterminate;
-			update_reason_bogus(vq->chase_reply, LDNS_EDE_DNSSEC_INDETERMINATE);
+			verbose(VERB_ALGO, "unsigned parent zone denies"
+				" trust anchor, thus bogus");
+			errinf_ede(qstate, "unsigned parent zone denies trust anchor, thus bogus", LDNS_EDE_DNSSEC_BOGUS);
+			vq->chase_reply->security = sec_status_bogus;
+			update_reason_bogus(vq->chase_reply, LDNS_EDE_DNSSEC_BOGUS);
 			vq->state = VAL_FINISHED_STATE;
 			return 1;
 		}
+		vq->parent_denial_must_be_secure = 1;
 		verbose(VERB_ALGO, "trust anchor NXDOMAIN by signed parent");
 	} else if(subtype == VAL_CLASS_POSITIVE &&
 		qstate->qinfo.qtype == LDNS_RR_TYPE_DNSKEY &&
@@ -2538,6 +2540,15 @@ processFinished(struct module_qstate* qstate, struct val_qstate* vq,
 	enum val_classification subtype = val_classify_response(
 		qstate->query_flags, &qstate->qinfo, &vq->qchase, 
 		vq->orig_msg->rep, vq->rrset_skip);
+	if(vq->parent_denial_must_be_secure) {
+		if(vq->chase_reply->security != sec_status_secure &&
+			vq->chase_reply->security != sec_status_bogus) {
+			verbose(VERB_ALGO, "parent denial of trust island subdomain is not secure, thus bogus");
+			vq->chase_reply->security = sec_status_bogus;
+			update_reason_bogus(vq->chase_reply, LDNS_EDE_DNSSEC_BOGUS);
+			errinf_ede(qstate, "parent denial of trust island subdomain is not secure, thus bogus", LDNS_EDE_DNSSEC_BOGUS);
+		}
+	}
 
 	/* store overall validation result in orig_msg */
 	if(vq->rrset_skip == 0) {

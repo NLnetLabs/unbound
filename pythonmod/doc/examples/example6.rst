@@ -23,12 +23,15 @@ This example relies on the following functionalities:
 Registering inplace callback functions
 --------------------------------------
 
-There are four types of inplace callback functions:
+There are seven types of inplace callback functions:
 
 - `inplace callback reply functions`_
 - `inplace callback reply_cache functions`_
 - `inplace callback reply_local functions`_
 - `inplace callback reply_servfail functions`_
+- `inplace callback query functions`_
+- `inplace callback query_response functions`_
+- `inplace callback edns_back_parsed functions`_
 
 
 Inplace callback reply functions
@@ -61,7 +64,9 @@ The callback function's prototype is the following:
                          release. Current parameters:
             ``repinfo``: Reply information for a communication point (comm_reply).
 
-        :return: True on success, False on failure.
+        :return: True on success, False on failure. Failure terminates any further
+                 callback processing. If this module is ephemeral it is advised
+                 to clean up and return success instead.
 
         """
 
@@ -105,7 +110,9 @@ The callback function's prototype is the following:
                          release. Current parameters:
             ``repinfo``: Reply information for a communication point (comm_reply).
 
-        :return: True on success, False on failure.
+        :return: True on success, False on failure. Failure terminates any further
+                 callback processing. If this module is ephemeral it is advised
+                 to clean up and return success instead.
 
         For demonstration purposes we want to see if EDNS option 65002 is present
         and reply with a new value.
@@ -152,7 +159,9 @@ The callback function's prototype is the following:
                          release. Current parameters:
             ``repinfo``: Reply information for a communication point (comm_reply).
 
-        :return: True on success, False on failure.
+        :return: True on success, False on failure. Failure terminates any further
+                 callback processing. If this module is ephemeral it is advised
+                 to clean up and return success instead.
 
         """
 
@@ -197,7 +206,9 @@ The callback function's prototype is the following:
                          release. Current parameters:
             ``repinfo``: Reply information for a communication point (comm_reply).
 
-        :return: True on success, False on failure.
+        :return: True on success, False on failure. Failure terminates any further
+                 callback processing. If this module is ephemeral it is advised
+                 to clean up and return success instead.
 
         For demonstration purposes we want to reply with an empty EDNS code '65003'
         and log the IP address(es) of the client(s).
@@ -211,6 +222,112 @@ We can register such function as:
 .. code-block:: python
 
     if not register_inplace_cb_reply_servfail(inplace_servfail_callback, env, id):
+        log_info("python: Could not register inplace callback function.")
+
+
+Inplace callback query functions
+................................
+
+Called before sending a query to a backend server.
+
+The callback function's prototype is the following:
+
+.. code-block:: python
+
+    def inplace_query_callback(qinfo, flags, qstate, addr, zone, region, **kwargs):
+        """
+        Function that will be registered as an inplace callback function.
+        It will be called before sending a query to a backend server.
+
+        :param qinfo: query_info struct;
+        :param flags: flags of the query;
+        :param qstate: module qstate. opt_lists are available here;
+        :param addr: struct sockaddr_storage. Address of the backend server;
+        :param zone: zone name in binary;
+        :param region: region to allocate temporary data. Needs to be used when we
+                       want to append a new option to opt_lists.
+        :param **kwargs: Dictionary that may contain parameters added in a future
+                         release.
+
+        :return: True on success, False on failure. Failure terminates any further
+                 callback processing. If this module is ephemeral it is advised
+                 to clean up and return success instead.
+        """
+
+.. note:: The function's name is irrelevant.
+
+We can register such function as:
+
+.. code-block:: python
+
+    if not register_inplace_cb_query(inplace_query_callback, env, id):
+        log_info("python: Could not register inplace callback function.")
+
+
+Inplace callback query_response functions
+.........................................
+
+Called after receiving a reply from a backend server.
+
+The callback function's prototype is the following:
+
+.. code-block:: python
+
+    def inplace_query_response_callback(qstate, response, **kwargs):
+        """
+        Function that will be registered as an inplace callback function.
+        It will be called after receiving a reply from a backend server.
+
+        :param qstate: module qstate. opt_lists are available here;
+        :param response: struct dns_msg. The reply received from the backend server;
+        :param **kwargs: Dictionary that may contain parameters added in a future
+                         release.
+
+        :return: True on success, False on failure. Failure terminates any further
+                 callback processing. If this module is ephemeral it is advised
+                 to clean up and return success instead.
+        """
+
+.. note:: The function's name is irrelevant.
+
+We can register such function as:
+
+.. code-block:: python
+
+    if not register_inplace_cb_query_response(inplace_query_response_callback, env, id):
+        log_info("python: Could not register inplace callback function.")
+
+
+Inplace callback edns_back_parsed functions
+...........................................
+
+Called after EDNS is parsed on a reply from a backend server.
+
+The callback function's prototype is the following:
+
+.. code-block:: python
+
+    def inplace_edns_back_parsed_call(qstate, **kwargs):
+        """
+        Function that will be registered as an inplace callback function.
+        It will be called after EDNS is parsed on a reply from a backend server.
+
+        :param qstate: module qstate. opt_lists are available here;
+        :param **kwargs: Dictionary that may contain parameters added in a future
+                         release.
+
+        :return: True on success, False on failure. Failure terminates any further
+                 callback processing. If this module is ephemeral it is advised
+                 to clean up and return success instead.
+        """
+
+.. note:: The function's name is irrelevant.
+
+We can register such function as:
+
+.. code-block:: python
+
+    if not register_inplace_cb_edns_back_parsed_call(inplace_edns_back_parsed_call, env, id):
         log_info("python: Could not register inplace callback function.")
 
 

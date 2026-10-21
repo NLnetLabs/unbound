@@ -2828,7 +2828,7 @@ doq_lookup_repinfo(struct doq_table* table, struct comm_reply* repinfo)
 /** doq find connection and stream. From inside callbacks from worker. */
 static int
 doq_lookup_conn_stream(struct comm_reply* repinfo, struct comm_point* c,
-	struct doq_conn** conn, struct doq_stream** stream)
+	struct doq_conn** conn, struct doq_stream** stream, int checkclose)
 {
 	log_assert(c->doq_socket);
 	if(c->doq_socket->current_conn) {
@@ -2856,7 +2856,7 @@ doq_lookup_conn_stream(struct comm_reply* repinfo, struct comm_point* c,
 		}
 		return 0;
 	}
-	if((*stream)->is_closed) {
+	if(checkclose && (*stream)->is_closed) {
 		/* stream is closed, ignore reply or drop */
 		if(!c->doq_socket->current_conn) {
 			/* Not inside callbacks, we have our own lock on conn.
@@ -2868,6 +2868,24 @@ doq_lookup_conn_stream(struct comm_reply* repinfo, struct comm_point* c,
 	return 1;
 }
 
+/** doq remove mesh state from stream */
+void doq_find_stream_remove_mesh_state(struct comm_reply* repinfo)
+{
+	struct doq_conn* conn;
+	struct doq_stream* stream;
+	log_assert(repinfo->c->type == comm_doq);
+	if(!doq_lookup_conn_stream(repinfo, repinfo->c, &conn, &stream, 0)) {
+		/* No stream, it may have been removed. */
+		return;
+	}
+	doq_stream_remove_mesh_state(stream);
+	if(!repinfo->c->doq_socket->current_conn) {
+		/* Not inside callbacks, we have our own lock on conn.
+		 * Release it. */
+		lock_basic_unlock(&conn->lock);
+	}
+}
+
 /** doq send a reply from a comm reply */
 static void
 doq_socket_send_reply(struct comm_reply* repinfo)
@@ -2875,7 +2893,7 @@ doq_socket_send_reply(struct comm_reply* repinfo)
 	struct doq_conn* conn;
 	struct doq_stream* stream;
 	log_assert(repinfo->c->type == comm_doq);
-	if(!doq_lookup_conn_stream(repinfo, repinfo->c, &conn, &stream)) {
+	if(!doq_lookup_conn_stream(repinfo, repinfo->c, &conn, &stream, 1)) {
 		verbose(VERB_ALGO, "doq: send_reply but %s is gone",
 			(conn?"stream":"connection"));
 		/* No stream, it may have been closed. */
@@ -2906,7 +2924,7 @@ doq_socket_drop_reply(struct comm_reply* repinfo)
 	struct doq_conn* conn;
 	struct doq_stream* stream;
 	log_assert(repinfo->c->type == comm_doq);
-	if(!doq_lookup_conn_stream(repinfo, repinfo->c, &conn, &stream)) {
+	if(!doq_lookup_conn_stream(repinfo, repinfo->c, &conn, &stream, 1)) {
 		verbose(VERB_ALGO, "doq: drop_reply but %s is gone",
 			(conn?"stream":"connection"));
 		/* The connection or stream is already gone. */
@@ -5037,6 +5055,10 @@ http_process_initial_header(struct comm_point* c)
 	} else if(strncasecmp(line, "Transfer-Encoding: chunked", 19+7) == 0) {
 		c->tcp_byte_count = 0;
 		c->http_is_chunked = 1;
+	} else if(strncasecmp(line, "ETag: ", 6) == 0) {
+		if (strlen(line + 6) < sizeof(c->etag)) {
+			strlcpy(c->etag, line + 6, sizeof(c->etag));
+		}
 	} else if(line[0] == 0) {
 		/* end of initial headers */
 		c->http_in_headers = 0;
@@ -6581,6 +6603,7 @@ comm_point_create_http_out(struct comm_base *base, size_t bufsize,
 	c->http_in_chunk_headers = 0;
 	c->http_is_chunked = 0;
 	c->http_temp = temp;
+	c->etag[0] = 0;
 #ifdef USE_MSG_FASTOPEN
 	c->tcp_do_fastopen = 1;
 #endif

@@ -1,3 +1,61 @@
+21 October 2026: Wouter
+	- Release of 1.26.2 with the following security fixes.
+	- Fix CVE-2026-97206, DoQ path-migration can lead to use-after-free on
+	  multi-threaded deployments. Thanks to Kunta Chu and Jianjun Chen
+	  from Tsinghua University for the report.
+	- Fix CVE-2026-50106, Possible insecure NXDOMAIN for non-existing
+	  records under a configured island trust anchor underneath an
+	  insecure parent. Thanks to Qifan Zhang from Palo Alto Networks
+	  for the report.
+	- Fix CVE-2026-96405, Aggregate DNS name chained pointer decompression
+	  work leads to degradation of service. Thanks to Yuheng Zhang
+	  (Tsinghua University and Jingxian Technology Co., Ltd.), Jianjun
+	  Chen (Tsinghua University), Zihan Wang (Z.AI Co., Ltd.) and Kaiwen
+	  Shen (CloudItera) for the report.
+	- Fix CVE-2026-109125, Possible cache poisoning vulnerability via
+	  a cache side-channel exposed by 'unwanted-reply-threshold'. Thanks
+	  to TaoFei Guo (Peking University), and Yang Luo and JianJun Chen
+	  (Tsinghua University) for the report.
+	- Fix CVE-2026-35501, Bypass of a configured island trust anchor
+	  underneath an insecure parent from an attacker-controlled NSEC
+	  record. Thanks to Qifan Zhang from Palo Alto Networks for the
+	  report.
+	- The code repository continues with 1.26.3 under development,
+	  that includes the changes from before the 1.26.2 commits.
+	- Unit test for CVE-2026-50106.
+	- Unit test for CVE-2026-35501.
+
+20 October 2026: Willem
+	- Merge #1539: Send along ETag with auth zone xfrs over http(s),
+	  so Unbound will not fetch the whole zone every refresh time,
+	  but only when it has changed.
+
+20 October 2026: Wouter
+	- Merge #1534: unbound-checkconf reads config, but zonefiles
+	  are read with an option, '-a'. This speeds up the checkconf
+	  before server start in the presence of large zone files.
+	  And it is similar to how nsd-checkconf behaves.
+	- Fix testbound so that it does not reference an already
+	  deleted pending packet, but its packet contents, when
+	  removing from the pending list.
+	- Fix to remove debug print from unit test.
+	- Fix testbound to free reference pending packet.
+
+20 October 2026: Yorgos
+	- Add CONTRIBUTING.md, similar to other NLnet Labs projects.
+	- Merge #1536: Better documentation and warning message for no
+	  configured trust anchors.
+	- Terminate inplace callback progression if one of them errors out;
+	  suggestion by Rio Fujita.
+
+19 October 2026: Wouter
+	- Merge #1528 from Ar-maan05: Fix NSEC at apex detection for
+	  short type bitmaps.
+	- Merge #1531 from nshopik: Fix dnstap queue registration race
+	  between worker threads.
+	- Merge #1532 from Ar-maan05: Fix packet position after a
+	  short RRSIG in pkt_rrsig_covered.
+
 16 October 2026: Wouter
 	- Fix unit test for root_zonemd with updated root key.
 
