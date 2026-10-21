@@ -278,7 +278,9 @@ static void zonemd_verify_test(char* zname, char* zfile, char* tastr,
 		fatal_exit("could not parse datetime %s", date_override);
 	if(env.cfg->module_conf)
 		free(env.cfg->module_conf);
-	env.cfg->module_conf = strdup("validator iterator");
+	if(tastr)
+		env.cfg->module_conf = strdup("validator iterator");
+	else	env.cfg->module_conf = strdup("iterator");
 	if(!env.cfg->module_conf)
 		fatal_exit("out of memory");
 	if(tastr) {
