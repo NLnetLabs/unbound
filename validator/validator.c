@@ -1963,14 +1963,7 @@ processInit(struct module_qstate* qstate, struct val_qstate* vq,
 	lookup_name = vq->qchase.qname;
 	lookup_len = vq->qchase.qname_len;
 	/* for type DS look at the parent side for keys/trustanchor */
-	/* also for NSEC not at apex */
-	if(vq->qchase.qtype == LDNS_RR_TYPE_DS ||
-		(vq->qchase.qtype == LDNS_RR_TYPE_NSEC && 
-		 vq->orig_msg->rep->rrset_count > vq->rrset_skip &&
-		 ntohs(vq->orig_msg->rep->rrsets[vq->rrset_skip]->rk.type) ==
-		 LDNS_RR_TYPE_NSEC &&
-		 !(vq->orig_msg->rep->rrsets[vq->rrset_skip]->
-		 rk.flags&PACKED_RRSET_NSEC_AT_APEX))) {
+	if(vq->qchase.qtype == LDNS_RR_TYPE_DS) {
 		dname_remove_label(&lookup_name, &lookup_len);
 	}
 
