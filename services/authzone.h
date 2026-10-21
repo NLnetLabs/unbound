@@ -919,7 +919,8 @@ int xfr_http_syntax_check(uint8_t* name, size_t namelen, uint16_t dclass,
 /** Apply http transfer to auth_zone */
 int xfr_apply_http(uint8_t* name, size_t namelen, const char* host,
 	const char* file, struct auth_chunk* chunk_list, struct auth_zone* z,
-	struct sldns_buffer* scratch_buffer, struct auth_load_thread* thr);
+	struct sldns_buffer* scratch_buffer, char* etag,
+	struct auth_load_thread* thr);
 
 /** Apply IXFR transfer to auth_zone */
 int xfr_apply_ixfr(struct auth_chunk* chunk_list, uint32_t xfr_serial,

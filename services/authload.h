@@ -168,6 +168,8 @@ struct auth_load_task {
 	int on_ixfr_is_axfr;
 	/** The zone is an rpz zone. */
 	int is_rpz;
+	/** The etag if any, alloced. */
+	char* etag;
 
 	/** Set if the ixfr failed. (So that there can be backoff to AXFR). */
 	int ixfr_fail;
@@ -196,9 +198,11 @@ struct auth_load_task {
  * It starts a thread.
  * @param xfr: zone transfer to start for.
  * @param worker: worker that is connected to the task.
+ * @param etag: the etag, if any.
  * @return false on failure.
  */
-int auth_load_add_task_xfr(struct auth_xfer* xfr, struct worker* worker);
+int auth_load_add_task_xfr(struct auth_xfer* xfr, struct worker* worker,
+	char* etag);
 
 /**
  * Add a new task to be performed by the auth load thread.

@@ -5105,7 +5105,7 @@ xfr_apply_ixfr(struct auth_chunk* chunk_list, uint32_t xfr_serial,
 				if(!ixfr_start_serial(rr_chunk, rr_num, rr_pos,
 					rr_dname, rr_type, rr_class, rr_ttl,
 					rr_rdlen, rr_rdata, rr_nextpos,
-					transfer_serial, xfr->serial,
+					transfer_serial, xfr_serial,
 					&budget)) {
 					return 0;
 				}
@@ -6611,13 +6611,15 @@ xfr_process_transfer_success(struct auth_xfer* xfr, struct module_env* env)
 /** task transfer.  the list of data is complete. process it and if failed
  * move to next master, if succeeded, end the task transfer */
 static void
-process_list_end_transfer(struct auth_xfer* xfr, struct module_env* env)
+process_list_end_transfer(struct auth_xfer* xfr, struct module_env* env,
+	char* etag)
 {
 	int ixfr_fail = 0;
+
 	if(env->cfg->auth_task_threads != 0 /* auth load enabled */) {
 		if(auth_load_info_grab_thread(env)) {
 			/* Create auth load thread task to process the data. */
-			if(auth_load_add_task_xfr(xfr, env->worker)) {
+			if(auth_load_add_task_xfr(xfr, env->worker, etag)) {
 				/* Task is created, wait for it to be done. The worker
 				 * is signalled with the result. */
 				/* When it is done, the xfr_process_load_end_transfer
@@ -6629,7 +6631,7 @@ process_list_end_transfer(struct auth_xfer* xfr, struct module_env* env)
 		} else {
 			verbose(VERB_ALGO, "Auth load threads at capacity, not creating a new thread");
 		}
-	} else if(xfr_process_chunk_list(xfr, env, &ixfr_fail)) {
+	} else if(xfr_process_chunk_list(xfr, env, &ixfr_fail, etag)) {
 		/* it worked! */
 		auth_chunks_delete(xfr->task_transfer);
 		xfr_process_transfer_success(xfr, env);

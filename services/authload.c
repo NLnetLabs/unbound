@@ -97,6 +97,7 @@ auth_load_task_delete(struct auth_load_task* task)
 	free(task->name);
 	free(task->host);
 	free(task->file);
+	free(task->etag);
 	auth_chunk_list_delete(task->chunks_first);
 	free(task);
 }
@@ -170,7 +171,8 @@ auth_load_task_pickup_write(struct auth_load_task* task, uint8_t* name,
 
 /** Create xfr task */
 static struct auth_load_task*
-auth_load_task_create_xfr(struct auth_xfer* xfr, struct worker* worker)
+auth_load_task_create_xfr(struct auth_xfer* xfr, struct worker* worker,
+	char* etag)
 {
 	struct auth_load_task* task = auth_load_task_create();
 	if(!task) {
@@ -178,6 +180,14 @@ auth_load_task_create_xfr(struct auth_xfer* xfr, struct worker* worker)
 		return NULL;
 	}
 	task->worker = worker;
+	if(etag) {
+		task->etag = strdup(etag);
+		if(!task->etag) {
+			log_err("out of memory");
+			auth_load_task_delete(task);
+			return NULL;
+		}
+	}
 	if(!auth_load_task_pickup_xfr(task, xfr)) {
 		log_err("out of memory");
 		auth_load_task_delete(task);
@@ -437,6 +447,10 @@ auth_load_swap_zone(struct auth_load_thread* thr, struct auth_zone* proxyz)
 	if(z->rpz && proxyz->rpz)
 		auth_load_swap_rpz(z->rpz, proxyz->rpz);
 
+	if(proxyz->etag[0]) {
+		strlcpy(z->etag, proxyz->etag, sizeof(z->etag));
+	}
+
 	lock_rw_unlock(&z->lock);
 
 	if(gettimeofday(&end, NULL) < 0)
@@ -503,7 +517,7 @@ auth_load_process_http(struct auth_load_thread* thr)
 		return 0;
 	}
 	if(!xfr_apply_http(task->name, task->namelen, task->host, task->file,
-		task->chunks_first, z, scratch_buffer, thr)) {
+		task->chunks_first, z, scratch_buffer, task->etag, thr)) {
 		sldns_buffer_free(scratch_buffer);
 		auth_zone_delete_proxy(z);
 		return 0;
@@ -1385,13 +1399,14 @@ auth_load_start_thread(struct auth_load_task* task)
 	return 1;
 }
 
-int auth_load_add_task_xfr(struct auth_xfer* xfr, struct worker* worker)
+int auth_load_add_task_xfr(struct auth_xfer* xfr, struct worker* worker,
+	char* etag)
 {
 	struct auth_load_task* task;
 	verbose(VERB_ALGO, "auth load add task");
 
 	/* Create new thread */
-	task = auth_load_task_create_xfr(xfr, worker);
+	task = auth_load_task_create_xfr(xfr, worker, etag);
 	if(!task)
 		return 0;
 
