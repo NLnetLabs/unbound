@@ -24,6 +24,7 @@
 	  that includes the changes from before the 1.26.2 commits.
 	- Unit test for CVE-2026-50106.
 	- Unit test for CVE-2026-35501.
+	- Fix dynlibmod test for inplace callback termination.
 
 20 October 2026: Willem
 	- Merge #1539: Send along ETag with auth zone xfrs over http(s),

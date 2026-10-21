@@ -128,5 +128,5 @@ int reply_callback(struct query_info* qinfo,
             ((int *)env->dyn_env)[1],
             ((int *)env->dyn_env)[2]);
     }
-    return 0;
+    return 1;
 }
