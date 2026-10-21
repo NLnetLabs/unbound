@@ -449,6 +449,8 @@ auth_load_swap_zone(struct auth_load_thread* thr, struct auth_zone* proxyz)
 
 	if(proxyz->etag[0]) {
 		strlcpy(z->etag, proxyz->etag, sizeof(z->etag));
+	} else {
+		z->etag[0]=0;
 	}
 
 	lock_rw_unlock(&z->lock);
