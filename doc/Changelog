@@ -1,3 +1,28 @@
+21 October 2026: Wouter
+	- Release of 1.26.2 with the following security fixes.
+	- Fix CVE-2026-97206, DoQ path-migration can lead to use-after-free on
+	  multi-threaded deployments. Thanks to Kunta Chu and Jianjun Chen
+	  from Tsinghua University for the report.
+	- Fix CVE-2026-50106, Possible insecure NXDOMAIN for non-existing
+	  records under a configured island trust anchor underneath an
+	  insecure parent. Thanks to Qifan Zhang from Palo Alto Networks
+	  for the report.
+	- Fix CVE-2026-96405, Aggregate DNS name chained pointer decompression
+	  work leads to degradation of service. Thanks to Yuheng Zhang
+	  (Tsinghua University and Jingxian Technology Co., Ltd.), Jianjun
+	  Chen (Tsinghua University), Zihan Wang (Z.AI Co., Ltd.) and Kaiwen
+	  Shen (CloudItera) for the report.
+	- Fix CVE-2026-109125, Possible cache poisoning vulnerability via
+	  a cache side-channel exposed by 'unwanted-reply-threshold'. Thanks
+	  to TaoFei Guo (Peking University), and Yang Luo and JianJun Chen
+	  (Tsinghua University) for the report.
+	- Fix CVE-2026-35501, Bypass of a configured island trust anchor
+	  underneath an insecure parent from an attacker-controlled NSEC
+	  record. Thanks to Qifan Zhang from Palo Alto Networks for the
+	  report.
+	- The code repository continues with 1.26.3 under development,
+	  that includes the changes from before the 1.26.2 commits.
+
 20 October 2026: Willem
 	- Merge #1539: Send along ETag with auth zone xfrs over http(s),
 	  so Unbound will not fetch the whole zone every refresh time,
