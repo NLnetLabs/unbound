@@ -22,6 +22,7 @@
 	  report.
 	- The code repository continues with 1.26.3 under development,
 	  that includes the changes from before the 1.26.2 commits.
+	- Unit test for CVE-2026-50106.
 
 20 October 2026: Willem
 	- Merge #1539: Send along ETag with auth zone xfrs over http(s),
