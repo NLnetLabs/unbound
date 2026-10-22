@@ -1260,6 +1260,7 @@ remote-control:
 # 	forward-tcp-upstream: no
 # 	forward-tls-upstream: no
 #	forward-no-cache: no
+# 	forward-sequential: no
 # forward-zone:
 # 	name: "example.org"
 # 	forward-host: fwd.example.com

@@ -74,6 +74,7 @@ struct delegpt* delegpt_copy(struct delegpt* dp, struct regional* region)
 	copy->has_parent_side_NS = dp->has_parent_side_NS;
 	copy->ssl_upstream = dp->ssl_upstream;
 	copy->tcp_upstream = dp->tcp_upstream;
+	copy->sequential = dp->sequential;
 	for(ns = dp->nslist; ns; ns = ns->next) {
 		if(!delegpt_add_ns(copy, region, ns->name, ns->lame,
 			ns->tls_auth_name, ns->port))
@@ -89,6 +90,8 @@ struct delegpt* delegpt_copy(struct delegpt* dp, struct regional* region)
 		if(!delegpt_add_addr(copy, region, &a->addr, a->addrlen,
 			a->bogus, a->lame, a->tls_auth_name, -1, NULL))
 			return NULL;
+		/* the new address is at the front of the target list */
+		copy->target_list->order = a->order;
 	}
 	return copy;
 }
@@ -232,6 +235,7 @@ delegpt_add_addr(struct delegpt* dp, struct regional* region,
 	a->bogus = bogus;
 	a->lame = lame;
 	a->dnsseclame = 0;
+	a->order = -1;
 	if(tls_auth_name) {
 		a->tls_auth_name = regional_strdup(region, tls_auth_name);
 		if(!a->tls_auth_name)
@@ -718,6 +722,7 @@ int delegpt_add_addr_mlc(struct delegpt* dp, struct sockaddr_storage* addr,
 	a->bogus = bogus;
 	a->lame = lame;
 	a->dnsseclame = 0;
+	a->order = -1;
 	if(tls_auth_name) {
 		a->tls_auth_name = strdup(tls_auth_name);
 		if(!a->tls_auth_name) {
