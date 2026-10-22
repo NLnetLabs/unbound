@@ -1236,6 +1236,11 @@ Includes the key cache and negative cache.
 .UNINDENT
 .INDENT 0.0
 .TP
+.B mem.auth_zones 
+Memory in bytes in use by the auth zones, including RPZ zone data.
+.UNINDENT
+.INDENT 0.0
+.TP
 .B mem.streamwait 
 Memory in bytes in used by the TCP and TLS stream wait buffers.
 These are answers waiting to be written back to the clients.
