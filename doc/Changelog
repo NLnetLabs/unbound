@@ -1,3 +1,6 @@
+22 October 2026: Wouter
+	- Fix readthedocs status badge in the readme.
+
 21 October 2026: Wouter
 	- Release of 1.26.2 with the following security fixes.
 	- Fix CVE-2026-97206, DoQ path-migration can lead to use-after-free on

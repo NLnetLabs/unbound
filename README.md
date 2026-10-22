@@ -3,7 +3,7 @@
 [![Github Build Status](https://github.com/NLnetLabs/unbound/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/NLnetLabs/unbound/actions)
 [![Packaging status](https://repology.org/badge/tiny-repos/unbound.svg)](https://repology.org/project/unbound/versions)
 [![Fuzzing Status](https://oss-fuzz-build-logs.storage.googleapis.com/badges/unbound.svg)](https://bugs.chromium.org/p/oss-fuzz/issues/list?sort=-opened&can=1&q=proj:unbound)
-[![Documentation Status](https://readthedocs.org/projects/unbound/badge/?version=latest)](https://unbound.readthedocs.io/en/latest/?badge=latest)
+[![Documentation Status](https://app.readthedocs.org/projects/unbound/badge/?version=latest)](https://unbound.readthedocs.io/en/latest/?badge=latest)
 [![Mastodon Follow](https://img.shields.io/mastodon/follow/114692612288811644?domain=social.nlnetlabs.nl&style=social)](https://social.nlnetlabs.nl/@nlnetlabs)
 
 Unbound is a validating, recursive, caching DNS resolver. It is designed to be
