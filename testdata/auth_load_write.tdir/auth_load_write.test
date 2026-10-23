@@ -1,0 +1,70 @@
+# #-- auth_load_write.test --#
+# source the master var file when it's there
+[ -f ../.tpkg.var.master ] && source ../.tpkg.var.master
+# use .tpkg.var.test for in test variable passing
+[ -f .tpkg.var.test ] && source .tpkg.var.test
+
+PRE="../.."
+. ../common.sh
+# do the test
+# The answer is rewritten by RPZ, that is loaded in the auth load thread.
+echo "> dig www.example.com."
+dig @127.0.0.1 -p $UNBOUND_PORT www.example.com. | tee outfile
+if grep SERVFAIL outfile; then
+	echo "> try again"
+	dig @127.0.0.1 -p $UNBOUND_PORT www.example.com. | tee outfile
+fi
+if grep SERVFAIL outfile; then
+	echo "> try again"
+	sleep 1
+	dig @127.0.0.1 -p $UNBOUND_PORT www.example.com. | tee outfile
+fi
+if grep SERVFAIL outfile; then
+	echo "> try again"
+	sleep 1
+	dig @127.0.0.1 -p $UNBOUND_PORT www.example.com. | tee outfile
+fi
+if grep SERVFAIL outfile; then
+	echo "> try again"
+	sleep 1
+	dig @127.0.0.1 -p $UNBOUND_PORT www.example.com. | tee outfile
+fi
+if grep SERVFAIL outfile; then
+	echo "> try again"
+	sleep 3
+	dig @127.0.0.1 -p $UNBOUND_PORT www.example.com. | tee outfile
+fi
+if grep SERVFAIL outfile; then
+	echo "> try again"
+	sleep 3
+	dig @127.0.0.1 -p $UNBOUND_PORT www.example.com. | tee outfile
+fi
+echo "> check answer"
+if grep "1.2.3.4" outfile; then
+	echo "OK"
+else
+	echo "Not OK"
+	exit 1
+fi
+
+if grep "auth zone rpz.example.com. details" unbound.log; then
+	echo "OK"
+else
+	echo "not OK"
+	exit 1
+fi
+
+wait_logfile unbound.log "write zonefile auth_load_write.zone for rpz.example.com." 10
+grep "write zonefile" unbound.log
+echo "> auth_load_write.zone"
+cat auth_load_write.zone
+echo ""
+
+if grep "text a b c d" auth_load_write.zone; then
+	echo "OK"
+else
+	echo "not OK"
+	exit 1
+fi
+
+exit 0
