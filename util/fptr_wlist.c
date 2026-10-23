@@ -95,7 +95,7 @@
 #ifdef CLIENT_SUBNET
 #include "edns-subnet/subnetmod.h"
 #endif
-#ifdef USE_IPSET
+#if defined(USE_IPSET) || defined(USE_NFTSET)
 #include "ipset/ipset.h"
 #endif
 #ifdef USE_DNSTAP
@@ -437,7 +437,7 @@ fptr_whitelist_mod_init(int (*fptr)(struct module_env* env, int id))
 #ifdef CLIENT_SUBNET
 	else if(fptr == &subnetmod_init) return 1;
 #endif
-#ifdef USE_IPSET
+#if defined(USE_IPSET) || defined(USE_NFTSET)
 	else if(fptr == &ipset_init) return 1;
 #endif
 	return 0;
@@ -465,7 +465,7 @@ fptr_whitelist_mod_deinit(void (*fptr)(struct module_env* env, int id))
 #ifdef CLIENT_SUBNET
 	else if(fptr == &subnetmod_deinit) return 1;
 #endif
-#ifdef USE_IPSET
+#if defined(USE_IPSET) || defined(USE_NFTSET)
 	else if(fptr == &ipset_deinit) return 1;
 #endif
 	return 0;
@@ -474,7 +474,7 @@ fptr_whitelist_mod_deinit(void (*fptr)(struct module_env* env, int id))
 int
 fptr_whitelist_mod_startup(int (*fptr)(struct module_env* env, int id))
 {
-#ifdef USE_IPSET
+#if defined(USE_IPSET) || defined(USE_NFTSET)
 	if(fptr == &ipset_startup) return 1;
 #else
 	(void)fptr;
@@ -485,7 +485,7 @@ fptr_whitelist_mod_startup(int (*fptr)(struct module_env* env, int id))
 int
 fptr_whitelist_mod_destartup(void (*fptr)(struct module_env* env, int id))
 {
-#ifdef USE_IPSET
+#if defined(USE_IPSET) || defined(USE_NFTSET)
 	if(fptr == &ipset_destartup) return 1;
 #else
 	(void)fptr;
@@ -516,7 +516,7 @@ fptr_whitelist_mod_operate(void (*fptr)(struct module_qstate* qstate,
 #ifdef CLIENT_SUBNET
 	else if(fptr == &subnetmod_operate) return 1;
 #endif
-#ifdef USE_IPSET
+#if defined(USE_IPSET) || defined(USE_NFTSET)
 	else if(fptr == &ipset_operate) return 1;
 #endif
 	return 0;
@@ -545,7 +545,7 @@ fptr_whitelist_mod_inform_super(void (*fptr)(
 #ifdef CLIENT_SUBNET
 	else if(fptr == &subnetmod_inform_super) return 1;
 #endif
-#ifdef USE_IPSET
+#if defined(USE_IPSET) || defined(USE_NFTSET)
 	else if(fptr == &ipset_inform_super) return 1;
 #endif
 	return 0;
@@ -574,7 +574,7 @@ fptr_whitelist_mod_clear(void (*fptr)(struct module_qstate* qstate,
 #ifdef CLIENT_SUBNET
 	else if(fptr == &subnetmod_clear) return 1;
 #endif
-#ifdef USE_IPSET
+#if defined(USE_IPSET) || defined(USE_NFTSET)
 	else if(fptr == &ipset_clear) return 1;
 #endif
 	return 0;
@@ -602,7 +602,7 @@ fptr_whitelist_mod_get_mem(size_t (*fptr)(struct module_env* env, int id))
 #ifdef CLIENT_SUBNET
 	else if(fptr == &subnetmod_get_mem) return 1;
 #endif
-#ifdef USE_IPSET
+#if defined(USE_IPSET) || defined(USE_NFTSET)
 	else if(fptr == &ipset_get_mem) return 1;
 #endif
 	return 0;
