@@ -424,6 +424,7 @@ config_create(void)
 #endif
 	cfg->ede = 0;
 	cfg->ede_serve_expired = 0;
+	cfg->mesh_isolate_client_tags = 0;
 	cfg->dns_error_reporting = 0;
 	cfg->iter_scrub_ns = 20;
 	cfg->iter_scrub_cname = 11;
@@ -783,6 +784,7 @@ int config_set_option(struct config_file* cfg, const char* opt,
 	else S_NUMBER_OR_ZERO("serve-expired-client-timeout:", serve_expired_client_timeout)
 	else S_YNO("ede:", ede)
 	else S_YNO("ede-serve-expired:", ede_serve_expired)
+	else S_YNO("mesh-isolate-client-tags:", mesh_isolate_client_tags)
 	else S_YNO("dns-error-reporting:", dns_error_reporting)
 	else S_NUMBER_NONZERO("iter-scrub-ns:", iter_scrub_ns)
 	else S_NUMBER_OR_ZERO("iter-scrub-cname:", iter_scrub_cname)
@@ -1266,6 +1268,7 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_DEC(opt, "serve-expired-client-timeout", serve_expired_client_timeout)
 	else O_YNO(opt, "ede", ede)
 	else O_YNO(opt, "ede-serve-expired", ede_serve_expired)
+	else O_YNO(opt, "mesh-isolate-client-tags", mesh_isolate_client_tags)
 	else O_YNO(opt, "dns-error-reporting", dns_error_reporting)
 	else O_DEC(opt, "iter-scrub-ns", iter_scrub_ns)
 	else O_DEC(opt, "iter-scrub-cname", iter_scrub_cname)

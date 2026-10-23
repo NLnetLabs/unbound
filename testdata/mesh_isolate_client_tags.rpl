@@ -1,0 +1,231 @@
+; config options
+server:
+	module-config: "respip iterator"
+	target-fetch-policy: "0 0 0 0 0"
+	qname-minimisation: no
+	mesh-isolate-client-tags: yes
+	access-control: 192.0.0.0/8 allow
+	access-control: 193.0.0.0/8 allow
+	access-control: 194.0.0.0/8 allow
+	define-tag: "blocked"
+	access-control-tag: 192.0.0.0/8 "blocked"
+	access-control-view: 194.0.0.0/8 "v"
+	; 193.0.0.0/8 has no tags and no view
+
+view:
+	name: "v"
+
+rpz:
+	name: "rpz.example.com."
+	tags: "blocked"
+	zonefile:
+TEMPFILE_NAME rpz.example.com
+TEMPFILE_CONTENTS rpz.example.com
+$ORIGIN example.com.
+rpz	3600	IN	SOA	ns1.rpz.example.com. hostmaster.rpz.example.com. (
+		1379078166 28800 7200 604800 7200 )
+	3600	IN	NS	ns1.rpz.example.com.
+	3600	IN	NS	ns2.rpz.example.com.
+$ORIGIN rpz.example.com.
+; server for a.
+32.40.30.20.10.rpz-nsip CNAME .
+TEMPFILE_END
+
+stub-zone:
+	name: "a."
+	stub-addr: 10.20.30.40
+stub-zone:
+	name: "b."
+	stub-addr: 10.20.30.50
+CONFIG_END
+
+SCENARIO_BEGIN Test mesh-isolate-client-tags: no mesh state sharing across tags or views
+
+; An untagged client asks a TXT query, it is in flight. A client tagged
+; "blocked" asks the same query. It must not attach to the untagged state:
+; the tagged RPZ nsip trigger answers it, and the untagged client gets
+; the upstream answer.
+STEP 10 QUERY ADDRESS 193.0.0.1
+ENTRY_BEGIN
+REPLY RD
+SECTION QUESTION
+www.a.	IN	TXT
+ENTRY_END
+
+STEP 20 QUERY ADDRESS 192.0.0.1
+ENTRY_BEGIN
+REPLY RD
+SECTION QUESTION
+www.a.	IN	TXT
+ENTRY_END
+
+; This also checks that the tag-restricted RPZ zone now applies to the
+; tagged client for a TXT query. Without the option, the client info is not
+; built for TXT, so the zone is skipped and the client attaches to the
+; untagged state.
+STEP 30 CHECK_ANSWER ADDRESS 192.0.0.1
+ENTRY_BEGIN
+MATCH all
+REPLY QR AA RD RA NXDOMAIN
+SECTION QUESTION
+www.a.	IN	TXT
+SECTION ANSWER
+ENTRY_END
+
+STEP 40 CHECK_OUT_QUERY
+ENTRY_BEGIN
+MATCH qname qtype opcode
+SECTION QUESTION
+www.a.	IN	TXT
+ENTRY_END
+
+STEP 50 REPLY
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR AA NOERROR
+SECTION QUESTION
+www.a.	IN	TXT
+SECTION ANSWER
+www.a.	IN	TXT "upstream"
+ENTRY_END
+
+STEP 60 CHECK_ANSWER ADDRESS 193.0.0.1
+ENTRY_BEGIN
+MATCH all
+REPLY QR RD RA NOERROR
+SECTION QUESTION
+www.a.	IN	TXT
+SECTION ANSWER
+www.a.	IN	TXT "upstream"
+ENTRY_END
+
+; Two clients with the same tags still share one state: a single upstream
+; query answers both. A second state would leave a query pending.
+STEP 110 QUERY ADDRESS 192.0.0.1
+ENTRY_BEGIN
+REPLY RD
+SECTION QUESTION
+www.b.	IN	TXT
+ENTRY_END
+
+STEP 120 QUERY ADDRESS 192.0.0.2
+ENTRY_BEGIN
+REPLY RD
+SECTION QUESTION
+www.b.	IN	TXT
+ENTRY_END
+
+STEP 130 CHECK_OUT_QUERY
+ENTRY_BEGIN
+MATCH qname qtype opcode
+SECTION QUESTION
+www.b.	IN	TXT
+ENTRY_END
+
+STEP 140 REPLY
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR AA NOERROR
+SECTION QUESTION
+www.b.	IN	TXT
+SECTION ANSWER
+www.b.	IN	TXT "same tags"
+ENTRY_END
+
+STEP 150 CHECK_ANSWER ADDRESS 192.0.0.1
+ENTRY_BEGIN
+MATCH all
+REPLY QR RD RA NOERROR
+SECTION QUESTION
+www.b.	IN	TXT
+SECTION ANSWER
+www.b.	IN	TXT "same tags"
+ENTRY_END
+
+STEP 160 CHECK_ANSWER ADDRESS 192.0.0.2
+ENTRY_BEGIN
+MATCH all
+REPLY QR RD RA NOERROR
+SECTION QUESTION
+www.b.	IN	TXT
+SECTION ANSWER
+www.b.	IN	TXT "same tags"
+ENTRY_END
+
+; A client with a view does not share a state with an untagged client:
+; the two states show here as two upstream queries, because testbound does
+; not merge identical outbound queries. Unbound itself sends one query for
+; both states.
+STEP 210 QUERY ADDRESS 193.0.0.1
+ENTRY_BEGIN
+REPLY RD
+SECTION QUESTION
+www2.b.	IN	TXT
+ENTRY_END
+
+STEP 220 QUERY ADDRESS 194.0.0.1
+ENTRY_BEGIN
+REPLY RD
+SECTION QUESTION
+www2.b.	IN	TXT
+ENTRY_END
+
+STEP 230 CHECK_OUT_QUERY
+ENTRY_BEGIN
+MATCH qname qtype opcode
+SECTION QUESTION
+www2.b.	IN	TXT
+ENTRY_END
+
+STEP 240 REPLY
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR AA NOERROR
+SECTION QUESTION
+www2.b.	IN	TXT
+SECTION ANSWER
+www2.b.	IN	TXT "per state"
+ENTRY_END
+
+STEP 250 CHECK_OUT_QUERY
+ENTRY_BEGIN
+MATCH qname qtype opcode
+SECTION QUESTION
+www2.b.	IN	TXT
+ENTRY_END
+
+STEP 260 REPLY
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR AA NOERROR
+SECTION QUESTION
+www2.b.	IN	TXT
+SECTION ANSWER
+www2.b.	IN	TXT "per state"
+ENTRY_END
+
+STEP 270 CHECK_ANSWER ADDRESS 193.0.0.1
+ENTRY_BEGIN
+MATCH all
+REPLY QR RD RA NOERROR
+SECTION QUESTION
+www2.b.	IN	TXT
+SECTION ANSWER
+www2.b.	IN	TXT "per state"
+ENTRY_END
+
+STEP 280 CHECK_ANSWER ADDRESS 194.0.0.1
+ENTRY_BEGIN
+MATCH all
+REPLY QR RD RA NOERROR
+SECTION QUESTION
+www2.b.	IN	TXT
+SECTION ANSWER
+www2.b.	IN	TXT "per state"
+ENTRY_END
+
+SCENARIO_END

@@ -6439,6 +6439,7 @@ fr_atomic_copy_cfg(struct config_file* oldcfg, struct config_file* cfg,
 	COPY_VAR_int(serve_expired_reply_ttl);
 	COPY_VAR_int(serve_expired_client_timeout);
 	COPY_VAR_int(ede_serve_expired);
+	COPY_VAR_int(mesh_isolate_client_tags);
 	COPY_VAR_int(dns_error_reporting);
 	COPY_VAR_int(serve_original_ttl);
 	COPY_VAR_ptr(val_nsec3_key_iterations);
