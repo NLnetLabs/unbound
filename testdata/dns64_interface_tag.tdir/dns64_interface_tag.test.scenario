@@ -1,0 +1,58 @@
+# #-- dns64_interface_tag.test.scenario --#
+[ -f ../.tpkg.var.master ] && source ../.tpkg.var.master
+[ -f .tpkg.var.test ] && source .tpkg.var.test
+
+PRE="../.."
+. ../common.sh
+get_ldns_testns
+
+ip addr add 10.0.0.1/32 dev lo
+ip link set lo up
+
+$LDNS_TESTNS -p $FORWARD_PORT dns64_interface_tag.testns >fwd.log 2>&1 &
+FWD_PID=$!
+echo "FWD_PID=$FWD_PID" >> .tpkg.var.test
+
+$PRE/unbound -d -c ub.conf >unbound.log 2>&1 &
+UNBOUND_PID=$!
+echo "UNBOUND_PID=$UNBOUND_PID" >> .tpkg.var.test
+
+wait_ldns_testns_up fwd.log
+wait_unbound_up unbound.log
+
+fail () {
+	echo "> cat logfiles"
+	cat fwd.log
+	cat unbound.log
+	exit 1
+}
+
+echo "> dig tagged.example. AAAA through tagged interface"
+dig @10.0.0.1 -p $TAGGED_PORT tagged.example. AAAA | tee tagged.out
+if ! grep "64:ff9b::c000:201" tagged.out; then
+	echo "DNS64 synthesis was not applied to tagged interface"
+	fail
+fi
+
+echo "> dig tagged.example. AAAA through untagged interface"
+dig @10.0.0.1 -p $UNTAGGED_PORT tagged.example. AAAA | tee tagged-untagged.out
+if grep "64:ff9b::c000:201" tagged-untagged.out; then
+	echo "DNS64 synthesis was incorrectly applied to untagged interface"
+	fail
+fi
+
+echo "> dig untagged.example. AAAA through untagged interface"
+dig @10.0.0.1 -p $UNTAGGED_PORT untagged.example. AAAA | tee untagged.out
+if grep "64:ff9b::c000:202" untagged.out; then
+	echo "DNS64 synthesis was incorrectly applied to untagged interface"
+	fail
+fi
+
+echo "> dig untagged.example. AAAA through tagged interface"
+dig @10.0.0.1 -p $TAGGED_PORT untagged.example. AAAA | tee untagged-tagged.out
+if ! grep "64:ff9b::c000:202" untagged-tagged.out; then
+	echo "DNS64 synthesis was not applied to tagged interface"
+	fail
+fi
+
+echo "OK"
