@@ -302,7 +302,7 @@ iter_apply_cfg(struct iter_env* iter_env, struct config_file* cfg)
 static int
 iter_filter_unsuitable(struct iter_env* iter_env, struct module_env* env,
 	uint8_t* name, size_t namelen, uint16_t qtype, time_t now,
-	struct delegpt_addr* a)
+	struct delegpt_addr* a, int no_route_family)
 {
 	int rtt, lame, reclame, dnsseclame;
 	if(a->bogus)
@@ -333,8 +333,12 @@ iter_filter_unsuitable(struct iter_env* iter_env, struct module_env* env,
 			return -1; /* server is on the donotquery list */
 		}
 	}
-	if(!iter_env->supports_ipv6 && addr_is_ip6(&a->addr, a->addrlen)) {
+	if((!iter_env->supports_ipv6 || no_route_family == AF_INET6) &&
+		addr_is_ip6(&a->addr, a->addrlen)) {
 		return -1; /* there is no ip6 available */
+	}
+	if(no_route_family == AF_INET && !addr_is_ip6(&a->addr, a->addrlen)) {
+		return -1; /* this query already saw ip4 has no route */
 	}
 	if(!iter_env->supports_ipv4 && !iter_env->nat64.use_nat64 &&
 	   !addr_is_ip6(&a->addr, a->addrlen)) {
@@ -397,7 +401,7 @@ static int
 iter_fill_rtt(struct iter_env* iter_env, struct module_env* env,
 	uint8_t* name, size_t namelen, uint16_t qtype, time_t now,
 	struct delegpt* dp, int* best_rtt, struct sock_list* blacklist,
-	size_t* num_suitable_results)
+	size_t* num_suitable_results, int no_route_family)
 {
 	int got_it = 0;
 	struct delegpt_addr* a;
@@ -407,7 +411,7 @@ iter_fill_rtt(struct iter_env* iter_env, struct module_env* env,
 		return 0; /* NS bogus, all bogus, nothing found */
 	for(a=dp->result_list; a; a = a->next_result) {
 		a->sel_rtt = iter_filter_unsuitable(iter_env, env,
-			name, namelen, qtype, now, a);
+			name, namelen, qtype, now, a, no_route_family);
 		if(a->sel_rtt != -1) {
 			if(sock_list_find(blacklist, &a->addr, a->addrlen))
 				a->sel_rtt += BLACKLIST_PENALTY;
@@ -476,7 +480,7 @@ static int
 iter_filter_order(struct iter_env* iter_env, struct module_env* env,
 	uint8_t* name, size_t namelen, uint16_t qtype, time_t now,
 	struct delegpt* dp, int* selected_rtt, int open_target,
-	struct sock_list* blacklist, time_t prefetch)
+	struct sock_list* blacklist, time_t prefetch, int no_route_family)
 {
 	int got_num = 0, low_rtt = 0, swap_to_front, rtt_band = RTT_BAND, nth;
 	int alllame = 0;
@@ -485,7 +489,7 @@ iter_filter_order(struct iter_env* iter_env, struct module_env* env,
 
 	/* fillup sel_rtt and find best rtt in the bunch */
 	got_num = iter_fill_rtt(iter_env, env, name, namelen, qtype, now, dp,
-		&low_rtt, blacklist, &num_results);
+		&low_rtt, blacklist, &num_results, no_route_family);
 	if(got_num == 0)
 		return 0;
 	if(low_rtt >= USEFUL_SERVER_TOP_TIMEOUT &&
@@ -670,13 +674,14 @@ iter_server_selection(struct iter_env* iter_env,
 	struct module_env* env, struct delegpt* dp,
 	uint8_t* name, size_t namelen, uint16_t qtype, int* dnssec_lame,
 	int* chase_to_rd, int open_target, struct sock_list* blacklist,
-	time_t prefetch)
+	time_t prefetch, int no_route_family)
 {
 	int sel;
 	int selrtt;
 	struct delegpt_addr* a, *prev;
 	int num = iter_filter_order(iter_env, env, name, namelen, qtype,
-		*env->now, dp, &selrtt, open_target, blacklist, prefetch);
+		*env->now, dp, &selrtt, open_target, blacklist, prefetch,
+		no_route_family);
 
 	if(num == 0)
 		return NULL;
