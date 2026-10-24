@@ -55,6 +55,7 @@ server:
 	# interface: 192.0.2.154
 	# interface: 192.0.2.154@5003
 	# interface: 2001:db8::5
+	# interface: fe80::1%eth0
 	# interface: eth0@5003
 
 	# enable this feature to copy the source address of queries to reply.
