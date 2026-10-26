@@ -3886,6 +3886,28 @@ cache).
 
     Default: no
 
+
+@@UAHL@unbound.conf.forward@forward-sequential@@: *<yes or no>*
+    If enabled, the servers are used in the order in which the
+    :ref:`forward-addr<unbound.conf.forward.forward-addr>` entries appear in
+    the configuration, instead of the default selection by round trip time.
+    The first server is used for every query.
+    If it does not answer, the query is retried with the next server in the
+    list, and so on.
+    A server that times out three times in a row is tried after the servers
+    that answer, until its entry in the infrastructure cache expires (see
+    :ref:`infra-host-ttl<unbound.conf.infra-host-ttl>`), after which it is
+    tried first again.
+    A server that is slow but answers keeps being used.
+    This is useful when a later server is a fallback that should only be
+    used when the earlier ones are unavailable, for example when the first
+    server applies filtering that the fallback does not.
+    Addresses from :ref:`forward-host<unbound.conf.forward.forward-host>` are
+    used after all the
+    :ref:`forward-addr<unbound.conf.forward.forward-addr>` entries.
+
+    Default: no
+
 .. _unbound.conf.auth:
 
 Authority Zone Options

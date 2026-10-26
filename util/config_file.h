@@ -844,6 +844,8 @@ struct config_stub {
 	int ssl_upstream;
 	/*** no cache */
 	int no_cache;
+	/** if forward-sequential is set (use addresses in config order) */
+	int sequential;
 };
 
 /**
