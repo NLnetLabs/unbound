@@ -1,3 +1,7 @@
+26 October 2026: Yorgos
+	- Merge #1541 from Georg Haas: doc: example.conf: add example to
+	  listen on link local IPv6 addresses.
+
 22 October 2026: Wouter
 	- Fix readthedocs status badge in the readme.
 
