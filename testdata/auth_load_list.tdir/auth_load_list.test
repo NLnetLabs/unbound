@@ -1,0 +1,60 @@
+# #-- auth_load_list.test --#
+# source the master var file when it's there
+[ -f ../.tpkg.var.master ] && source ../.tpkg.var.master
+# use .tpkg.var.test for in test variable passing
+[ -f .tpkg.var.test ] && source .tpkg.var.test
+
+PRE="../.."
+
+# do the test
+for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15; do
+	name="www.example$i.com"
+	echo ""
+	echo "> dig $name"
+	dig @127.0.0.1 -p $UNBOUND_PORT $name | tee outfile
+	if grep SERVFAIL outfile; then
+		echo "> try again"
+		dig @127.0.0.1 -p $UNBOUND_PORT $name | tee outfile
+	fi
+	if grep SERVFAIL outfile; then
+		echo "> try again"
+		sleep 1
+		dig @127.0.0.1 -p $UNBOUND_PORT $name | tee outfile
+	fi
+	if grep SERVFAIL outfile; then
+		echo "> try again"
+		sleep 1
+		dig @127.0.0.1 -p $UNBOUND_PORT $name | tee outfile
+	fi
+	if grep SERVFAIL outfile; then
+		echo "> try again"
+		sleep 1
+		dig @127.0.0.1 -p $UNBOUND_PORT $name | tee outfile
+	fi
+	if grep SERVFAIL outfile; then
+		echo "> try again"
+		sleep 3
+		dig @127.0.0.1 -p $UNBOUND_PORT $name | tee outfile
+	fi
+	if grep SERVFAIL outfile; then
+		echo "> try again"
+		sleep 3
+		dig @127.0.0.1 -p $UNBOUND_PORT $name | tee outfile
+	fi
+	echo "> check answer"
+	if grep "1.2.3.4" outfile; then
+		echo "OK"
+	else
+		echo "Not OK"
+		exit 1
+	fi
+	if grep "auth zone example$i.com. details" unbound.log; then
+		echo "OK"
+	else
+		echo "not OK"
+		exit 1
+	fi
+done
+echo "loop done"
+
+exit 0
