@@ -61,5 +61,10 @@
 /testdata/.done-*
 /testdata/.skip-*
 /testdata/.perfstats.txt
+/testdata/*.tdir/.tpkg.var.test
+/testdata/*.tdir/outfile
+/testdata/*.tdir/fwd.log
+/testdata/*.tdir/ub.conf
+/testdata/*.tdir/unbound.log
 /doc/html
 /doc/xml
