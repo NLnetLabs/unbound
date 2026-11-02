@@ -424,9 +424,14 @@ struct iter_qstate {
 	 */
 	int dnssec_lame_query;
 
+	/** address family (AF_INET/AF_INET6) with no route from this host
+	 * for this query, or 0 if none; addresses of that family are
+	 * skipped for the rest of this query. */
+	int no_route_family;
+
 	/**
-	 * This is flag that, if true, means that this event is 
-	 * waiting for a stub priming query. 
+	 * This is flag that, if true, means that this event is
+	 * waiting for a stub priming query.
 	 */
 	int wait_priming_stub;
 
