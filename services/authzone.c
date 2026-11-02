@@ -5663,7 +5663,7 @@ parse_http_simdzone(struct auth_xfer* xfr, struct auth_zone* z)
 /** apply HTTP to zone in memory. z is locked. false on failure(mallocfail) */
 static int
 apply_http(struct auth_xfer* xfr, struct auth_zone* z,
-	struct sldns_buffer* scratch_buffer)
+	struct sldns_buffer* scratch_buffer, char* etag)
 {
 	int use_simdzone = 1;
 
