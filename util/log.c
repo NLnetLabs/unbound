@@ -72,6 +72,14 @@ static ub_thread_key_type logkey;
 #ifndef THREADS_DISABLED
 /** pthread mutex to protect FILE* */
 static lock_basic_type log_lock;
+#ifdef HAVE_PTHREAD
+/* Guards the one-time initialization below. Without this, two threads
+ * calling log_init() for the first time concurrently (e.g. via
+ * ub_ctx_create() from a multi-threaded application) can both observe
+ * key_created==0 and both call lock_basic_init(&log_lock), a data race
+ * that reinitializes/corrupts an in-use mutex. */
+static pthread_once_t log_lock_once = PTHREAD_ONCE_INIT;
+#endif
 #endif
 /** the identity of this executable/process */
 static const char* ident="unbound";
@@ -85,15 +93,28 @@ static int log_time_asc = 0;
 /** print time in iso format */
 static int log_time_iso = 0;
 
+#if !defined(THREADS_DISABLED) && defined(HAVE_PTHREAD)
+static void log_lock_init_once(void)
+{
+	ub_thread_key_create(&logkey, NULL);
+	lock_basic_init(&log_lock);
+	key_created = 1;
+}
+#endif
+
 void
 log_init(const char* filename, int use_syslog, const char* chrootdir)
 {
 	FILE *f;
+#if !defined(THREADS_DISABLED) && defined(HAVE_PTHREAD)
+	(void)pthread_once(&log_lock_once, log_lock_init_once);
+#else
 	if(!key_created) {
 		key_created = 1;
 		ub_thread_key_create(&logkey, NULL);
 		lock_basic_init(&log_lock);
 	}
+#endif
 	lock_basic_lock(&log_lock);
 	if(logfile 
 #if defined(HAVE_SYSLOG_H) || defined(UB_ON_WINDOWS)

@@ -1,0 +1,506 @@
+; config options
+server: 
+	target-fetch-policy: "0 0 0 0 0"
+	qname-minimisation: no
+	local-zone: test. nodefault
+
+stub-zone:
+	name: "."
+	stub-addr: 193.0.14.129
+CONFIG_END
+
+SCENARIO_BEGIN Test locate of DS NS records when middle NS is another server.
+; There are several zones hosted on one server. The DS lookup needs to
+; locate the NS for one of the middle zones. That middle zone has an NS
+; record where the child-data does not precisely match the parent referral.
+; Even though that parent referral is not visible due to the zones that are
+; on one server. The DS lookup fetches the child-side NS record.
+; And then should lookup the DS with it.
+;
+; In foo2.test there is an actual referral, the server host the upper and
+; lower zone, but not the middle, so it gives a referral instead of the
+; child side data when queried for the middle NS record.
+;
+; In foo3.test the zone is co-hosted, also the middle zone, and the glue
+; is correct, there is no mismatch with the NS record. It points to the
+; same server. That server answers from the lower zone for qtype DS,
+; that is from the wrong zone if that server supported DNSSEC for qtype DS.
+;
+; In foo4.test the zone is co-hosted and the server supports DNSSEC for
+; qtype DS, and so uses the correct middle zone, answering the query.
+; And DSNS find is not used.
+
+; K.ROOT-SERVERS.NET.
+RANGE_BEGIN 0 200
+	ADDRESS 193.0.14.129
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR AA NOERROR
+SECTION QUESTION
+. IN NS
+SECTION ANSWER
+. IN NS K.ROOT-SERVERS.NET.
+SECTION ADDITIONAL
+K.ROOT-SERVERS.NET. IN A 193.0.14.129
+ENTRY_END
+
+ENTRY_BEGIN
+MATCH opcode subdomain
+ADJUST copy_id copy_query
+REPLY QR NOERROR
+SECTION QUESTION
+test. IN A
+SECTION AUTHORITY
+test. IN NS ns.test.
+SECTION ADDITIONAL
+ns.test. IN A 192.5.0.1
+ENTRY_END
+RANGE_END
+
+; ns.test.
+RANGE_BEGIN 0 200
+	ADDRESS 192.5.0.1
+ENTRY_BEGIN
+MATCH opcode subdomain
+ADJUST copy_id copy_query
+REPLY QR NOERROR
+SECTION QUESTION
+foo.test. IN A
+SECTION AUTHORITY
+foo.test. IN NS ns.foo.test.
+SECTION ADDITIONAL
+ns.foo.test. IN A 192.5.0.2
+ENTRY_END
+
+ENTRY_BEGIN
+MATCH opcode subdomain
+ADJUST copy_id copy_query
+REPLY QR NOERROR
+SECTION QUESTION
+ex2.test. IN A
+SECTION AUTHORITY
+ex2.test. IN NS ns.ex2.test.
+SECTION ADDITIONAL
+ns.ex2.test. IN A 192.5.0.3
+ENTRY_END
+
+ENTRY_BEGIN
+MATCH opcode subdomain
+ADJUST copy_id copy_query
+REPLY QR NOERROR
+SECTION QUESTION
+foo2.test. IN A
+SECTION AUTHORITY
+foo2.test. IN NS ns.foo2.test.
+SECTION ADDITIONAL
+ns.foo2.test. IN A 192.5.0.4
+ENTRY_END
+
+ENTRY_BEGIN
+MATCH opcode subdomain
+ADJUST copy_id copy_query
+REPLY QR NOERROR
+SECTION QUESTION
+ex3.test. IN A
+SECTION AUTHORITY
+ex3.test. IN NS ns.ex3.test.
+SECTION ADDITIONAL
+ns.ex3.test. IN A 192.5.0.5
+ENTRY_END
+
+ENTRY_BEGIN
+MATCH opcode subdomain
+ADJUST copy_id copy_query
+REPLY QR NOERROR
+SECTION QUESTION
+foo3.test. IN A
+SECTION AUTHORITY
+foo3.test. IN NS ns.foo3.test.
+SECTION ADDITIONAL
+ns.foo3.test. IN A 192.5.0.6
+ENTRY_END
+
+ENTRY_BEGIN
+MATCH opcode subdomain
+ADJUST copy_id copy_query
+REPLY QR NOERROR
+SECTION QUESTION
+foo4.test. IN A
+SECTION AUTHORITY
+foo4.test. IN NS ns.foo4.test.
+SECTION ADDITIONAL
+ns.foo4.test. IN A 192.5.0.7
+ENTRY_END
+RANGE_END
+
+; ns.foo.test.
+; This server hosts a number of zones.
+; foo.test
+; mid.foo.test
+; x.mid.foo.test
+RANGE_BEGIN 0 200
+	ADDRESS 192.5.0.2
+
+; This answer is too low, for the DS query, it should have been answered
+; from a higher zone. This starts DSNS find.
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR AA NOERROR
+SECTION QUESTION
+x.mid.foo.test. IN DS
+SECTION ANSWER
+SECTION AUTHORITY
+x.mid.foo.test. IN SOA a. b. 1 2 3 4 5
+ENTRY_END
+
+; The server is also authoriative for mid.foo.test and that
+; has a mismatching NS record, that lists another server than ns.foo.test.
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR AA NOERROR
+SECTION QUESTION
+mid.foo.test. IN NS
+SECTION ANSWER
+mid.foo.test. IN NS ns2.ex2.test.
+SECTION AUTHORITY
+ENTRY_END
+
+; If it goes up further, this is the answer for the foo.test NS.
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR AA NOERROR
+SECTION QUESTION
+foo.test. IN NS
+SECTION ANSWER
+foo.test. IN NS ns.foo.test.
+SECTION AUTHORITY
+SECTION ADDITIONAL
+ns.foo.test. IN A 192.5.0.2
+ENTRY_END
+RANGE_END
+
+; ns.ex2.test.
+RANGE_BEGIN 0 200
+	ADDRESS 192.5.0.3
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR AA NOERROR
+SECTION QUESTION
+ns2.ex2.test. IN A
+SECTION ANSWER
+; it is on this same server for ex2.test.
+ns2.ex2.test. IN A 192.5.0.3
+ENTRY_END
+
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR AA NOERROR
+SECTION QUESTION
+ns2.ex2.test. IN AAAA
+SECTION AUTHORITY
+ex2.test. IN SOA a. b. 1 2 3 4 5
+ENTRY_END
+
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR AA NOERROR
+SECTION QUESTION
+x.mid.foo.test. IN DS
+SECTION ANSWER
+; The DS and RRSIG content are for the test. Not actually DNSSEC valid,
+; but supposedly the zone is signed, and has a signed DS to the lower zone.
+x.mid.foo.test. IN DS 30899 5 1 f7ed618f24d5e5202927e1d27bc2e84a141cb4b3
+x.mid.foo.test. IN RRSIG DS 3 4 3600 20070926134150 20070829134150 2854 mid.foo.test. MCwCFCW3ix0GD4BSvNLWIbROCJt5DAW9AhRt/kg9kBKJ20UBUdumrBUHqnskdA==
+SECTION AUTHORITY
+ENTRY_END
+RANGE_END
+
+; ns.foo2.test.
+; This server hosts a number of zones.
+; foo2.test
+; x.mid.foo2.test
+; but not: mid.foo2.test
+RANGE_BEGIN 0 200
+	ADDRESS 192.5.0.4
+
+; This answer is too low, for the DS query, it should have been answered
+; from a higher zone. This starts DSNS find.
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR AA NOERROR
+SECTION QUESTION
+x.mid.foo2.test. IN DS
+SECTION ANSWER
+SECTION AUTHORITY
+x.mid.foo2.test. IN SOA a. b. 1 2 3 4 5
+ENTRY_END
+
+; The server has a referral for mid.foo2.test.
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR NOERROR
+SECTION QUESTION
+mid.foo2.test. IN NS
+SECTION AUTHORITY
+mid.foo2.test. IN NS ns.ex3.test.
+ENTRY_END
+
+; If it goes up further, this is the answer for the foo2.test NS.
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR AA NOERROR
+SECTION QUESTION
+foo2.test. IN NS
+SECTION ANSWER
+foo2.test. IN NS ns.foo2.test.
+SECTION AUTHORITY
+SECTION ADDITIONAL
+ns.foo2.test. IN A 192.5.0.4
+ENTRY_END
+RANGE_END
+
+; ns.ex3.test.
+RANGE_BEGIN 0 200
+	ADDRESS 192.5.0.5
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR AA NOERROR
+SECTION QUESTION
+ns.ex3.test. IN A
+SECTION ANSWER
+ns.ex3.test. IN A 192.5.0.5
+ENTRY_END
+
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR AA NOERROR
+SECTION QUESTION
+ns.ex3.test. IN AAAA
+SECTION AUTHORITY
+ex3.test. IN SOA a. b. 1 2 3 4 5
+ENTRY_END
+
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR AA NOERROR
+SECTION QUESTION
+mid.foo2.test. IN NS
+SECTION ANSWER
+mid.foo2.test. IN NS ns.ex3.test.
+; Not actually valid signature, but content is here for the test.
+mid.foo2.test. IN RRSIG NS 3 3 3600 20070926134150 20070829134150 2854 mid.foo2.test. MCwCFCW3ix0GD4BSvNLWIbROCJt5DAW9AhRt/kg9kBKJ20UBUdumrBUHqnskdA==
+ENTRY_END
+
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR AA NOERROR
+SECTION QUESTION
+x.mid.foo2.test. IN DS
+SECTION ANSWER
+; The DS and RRSIG content are for the test. Not actually DNSSEC valid,
+; but supposedly the zone is signed, and has a signed DS to the lower zone.
+x.mid.foo2.test. IN DS 30899 5 1 f7ed618f24d5e5202927e1d27bc2e84a141cb4b3
+x.mid.foo2.test. IN RRSIG DS 3 4 3600 20070926134150 20070829134150 2854 mid.foo2.test. MCwCFCW3ix0GD4BSvNLWIbROCJt5DAW9AhRt/kg9kBKJ20UBUdumrBUHqnskdA==
+SECTION AUTHORITY
+ENTRY_END
+RANGE_END
+
+; ns.foo3.test.
+; This server hosts a number of zones.
+; foo3.test
+; mid.foo3.test
+; x.mid.foo3.test
+RANGE_BEGIN 0 200
+	ADDRESS 192.5.0.6
+
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR AA NOERROR
+SECTION QUESTION
+ns.foo3.test. IN A
+SECTION ANSWER
+ns.foo3.test. IN A 192.5.0.6
+ENTRY_END
+
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR AA NOERROR
+SECTION QUESTION
+ns.foo3.test. IN AAAA
+SECTION AUTHORITY
+foo3.test. IN SOA a. b. 1 2 3 4 5
+ENTRY_END
+
+; This answer is too low, for the DS query, it should have been answered
+; from a higher zone. This starts DSNS find.
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR AA NOERROR
+SECTION QUESTION
+x.mid.foo3.test. IN DS
+SECTION ANSWER
+SECTION AUTHORITY
+x.mid.foo3.test. IN SOA a. b. 1 2 3 4 5
+ENTRY_END
+
+; The middle zone is actually hosted on this server, and this is its
+; child side NS record.
+; But since this nameserver gives the wrong answer, from the wrong zone
+; for qtype DS, it is not going to resolve the DS lookup from mid.foo3.test,
+; but from x.mid.foo3.test instead. This can happen for a server that does
+; not support DNSSEC, and qtype DS then has lookup in the zone for it.
+; Servers that support DNSSEC are supposed to pick the right zone for the
+; qtype DS lookup in the multiple zone situation.
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR AA NOERROR
+SECTION QUESTION
+mid.foo3.test. IN NS
+SECTION ANSWER
+mid.foo3.test. IN NS ns.foo3.test.
+ENTRY_END
+RANGE_END
+
+; ns.foo4.test.
+; This server hosts a number of zones.
+; foo4.test
+; mid.foo4.test
+; x.mid.foo4.test
+RANGE_BEGIN 0 200
+	ADDRESS 192.5.0.7
+
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR AA NOERROR
+SECTION QUESTION
+ns.foo4.test. IN A
+SECTION ANSWER
+ns.foo4.test. IN A 192.5.0.7
+ENTRY_END
+
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR AA NOERROR
+SECTION QUESTION
+ns.foo4.test. IN AAAA
+SECTION AUTHORITY
+foo4.test. IN SOA a. b. 1 2 3 4 5
+ENTRY_END
+
+; The server supports DNSSEC, it hosts the correct zone for the answer,
+; and it uses the mid.foo4.test zone for the qtype DS answer.
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR AA NOERROR
+SECTION QUESTION
+x.mid.foo4.test. IN DS
+SECTION ANSWER
+x.mid.foo4.test. IN DS 30899 5 1 f7ed618f24d5e5202927e1d27bc2e84a141cb4b3
+x.mid.foo4.test. IN RRSIG DS 3 4 3600 20070926134150 20070829134150 2854 mid.foo4.test. MCwCFCW3ix0GD4BSvNLWIbROCJt5DAW9AhRt/kg9kBKJ20UBUdumrBUHqnskdA==
+ENTRY_END
+RANGE_END
+
+STEP 1 QUERY
+ENTRY_BEGIN
+REPLY RD DO
+SECTION QUESTION
+x.mid.foo.test. IN DS
+ENTRY_END
+
+; recursion happens here.
+STEP 10 CHECK_ANSWER
+ENTRY_BEGIN
+MATCH all
+REPLY QR RD RA DO NOERROR
+SECTION QUESTION
+x.mid.foo.test. IN DS
+SECTION ANSWER
+x.mid.foo.test. IN DS 30899 5 1 f7ed618f24d5e5202927e1d27bc2e84a141cb4b3
+x.mid.foo.test. IN RRSIG DS 3 4 3600 20070926134150 20070829134150 2854 mid.foo.test. MCwCFCW3ix0GD4BSvNLWIbROCJt5DAW9AhRt/kg9kBKJ20UBUdumrBUHqnskdA==
+ENTRY_END
+RANGE_END
+
+; to resolve pending messages for nameserver lookups.
+STEP 20 TRAFFIC
+
+STEP 30 QUERY
+ENTRY_BEGIN
+REPLY RD DO
+SECTION QUESTION
+x.mid.foo2.test. IN DS
+ENTRY_END
+
+STEP 40 CHECK_ANSWER
+ENTRY_BEGIN
+MATCH all
+REPLY QR RD RA DO NOERROR
+SECTION QUESTION
+x.mid.foo2.test. IN DS
+SECTION ANSWER
+x.mid.foo2.test. IN DS 30899 5 1 f7ed618f24d5e5202927e1d27bc2e84a141cb4b3
+x.mid.foo2.test. IN RRSIG DS 3 4 3600 20070926134150 20070829134150 2854 mid.foo2.test. MCwCFCW3ix0GD4BSvNLWIbROCJt5DAW9AhRt/kg9kBKJ20UBUdumrBUHqnskdA==
+ENTRY_END
+
+; to resolve pending messages for nameserver lookups.
+STEP 50 TRAFFIC
+
+STEP 60 QUERY
+ENTRY_BEGIN
+REPLY RD DO
+SECTION QUESTION
+x.mid.foo3.test. IN DS
+ENTRY_END
+
+STEP 70 CHECK_ANSWER
+ENTRY_BEGIN
+MATCH all
+REPLY QR RD RA DO NOERROR
+SECTION QUESTION
+x.mid.foo3.test. IN DS
+SECTION AUTHORITY
+x.mid.foo3.test. IN SOA a. b. 1 2 3 4 5
+ENTRY_END
+
+; to resolve pending messages for nameserver lookups.
+STEP 80 TRAFFIC
+
+STEP 90 QUERY
+ENTRY_BEGIN
+REPLY RD DO
+SECTION QUESTION
+x.mid.foo4.test. IN DS
+ENTRY_END
+
+STEP 100 CHECK_ANSWER
+ENTRY_BEGIN
+MATCH all
+REPLY QR RD RA DO NOERROR
+SECTION QUESTION
+x.mid.foo4.test. IN DS
+SECTION ANSWER
+x.mid.foo4.test. IN DS 30899 5 1 f7ed618f24d5e5202927e1d27bc2e84a141cb4b3
+x.mid.foo4.test. IN RRSIG DS 3 4 3600 20070926134150 20070829134150 2854 mid.foo4.test. MCwCFCW3ix0GD4BSvNLWIbROCJt5DAW9AhRt/kg9kBKJ20UBUdumrBUHqnskdA==
+ENTRY_END
+
+SCENARIO_END

@@ -401,6 +401,12 @@ prep_data(struct module_qstate* qstate, struct sldns_buffer* buf)
 	   FLAGS_GET_RCODE(qstate->return_msg->rep->flags) !=
 		LDNS_RCODE_YXDOMAIN)
 		return 0;
+	/* Do not persist data the validator has not yet seen, or has rejected.
+	 * Otherwise an expired blob could maybe reach clients via
+	 * serve-expired. */
+	if(qstate->env->need_to_validate &&
+		qstate->return_msg->rep->security == sec_status_bogus)
+		return 0;
 	/* We don't store the reply if its TTL is 0. This is probably coming
 	 * from upstream and it is not meant to be stored. */
 	if(qstate->return_msg->rep->ttl == 0)
@@ -754,8 +760,10 @@ cachedb_intcache_store(struct module_qstate* qstate, int msg_expired,
 			"(original ttl: %d)", (int)original_ttl);
 		/* The expired entry does not get checked by the validator
 		 * and we need a validation value for it. */
+		/* By setting this to unchecked, bogus data is not returned
+		 * as non-bogus. */
 		if(qstate->env->cfg->cachedb_check_when_serve_expired)
-			qstate->return_msg->rep->security = sec_status_insecure;
+			qstate->return_msg->rep->security = sec_status_unchecked;
 	}
 	(void)dns_cache_store(qstate->env, &qstate->qinfo,
 		qstate->return_msg->rep, 0, qstate->prefetch_leeway, 0,
@@ -803,8 +811,11 @@ cachedb_handle_query(struct module_qstate* qstate,
 		return;
 	}
 
-	if(qstate->blacklist || qstate->no_cache_lookup) {
-		/* cache is blacklisted or we are instructed from edns to not look */
+	if(qstate->blacklist || qstate->no_cache_lookup
+		|| iter_stub_fwd_no_cache(qstate, &qstate->qinfo, NULL, NULL,
+		NULL, 0)) {
+		/* cache is blacklisted or we are instructed from edns to not
+		 * look or a forwarder/stub forbids it */
 		/* pass request to next module */
 		qstate->ext_state[id] = module_wait_module;
 		return;
@@ -858,6 +869,11 @@ cachedb_handle_query(struct module_qstate* qstate,
 				return;
 		}
 		/* No 0TTL answers escaping from external cache. */
+		if(qstate->return_msg->rep->ttl == 0) {
+			qstate->return_msg = NULL;
+			qstate->ext_state[id] = module_wait_module;
+			return;
+		}
 		log_assert(qstate->return_msg->rep->ttl > 0);
 		qstate->is_cachedb_answer = 1;
 		/* we are done with the query */
@@ -892,7 +908,9 @@ cachedb_handle_response(struct module_qstate* qstate,
 {
 	qstate->is_cachedb_answer = 0;
 	/* check if we are not enabled or instructed to not cache, and skip */
-	if(!ie->enabled || qstate->no_cache_store) {
+	if(!ie->enabled || qstate->no_cache_store
+		|| iter_stub_fwd_no_cache(qstate, &qstate->qinfo, NULL, NULL,
+		NULL, 0)) {
 		/* we are done with the query */
 		qstate->ext_state[id] = module_finished;
 		return;

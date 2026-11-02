@@ -60,11 +60,6 @@
 #include "util/config_file.h"
 
 /**
- * Max number of NSEC3 calculations at once, suspend query for later.
- * 8 is low enough and allows for cases where multiple proofs are needed.
- */
-#define MAX_NSEC3_CALCULATIONS 8
-/**
  * When all allowed NSEC3 calculations at once resulted in error treat as
  * bogus. NSEC3 hash errors are not cached and this helps breaks loops with
  * erroneous data.
@@ -270,6 +265,8 @@ size_t nsec3_hash_to_b32(uint8_t* hash, size_t hashlen, uint8_t* zone,
 	ret = sldns_b32_ntop_extended_hex(hash, hashlen, (char*)buf+1, max-1);
 	if(ret < 1) 
 		return 0;
+	if(ret > LDNS_MAX_LABELLEN)
+		return 0; /* label length too long */
 	buf[0] = (uint8_t)ret; /* length of b32 label */
 	ret++;
 	if(max - ret < zonelen)
@@ -278,13 +275,30 @@ size_t nsec3_hash_to_b32(uint8_t* hash, size_t hashlen, uint8_t* zone,
 	return zonelen+(size_t)ret;
 }
 
+/** Check that the hash length corresponds to the nsec3 algo */
+static int
+nsec3_algo_has_hashlen(int algo, size_t hlen)
+{
+	if(algo == NSEC3_HASH_SHA1) {
+		if(hlen != NSEC3_SHA_LEN)
+			return 0; /* wrong hash length for this algo */
+	} else {
+		return 0; /* unknown algo */
+	}
+	return 1;
+}
+
 size_t nsec3_get_nextowner_b32(struct ub_packed_rrset_key* rrset, int r,
 	uint8_t* buf, size_t max)
 {
 	uint8_t* nm, *zone;
 	size_t nmlen, zonelen;
+	int algo;
 	if(!nsec3_get_nextowner(rrset, r, &nm, &nmlen))
 		return 0;
+	algo = nsec3_get_algo(rrset, r);
+	if(!nsec3_algo_has_hashlen(algo, nmlen))
+		return 0; /* wrong hash length for this algo */
 	/* append zone name; the owner name must be <b32>.zone */
 	zone = rrset->rk.dname;
 	zonelen = rrset->rk.dname_len;
@@ -454,6 +468,67 @@ filter_init(struct nsec3_filter* filter, struct ub_packed_rrset_key** list,
 			filter->zone_len = nmlen;
 		}
 	}
+}
+
+/** Check if the NSEC3s have the same parameter set. */
+static int
+param_set_same(struct nsec3_filter* flt, char** reason)
+{
+	size_t rrsetnum;
+	int rrnum;
+	struct ub_packed_rrset_key* rrset;
+	int have_params = 0;
+	int first_algo = 0;
+	size_t first_iter = 0;
+	uint8_t* first_salt = NULL;
+	size_t first_saltlen = 0;
+
+	/* If the NSEC3 parameter sets have distinct values, then they are
+	 * from different NSEC3 chains, and we do not want that. */
+	for(rrset=filter_first(flt, &rrsetnum, &rrnum); rrset;
+		rrset=filter_next(flt, &rrsetnum, &rrnum)) {
+		if(!have_params) {
+			first_algo = nsec3_get_algo(rrset, rrnum);
+			first_iter = nsec3_get_iter(rrset, rrnum);
+			if(!nsec3_get_salt(rrset, rrnum, &first_salt,
+				&first_saltlen)) {
+				verbose(VERB_ALGO, "NSEC3 salt malformed");
+				if(reason)
+					*reason = "NSEC3 salt malformed";
+				return 0;
+			}
+			have_params = 1;
+		} else {
+			uint8_t* salt = NULL;
+			size_t saltlen = 0;
+			if(nsec3_get_algo(rrset, rrnum) != first_algo) {
+				verbose(VERB_ALGO, "NSEC3 algorithm mismatch");
+				if(reason)
+					*reason = "NSEC3 algorithm mismatch";
+				return 0;
+			}
+			if(nsec3_get_iter(rrset, rrnum) != first_iter) {
+				verbose(VERB_ALGO, "NSEC3 iterations mismatch");
+				if(reason)
+					*reason = "NSEC3 iterations mismatch";
+				return 0;
+			}
+			if(!nsec3_get_salt(rrset, rrnum, &salt, &saltlen)) {
+				verbose(VERB_ALGO, "NSEC3 salt malformed");
+				if(reason)
+					*reason = "NSEC3 salt malformed";
+				return 0;
+			}
+			if(saltlen != first_saltlen ||
+				memcmp(salt, first_salt, saltlen) != 0) {
+				verbose(VERB_ALGO, "NSEC3 salt mismatch");
+				if(reason)
+					*reason = "NSEC3 salt mismatch";
+				return 0;
+			}
+		}
+	}
+	return 1;
 }
 
 /**
@@ -1192,6 +1267,12 @@ nsec3_prove_nameerror(struct module_env* env, struct val_env* ve,
 	filter_init(&flt, list, num, qinfo); /* init RR iterator */
 	if(!flt.zone)
 		return sec_status_bogus; /* no RRs */
+	if(query_dname_compare(flt.zone, kkey->name) != 0) {
+		verbose(VERB_ALGO, "NSEC3 name is not b32.signer name");
+		return sec_status_bogus;
+	}
+	if(!param_set_same(&flt, NULL))
+		return sec_status_bogus; /* nsec3 params from distinct chains*/
 	if(nsec3_iteration_count_high(ve, &flt, kkey))
 		return sec_status_insecure; /* iteration count too high */
 	log_nametypeclass(VERB_ALGO, "start nsec3 nameerror proof, zone", 
@@ -1378,6 +1459,12 @@ nsec3_prove_nodata(struct module_env* env, struct val_env* ve,
 	filter_init(&flt, list, num, qinfo); /* init RR iterator */
 	if(!flt.zone)
 		return sec_status_bogus; /* no RRs */
+	if(query_dname_compare(flt.zone, kkey->name) != 0) {
+		verbose(VERB_ALGO, "NSEC3 name is not b32.signer name");
+		return sec_status_bogus;
+	}
+	if(!param_set_same(&flt, NULL))
+		return sec_status_bogus; /* nsec3 params from distinct chains*/
 	if(nsec3_iteration_count_high(ve, &flt, kkey))
 		return sec_status_insecure; /* iteration count too high */
 	return nsec3_do_prove_nodata(env, &flt, ct, qinfo, calc);
@@ -1401,6 +1488,12 @@ nsec3_prove_wildcard(struct module_env* env, struct val_env* ve,
 	filter_init(&flt, list, num, qinfo); /* init RR iterator */
 	if(!flt.zone)
 		return sec_status_bogus; /* no RRs */
+	if(query_dname_compare(flt.zone, kkey->name) != 0) {
+		verbose(VERB_ALGO, "NSEC3 name is not b32.signer name");
+		return sec_status_bogus;
+	}
+	if(!param_set_same(&flt, NULL))
+		return sec_status_bogus; /* nsec3 params from distinct chains*/
 	if(nsec3_iteration_count_high(ve, &flt, kkey))
 		return sec_status_insecure; /* iteration count too high */
 
@@ -1447,7 +1540,8 @@ static int
 list_is_secure(struct module_env* env, struct val_env* ve, 
 	struct ub_packed_rrset_key** list, size_t num,
 	struct key_entry_key* kkey, char** reason, sldns_ede_code *reason_bogus,
-	struct module_qstate* qstate, char* reasonbuf, size_t reasonlen)
+	struct module_qstate* qstate, struct val_qstate* vq, char* reasonbuf,
+	size_t reasonlen)
 {
 	struct packed_rrset_data* d;
 	size_t i;
@@ -1463,7 +1557,7 @@ list_is_secure(struct module_env* env, struct val_env* ve,
 			continue;
 		d->security = val_verify_rrset_entry(env, ve, list[i], kkey,
 			reason, reason_bogus, LDNS_SECTION_AUTHORITY, qstate,
-			&verified, reasonbuf, reasonlen);
+			vq, &verified, reasonbuf, reasonlen);
 		if(d->security != sec_status_secure) {
 			verbose(VERB_ALGO, "NSEC3 did not verify");
 			return 0;
@@ -1478,7 +1572,8 @@ nsec3_prove_nods(struct module_env* env, struct val_env* ve,
 	struct ub_packed_rrset_key** list, size_t num,
 	struct query_info* qinfo, struct key_entry_key* kkey, char** reason,
 	sldns_ede_code* reason_bogus, struct module_qstate* qstate,
-	struct nsec3_cache_table* ct, char* reasonbuf, size_t reasonlen)
+	struct val_qstate* vq, struct nsec3_cache_table* ct, char* reasonbuf,
+	size_t reasonlen)
 {
 	struct nsec3_filter flt;
 	struct ce_response ce;
@@ -1494,7 +1589,7 @@ nsec3_prove_nods(struct module_env* env, struct val_env* ve,
 		return sec_status_bogus; /* no valid NSEC3s, bogus */
 	}
 	if(!list_is_secure(env, ve, list, num, kkey, reason, reason_bogus,
-		qstate, reasonbuf, reasonlen)) {
+		qstate, vq, reasonbuf, reasonlen)) {
 		*reason = "not all NSEC3 records secure";
 		return sec_status_bogus; /* not all NSEC3 records secure */
 	}
@@ -1503,6 +1598,13 @@ nsec3_prove_nods(struct module_env* env, struct val_env* ve,
 		*reason = "no NSEC3 records";
 		return sec_status_bogus; /* no RRs */
 	}
+	if(query_dname_compare(flt.zone, kkey->name) != 0) {
+		verbose(VERB_ALGO, "NSEC3 name is not b32.signer name");
+		*reason = "NSEC3 name is not b32.signer name";
+		return sec_status_bogus;
+	}
+	if(!param_set_same(&flt, reason))
+		return sec_status_bogus; /* nsec3 params from distinct chains*/
 	if(nsec3_iteration_count_high(ve, &flt, kkey))
 		return sec_status_insecure; /* iteration count too high */
 
@@ -1596,6 +1698,12 @@ nsec3_prove_nxornodata(struct module_env* env, struct val_env* ve,
 	filter_init(&flt, list, num, qinfo); /* init RR iterator */
 	if(!flt.zone)
 		return sec_status_bogus; /* no RRs */
+	if(query_dname_compare(flt.zone, kkey->name) != 0) {
+		verbose(VERB_ALGO, "NSEC3 name is not b32.signer name");
+		return sec_status_bogus;
+	}
+	if(!param_set_same(&flt, NULL))
+		return sec_status_bogus; /* nsec3 params from distinct chains*/
 	if(nsec3_iteration_count_high(ve, &flt, kkey))
 		return sec_status_insecure; /* iteration count too high */
 

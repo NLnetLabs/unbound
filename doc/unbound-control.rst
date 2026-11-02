@@ -170,6 +170,8 @@ There are several commands that the server understands.
     :ref:`tcp-auth-query-timeout<unbound.conf.tcp-auth-query-timeout>`,
     :ref:`delay-close<unbound.conf.delay-close>`.
     :ref:`iter-scrub-promiscuous<unbound.conf.iter-scrub-promiscuous>`.
+    :ref:`tls-service-key<unbound.conf.tls-service-key>`.
+    :ref:`tls-service-pem<unbound.conf.tls-service-pem>`.
 
     It does not work with
     :ref:`interface<unbound.conf.interface>` and
@@ -345,6 +347,8 @@ There are several commands that the server understands.
     Often results in NXDOMAIN for the name (in a static zone), but if the name
     has become an empty nonterminal (there is still data in domain names below
     the removed name), NOERROR nodata answers are the result for that name.
+    With a specific RR instead of a domain name, that specific record is
+    removed from the local data, and not all the RR data.
 
 
 @@UAHL@unbound-control.commands@local_zones@@

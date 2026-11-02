@@ -366,6 +366,10 @@ These options are part of the ``server:`` section.
     Larger numbers need extra resources from the operating system.
     For performance a very large value is best, use libevent to make this
     possible.
+    Should be higher (preferably double) than the value of
+    :ref:`num-queries-per-thread<unbound.conf.num-queries-per-thread>` to
+    account for cases where the request list is full and avoid file descriptor
+    starvation.
 
     Default: 4096 (libevent) / 960 (minievent) / 48 (windows)
 
@@ -638,7 +642,7 @@ These options are part of the ``server:`` section.
 
 @@UAHL@unbound.conf@so-sndbuf@@: *<number>*
     If not 0, then set the SO_SNDBUF socket option to get more buffer space on
-    UDP port 53 outgoing queries.
+    UDP port 53 outgoing responses.
     This for very busy servers handles spikes in answer traffic, otherwise:
 
     .. code-block:: text
@@ -1044,9 +1048,13 @@ These options are part of the ``server:`` section.
     certificate is in the :ref:`tls-service-pem<unbound.conf.tls-service-pem>`
     file and it must also be specified if
     :ref:`tls-service-key<unbound.conf.tls-service-key>` is specified.
-    Enabling or disabling this service requires a restart (a reload is not
-    enough), because the key is read while root permissions are held and before
-    chroot (if any).
+    If the key is stored with root permissions or outside of chroot, then
+    a change or enabling or disabling requires a restart (a reload is not
+    enough).
+    But if the key file (and tls-service-pem file) are accessible, then they
+    are read in on reload, and fast_reload.
+    The server checks the modification time of the file (and the filename)
+    to see if the file has changed for reload.
     The ports enabled implicitly or explicitly via
     :ref:`tls-port<unbound.conf.tls-port>` and
     :ref:`https-port<unbound.conf.https-port>` do not provide normal DNS TCP
@@ -1172,25 +1180,19 @@ These options are part of the ``server:`` section.
 @@UAHL@unbound.conf@tls-use-sni@@: *<yes or no>*
     Enable or disable sending the SNI extension on TLS connections.
 
-    .. note:: Changing the value requires a reload.
+    .. note:: Changing the value requires a restart.
 
     Default: yes
 
 
-@@UAHL@unbound.conf@tls-use-system-policy-versions@@: *<yes or no>*
-    Enable or disable general-puspose version-flexible TLS server configuration
-    when serving TLS.
-    This will allow the whole list of available TLS versions provided by the
-    crypto library, which may have been further restricted by the system's
-    crypto policy.
+@@UAHL@unbound.conf@tls-protocols@@: *"<list of protocols>"*
+    Specify the allowed TLS protocol versions to use, in no particular order.
+    Possible values are ``TLSv1.2`` and ``TLSv1.3``.
+    Enclose list of protocols in quotes (``""``) and put spaces between them.
 
-    By default Unbound only uses the latest available TLS version.
+    .. note:: Changing the value requires a restart.
 
-    .. caution:: Use only if you want to support legacy TLS client connections.
-
-    .. note:: Changing the value requires a reload.
-
-    Default: no
+    Default: "TLSv1.2 TLSv1.3"
 
 
 @@UAHL@unbound.conf@pad-responses@@: *<yes or no>*
@@ -1836,13 +1838,15 @@ These options are part of the ``server:`` section.
 
 
 @@UAHL@unbound.conf@harden-short-bufsize@@: *<yes or no>*
-    Very small EDNS buffer sizes from queries are ignored.
+    Very small EDNS buffer sizes from queries are ignored and are instead
+    set to the normal UDP packet size (512 bytes).
 
     Default: yes (per :rfc:`6891`)
 
 
 @@UAHL@unbound.conf@harden-large-queries@@: *<yes or no>*
     Very large queries are ignored.
+    The cutoff value is chosen to be the normal UDP packet size (512 bytes).
     Default is no, since it is legal protocol wise to send these, and could be
     necessary for operation if TSIG or EDNS payload is very large.
 
@@ -1950,6 +1954,17 @@ These options are part of the ``server:`` section.
     Default: no
 
 
+@@UAHL@unbound.conf@harden-cname-follow@@: *<yes or no>*
+    Harden CNAME redirections by following them.
+    If no, then upstream CNAME and DNAME redirections are allowed in a
+    response without checking with further messages if those are valid.
+    It can only really be disabled safely on localhost net or encrypted
+    connectivity.
+    Default is on to protect the cache integrity.
+
+    Default: yes
+
+
 @@UAHL@unbound.conf@use-caps-for-id@@: *<yes or no>*
     Use 0x20-encoded random bits in the query to foil spoof attempts.
     This perturbs the lowercase and uppercase of query names sent to authority
@@ -2012,6 +2027,11 @@ These options are part of the ``server:`` section.
     turned into a network proxy, allowing remote access through the browser to
     other parts of your private network.
 
+    The option removes resource records of types A, AAAA, SVCB and HTTPS
+    that match the filter.
+    Inside the SVCB and HTTPS records, the svcparams of type ipv4hint
+    and ipv6hint are checked for matches.
+
     Some names can be allowed to contain your private addresses, by default all
     the :ref:`local-data<unbound.conf.local-data>` that you configured is
     allowed to, and you can specify additional names using
@@ -2048,6 +2068,13 @@ These options are part of the ``server:`` section.
     flushing away any poison.
     A value of 10 million is suggested.
 
+    It is useful to add 0.0.0.0/8 and '::' to the
+    :ref:`do-not-query-address<unbound.conf.do-not-query-address>` list.
+    Otherwise they may be answered, from localhost, and the different source
+    makes an unwanted reply that unnecessarily ticks up.
+    The :ref:`do-not-query-localhost<unbound.conf.do-not-query-localhost>`
+    option includes them, the zero subnets, when it is enabled.
+
     Default: 0 (disabled)
 
 
@@ -2063,7 +2090,10 @@ These options are part of the ``server:`` section.
 @@UAHL@unbound.conf@do-not-query-localhost@@: *<yes or no>*
     If yes, localhost is added to the
     :ref:`do-not-query-address<unbound.conf.do-not-query-address>` entries,
-    both IPv6 ``::1`` and IPv4 ``127.0.0.1/8``.
+    both IPv4 ``127.0.0.1/8`` (also ``::ffff:127.0.0.0/104``) and IPv6 ``::1``.
+    Additionally, the zero subnets ``0.0.0.0/8`` (also ``::ffff:0:0/96``) and
+    ``::`` are added to the list since on some systems they route to
+    localhost as well.
     If no, then localhost can be used to send queries to.
 
     Default: yes
@@ -2093,6 +2123,8 @@ These options are part of the ``server:`` section.
     If disabled, Unbound responds with a short list of resource records if some
     can be found in the cache and makes the upstream type ANY query if there
     are none.
+    The option stops the DNSSEC validation from processing, possibly lengthy,
+    ANY responses, when the option is enabled.
 
     Default: no
 
@@ -2139,11 +2171,12 @@ These options are part of the ``server:`` section.
         The ordering of the modules is significant, the order decides the order
         of processing.
 
-    Setting this to just "iterator" will result in a non-validating server.
-    Setting this to "validator iterator" will turn on DNSSEC validation.
+    Setting this to just ``"iterator"`` results in a non-validating server.
+    Setting this to ``"validator iterator"`` (default) enables the DNSSEC
+    validator module but not DNSSEC validation.
 
     .. note::
-        You must also set trust-anchors for validation to be useful.
+        To turn on DNSSEC validation you must configure trust-anchors.
 
     Adding ``respip`` to the front will cause RPZ processing to be done on all
     queries.
@@ -2209,6 +2242,9 @@ These options are part of the ``server:`` section.
     "key"; };`` clauses are read.
     It is possible to use wildcards with this statement, the wildcard is
     expanded on start and on reload.
+
+    A wildcard that matches no files is not an error: the entry loads no
+    trust anchors, and the condition is logged at operational verbosity.
 
     Default: "" (no trusted keys file)
 
@@ -2304,7 +2340,7 @@ These options are part of the ``server:`` section.
     Use this setting to protect the users that rely on this validator for
     authentication from potentially bad data in the additional section.
 
-    Default: yes
+    Default: no
 
 
 @@UAHL@unbound.conf@val-log-level@@: *<number>*
@@ -2576,6 +2612,9 @@ These options are part of the ``server:`` section.
     :ref:`inform_redirect<unbound.conf.local-zone.type.inform_redirect>`,
     :ref:`always_transparent<unbound.conf.local-zone.type.always_transparent>`,
     :ref:`block_a<unbound.conf.local-zone.type.block_a>`,
+    :ref:`block_aaaa<unbound.conf.local-zone.type.block_aaaa>`,
+    :ref:`block_a_wdata<unbound.conf.local-zone.type.block_a_wdata>`,
+    :ref:`block_aaaa_wdata<unbound.conf.local-zone.type.block_aaaa_wdata>`,
     :ref:`always_refuse<unbound.conf.local-zone.type.always_refuse>`,
     :ref:`always_nxdomain<unbound.conf.local-zone.type.always_nxdomain>`,
     :ref:`always_null<unbound.conf.local-zone.type.always_null>`,
@@ -2662,6 +2701,33 @@ These options are part of the ``server:`` section.
         redirected, so that users with web browsers cannot access sites with
         suffix example.com.
 
+        A ``CNAME`` record can also be provided via local-data:
+
+        .. code-block:: text
+
+            local-zone: "example.com." redirect
+            local-data: "example.com. CNAME www.example.org."
+
+        In that case, the ``CNAME`` is resolved and the answer
+        includes resolved target records as well.
+        The ``CNAME`` record has to be with the zone name of the local-zone,
+        and there can be one CNAME, not more.
+        The ``CNAME`` record has to be at the zone apex of the
+        ``redirect`` zone, then it is used for redirection.
+        The resolution proceeds with upstream DNS resolution, and
+        that does not include the lookup in local zones.
+        So the record is not able to point in local zones, but it
+        can point to upstream DNS answers.
+
+        ``CNAME`` resolution is supported only in type ``redirect``
+        local-zone, and in type ``inform_redirect`` local-zone.
+
+        As different from ``CNAME`` records that are used elsewhere, in
+        the ``redirect`` type local-zone, it is supported that in the target
+        of the record a wildcard label gets expanded to the query name, with
+        for example: ``example.com. CNAME *.foo.net.`` gets expanded
+        to ``www.example.com. CNAME www.example.com.foo.net.``.
+
     @@UAHL@unbound.conf.local-zone.type@inform@@
         The query is answered normally, same as
         :ref:`transparent<unbound.conf.local-zone.type.transparent>`.
@@ -2698,9 +2764,32 @@ These options are part of the ``server:`` section.
         Useful in cases when there is a need to explicitly force all apps to
         use IPv6 protocol and avoid any queries to IPv4.
 
+    @@UAHL@unbound.conf.local-zone.type@block_aaaa@@
+        Like :ref:`transparent<unbound.conf.local-zone.type.transparent>` or
+        :ref:`block_a<unbound.conf.local-zone.type.block_a>`, but
+        ignores local data and resolves normally all query types excluding AAAA.
+        For AAAA queries it unconditionally returns NODATA.
+        Useful in cases when there is a need to explicitly force all apps to
+        use IPv4 protocol and avoid any queries to IPv6.
+
+    @@UAHL@unbound.conf.local-zone.type@block_a_wdata@@
+        Like :ref:`block_a<unbound.conf.local-zone.type.block_a>`, but
+        uses local data if present.
+        If there is local data that is returned, and it acts like transparent.
+        For A queries it returns NODATA.
+
+    @@UAHL@unbound.conf.local-zone.type@block_aaaa_wdata@@
+        Like :ref:`block_aaaa<unbound.conf.local-zone.type.block_aaaa>`, but
+        uses local data if present.
+        If there is local data that is returned, and it acts like transparent.
+        For AAAA queries it returns NODATA.
+
     @@UAHL@unbound.conf.local-zone.type@always_refuse@@
         Like :ref:`refuse<unbound.conf.local-zone.type.refuse>`, but ignores
         local data and refuses the query.
+        This type also blocks queries of type DS for the zone name.
+        That can break the DNSSEC chain of trust, but it is refused anyway.
+        The block for type DS assists in more completely blocking the zone.
 
     @@UAHL@unbound.conf.local-zone.type@always_nxdomain@@
         Like :ref:`static<unbound.conf.local-zone.type.static>`, but ignores
@@ -3041,6 +3130,18 @@ These options are part of the ``server:`` section.
     overloaded with random names, and keeps unbound from sending traffic to the
     nameservers for those zones.
 
+    It is intended to count the number of queries towards the nameservers
+    for the zone, and keep those queries limited.
+    When there is a delegation that needs a lot of lookups, those are
+    charged in the counters for the destination, the target name, of
+    the NS records.
+    Since that is where the nameserver lookup queries are sent to.
+    That keeps the target, the victim domain, from having many queries.
+    With the :ref:`ratelimit-factor<unbound.conf.ratelimit-factor>`, some
+    genuine queries that are also made to the target zone, can filter
+    through, and then end up in cache, where the genuine answers have
+    a chance to collect, keeping up service to some extent.
+
     .. note:: Configured forwarders are excluded from ratelimiting.
 
     Default: 0
@@ -3223,6 +3324,10 @@ These options are part of the ``server:`` section.
     Hard limit on the number of times Unbound is allowed to restart a query
     upon encountering a CNAME record.
     Results in SERVFAIL when reached.
+    This applies to chained CNAME records but not sporadic CNAME records that
+    could be encountered in the lifetime of the query's resolution effort.
+    When a CNAME chain concludes, the counter keeping track of this limit is
+    reset.
     Changing this value needs caution as it can allow long CNAME chains to be
     accepted, where Unbound needs to verify (resolve) each link individually.
 
@@ -3247,6 +3352,15 @@ These options are part of the ``server:`` section.
     Default: 11
 
 
+@@UAHL@unbound.conf@iter-scrub-rrsig@@: *<number>*
+    Limit on the number of RRSIGs allowed for an RRset, from the iterator
+    scrubber.
+    This protects against an overly large number of RRSIGs.
+    Clips off the remainder of the RRSIG list at that point.
+
+    Default: 8
+
+
 @@UAHL@unbound.conf@max-global-quota@@: *<number>*
     Limit on the number of upstream queries sent out for an incoming query and
     its subqueries from recursion.
@@ -3262,6 +3376,26 @@ These options are part of the ``server:`` section.
     same zone as a spoofed packet.
 
     Default: yes
+
+
+@@UAHL@unbound.conf@val-validation-attempts@@: *<number>*
+    Limit on the number of DNSSEC validation attempts for a query.
+    This protects against too large numbers of cryptographic operations,
+    like for a deep delegation chain.
+    This counts attempts to validate RRSIGs.
+    When it is exceeded, the query fails.
+
+    Default: 32
+
+
+@@UAHL@unbound.conf@val-hash-attempts@@: *<number>*
+    Limit on the number of DNSSEC hash attempts for a query.
+    This protects against too large numbers of cryptographic operations,
+    like for a deep delegation chain.
+    This counts DS hash attempts to match DNSKEYs.
+    When it is exceeded, the query fails.
+
+    Default: 32
 
 
 @@UAHL@unbound.conf@fast-server-permil@@: *<number>*
@@ -3411,7 +3545,7 @@ To setup the correct self-signed certificates use the
     Default: no
 
 
-@@UAHL@unbound.conf.remote@control-interface@@: *<IP address or interface name or path>*
+@@UAHL@unbound.conf.remote@control-interface@@: *<IP address or interface name[@port] or path>*
     Give IPv4 or IPv6 addresses or local socket path to listen on for control
     commands.
     If an interface name is used instead of an IP address, the list of IP
@@ -3961,6 +4095,31 @@ fallback activates to fetch from the upstream instead of the SERVFAIL.
     If the file does not exist or is empty, Unbound will attempt to fetch zone
     data (eg. from the primary servers).
 
+
+@@UAHL@unbound.conf.auth@max-transfer-size@@: *<number>*
+    Number of bytes size of the maximum zone transfer size.
+    Larger transfers, over AXFR, IXFR and HTTP, are not allowed.
+    A plain number is in bytes, append 'k', 'm' or 'g' for kilobytes, megabytes
+    or gigabytes (1024*1024 bytes in a megabyte).
+    The value ``0`` disables the feature.
+
+    Only consider for untrusted/misbehaving primaries that could hog resources
+    and bring down the resolver.
+
+    Default: 0
+
+
+@@UAHL@unbound.conf.auth@max-transfer-time@@: *<msec>*
+    Maximum time in milliseconds that a zone transfer is allowed to take from
+    the start.
+    The value ``0`` disables the feature.
+
+    Only consider for untrusted/misbehaving primaries that could hog resources
+    and bring down the resolver.
+
+    Default: 0
+
+
 .. _unbound.conf.view:
 
 View Options
@@ -4160,6 +4319,17 @@ servers.
 @@UAHL@unbound.conf.nat64@nat64-prefix@@: *<IPv6 prefix>*
     Use a specific NAT64 prefix to reach IPv4-only servers.
     The prefix length must be one of /32, /40, /48, /56, /64 or /96.
+
+    The NAT64 prefix is allowed by the
+    :ref:`do-not-query-address<unbound.conf.do-not-query-address>` option,
+    so that there is a clear outcome of addresses in both; the NAT64 prefix
+    is allowed.
+    The IPv4 address could be filtered by the
+    :ref:`do-not-query-address<unbound.conf.do-not-query-address>` option,
+    if needed.
+    Allowing the NAT64 prefix is useful when using do-not-query-address
+    for a cluster of machines that is IPv6-only and uses NAT64, but does
+    not have internet access.
 
     Default: 64:ff9b::/96 (same as :ref:`dns64-prefix<unbound.conf.dns64.dns64-prefix>`)
 
@@ -5030,6 +5200,10 @@ answer queries with that content.
     because it may not have that when retrieving that data, instead use a plain
     IP address to avoid a circular dependency on retrieving that IP address.
 
+    Every number of IXFR transfers, a full AXFR is performed.
+    This is to consolidate the rpz memory, that would otherwise grow.
+    The fixed value is after 5 IXFR transfers.
+
 
 @@UAHL@unbound.conf.rpz@master@@: *<IP address or host name>*
     Alternate syntax for :ref:`primary<unbound.conf.rpz.primary>`.
@@ -5129,6 +5303,31 @@ answer queries with that content.
 
     If no tags are specified the policies from this section will be applied for
     all clients.
+
+
+@@UAHL@unbound.conf.rpz@max-transfer-size@@: *<number>*
+    Number of bytes size of the maximum zone transfer size.
+    Larger transfers, over AXFR, IXFR and HTTP, are not allowed.
+    A plain number is in bytes, append 'k', 'm' or 'g' for kilobytes, megabytes
+    or gigabytes (1024*1024 bytes in a megabyte).
+    The value ``0`` disables the feature.
+
+    Only consider for untrusted/misbehaving primaries that could hog resources
+    and bring down the resolver.
+
+    Default: 0
+
+
+@@UAHL@unbound.conf.rpz@max-transfer-time@@: *<msec>*
+    Maximum time in milliseconds that a zone transfer is allowed to take from
+    the start.
+    The value ``0`` disables the feature.
+
+    Only consider for untrusted/misbehaving primaries that could hog resources
+    and bring down the resolver.
+
+    Default: 0
+
 
 Memory Control Example
 ----------------------

@@ -146,7 +146,9 @@ submit_query(struct http2_session* h2_session, struct sldns_buffer* buf)
 {
 	int32_t stream_id;
 	struct http2_stream* h2_stream;
-	nghttp2_nv headers[5];
+	nghttp2_nv headers[6];
+	size_t num_headers = 5;
+	char clen[16];
 	char* qb64;
 	size_t qb64_size;
 	size_t qb64_expected_size;
@@ -194,9 +196,16 @@ submit_query(struct http2_session* h2_session, struct sldns_buffer* buf)
 	headers[3].value = (uint8_t*)h2_session->authority;
 	headers[4].name = (uint8_t*)"content-type";
 	headers[4].value = (uint8_t*)h2_session->content_type;
+	if(h2_session->post) {
+		snprintf(clen, sizeof(clen), "%u",
+			(unsigned)sldns_buffer_remaining(buf));
+		headers[5].name = (uint8_t*)"content-length";
+		headers[5].value = (uint8_t*)clen;
+		num_headers = 6;
+	}
 
 	printf("Request headers\n");
-	for(i=0; i<sizeof(headers)/sizeof(headers[0]); i++) {
+	for(i=0; i<num_headers; i++) {
 		headers[i].namelen = strlen((char*)headers[i].name);
 		headers[i].valuelen = strlen((char*)headers[i].value);
 		headers[i].flags = NGHTTP2_NV_FLAG_NONE;
@@ -204,7 +213,7 @@ submit_query(struct http2_session* h2_session, struct sldns_buffer* buf)
 	}
 
 	stream_id = nghttp2_submit_request(h2_session->session, NULL, headers,
-		sizeof(headers)/sizeof(headers[0]),
+		num_headers,
 		(h2_session->post) ? &data_prd : NULL, h2_stream);
 	if(stream_id < 0) {
 		printf("Failed to submit nghttp2 request");
@@ -642,12 +651,20 @@ int main(int argc, char** argv)
 #else
 		OPENSSL_init_crypto(OPENSSL_INIT_ADD_ALL_CIPHERS
 			| OPENSSL_INIT_ADD_ALL_DIGESTS
-			| OPENSSL_INIT_LOAD_CRYPTO_STRINGS, NULL);
+			| OPENSSL_INIT_LOAD_CRYPTO_STRINGS
+#  if defined(OPENSSL_INIT_NO_LOAD_CONFIG) && defined(UB_ON_WINDOWS)
+			| OPENSSL_INIT_NO_LOAD_CONFIG
+#  endif
+			, NULL);
 #endif
 #if OPENSSL_VERSION_NUMBER < 0x10100000 || !defined(HAVE_OPENSSL_INIT_SSL)
 		(void)SSL_library_init();
 #else
-		(void)OPENSSL_init_ssl(OPENSSL_INIT_LOAD_SSL_STRINGS, NULL);
+		(void)OPENSSL_init_ssl(OPENSSL_INIT_LOAD_SSL_STRINGS
+#  if defined(OPENSSL_INIT_NO_LOAD_CONFIG) && defined(UB_ON_WINDOWS)
+			| OPENSSL_INIT_NO_LOAD_CONFIG
+#  endif
+			, NULL);
 #endif
 	}
 	run(h2_session, port, no_tls, argc, argv);

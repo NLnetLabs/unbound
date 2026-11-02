@@ -13,7 +13,6 @@
 #pragma GCC diagnostic ignored "-Wsign-compare"
 #endif
 
-#include <ctype.h>
 #include <strings.h>
 #ifdef HAVE_GLOB_H
 # include <glob.h>
@@ -262,7 +261,7 @@ tls-session-ticket-keys{COLON}	{ YDVAR(1, VAR_TLS_SESSION_TICKET_KEYS) }
 tls-ciphers{COLON}		{ YDVAR(1, VAR_TLS_CIPHERS) }
 tls-ciphersuites{COLON}		{ YDVAR(1, VAR_TLS_CIPHERSUITES) }
 tls-use-sni{COLON}		{ YDVAR(1, VAR_TLS_USE_SNI) }
-tls-use-system-policy-versions{COLON}		{ YDVAR(1, VAR_TLS_USE_SYSTEM_POLICY_VERSIONS) }
+tls-protocols{COLON}		{ YDVAR(1, VAR_TLS_PROTOCOLS) }
 https-port{COLON}		{ YDVAR(1, VAR_HTTPS_PORT) }
 http-endpoint{COLON}		{ YDVAR(1, VAR_HTTP_ENDPOINT) }
 http-max-streams{COLON}		{ YDVAR(1, VAR_HTTP_MAX_STREAMS) }
@@ -324,6 +323,7 @@ harden-below-nxdomain{COLON}	{ YDVAR(1, VAR_HARDEN_BELOW_NXDOMAIN) }
 harden-referral-path{COLON}	{ YDVAR(1, VAR_HARDEN_REFERRAL_PATH) }
 harden-algo-downgrade{COLON}	{ YDVAR(1, VAR_HARDEN_ALGO_DOWNGRADE) }
 harden-unknown-additional{COLON}	{ YDVAR(1, VAR_HARDEN_UNKNOWN_ADDITIONAL) }
+harden-cname-follow{COLON}	{ YDVAR(1, VAR_HARDEN_CNAME_FOLLOW) }
 use-caps-for-id{COLON}		{ YDVAR(1, VAR_USE_CAPS_FOR_ID) }
 caps-whitelist{COLON}		{ YDVAR(1, VAR_CAPS_WHITELIST) }
 caps-exempt{COLON}		{ YDVAR(1, VAR_CAPS_WHITELIST) }
@@ -607,7 +607,12 @@ dns-error-reporting{COLON}	{ YDVAR(1, VAR_DNS_ERROR_REPORTING ) }
 proxy-protocol-port{COLON}	{ YDVAR(1, VAR_PROXY_PROTOCOL_PORT) }
 iter-scrub-ns{COLON}		{ YDVAR(1, VAR_ITER_SCRUB_NS) }
 iter-scrub-cname{COLON}		{ YDVAR(1, VAR_ITER_SCRUB_CNAME) }
+iter-scrub-rrsig{COLON}		{ YDVAR(1, VAR_ITER_SCRUB_RRSIG) }
 max-global-quota{COLON}		{ YDVAR(1, VAR_MAX_GLOBAL_QUOTA) }
+val-validation-attempts{COLON}	{ YDVAR(1, VAR_VAL_VALIDATION_ATTEMPTS) }
+val-hash-attempts{COLON}	{ YDVAR(1, VAR_VAL_HASH_ATTEMPTS) }
+max-transfer-size{COLON}	{ YDVAR(1, VAR_MAX_TRANSFER_SIZE) }
+max-transfer-time{COLON}	{ YDVAR(1, VAR_MAX_TRANSFER_TIME) }
 iter-scrub-promiscuous{COLON}	{ YDVAR(1, VAR_ITER_SCRUB_PROMISCUOUS) }
 <INITIAL,val>{NEWLINE}		{ LEXOUT(("NL\n")); cfg_parser->line++; }
 

@@ -42,7 +42,7 @@ unbound-checkconf(8)
 Synopsis
 --------
 
-**unbound-checkconf** [``-hf``] [``-o option``] [cfgfile]
+**unbound-checkconf** [``-ahf``] [``-o option``] [cfgfile]
 
 Description
 -----------
@@ -53,6 +53,11 @@ The config file syntax is described in
 :doc:`unbound.conf(5)</manpages/unbound.conf>`.
 
 The available options are:
+
+.. option:: -a
+
+    Also read the zonefiles for auth-zones and RPZ.
+    It checks if the syntax is okay of the zonefiles.
 
 .. option:: -h
 

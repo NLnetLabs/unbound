@@ -307,6 +307,11 @@ struct dt_io_thread* dt_io_thread_create(void)
 	lock_basic_init(&dtio->wakeup_timer_lock);
 	lock_protect(&dtio->wakeup_timer_lock, &dtio->wakeup_timer_enabled,
 		sizeof(dtio->wakeup_timer_enabled));
+	lock_basic_init(&dtio->io_list_lock);
+	lock_protect(&dtio->io_list_lock, &dtio->io_list,
+		sizeof(dtio->io_list));
+	lock_protect(&dtio->io_list_lock, &dtio->io_list_iter,
+		sizeof(dtio->io_list_iter));
 	return dtio;
 }
 
@@ -315,6 +320,7 @@ void dt_io_thread_delete(struct dt_io_thread* dtio)
 	struct dt_io_list_item* item, *nextitem;
 	if(!dtio) return;
 	lock_basic_destroy(&dtio->wakeup_timer_lock);
+	lock_basic_destroy(&dtio->io_list_lock);
 	item=dtio->io_list;
 	while(item) {
 		nextitem = item->next;
@@ -463,9 +469,11 @@ int dt_io_thread_register_queue(struct dt_io_thread* dtio,
 	mq->dtio = dtio;
 	lock_basic_unlock(&mq->lock);
 	item->queue = mq;
+	lock_basic_lock(&dtio->io_list_lock);
 	item->next = dtio->io_list;
 	dtio->io_list = item;
 	dtio->io_list_iter = NULL;
+	lock_basic_unlock(&dtio->io_list_lock);
 	return 1;
 }
 
@@ -474,6 +482,7 @@ void dt_io_thread_unregister_queue(struct dt_io_thread* dtio,
 {
 	struct dt_io_list_item* item, *prev=NULL;
 	if(!dtio) return;
+	lock_basic_lock(&dtio->io_list_lock);
 	item = dtio->io_list;
 	while(item) {
 		if(item->queue == mq) {
@@ -486,11 +495,13 @@ void dt_io_thread_unregister_queue(struct dt_io_thread* dtio,
 			lock_basic_unlock(&item->queue->lock);
 			free(item);
 			dtio->io_list_iter = NULL;
+			lock_basic_unlock(&dtio->io_list_lock);
 			return;
 		}
 		prev = item;
 		item = item->next;
 	}
+	lock_basic_unlock(&dtio->io_list_lock);
 }
 
 /** pick a message from the queue, the routine locks and unlocks,
@@ -537,6 +548,7 @@ static int dtio_find_msg(struct dt_io_thread* dtio)
 {
 	struct dt_io_list_item *spot, *item;
 
+	lock_basic_lock(&dtio->io_list_lock);
 	spot = dtio->io_list_iter;
 	/* use the next queue for the next message lookup,
 	 * if we hit the end(NULL) the NULL restarts the iter at start. */
@@ -548,17 +560,22 @@ static int dtio_find_msg(struct dt_io_thread* dtio)
 	/* scan from spot to end-of-io_list */
 	item = spot;
 	while(item) {
-		if(dtio_find_in_queue(dtio, item->queue))
+		if(dtio_find_in_queue(dtio, item->queue)) {
+			lock_basic_unlock(&dtio->io_list_lock);
 			return 1;
+		}
 		item = item->next;
 	}
 	/* scan starting at the start-of-list (to wrap around the end) */
 	item = dtio->io_list;
 	while(item) {
-		if(dtio_find_in_queue(dtio, item->queue))
+		if(dtio_find_in_queue(dtio, item->queue)) {
+			lock_basic_unlock(&dtio->io_list_lock);
 			return 1;
+		}
 		item = item->next;
 	}
+	lock_basic_unlock(&dtio->io_list_lock);
 	return 0;
 }
 
@@ -2133,6 +2150,8 @@ static void* dnstap_io(void* arg)
 	struct dt_io_thread* dtio = (struct dt_io_thread*)arg;
 	time_t secs = 0;
 	struct timeval now;
+	const char name[16] = "unbound/dnstap"; /* seems to be the safest size
+						   between different OSes */
 
 #if defined(HAVE_GETTID) && !defined(THREADS_DISABLED)
 	dtio->thread_tid = gettid();
@@ -2141,6 +2160,8 @@ static void* dnstap_io(void* arg)
 	else
 #endif
 		log_thread_set(&dtio->threadnum);
+
+	ub_thread_setname(ub_thread_self(), name);
 
 	/* setup */
 	verbose(VERB_ALGO, "start dnstap io thread");
