@@ -1228,10 +1228,10 @@ az_insert_rr_as_rdata(struct auth_zone* z, uint8_t* dname, size_t dname_len,
 		log_err("wrong class for RR");
 		return 0;
 	}
-	if(rr_type == LDNS_RR_TYPE_A && rdatalen != 6 /* 2 + 4 */) {
+	if(rr_type == LDNS_RR_TYPE_A && rdatalen != 4) {
 		log_err("malformed A record");
 		return 0;
-	} else if(rr_type == LDNS_RR_TYPE_AAAA && rdatalen != 18 /* 2 + 16 */) {
+	} else if(rr_type == LDNS_RR_TYPE_AAAA && rdatalen != 16) {
 		log_err("malformed AAAA record");
 		return 0;
 	}
