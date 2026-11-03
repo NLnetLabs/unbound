@@ -3398,6 +3398,34 @@ These options are part of the ``server:`` section.
     Default: 32
 
 
+@@UAHL@unbound.conf@scrub-glue-count@@: *<number>*
+    Limit on the number of glue RRs from upstream responses.
+    This protects against too large numbers of additional section records.
+    When it is exceeded, the remainder is removed from the message.
+
+    Default: 100
+
+
+@@UAHL@unbound.conf@delegpt-max-addr@@: *<number>*
+    The max number of addresses in a delegation point.
+    This protects the internals of the iterator from very long lists of
+    items to examine.
+    That stops it from looping over them to find new glue, cache lookups,
+    and sending queries there.
+
+    Default: 100
+
+
+@@UAHL@unbound.conf@delegpt-max-ns@@: *<number>*
+    The max number of nameserver names in a delegation point.
+    This protects the internals of the iterator from a very long list
+    of nameserver names to examine.
+    That stops it from looping over that list to find names in cache,
+    and making queries there.
+
+    Default: 20
+
+
 @@UAHL@unbound.conf@fast-server-permil@@: *<number>*
     Specify how many times out of 1000 to pick from the set of fastest servers.
     0 turns the feature off.

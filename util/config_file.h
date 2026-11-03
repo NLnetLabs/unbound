@@ -807,6 +807,12 @@ struct config_file {
 	/** Should the iterator scrub promiscuous NS rrsets, from positive
 	 * answers. */
 	int iter_scrub_promiscuous;
+	/** limit on number of glue RRs in a response. */
+	size_t scrub_glue_count;
+	/** Max number of addresses in a delegation point. */
+	int delegpt_max_addr;
+	/** Max number of nameserver names in a delagation point. */
+	int delegpt_max_ns;
 };
 
 /** from cfg username, after daemonize setup performed */

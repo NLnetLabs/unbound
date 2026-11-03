@@ -614,6 +614,9 @@ val-hash-attempts{COLON}	{ YDVAR(1, VAR_VAL_HASH_ATTEMPTS) }
 max-transfer-size{COLON}	{ YDVAR(1, VAR_MAX_TRANSFER_SIZE) }
 max-transfer-time{COLON}	{ YDVAR(1, VAR_MAX_TRANSFER_TIME) }
 iter-scrub-promiscuous{COLON}	{ YDVAR(1, VAR_ITER_SCRUB_PROMISCUOUS) }
+scrub-glue-count{COLON}		{ YDVAR(1, VAR_SCRUB_GLUE_COUNT) }
+delegpt-max-addr{COLON}		{ YDVAR(1, VAR_DELEGPT_MAX_ADDR) }
+delegpt-max-ns{COLON}		{ YDVAR(1, VAR_DELEGPT_MAX_NS) }
 <INITIAL,val>{NEWLINE}		{ LEXOUT(("NL\n")); cfg_parser->line++; }
 
 	/* Quoted strings. Strip leading and ending quotes */

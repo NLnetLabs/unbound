@@ -63,6 +63,7 @@
 #include "sldns/wire2str.h"
 #include "sldns/parseutil.h"
 #include "iterator/iterator.h"
+#include "iterator/iter_delegpt.h"
 #ifdef HAVE_SYS_STAT_H
 #include <sys/stat.h>
 #endif
@@ -432,6 +433,9 @@ config_create(void)
 	cfg->max_global_quota = 200;
 	cfg->val_validation_attempts = 32;
 	cfg->val_hash_attempts = 32;
+	cfg->scrub_glue_count = 100;
+	cfg->delegpt_max_addr = 100;
+	cfg->delegpt_max_ns = 20;
 	return cfg;
 error_exit:
 	config_delete(cfg);
@@ -791,6 +795,9 @@ int config_set_option(struct config_file* cfg, const char* opt,
 	else S_NUMBER_OR_ZERO("max-global-quota:", max_global_quota)
 	else S_NUMBER_OR_ZERO("val-validation-attempts:", val_validation_attempts)
 	else S_NUMBER_OR_ZERO("val-hash-attempts:", val_hash_attempts)
+	else S_SIZET_OR_ZERO("scrub-glue-count:", scrub_glue_count)
+	else S_NUMBER_OR_ZERO("delegpt-max-addr:", delegpt_max_addr)
+	else S_NUMBER_OR_ZERO("delegpt-max-ns:", delegpt_max_ns)
 	else S_YNO("serve-original-ttl:", serve_original_ttl)
 	else S_STR("val-nsec3-keysize-iterations:", val_nsec3_key_iterations)
 	else S_YNO("zonemd-permissive-mode:", zonemd_permissive_mode)
@@ -1274,6 +1281,9 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_DEC(opt, "max-global-quota", max_global_quota)
 	else O_DEC(opt, "val-validation-attempts", val_validation_attempts)
 	else O_DEC(opt, "val-hash-attempts", val_hash_attempts)
+	else O_UNS(opt, "scrub-glue-count", scrub_glue_count)
+	else O_DEC(opt, "delegpt-max-addr", delegpt_max_addr)
+	else O_DEC(opt, "delegpt-max-ns", delegpt_max_ns)
 	else O_YNO(opt, "serve-original-ttl", serve_original_ttl)
 	else O_STR(opt, "val-nsec3-keysize-iterations",val_nsec3_key_iterations)
 	else O_YNO(opt, "zonemd-permissive-mode", zonemd_permissive_mode)
@@ -2557,6 +2567,8 @@ config_apply(struct config_file* config)
 	stream_wait_max = config->stream_wait_size;
 	http2_query_buffer_max = config->http_query_buffer_size;
 	http2_response_buffer_max = config->http_response_buffer_size;
+	delegpt_max_addr = config->delegpt_max_addr;
+	delegpt_max_ns = config->delegpt_max_ns;
 }
 
 void config_lookup_uid(struct config_file* cfg)

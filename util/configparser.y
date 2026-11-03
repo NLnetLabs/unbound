@@ -220,7 +220,8 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_MAX_GLOBAL_QUOTA VAR_HARDEN_UNVERIFIED_GLUE VAR_LOG_TIME_ISO
 %token VAR_VAL_VALIDATION_ATTEMPTS VAR_VAL_HASH_ATTEMPTS
 %token VAR_ITER_SCRUB_PROMISCUOUS VAR_LOG_THREAD_ID
-%token VAR_HARDEN_CNAME_FOLLOW
+%token VAR_HARDEN_CNAME_FOLLOW VAR_SCRUB_GLUE_COUNT VAR_DELEGPT_MAX_ADDR
+%token VAR_DELEGPT_MAX_NS
 
 %%
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
@@ -365,7 +366,8 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_val_validation_attempts |
 	server_val_hash_attempts | server_iter_scrub_rrsig |
 	server_harden_unverified_glue | server_log_time_iso | server_iter_scrub_promiscuous |
-	server_harden_cname_follow
+	server_harden_cname_follow | server_scrub_glue_count |
+	server_delegpt_max_addr | server_delegpt_max_ns
 	;
 stub_clause: stubstart contents_stub
 	{
@@ -4304,6 +4306,33 @@ server_val_hash_attempts: VAR_VAL_HASH_ATTEMPTS STRING_ARG
 		if(atoi($2) == 0 && strcmp($2, "0") != 0)
 			yyerror("number expected");
 		else cfg_parser->cfg->val_hash_attempts = atoi($2);
+		free($2);
+	}
+	;
+server_scrub_glue_count: VAR_SCRUB_GLUE_COUNT STRING_ARG
+	{
+		OUTYY(("P(server_scrub_glue_count:%s)\n", $2));
+		if(atoi($2) == 0 && strcmp($2, "0") != 0)
+			yyerror("number expected");
+		else cfg_parser->cfg->scrub_glue_count = atoi($2);
+		free($2);
+	}
+	;
+server_delegpt_max_addr: VAR_DELEGPT_MAX_ADDR STRING_ARG
+	{
+		OUTYY(("P(server_delegpt_max_addr:%s)\n", $2));
+		if(atoi($2) == 0 && strcmp($2, "0") != 0)
+			yyerror("number expected");
+		else cfg_parser->cfg->delegpt_max_addr = atoi($2);
+		free($2);
+	}
+	;
+server_delegpt_max_ns: VAR_DELEGPT_MAX_NS STRING_ARG
+	{
+		OUTYY(("P(server_delegpt_max_ns:%s)\n", $2));
+		if(atoi($2) == 0 && strcmp($2, "0") != 0)
+			yyerror("number expected");
+		else cfg_parser->cfg->delegpt_max_ns = atoi($2);
 		free($2);
 	}
 	;

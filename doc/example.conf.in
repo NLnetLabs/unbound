@@ -210,6 +210,18 @@ server:
 	# Limit on number of DNSSEC hash attempts for a query.
 	# val-hash-attempts: 32
 
+	# Limit on number of glue RRs in a response. Protects against too
+	# much work on the response.
+	# scrub-glue-count: 100
+
+	# Max number of addresses in a delegation point. Protects against
+	# too much work to loop over them.
+	# delegpt-max-addr: 100
+
+	# Max number of nameserver names in a delegation point. Protects
+	# against too much work to loop over them.
+	# delegpt-max-ns: 20
+
 	# msec for waiting for an unknown server to reply.  Increase if you
 	# are behind a slow satellite link, to eg. 1128.
 	# unknown-server-time-limit: 376

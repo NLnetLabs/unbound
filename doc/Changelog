@@ -6,6 +6,10 @@
 	- Fix to limit the number of ns and address records that are
 	  used in a delegation point. Thanks to Toshifumi Sakaguchi
 	  for the report.
+	- Add configuration options scrub-glue-count: 100,
+	  delegpt-max-addr: 100, delegpt-max-ns: 20 to set the
+	  limits on the glue RR count, and delegation point number of
+	  addresses and nameserver names.
 
 26 October 2026: Yorgos
 	- Merge #1541 from Georg Haas: doc: example.conf: add example to

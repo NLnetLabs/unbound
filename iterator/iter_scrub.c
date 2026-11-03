@@ -857,7 +857,7 @@ scrub_normalize(sldns_buffer* pkt, struct msg_parse* msg,
 				continue;
 			}
 			num_glue += rrset->rr_count;
-			if(num_glue > 100 /* scrub_glue_count */) {
+			if(num_glue > env->cfg->scrub_glue_count) {
 				remove_rrset("normalize: removing too large "
 					"glue amount:", pkt, msg, prev, &rrset);
 				continue;
