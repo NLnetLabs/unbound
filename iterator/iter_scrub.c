@@ -501,6 +501,7 @@ scrub_normalize(sldns_buffer* pkt, struct msg_parse* msg,
 	size_t snamelen = qinfo->qname_len;
 	struct rrset_parse* rrset, *prev, *nsset=NULL;
 	int cname_length = 0; /* number of CNAMEs, or DNAMEs */
+	size_t num_glue = 0; /* number of A,AAAA RRs in additional */
 	int has_answer = 0; /* if answer section contains nonCNAME,nonDNAME */
 
 	if(FLAGS_GET_RCODE(msg->flags) != LDNS_RCODE_NOERROR &&
@@ -853,6 +854,12 @@ scrub_normalize(sldns_buffer* pkt, struct msg_parse* msg,
 			} else {
 				remove_rrset("normalize: removing irrelevant "
 					"RRset:", pkt, msg, prev, &rrset);
+				continue;
+			}
+			num_glue += rrset->rr_count;
+			if(num_glue > 100 /* scrub_glue_count */) {
+				remove_rrset("normalize: removing too large "
+					"glue amount:", pkt, msg, prev, &rrset);
 				continue;
 			}
 		}
