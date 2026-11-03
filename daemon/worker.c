@@ -1956,7 +1956,8 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 	/* If we may apply IP-based actions to the answer, build the client
 	 * information.  As this can be expensive, skip it if there is
 	 * absolutely no possibility of it. */
-	if((worker->daemon->use_response_ip || worker->daemon->use_rpz) &&
+	if((worker->daemon->use_response_ip || worker->daemon->use_rpz ||
+		worker->env.cfg->dns64_taglist) &&
 		(qinfo.qtype == LDNS_RR_TYPE_A ||
 		qinfo.qtype == LDNS_RR_TYPE_AAAA ||
 		qinfo.qtype == LDNS_RR_TYPE_ANY)) {
@@ -1981,7 +1982,9 @@ lookup_cache:
 	 * this is a two-pass operation, and lookup_qinfo is different for
 	 * each pass.  We should still pass the original qinfo to
 	 * answer_from_cache(), however, since it's used to build the reply. */
-	if(!edns_bypass_cache_stage(edns.opt_list_in, &worker->env)) {
+	if(!edns_bypass_cache_stage(edns.opt_list_in, &worker->env) &&
+		!(worker->env.cfg->dns64_taglist &&
+		qinfo.qtype == LDNS_RR_TYPE_AAAA)) {
 		is_expired_answer = 0;
 		is_secure_answer = 0;
 		h = query_info_hash(lookup_qinfo, sldns_buffer_read_u16_at(c->buffer, 2));

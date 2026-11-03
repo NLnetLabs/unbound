@@ -578,6 +578,10 @@ struct config_file {
 	int dns64_synthall;
 	/** ignore AAAAs for these domain names and use A record anyway */
 	struct config_strlist* dns64_ignore_aaaa;
+	/** tags that enable DNS64 processing for a client */
+	uint8_t* dns64_taglist;
+	/** length of the DNS64 tag bitlist */
+	size_t dns64_taglistlen;
 
 	/* NAT64 prefix; if unset defaults to dns64_prefix */
 	char* nat64_prefix;
