@@ -71,6 +71,10 @@ struct delegpt {
 	struct delegpt_addr* usable_list;
 	/** the list of returned targets; subset of target_list */
 	struct delegpt_addr* result_list;
+	/** Number of names on the list */
+	int num_ns;
+	/** Number of addresses on the list */
+	int num_addr;
 
 	/** if true, the NS RRset was bogus. All info is bad. */
 	int bogus;
@@ -176,6 +180,11 @@ struct delegpt_addr {
 	/** the TLS authentication name, (if not NULL) to use. */
 	char* tls_auth_name;
 };
+
+/** Max number of addresses in a delegation point. */
+extern int delegpt_max_addr;
+/** Max number of nameserver names in a delegation point. */
+extern int delegpt_max_ns;
 
 /**
  * Create new delegation point.

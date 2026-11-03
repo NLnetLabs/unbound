@@ -3,6 +3,9 @@
 	- Fix to remove too large glue amount with the scrubber from
 	  incoming upstream responses. Thanks to Liwen Xu from ETH
 	  Zurich for the report.
+	- Fix to limit the number of ns and address records that are
+	  used in a delegation point. Thanks to Toshifumi Sakaguchi
+	  for the report.
 
 26 October 2026: Yorgos
 	- Merge #1541 from Georg Haas: doc: example.conf: add example to
