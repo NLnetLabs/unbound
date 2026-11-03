@@ -433,7 +433,7 @@ config_create(void)
 	cfg->max_global_quota = 200;
 	cfg->val_validation_attempts = 32;
 	cfg->val_hash_attempts = 32;
-	cfg->scrub_glue_count = 100;
+	cfg->iter_scrub_glue_count = 100;
 	cfg->delegpt_max_addr = 100;
 	cfg->delegpt_max_ns = 20;
 	return cfg;
@@ -795,7 +795,7 @@ int config_set_option(struct config_file* cfg, const char* opt,
 	else S_NUMBER_OR_ZERO("max-global-quota:", max_global_quota)
 	else S_NUMBER_OR_ZERO("val-validation-attempts:", val_validation_attempts)
 	else S_NUMBER_OR_ZERO("val-hash-attempts:", val_hash_attempts)
-	else S_SIZET_OR_ZERO("scrub-glue-count:", scrub_glue_count)
+	else S_SIZET_OR_ZERO("iter-scrub-glue-count:", iter_scrub_glue_count)
 	else S_NUMBER_OR_ZERO("delegpt-max-addr:", delegpt_max_addr)
 	else S_NUMBER_OR_ZERO("delegpt-max-ns:", delegpt_max_ns)
 	else S_YNO("serve-original-ttl:", serve_original_ttl)
@@ -1281,7 +1281,7 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_DEC(opt, "max-global-quota", max_global_quota)
 	else O_DEC(opt, "val-validation-attempts", val_validation_attempts)
 	else O_DEC(opt, "val-hash-attempts", val_hash_attempts)
-	else O_UNS(opt, "scrub-glue-count", scrub_glue_count)
+	else O_UNS(opt, "iter-scrub-glue-count", iter_scrub_glue_count)
 	else O_DEC(opt, "delegpt-max-addr", delegpt_max_addr)
 	else O_DEC(opt, "delegpt-max-ns", delegpt_max_ns)
 	else O_YNO(opt, "serve-original-ttl", serve_original_ttl)

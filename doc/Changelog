@@ -10,6 +10,7 @@
 	  delegpt-max-addr: 100, delegpt-max-ns: 20 to set the
 	  limits on the glue RR count, and delegation point number of
 	  addresses and nameserver names.
+	- Change to iter-scrub-glue-count: 100 to match others.
 
 26 October 2026: Yorgos
 	- Merge #1541 from Georg Haas: doc: example.conf: add example to

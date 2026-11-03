@@ -3398,7 +3398,7 @@ These options are part of the ``server:`` section.
     Default: 32
 
 
-@@UAHL@unbound.conf@scrub-glue-count@@: *<number>*
+@@UAHL@unbound.conf@iter-scrub-glue-count@@: *<number>*
     Limit on the number of glue RRs from upstream responses.
     This protects against too large numbers of additional section records.
     When it is exceeded, the remainder is removed from the message.

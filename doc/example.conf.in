@@ -212,7 +212,7 @@ server:
 
 	# Limit on number of glue RRs in a response. Protects against too
 	# much work on the response.
-	# scrub-glue-count: 100
+	# iter-scrub-glue-count: 100
 
 	# Max number of addresses in a delegation point. Protects against
 	# too much work to loop over them.
