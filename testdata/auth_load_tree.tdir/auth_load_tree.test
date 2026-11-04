@@ -1,0 +1,32 @@
+# #-- auth_load_tree.test --#
+# source the master var file when it's there
+[ -f ../.tpkg.var.master ] && source ../.tpkg.var.master
+# use .tpkg.var.test for in test variable passing
+[ -f .tpkg.var.test ] && source .tpkg.var.test
+
+PRE="../.."
+. ../common.sh
+
+# While the updates are in progress,
+# perform:
+# - reload
+# - stop
+# This exercises the auth load thread tree in the worker that keeps
+# track of the connected auth load threads to the worker thread.
+
+# do the test
+echo "> unbound-control reload"
+$PRE/unbound-control -c ub.conf reload
+if test $? -ne 0; then
+	echo "wrong exit value."
+	exit 1
+else
+	echo "exit value: OK"
+fi
+
+# wait enough to have the reload cause re-fetch to happen during the exit.
+# for valgrind .4, without .04
+#sleep .4
+sleep 0.04
+
+exit 0

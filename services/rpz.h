@@ -219,6 +219,9 @@ void rpz_delete(struct rpz* r);
  */
 int rpz_clear(struct rpz* r);
 
+/** Create empty RPZ structure, useful as a proxy for entering data. */
+struct rpz* rpz_create_empty(void);
+
 /**
  * Create RPZ. RPZ must be added to linked list after creation.
  * @return: the newly created RPZ

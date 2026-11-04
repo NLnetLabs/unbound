@@ -604,4 +604,20 @@ ssize_t hex_ntop(uint8_t const *src, size_t srclength, char *target,
 /** Convert hexadecimal data to binary. */
 ssize_t hex_pton(const char* src, uint8_t* target, size_t targsize);
 
+/**
+ * This routine polls a socket for readiness.
+ * @param fd: file descriptor, -1 uses no fd for a timer only.
+ * @param timeout: time in msec to wait. 0 means nonblocking test,
+ * 	-1 waits blocking for events.
+ * @param pollin: check for input event.
+ * @param pollout: check for output event.
+ * @param event: output variable, set to true if the event happens.
+ * 	It is false if there was an error or timeout.
+ * @return false is system call failure, also logged.
+ */
+int sock_poll_timeout(int fd, int timeout, int pollin, int pollout, int* event);
+
+/** create a socketpair for bidirectional communication, false on failure */
+int create_socketpair(int* pair, struct ub_randstate* rand);
+
 #endif /* NET_HELP_H */
