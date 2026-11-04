@@ -14,6 +14,7 @@ NEED_NC='fwd_compress_c00c.tdir fwd_zero.tdir'
 NEED_CURL='06-ianaports.tdir root_anchor.tdir'
 NEED_WHOAMI='07-confroot.tdir'
 NEED_IPV6='fwd_ancil.tdir fwd_tcp_tc6.tdir stub_udp6.tdir edns_cache.tdir'
+NEED_LIBCOAP_BIN="doc_downstream"
 NEED_NOMINGW='tcp_sigpipe.tdir 07-confroot.tdir 08-host-lib.tdir fwd_ancil.tdir'
 NEED_DNSCRYPT_PROXY='dnscrypt_queries.tdir dnscrypt_queries_chacha.tdir'
 NEED_UNSHARE='acl_interface.tdir proxy_protocol.tdir'
@@ -51,6 +52,7 @@ for test in `ls -d *.tdir`; do
 	skip_if_in_list $test "$NEED_XXD" "xxd"
 	skip_if_in_list $test "$NEED_NC" "nc"
 	skip_if_in_list $test "$NEED_WHOAMI" "whoami"
+	skip_if_in_list $test "$NEED_LIBCOAP_BIN" "coap-client-openssl"
 	skip_if_in_list $test "$NEED_DNSCRYPT_PROXY" "dnscrypt-proxy"
 	skip_if_in_list $test "$NEED_UNSHARE" "unshare"
 	skip_if_in_list $test "$NEED_REDIS_SERVER" "redis-server"
