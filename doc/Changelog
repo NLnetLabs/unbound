@@ -1,3 +1,8 @@
+5 November 2026: Wouter
+	- Fix handling of SOA probe reply for secondary zone transfer
+	  that contains an extended label type. Thanks to Qifan Zhang
+	  from Palo Alto Networks for the report.
+
 3 November 2026: Wouter
 	- iana portlist update.
 	- Fix to remove too large glue amount with the scrubber from

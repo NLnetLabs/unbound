@@ -4500,16 +4500,18 @@ check_packet_ok(sldns_buffer* pkt, uint16_t qtype, struct auth_xfer* xfr,
 
 	if(serial) {
 		uint16_t rdlen;
+		size_t namepos;
 		/* read serial number, from answer section SOA */
 		if(LDNS_ANCOUNT(sldns_buffer_begin(pkt)) == 0)
 			return 0;
 		/* read from first record SOA record */
 		if(sldns_buffer_remaining(pkt) < 1)
 			return 0;
-		if(dname_pkt_compare(pkt, sldns_buffer_current(pkt),
-			xfr->name) != 0)
-			return 0;
+		namepos = sldns_buffer_position(pkt);
 		if(!pkt_dname_len(pkt))
+			return 0;
+		if(dname_pkt_compare(pkt, sldns_buffer_at(pkt, namepos),
+			xfr->name) != 0)
 			return 0;
 		/* type, class, ttl, rdatalen */
 		if(sldns_buffer_remaining(pkt) < 4+4+2)
