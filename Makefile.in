@@ -56,7 +56,7 @@ YACC=@YACC@
 LEX=@LEX@
 STRIP=@STRIP@
 CC=@CC@
-CPPFLAGS=-I. @CPPFLAGS@
+CPPFLAGS=-I. @CPPFLAGS@ -Isimdzone/include -I@srcdir@/simdzone/include
 PYTHON_CPPFLAGS=-I. -I$(srcdir) @PYTHON_CPPFLAGS@
 CFLAGS=-DSRCDIR=$(srcdir) @CFLAGS@
 LDFLAGS=@LDFLAGS@
@@ -267,6 +267,7 @@ LIBUNBOUND_SRC=libunbound/context.c libunbound/libunbound.c \
 libunbound/libworker.c
 LIBUNBOUND_OBJ=context.lo libunbound.lo libworker.lo ub_event_pluggable.lo
 LIBUNBOUND_OBJ_LINK=$(LIBUNBOUND_OBJ) $(COMMON_OBJ_WITHOUT_UB_EVENT) $(SLDNS_OBJ) $(COMPAT_OBJ)
+SIMDZONE_OBJ=@SIMDZONE_OBJ@
 
 # win apps or "" if not on windows
 WINAPPS=@WINAPPS@
@@ -364,19 +365,24 @@ longtest:	tests
 	if test ! $(srcdir)/testdata -ef ./testdata; then rm -rf testcode testdata; mkdir testcode testdata; cp -R $(srcdir)/testdata/*.sh $(srcdir)/testdata/*.tdir $(srcdir)/testdata/*.rpl $(srcdir)/testdata/*.crpl testdata; cp $(srcdir)/testcode/*.sh testcode; if test ! -d util; then mkdir util; fi; cp $(srcdir)/util/iana_ports.inc util; fi
 	if test -x "`which bash`"; then bash testcode/do-tests.sh; else sh testcode/do-tests.sh; fi
 
+simdzone/libzone.la:
+	$(MAKE) -C simdzone
+
+simdzone/include/zone/export.h: simdzone/libzone.la
+
 lib:	libunbound.la unbound.h
 
-libunbound.la:	$(LIBUNBOUND_OBJ_LINK)
-	$(LINK_LIB) $(UBSYMS) -o $@ $(LIBUNBOUND_OBJ_LINK) -rpath $(libdir) $(SSLLIB) $(LIBS)
+libunbound.la:	simdzone/libzone.la $(LIBUNBOUND_OBJ_LINK)
+	$(LINK_LIB) $(UBSYMS) -o $@ $(LIBUNBOUND_OBJ_LINK) $(SIMDZONE_OBJ) -rpath $(libdir) $(SSLLIB) $(LIBS)
 
 unbound$(EXEEXT):	$(DAEMON_OBJ_LINK) libunbound.la
-	$(LINK) -o $@ $(DAEMON_OBJ_LINK) $(EXTRALINK) $(SSLLIB) $(LIBS) $(DYNLIBMOD_EXTRALIBS)
+	$(LINK) -o $@ $(DAEMON_OBJ_LINK) $(EXTRALINK) $(SIMDZONE_OBJ) $(SSLLIB) $(LIBS) $(DYNLIBMOD_EXTRALIBS)
 
 unbound-checkconf$(EXEEXT):	$(CHECKCONF_OBJ_LINK) libunbound.la
-	$(LINK) -o $@ $(CHECKCONF_OBJ_LINK) $(EXTRALINK) $(SSLLIB) $(LIBS)
+	$(LINK) -o $@ $(CHECKCONF_OBJ_LINK) $(EXTRALINK) $(SIMDZONE_OBJ) $(SSLLIB) $(LIBS)
 
 unbound-control$(EXEEXT):	$(CONTROL_OBJ_LINK) libunbound.la
-	$(LINK) -o $@ $(CONTROL_OBJ_LINK) $(EXTRALINK) $(SSLLIB) $(LIBS)
+	$(LINK) -o $@ $(CONTROL_OBJ_LINK) $(EXTRALINK) $(SIMDZONE_OBJ) $(SSLLIB) $(LIBS)
 
 unbound-host$(EXEEXT):	$(HOST_OBJ_LINK) libunbound.la
 	$(LINK) -o $@ $(HOST_OBJ_LINK) libunbound.la $(SSLLIB) $(LIBS)
@@ -394,43 +400,43 @@ anchor-update$(EXEEXT):  $(ANCHORUPD_OBJ_LINK) libunbound.la
 	$(LINK) -o $@ $(ANCHORUPD_OBJ_LINK) libunbound.la $(LIBS)
 
 unittest$(EXEEXT):	$(UNITTEST_OBJ_LINK)
-	$(LINK) -o $@ $(UNITTEST_OBJ_LINK) $(SSLLIB) $(LIBS)
+	$(LINK) -o $@ $(UNITTEST_OBJ_LINK) $(SIMDZONE_OBJ) $(SSLLIB) $(LIBS)
 
 testbound$(EXEEXT):	$(TESTBOUND_OBJ_LINK)
-	$(LINK) -o $@ $(TESTBOUND_OBJ_LINK) $(SSLLIB) $(LIBS)
+	$(LINK) -o $@ $(TESTBOUND_OBJ_LINK) $(SIMDZONE_OBJ) $(SSLLIB) $(LIBS)
 
 lock-verify$(EXEEXT):	$(LOCKVERIFY_OBJ_LINK)
-	$(LINK) -o $@ $(LOCKVERIFY_OBJ_LINK) $(SSLLIB) $(LIBS)
+	$(LINK) -o $@ $(LOCKVERIFY_OBJ_LINK) $(SIMDZONE_OBJ) $(SSLLIB) $(LIBS)
 
 petal$(EXEEXT):	$(PETAL_OBJ_LINK)
 	$(LINK) -o $@ $(PETAL_OBJ_LINK) $(SSLLIB) $(LIBS)
 
 pktview$(EXEEXT):	$(PKTVIEW_OBJ_LINK)
-	$(LINK) -o $@ $(PKTVIEW_OBJ_LINK) $(SSLLIB) $(LIBS)
+	$(LINK) -o $@ $(PKTVIEW_OBJ_LINK) $(SIMDZONE_OBJ) $(SSLLIB) $(LIBS)
 
 memstats$(EXEEXT):	$(MEMSTATS_OBJ_LINK)
-	$(LINK) -o $@ $(MEMSTATS_OBJ_LINK) $(SSLLIB) $(LIBS)
+	$(LINK) -o $@ $(MEMSTATS_OBJ_LINK) $(SIMDZONE_OBJ) $(SSLLIB) $(LIBS)
 
 asynclook$(EXEEXT):	$(ASYNCLOOK_OBJ_LINK) libunbound.la
 	$(LINK) -o $@ $(ASYNCLOOK_OBJ_LINK) libunbound.la $(SSLLIB) $(LIBS)
 
 streamtcp$(EXEEXT):	$(STREAMTCP_OBJ_LINK)
-	$(LINK) -o $@ $(STREAMTCP_OBJ_LINK) $(SSLLIB) $(LIBS)
+	$(LINK) -o $@ $(STREAMTCP_OBJ_LINK) $(SIMDZONE_OBJ) $(SSLLIB) $(LIBS)
 
 dohclient$(EXEEXT):	$(DOHCLIENT_OBJ_LINK)
-	$(LINK) -o $@ $(DOHCLIENT_OBJ_LINK) $(SSLLIB) $(LIBS)
+	$(LINK) -o $@ $(DOHCLIENT_OBJ_LINK) $(SIMDZONE_OBJ) $(SSLLIB) $(LIBS)
 
 doqclient$(EXEEXT):	$(DOQCLIENT_OBJ_LINK)
-	$(LINK) -o $@ $(DOQCLIENT_OBJ_LINK) $(SSLLIB) $(LIBS)
+	$(LINK) -o $@ $(DOQCLIENT_OBJ_LINK) $(SIMDZONE_OBJ) $(SSLLIB) $(LIBS)
 
 perf$(EXEEXT):	$(PERF_OBJ_LINK)
-	$(LINK) -o $@ $(PERF_OBJ_LINK) $(SSLLIB) $(LIBS)
+	$(LINK) -o $@ $(PERF_OBJ_LINK) $(SIMDZONE_OBJ) $(SSLLIB) $(LIBS)
 
 delayer$(EXEEXT):	$(DELAYER_OBJ_LINK)
-	$(LINK) -o $@ $(DELAYER_OBJ_LINK) $(SSLLIB) $(LIBS)
+	$(LINK) -o $@ $(DELAYER_OBJ_LINK) $(SIMDZONE_OBJ) $(SSLLIB) $(LIBS)
 
 readzone$(EXEEXT):	$(READZONE_OBJ_LINK)
-	$(LINK) -o $@ $(READZONE_OBJ_LINK) $(SSLLIB) $(LIBS)
+	$(LINK) -o $@ $(READZONE_OBJ_LINK) $(SIMDZONE_OBJ) $(SSLLIB) $(LIBS)
 
 signit$(EXEEXT):	testcode/signit.c
 	$(CC) $(CPPFLAGS) $(CFLAGS) @PTHREAD_CFLAGS_ONLY@ -o $@ testcode/signit.c $(LDFLAGS) -lldns $(SSLLIB) $(LIBS)
@@ -458,7 +464,7 @@ dnstap/dnstap.pb-c.h: dnstap/dnstap.pb-c.c
 	touch $@
 
 unbound-dnstap-socket$(EXEEXT):	$(DNSTAP_SOCKET_OBJ_LINK)
-	$(LINK) -o $@ $(DNSTAP_SOCKET_OBJ_LINK) $(SSLLIB) $(LIBS)
+	$(LINK) -o $@ $(DNSTAP_SOCKET_OBJ_LINK) $(SIMDZONE_OBJ) $(SSLLIB) $(LIBS)
 
 dnstap.pb-c.lo dnstap.pb-c.o: dnstap/dnstap.pb-c.c dnstap/dnstap.pb-c.h
 dtstream.lo dtstream.o: $(srcdir)/dnstap/dtstream.c config.h $(srcdir)/dnstap/dtstream.h
@@ -522,7 +528,9 @@ util/configparser.c:  $(srcdir)/util/configparser.y
 util/configparser.h: util/configparser.c
 	touch $@
 
-clean:
+.PHONY: .clean .distclean .maintainer-clean .realclean .devclean
+
+.clean:
 	rm -f *.o *.d *.lo *~ tags
 	rm -f unbound$(EXEEXT) unbound-checkconf$(EXEEXT) unbound-host$(EXEEXT) unbound-control$(EXEEXT) unbound-anchor$(EXEEXT) unbound-control-setup libunbound.la unbound.h
 	rm -f $(ALL_SRC:.c=.lint)
@@ -530,18 +538,36 @@ clean:
 	rm -f libunbound.a
 	rm -rf autom4te.cache .libs build doc/html doc/xml
 
-distclean: clean
+.distclean: .clean
 	rm -f config.status config.log config.h
 	rm -f doc/example.conf doc/libunbound.3 doc/unbound-anchor.8 doc/unbound-checkconf.8 doc/unbound-control.8 doc/unbound.8 doc/unbound.conf.5 doc/unbound-host.1
 	rm -f smallapp/unbound-control-setup.sh dnstap/dnstap_config.h dnscrypt/dnscrypt_config.h contrib/libunbound.pc contrib/unbound.socket contrib/unbound.service
 	rm -f $(TEST_BIN)
 	rm -f Makefile
 
-maintainer-clean: distclean
+.maintainer-clean: .distclean
 	rm -f util/configlexer.c util/configparser.c util/configparser.h
 
-realclean: maintainer-clean
+.realclean: .maintainer-clean
 	rm -f configure config.h.in config.sub config.guess ltmain.sh aclocal.m4 libtool
+
+.devclean: .realclean
+	rm -f config.h.in configure
+
+clean: .clean
+	$(MAKE) -C simdzone clean
+
+distclean: .distclean
+	$(MAKE) -C simdzone distclean
+
+realclean: .realclean
+	$(MAKE) -C simdzone realclean
+
+maintainer-clean: .maintainer-clean
+	$(MAKE) -C simdzone maintainer-clean
+
+devclean: .devclean
+	$(MAKE) -C simdzone devclean
 
 .SUFFIXES: .lint
 .c.lint:
@@ -703,6 +729,7 @@ depend:
 			-e 's?$$(srcdir)/edns-subnet/subnetmod.h $$(srcdir)/edns-subnet/subnet-whitelist.h $$(srcdir)/edns-subnet/edns-subnet.h $$(srcdir)/edns-subnet/addrtree.h?$$(SUBNET_HEADER)?g' \
 			-e 's?$$(srcdir)/ipsecmod/ipsecmod.h $$(srcdir)/ipsecmod/ipsecmod-whitelist.h?$$(IPSECMOD_HEADER)?g' \
 			-e 's?$$(srcdir)/dynlibmod/dynlibmod.h?$$(DYNLIBMOD_HEADER)?g' \
+			-e 's?$$(srcdir)/simdzone/include/zone/export.h?simdzone/include/zone/export.h?g' \
 			-e 's!\(.*\)\.o[ :]*!\1.lo \1.o: !g' \
 			> $(DEPEND_TMP)
 	cp $(DEPEND_TARGET) $(DEPEND_TMP2)
@@ -1000,7 +1027,9 @@ authzone.lo authzone.o: $(srcdir)/services/authzone.c config.h $(srcdir)/service
  $(srcdir)/services/listen_dnsport.h $(srcdir)/daemon/acl_list.h \
  $(srcdir)/sldns/str2wire.h $(srcdir)/sldns/wire2str.h $(srcdir)/sldns/parseutil.h $(srcdir)/sldns/keyraw.h \
  $(srcdir)/validator/val_nsec3.h $(srcdir)/validator/val_nsec.h $(srcdir)/validator/val_secalgo.h \
- $(srcdir)/validator/val_sigcrypt.h $(srcdir)/validator/val_anchor.h $(srcdir)/validator/val_utils.h
+ $(srcdir)/validator/val_sigcrypt.h $(srcdir)/validator/val_anchor.h $(srcdir)/validator/val_utils.h \
+ $(srcdir)/simdzone/include/zone.h $(srcdir)/simdzone/include/zone/attributes.h \
+ simdzone/include/zone/export.h
 fptr_wlist.lo fptr_wlist.o: $(srcdir)/util/fptr_wlist.c config.h $(srcdir)/util/fptr_wlist.h \
  $(srcdir)/util/netevent.h $(srcdir)/dnscrypt/dnscrypt.h  \
  $(srcdir)/dnscrypt/cert.h $(srcdir)/util/locks.h $(srcdir)/util/log.h \
