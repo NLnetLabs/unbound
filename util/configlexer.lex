@@ -633,10 +633,13 @@ delegpt-max-ns{COLON}		{ YDVAR(1, VAR_DELEGPT_MAX_NS) }
         LEXOUT(("QE "));
 	if(--num_args == 0) { BEGIN(INITIAL); }
 	else		    { BEGIN(val); }
-        yytext[yyleng - 1] = '\0';
-	yylval.str = strdup(yytext);
+	/* deliberately allocate one extra byte so there is room to add a
+	 * trailing dot if necessary */
+	yylval.str = malloc(yyleng + 1);
 	if(!yylval.str)
 		yyerror("out of memory");
+	memcpy(yylval.str, yytext, yyleng - 1);
+	yylval.str[yyleng - 1] = yylval.str[yyleng] = '\0';
         return STRING_ARG;
 }
 
@@ -654,10 +657,13 @@ delegpt-max-ns{COLON}		{ YDVAR(1, VAR_DELEGPT_MAX_NS) }
         LEXOUT(("SQE "));
 	if(--num_args == 0) { BEGIN(INITIAL); }
 	else		    { BEGIN(val); }
-        yytext[yyleng - 1] = '\0';
-	yylval.str = strdup(yytext);
+	/* deliberately allocate one extra byte so there is room to add a
+	 * trailing dot if necessary */
+	yylval.str = malloc(yyleng + 1);
 	if(!yylval.str)
 		yyerror("out of memory");
+	memcpy(yylval.str, yytext, yyleng - 1);
+	yylval.str[yyleng - 1] = yylval.str[yyleng] = '\0';
         return STRING_ARG;
 }
 
@@ -736,9 +742,18 @@ delegpt-max-ns{COLON}		{ YDVAR(1, VAR_DELEGPT_MAX_NS) }
 	return (VAR_FORCE_TOPLEVEL);
 }
 
-<val>{UNQUOTEDLETTER}*	{ LEXOUT(("unquotedstr(%s) ", yytext));
-			if(--num_args == 0) { BEGIN(INITIAL); }
-			yylval.str = strdup(yytext); return STRING_ARG; }
+<val>{UNQUOTEDLETTER}*	{
+	LEXOUT(("unquotedstr(%s) ", yytext));
+	if(--num_args == 0) { BEGIN(INITIAL); }
+	/* deliberately allocate one extra byte so there is room to add a
+	 * trailing dot if necessary */
+	yylval.str = malloc(yyleng + 2);
+	if(!yylval.str)
+		yyerror("out of memory");
+	memcpy(yylval.str, yytext, yyleng);
+	yylval.str[yyleng] = yylval.str[yyleng + 1] = '\0';
+	return STRING_ARG;
+}
 
 {UNQUOTEDLETTER_NOCOLON}*	{
 	ub_c_error_msg("unknown keyword '%s'", yytext);
