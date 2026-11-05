@@ -1111,6 +1111,10 @@ Extended Statistics
     Includes the key cache and negative cache.
 
 
+@@UAHL@unbound-control.stats@mem.auth_zones@@
+    Memory in bytes in use by the auth zones, including RPZ zone data.
+
+
 @@UAHL@unbound-control.stats@mem.streamwait@@
     Memory in bytes in used by the TCP and TLS stream wait buffers.
     These are answers waiting to be written back to the clients.
