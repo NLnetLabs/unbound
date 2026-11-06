@@ -353,13 +353,18 @@ int local_zones_answer(struct local_zones* zones, struct module_env* env,
  * @param temp: temp region for encoding.
  * @param ld: local data, if NULL, no such name exists in localdata.
  * @param lz_type: type of the local zone.
+ * @param ede_txt: EDE (RFC 8914) text to attach to a blocked response, e.g.
+ * naming the specific RPZ zone that triggered. NULL for the generic
+ * "blocked by local-zone policy" text (used by plain, non-RPZ local-zone
+ * callers, which have no more specific policy name to report).
  * @return 1 if a reply is to be sent, 0 if not.
  */
 int
 local_zones_zone_answer(struct local_zone* z, struct module_env* env,
 	struct query_info* qinfo, struct edns_data* edns,
 	struct comm_reply* repinfo, sldns_buffer* buf, struct regional* temp,
-	struct local_data* ld, enum localzone_type lz_type);
+	struct local_data* ld, enum localzone_type lz_type,
+	const char* ede_txt);
 
 /**
  * Parse the string into localzone type.
