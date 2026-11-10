@@ -1,3 +1,6 @@
+10 November 2026: Wouter
+	- iana portlist update.
+
 5 November 2026: Wouter
 	- Fix handling of SOA probe reply for secondary zone transfer
 	  that contains an extended label type. Thanks to Qifan Zhang
