@@ -272,7 +272,8 @@ auth_load_thread_poll_for_quit(struct auth_load_thread* thr)
 		return 1;
 	}
 	log_err("auth_load_thread_poll_for_quit: unknown notification status "
-		"received: %d %s", cmd, auth_load_notification_to_string(cmd));
+		"received: %d %s", (int)cmd,
+		auth_load_notification_to_string(cmd));
 	return 0;
 }
 
