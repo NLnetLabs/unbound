@@ -3534,7 +3534,8 @@ These options are part of the ``server:`` section.
     The result is swapped into the resolver when the thread is done.
 
     The value 0 disables the threading, one of the worker threads performs
-    the processing. Without threading enabled, use the value 0.
+    the processing.
+    Without threading enabled, use the value 0.
 
     Default: 0
 
