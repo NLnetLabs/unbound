@@ -246,6 +246,29 @@ struct dns_msg* val_neg_getmsg(struct val_neg_cache* neg,
 	struct rrset_cache* rrset_cache, struct sldns_buffer* buf, time_t now,
 	int addsoa, uint8_t* topname, struct config_file* cfg);
 
+/**
+ * Remove the cached denial of existence of a DS for the given name.
+ * That denial is held by the parent zone, so this removes from the
+ * negative cache of the closest zone above the name the record that
+ * val_neg_getmsg() would deny the DS with: the NSEC that matches or
+ * covers the name, or the NSEC3 that matches it or that covers the next
+ * closer name of an opt-out proof.  It does not walk the zone.  This way
+ * a newly created DS is not shadowed by a cached NSEC or NSEC3 record.
+ * Only that one record is removed.  An older, overlapping record (from
+ * a different point in time) can still deny the DS; another call
+ * removes it.  Telling whether a record still covers the name would
+ * need its next owner from the rrset cache.
+ * Note that DS denial from the negative cache is not subject to the
+ * aggressive-nsec setting; it is always enabled.
+ * @param neg: negative cache.
+ * @param nm: name of the delegation; uncompressed wireformat.
+ * @param nmlen: length of nm.
+ * @param dclass: class of the delegation, host order.
+ * @param buf: temporary buffer, for the NSEC3 hash calculation.
+ */
+void val_neg_remove_ds_denial(struct val_neg_cache* neg, uint8_t* nm,
+	size_t nmlen, uint16_t dclass, struct sldns_buffer* buf);
+
 
 /**** functions exposed for unit test ****/
 /**
