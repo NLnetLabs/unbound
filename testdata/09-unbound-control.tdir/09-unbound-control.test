@@ -366,6 +366,23 @@ control_command -c ub.conf flush_type www.example.net TXT
 expect_exit_value 0
 control_command -c ub.conf flush_zone example.net
 expect_exit_value 0
+control_command -c ub.conf flush_delegation example.net
+expect_exit_value 0
+control_command -c ub.conf flush_delegation .
+expect_exit_value 0
+control_command -c ub.conf flush_delegation +s example.net
+expect_exit_value 0
+control_command -c ub.conf flush_delegation +cs example.net
+expect_exit_value 0
+control_command -c ub.conf flush_delegation +x example.net
+expect_exit_value 1
+control_command -c ub.conf flush_delegation + example.net
+expect_exit_value 1
+# an option after the name is an error, it is not part of the name
+control_command -c ub.conf flush_delegation example.net +s
+expect_exit_value 1
+control_command -c ub.conf flush_delegation example.net extra
+expect_exit_value 1
 
 # START - single thread/process tests only
 if test $num_threads -le 1; then
@@ -388,6 +405,93 @@ cache_load -c ub.conf
 expect_exit_value 0
 query www.example.com. +nordflag
 expect_answer "10.20.30.40"
+
+teststep "flush_delegation removes the zone cut, but not names below it"
+clean_reload_and_fill_cache
+query example.com. SOA
+expect_answer "root.example.com."
+query example.com. DS
+expect_answer "55555 8 2"
+query example.com. CDS
+expect_answer "55555 8 2"
+query example.com. CDNSKEY
+expect_answer "257 3 8"
+query example.com. CSYNC
+expect_answer "A NS AAAA"
+query example.com. NSEC
+expect_answer "www.example.com. NS SOA"
+query example.com. DNAME
+expect_answer "example.net."
+cache_dump -c ub.conf
+expect_exit_value 0
+cat cache.dump
+expect_in_cache_dump "^example.com.*IN	SOA"
+# the flush command does not remove the DS type, flush_delegation does
+expect_in_cache_dump "^example.com.*IN	DS"
+expect_in_cache_dump "^example.com.*IN	CDS"
+expect_in_cache_dump "^example.com.*IN	CDNSKEY"
+expect_in_cache_dump "^example.com.*IN	CSYNC"
+# the NSEC at the zone apex has its own cache key
+expect_in_cache_dump "^;rrset nsec_apex"
+expect_in_cache_dump "^example.com.*IN	NSEC"
+expect_in_cache_dump "^example.com.*IN	DNAME"
+expect_in_cache_dump "^www.example.com.*10.20.30.40"
+
+control_command -c ub.conf flush_delegation example.com
+expect_exit_value 0
+cache_dump -c ub.conf
+expect_exit_value 0
+cat cache.dump
+fail_in_cache_dump "^example.com.*IN	SOA"
+fail_in_cache_dump "^example.com.*IN	DS"
+fail_in_cache_dump "^example.com.*IN	NSEC"
+fail_in_cache_dump "^example.com.*IN	DNAME"
+# the zone's signals to its parent stay, without the +s option
+expect_in_cache_dump "^example.com.*IN	CDS"
+expect_in_cache_dump "^example.com.*IN	CDNSKEY"
+expect_in_cache_dump "^example.com.*IN	CSYNC"
+# below the name is left alone, unlike flush_zone
+expect_in_cache_dump "^www.example.com.*10.20.30.40"
+
+teststep "flush_delegation +s also removes CDS, CDNSKEY and CSYNC"
+clean_reload_and_fill_cache
+query example.com. SOA
+expect_answer "root.example.com."
+query example.com. CDS
+expect_answer "55555 8 2"
+query example.com. CDNSKEY
+expect_answer "257 3 8"
+query example.com. CSYNC
+expect_answer "A NS AAAA"
+control_command -c ub.conf flush_delegation +s example.com
+expect_exit_value 0
+cache_dump -c ub.conf
+expect_exit_value 0
+cat cache.dump
+fail_in_cache_dump "^example.com.*IN	SOA"
+fail_in_cache_dump "^example.com.*IN	CDS"
+fail_in_cache_dump "^example.com.*IN	CDNSKEY"
+fail_in_cache_dump "^example.com.*IN	CSYNC"
+
+teststep "flush_delegation removes a cached NXDOMAIN for the name"
+clean_reload_and_fill_cache
+query new.example.com. A
+expect_answer "NXDOMAIN"
+query new.example.com. AAAA
+expect_answer "NXDOMAIN"
+cache_dump -c ub.conf
+expect_exit_value 0
+cat cache.dump
+expect_in_cache_dump "^msg new.example.com. IN A "
+expect_in_cache_dump "^msg new.example.com. IN AAAA "
+control_command -c ub.conf flush_delegation new.example.com
+expect_exit_value 0
+cache_dump -c ub.conf
+expect_exit_value 0
+cat cache.dump
+fail_in_cache_dump "^msg new.example.com. IN A "
+fail_in_cache_dump "^msg new.example.com. IN AAAA "
+expect_in_cache_dump "^www.example.com.*10.20.30.40"
 
 else
 	echo ""

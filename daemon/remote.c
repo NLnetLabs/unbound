@@ -2676,6 +2676,115 @@ do_flush_name(RES* ssl, struct worker* w, char* arg)
 	send_ok(ssl);
 }
 
+/** parse the options of flush_delegation, '+c' and '+s' in any
+ * combination, modifies string to return remainder. */
+static int
+parse_flush_delegation_options(RES* ssl, char** arg, int* pc, int* ps)
+{
+	*arg = skipwhite(*arg);
+	while((*arg)[0] == '+') {
+		char* p;
+		char* arg2;
+		if((*arg)[1] == 0 || (*arg)[1] == ' ' || (*arg)[1] == '\t') {
+			ssl_printf(ssl, "error empty option '+'\n");
+			return 0;
+		}
+		for(p = *arg + 1; *p && *p != ' ' && *p != '\t'; p++) {
+			if(*p == 'c')
+				*pc = 1;
+			else if(*p == 's')
+				*ps = 1;
+			else {
+				ssl_printf(ssl, "error unknown option '+%c'\n", *p);
+				return 0;
+			}
+		}
+		if(!find_arg2(ssl, *arg, &arg2))
+			return 0;
+		*arg = arg2;
+	}
+	return 1;
+}
+
+/** remove the delegation of a name from the cache */
+static void
+do_flush_delegation(RES* ssl, struct worker* w, char* arg)
+{
+	uint8_t* nm;
+	int nmlabs;
+	size_t nmlen;
+	int pc = 0; /* '+c' option */
+	int ps = 0; /* '+s' option */
+	char* end;
+	if(!parse_flush_delegation_options(ssl, &arg, &pc, &ps))
+		return;
+	/* The name is the last argument.  Text after it would become part
+	 * of the name, so that an option that is given after the name is
+	 * not seen and a name that is not in the cache is flushed. */
+	for(end = arg; *end && *end != ' ' && *end != '\t'; end++) {
+		if(*end == '\\' && end[1])
+			end++; /* an escaped character in the name */
+	}
+	if(*skipwhite(end) != 0) {
+		ssl_printf(ssl, "error unexpected argument after the name, "
+			"options go before the name: %s\n", skipwhite(end));
+		return;
+	}
+	*end = 0;
+	if(!parse_arg_name(ssl, arg, &nm, &nmlen, &nmlabs))
+		return;
+	/* The NSEC or NSEC3 record that denies the DS lives in the parent
+	 * zone, and is not reachable by name from here.  It goes first, so
+	 * that a DS lookup in the meantime cannot store the denial again
+	 * after its message is removed below. */
+	if(w->env.neg_cache)
+		val_neg_remove_ds_denial(w->env.neg_cache, nm, nmlen,
+			LDNS_RR_CLASS_IN, w->env.scratch_buffer);
+	/* The rrsets and messages at the zone cut, both the child side and
+	 * the parent side of it.  For SOA this also removes the negative
+	 * cache element.  NSEC3 is not listed, those are never owned by
+	 * the name itself. */
+	do_cache_remove(w, nm, nmlen, LDNS_RR_TYPE_SOA, LDNS_RR_CLASS_IN, pc);
+	do_cache_remove(w, nm, nmlen, LDNS_RR_TYPE_NS, LDNS_RR_CLASS_IN, pc);
+	do_cache_remove(w, nm, nmlen, LDNS_RR_TYPE_DS, LDNS_RR_CLASS_IN, pc);
+	do_cache_remove(w, nm, nmlen, LDNS_RR_TYPE_DNSKEY, LDNS_RR_CLASS_IN, pc);
+	do_cache_remove(w, nm, nmlen, LDNS_RR_TYPE_NSEC, LDNS_RR_CLASS_IN, pc);
+	do_cache_remove(w, nm, nmlen, LDNS_RR_TYPE_CNAME, LDNS_RR_CLASS_IN, pc);
+	do_cache_remove(w, nm, nmlen, LDNS_RR_TYPE_DNAME, LDNS_RR_CLASS_IN, pc);
+	/* A cached NXDOMAIN for the name, from before it was delegated,
+	 * hides the names below it with harden-below-nxdomain.  The lookup
+	 * of a name below tries its own query type and type A, and QNAME
+	 * minimisation queries with type A.  Remove A, and AAAA as the
+	 * other common query type; an NXDOMAIN for other types stays. */
+	do_cache_remove(w, nm, nmlen, LDNS_RR_TYPE_A, LDNS_RR_CLASS_IN, pc);
+	do_cache_remove(w, nm, nmlen, LDNS_RR_TYPE_AAAA, LDNS_RR_CLASS_IN, pc);
+	/* With the '+s' option, the zone's signals to its parent (RFC 7344,
+	 * RFC 7477).  They keep the validation status from when they were
+	 * cached, so they would contradict a changed DS until they expire. */
+	if(ps) {
+		do_cache_remove(w, nm, nmlen, LDNS_RR_TYPE_CDS,
+			LDNS_RR_CLASS_IN, pc);
+		do_cache_remove(w, nm, nmlen, LDNS_RR_TYPE_CDNSKEY,
+			LDNS_RR_CLASS_IN, pc);
+		do_cache_remove(w, nm, nmlen, LDNS_RR_TYPE_CSYNC,
+			LDNS_RR_CLASS_IN, pc);
+	}
+	/* The copy of the NS rrset that was kept from the parent side, and
+	 * the NSEC at the zone apex, have a different cache key and are not
+	 * removed by the above. */
+	rrset_cache_remove(w->env.rrset_cache, nm, nmlen, LDNS_RR_TYPE_NS,
+		LDNS_RR_CLASS_IN, PACKED_RRSET_PARENT_SIDE);
+	rrset_cache_remove(w->env.rrset_cache, nm, nmlen, LDNS_RR_TYPE_NSEC,
+		LDNS_RR_CLASS_IN, PACKED_RRSET_NSEC_AT_APEX);
+	/* The DNSKEY trust state that the validator derived for the zone.
+	 * It goes last, after the DS and DNSKEY rrsets it is derived from. */
+	if(w->env.key_cache)
+		key_cache_remove(w->env.key_cache, nm, nmlen, LDNS_RR_CLASS_IN);
+
+	free(nm);
+	send_ok(ssl);
+}
+
 /** printout a delegation point info */
 static int
 ssl_print_name_dp(RES* ssl, const char* str, uint8_t* nm, uint16_t dclass,
@@ -4257,6 +4366,8 @@ execute_cmd(struct daemon_remote* rc, struct rc_state* s, RES* ssl, char* cmd,
 		do_flush_type(ssl, worker, skipwhite(p+10));
 	} else if(cmdcmp(p, "flush_infra", 11)) {
 		do_flush_infra(ssl, worker, skipwhite(p+11));
+	} else if(cmdcmp(p, "flush_delegation", 16)) {
+		do_flush_delegation(ssl, worker, skipwhite(p+16));
 	} else if(cmdcmp(p, "flush", 5)) {
 		do_flush_name(ssl, worker, skipwhite(p+5));
 	} else if(cmdcmp(p, "dump_requestlist", 16)) {
