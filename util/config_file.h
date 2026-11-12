@@ -291,6 +291,8 @@ struct config_file {
 
 	/** list of tcp connection limitss, linked list */
 	struct config_str2list* tcp_connection_limits;
+	/** auth task threads, or 0 disabled. */
+	int auth_task_threads;
 
 	/** harden against very small edns buffer sizes */
 	int harden_short_bufsize;

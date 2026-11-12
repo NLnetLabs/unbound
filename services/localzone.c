@@ -198,7 +198,7 @@ parse_dname(const char* str, uint8_t** res, size_t* len, int* labs)
 }
 
 /** create a new localzone */
-static struct local_zone*
+struct local_zone*
 local_zone_create(uint8_t* nm, size_t len, int labs, 
 	enum localzone_type t, uint16_t dclass)
 {
@@ -534,7 +534,7 @@ lz_find_create_node(struct local_zone* z, uint8_t* nm, size_t nmlen,
  * records. An artificial soa_negative record with a modified TTL (minimum of
  * the TTL and the SOA.MINIMUM) is also created and marked for usage with
  * negative answers and to avoid allocations during those answers. */
-static int
+int
 lz_mark_soa_for_zone(struct local_zone* z, struct ub_packed_rrset_key* soa_rrset,
 	uint8_t* rdata, size_t rdata_len, time_t ttl, const char* rrstr)
 {
