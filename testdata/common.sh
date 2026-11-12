@@ -1,7 +1,8 @@
 # common.sh - an include file for commonly used functions for test code.
 # BSD licensed (see LICENSE file).
 #
-# Version 7
+# Version 8
+# 2026-11-11: get_pre with automagic valgrind support
 # 2025-04-04: speed up kill_pid.
 # 2023-12-06: list wait_for_soa_serial in overview
 # 2023-12-06: get_ldns_notify, skip_test and teststep, and previous changes
@@ -19,6 +20,7 @@
 # error x		: print error and exit
 # info x		: print info
 # test_tool_avail x	: see if program in path and complain, exit if not.
+# get_pre		: set PRE and TEST_BINARY_PRE
 # get_ldns_testns	: set LDNS_TESTNS to executable ldns-testns
 # get_ldns_notify	: set LDNS_NOTIFY to executable ldns-notify
 # get_make		: set MAKE to gmake or make tool.
@@ -64,6 +66,17 @@ test_tool_avail () {
 	if test ! -x "`which $1 2>&1`"; then
 		echo No "$1" in path
 		exit 1
+	fi
+}
+
+# get src build directory in PRE variable, also TEST_BINARY_PRE for the binary
+# under test for automagically invoking valgring if needed.
+get_pre() {
+	PRE="../.."
+	VALGRIND_FLAGS="--leak-check=full --show-leak-kinds=all"
+	TEST_BINARY_PRE=$PRE
+	if test -f $PRE/unbound_do_valgrind_in_test; then
+		TEST_BINARY_PRE="valgrind $VALGRIND_FLAGS $PRE"
 	fi
 }
 
