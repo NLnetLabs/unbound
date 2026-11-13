@@ -264,9 +264,89 @@ and PRZ actions.
 .sp
 Default: yes
 .UNINDENT
+.sp
+The following four options configure Unbound\(aqs built\-in Prometheus
+(\fI\%https://prometheus.io/\fP) metrics exporter.
+When enabled, Unbound serves the same statistics that are otherwise only
+available via \fBunbound\-control stats_noreset\fP as a plain HTTP endpoint, in
+the Prometheus text exposition format, so a Prometheus server can scrape
+them directly, without running a separate exporter process.
+This metrics endpoint is independent of the \fBremote\-control:\fP interface
+and does not use certificates.
+It is disabled by default.
+.sp
+To enable it, add for example the following to the \fBserver:\fP clause:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+server:
+    metrics\-enable: yes
+    metrics\-interface: 127.0.0.1
+    metrics\-port: 9100
+    metrics\-path: \(dq/metrics\(dq
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+With the settings above, the metrics can then be fetched with
+\fBcurl http://127.0.0.1:9100/metrics\fP, or scraped by adding
+\fB127.0.0.1:9100\fP as a target in the Prometheus server\(aqs
+\fBscrape_configs:\fP\&.
 .INDENT 0.0
 .TP
-.B num\-threads: \fI<number>\fP 
+.B metrics\-enable: \fI<yes or no>\fP
+If enabled, Unbound serves the server statistics (the same values as
+obtained with \fBunbound\-control stats_noreset\fP) over plain HTTP, in
+the Prometheus text exposition format, so they can be scraped by a
+Prometheus server without an external exporter process.
+This metrics endpoint is independent of the \fBremote\-control:\fP
+interface and does not use certificates.
+.sp
+Default: no
+.UNINDENT
+.INDENT 0.0
+.TP
+.B metrics\-interface: \fI<IP address or interface name[@port]>\fP
+Give IPv4 or IPv6 addresses, or an interface name, to listen on for
+metrics http requests. Can be given multiple times to listen on several
+interfaces.
+If an interface name is used instead of an IP address, the list of IP
+addresses on that interface are used.
+.sp
+By default localhost (\fB127.0.0.1\fP and \fB::1\fP) is listened to.
+Use \fB0.0.0.0\fP and \fB::0\fP to listen to all interfaces.
+If you change this and permissions have been dropped, you must restart
+the server for the change to take effect.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B metrics\-port: \fI<port number>\fP
+The port number to listen on for the metrics http interface.
+.sp
+.ne 2
+.INDENT 7.0
+.INDENT 3.5
+.sp
+If you change this and permissions have been dropped, you must
+restart the server for the change to take effect.
+.UNINDENT
+.UNINDENT
+.sp
+Default: 9100
+.UNINDENT
+.INDENT 0.0
+.TP
+.B metrics\-path: \fI<path>\fP
+The URL path on which the metrics are served, for example \fB/metrics\fP\&.
+.sp
+Default: "/metrics"
+.UNINDENT
+.INDENT 0.0
+.TP
+.B num\-threads: \fI<number>\fP
 The number of threads to create to serve clients. Use 1 for no threading.
 .sp
 Default: 1

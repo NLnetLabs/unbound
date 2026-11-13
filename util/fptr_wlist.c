@@ -122,6 +122,8 @@ fptr_whitelist_comm_point_raw(comm_point_callback_type *fptr)
 	else if(fptr == &tube_handle_write) return 1;
 	else if(fptr == &remote_accept_callback) return 1;
 	else if(fptr == &remote_control_callback) return 1;
+	else if(fptr == &metrics_accept_callback) return 1;
+	else if(fptr == &metrics_control_callback) return 1;
 	else if(fptr == &fast_reload_client_callback) return 1;
 	return 0;
 }

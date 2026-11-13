@@ -82,6 +82,15 @@ struct config_file {
 	/** if true, inhibits a lot of =0 lines from the extended stats output */
 	int stat_inhibit_zero;
 
+	/** Prometheus metrics exporter section. enable toggle. */
+	int metrics_enable;
+	/** the interfaces the metrics exporter should listen on */
+	struct config_strlist_head metrics_ifs;
+	/** port number for the metrics exporter */
+	int metrics_port;
+	/** URL path on which the metrics are served */
+	char* metrics_path;
+
 	/** number of threads to create */
 	int num_threads;
 

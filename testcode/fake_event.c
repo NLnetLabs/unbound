@@ -1782,6 +1782,14 @@ void daemon_remote_stop_accept(struct daemon_remote* ATTR_UNUSED(rc))
 {
 }
 
+void daemon_metrics_start_accept(struct daemon_metrics* ATTR_UNUSED(dm))
+{
+}
+
+void daemon_metrics_stop_accept(struct daemon_metrics* ATTR_UNUSED(dm))
+{
+}
+
 int create_udp_sock(int ATTR_UNUSED(family), int ATTR_UNUSED(socktype),
 	struct sockaddr* ATTR_UNUSED(addr), socklen_t ATTR_UNUSED(addrlen),
 	int ATTR_UNUSED(v6only), int* ATTR_UNUSED(inuse),

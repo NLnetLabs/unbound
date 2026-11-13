@@ -1235,10 +1235,6 @@ print_ext(RES* ssl, struct ub_stats_info* s, int inhibit_zero)
 	if(!ssl_printf(ssl, "num.query.cachedb"SQ"%lu\n",
 		(unsigned long)s->svr.num_query_cachedb)) return 0;
 #endif /* USE_CACHEDB */
-#ifdef USE_DNSTAP
-	if(!ssl_printf(ssl, "num.dnstap_congestion_drop"SQ"%lu\n",
-		(unsigned long)s->svr.num_dnstap_congestion_drop)) return 0;
-#endif /* USE_DNSTAP */
 	return 1;
 }
 
