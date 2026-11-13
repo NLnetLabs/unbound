@@ -401,6 +401,8 @@ metrics_print_stats(struct evbuffer* reply, const char* nm,
 #endif
 	INFO_STATS("hits_queries", "num.dns_error_reports",
 		s->svr.num_dns_error_reports);
+	INFO_STATS("hits_queries", "num.dnstap_congestion_drop",
+		s->svr.num_dnstap_congestion_drop);
 
 	evbuffer_add_printf(reply,
 		"%squeue_queries{type=\"%s.requestlist.avg\"} %g\n",
