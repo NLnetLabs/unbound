@@ -273,8 +273,11 @@ void dt_msg_queue_delete(struct dt_msg_queue* mq);
  * 	the buffer is freed as well (and nothing happens, the item
  * 	could not be logged).
  * @param len: length of buffer.
+ * @param congested: set true if the operation failed because the queue is
+ *	congested, and the message is dropped.
  */
-void dt_msg_queue_submit(struct dt_msg_queue* mq, void* buf, size_t len);
+void dt_msg_queue_submit(struct dt_msg_queue* mq, void* buf, size_t len,
+	int* congested);
 
 /** timer callback to wakeup dtio thread to process messages */
 void mq_wakeup_cb(void* arg);

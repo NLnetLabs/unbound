@@ -2584,6 +2584,9 @@ void worker_stats_clear(struct worker* worker)
 {
 	server_stats_init(&worker->stats, worker->env.cfg);
 	mesh_stats_clear(worker->env.mesh);
+#ifdef USE_DNSTAP
+	worker->dtenv.congestion_count = 0;
+#endif
 	worker->back->unwanted_replies = 0;
 	worker->back->num_tcp_outgoing = 0;
 	worker->back->num_udp_outgoing = 0;

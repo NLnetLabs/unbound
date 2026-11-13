@@ -232,7 +232,8 @@ dt_msg_queue_start_timer(struct dt_msg_queue* mq, int wakeupnow)
 }
 
 void
-dt_msg_queue_submit(struct dt_msg_queue* mq, void* buf, size_t len)
+dt_msg_queue_submit(struct dt_msg_queue* mq, void* buf, size_t len,
+	int* congested)
 {
 	int wakeupnow = 0, wakeupstarttimer = 0;
 	struct dt_msg_entry* entry;
@@ -282,6 +283,7 @@ dt_msg_queue_submit(struct dt_msg_queue* mq, void* buf, size_t len)
 		lock_basic_unlock(&mq->lock);
 		free(buf);
 		free(entry);
+		*congested = 1;
 		return;
 	}
 	mq->cursize += len;

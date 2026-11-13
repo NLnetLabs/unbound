@@ -255,6 +255,10 @@ static void pr_stats(const char* nm, struct ub_stats_info* s)
 		s->svr.num_query_dnscrypt_crypted_malformed);
 #endif /* USE_DNSCRYPT */
 	PR_UL_NM("num.dns_error_reports", s->svr.num_dns_error_reports);
+#ifdef USE_DNSTAP
+	PR_UL_NM("num.dnstap_congestion_drop",
+		s->svr.num_dnstap_congestion_drop);
+#endif /* USE_DNSTAP */
 	printf("%s.requestlist.avg"SQ"%g\n", nm,
 		(s->svr.num_queries_missed_cache+s->svr.num_queries_prefetch)?
 			(double)s->svr.sum_query_list_size/

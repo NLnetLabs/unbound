@@ -83,6 +83,9 @@ struct dt_env {
 	unsigned int sample_rate;
 	/** rate limit counter */
 	unsigned int sample_rate_count;
+
+	/** number of messages dropped due to congestion, per worker. */
+	unsigned int congestion_count;
 };
 
 /**

@@ -1387,6 +1387,19 @@ Extended Statistics
     These are counted as cachemiss by the main counters, but hit the cachedb
     external cache after getting processed by the cachedb module.
 
+
+@@UAHL@unbound-control.stats@num.dnstap_congestion_drop@@
+    Number of messages that dnstap dropped due to congestion.
+    This means the message is not logged to dnstap.
+    The dnstap writer was not connected to the destination or it can
+    not keep up with the message rate and the buffers are full.
+    If there are  messages dropped due to the dnstap-sample-rate option,
+    these are not part of this counter value.
+    So that the dnstap-sample-rate can be set higher and that can then
+    free up time and buffer space for the dnstap writer to keep up with the
+    volume, and then this counter can no longer increase.
+
+
 @@UAHL@unbound-control.stats@num.rpz.action@@.<rpz_action>
     Number of queries answered using configured RPZ policy, per RPZ action
     type.
