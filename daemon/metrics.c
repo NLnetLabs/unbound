@@ -75,7 +75,7 @@ struct daemon_metrics*
 daemon_metrics_create(void)
 {
 	struct daemon_metrics* metrics = (struct daemon_metrics*)calloc(
-		sizeof(*metrics), 1);
+		1, sizeof(*metrics));
 	if(!metrics) {
 		log_err("out of memory");
 		return NULL;
