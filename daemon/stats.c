@@ -365,6 +365,12 @@ server_stats_compile(struct worker* worker, struct ub_stats_info* s, int reset)
 #else
 	s->svr.num_query_cachedb = 0;
 #endif
+#ifdef USE_DNSTAP
+	if(worker->daemon->dtenv) {
+		s->svr.num_dnstap_congestion_drop =
+			(long long)worker->dtenv.congestion_count;
+	}
+#endif
 
 	/* get tcp accept usage */
 	s->svr.tcp_accept_usage = 0;
@@ -523,6 +529,10 @@ void server_stats_add(struct ub_stats_info* total, struct ub_stats_info* a)
 		total->svr.tcp_accept_usage += a->svr.tcp_accept_usage;
 #ifdef USE_CACHEDB
 		total->svr.num_query_cachedb += a->svr.num_query_cachedb;
+#endif
+#ifdef USE_DNSTAP
+		total->svr.num_dnstap_congestion_drop +=
+			a->svr.num_dnstap_congestion_drop;
 #endif
 		for(i=0; i<UB_STATS_QTYPE_NUM; i++)
 			total->svr.qtype[i] += a->svr.qtype[i];

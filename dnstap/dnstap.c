@@ -112,9 +112,14 @@ dt_sample_rate_limited(struct dt_env* env)
 }
 
 static void
-dt_send(const struct dt_env *env, void *buf, size_t len_buf)
+dt_send(struct dt_env *env, void *buf, size_t len_buf)
 {
-	dt_msg_queue_submit(env->msgqueue, buf, len_buf);
+	int congested = 0;
+	dt_msg_queue_submit(env->msgqueue, buf, len_buf, &congested);
+	if(congested) {
+		/* account congested message drop in statistics */
+		env->congestion_count++;
+	}
 }
 
 static void
@@ -309,6 +314,7 @@ dt_apply_cfg(struct dt_env *env, struct config_file *cfg)
 int
 dt_init(struct dt_env *env, struct comm_base* base)
 {
+	env->congestion_count = 0;
 	env->msgqueue = dt_msg_queue_create(base);
 	if(!env->msgqueue) {
 		log_err("malloc failure");

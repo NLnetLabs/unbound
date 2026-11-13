@@ -859,6 +859,8 @@ struct ub_server_stats {
 	long long num_queries_wait_limit;
 	/** number of dns error reports generated */
 	long long num_dns_error_reports;
+	/** number of dnstap messages dropped due to congestion */
+	long long num_dnstap_congestion_drop;
 };
 
 /**

@@ -1,3 +1,7 @@
+13 November 2026: Wouter
+	- Fix #1549: [FR] Counter for dropped DNSTAP messages.
+	  This adds num.dnstap_congestion_drop to the statistics.
+
 12 November 2026: Yorgos
 	- Update common.sh to version 8; adding get_pre.
 
