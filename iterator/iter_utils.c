@@ -470,6 +470,84 @@ nth_rtt(struct delegpt_addr* result_list, size_t num_results, size_t n)
 	return rtt_band;
 }
 
+/** number of timeouts in a row after which a sequential target is
+ * passed over for the ones after it, until its infra entry expires.
+ * Each timeout doubles the rto, so this is checked as a factor 2^n. */
+#define SEQUENTIAL_TIMEOUT_FACTOR 8
+
+/** classify a target for sequential selection: 0 usable, 1 timing out,
+ * 2 penalized (lame, dnssec lame, blacklisted) */
+static int
+sequential_class(struct module_env* env, struct delegpt* dp,
+	struct delegpt_addr* a, time_t now)
+{
+	struct rtt_info rtt;
+	int delay, tA, tAAAA, tother;
+	if(a->sel_rtt >= USEFUL_SERVER_TOP_TIMEOUT)
+		return 2;
+	/* a slow server that answers has no timeout backoff on its rto,
+	 * a server that stopped answering has, for every timeout */
+	if(infra_get_host_rto(env->infra_cache, &a->addr, a->addrlen,
+		dp->name, dp->namelen, &rtt, &delay, now, &tA, &tAAAA,
+		&tother) >= 0 &&
+		rtt_notimeout(&rtt)*SEQUENTIAL_TIMEOUT_FACTOR <= rtt.rto)
+		return 1;
+	return 0;
+}
+
+/** see if target a is preferred over target b for a sequential delegpt.
+ * Lower class first, then the least tried in this query, then the
+ * configured order, then rtt. */
+static int
+sequential_better(struct delegpt_addr* a, int class_a,
+	struct delegpt_addr* b, int class_b)
+{
+	if(class_a != class_b)
+		return class_a < class_b;
+	if(a->attempts != b->attempts)
+		return a->attempts < b->attempts;
+	if(a->order != b->order) {
+		/* addresses that are not configured, from forward-host,
+		 * come after the configured ones */
+		if(a->order == -1)
+			return 0;
+		if(b->order == -1)
+			return 1;
+		return a->order < b->order;
+	}
+	return a->sel_rtt < b->sel_rtt;
+}
+
+/** filter the address list for a sequential delegpt, put the target to
+ * use at the front, returns number of best targets (0 or 1) */
+static int
+iter_filter_sequential(struct module_env* env, struct delegpt* dp,
+	time_t now, int* selected_rtt)
+{
+	struct delegpt_addr* a, *prev = NULL, *best = NULL, *bestprev = NULL;
+	int cl, bestcl = 0;
+	for(a = dp->result_list; a; prev = a, a = a->next_result) {
+		/* skip unsuitable targets */
+		if(a->sel_rtt == -1)
+			continue;
+		cl = sequential_class(env, dp, a, now);
+		if(!best || sequential_better(a, cl, best, bestcl)) {
+			best = a;
+			bestcl = cl;
+			bestprev = prev;
+		}
+	}
+	if(!best)
+		return 0;
+	if(bestprev) {
+		bestprev->next_result = best->next_result;
+		best->next_result = dp->result_list;
+		dp->result_list = best;
+	}
+	*selected_rtt = best->sel_rtt;
+	return 1;
+}
+
 /** filter the address list, putting best targets at front,
  * returns number of best targets (or 0, no suitable targets) */
 static int
@@ -497,6 +575,9 @@ iter_filter_order(struct iter_env* iter_env, struct module_env* env,
 		return 0; /* we want more choice. The best choice is a bad one.
 			     return 0 to force the caller to fetch more */
 	}
+
+	if(dp->sequential)
+		return iter_filter_sequential(env, dp, now, selected_rtt);
 
 	if(env->cfg->fast_server_permil != 0 && prefetch == 0 &&
 		num_results > env->cfg->fast_server_num &&
