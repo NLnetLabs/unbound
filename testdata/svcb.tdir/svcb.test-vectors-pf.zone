@@ -90,3 +90,11 @@ v18	HTTPS	16 foo.example.org. (alpn=h2,h3-19 mandatory=ipv4hint,alpn
 v19	HTTPS	16 foo.example.org. alpn="f\\\\oo\\,bar,h2"
 v20	HTTPS	16 foo.example.org. alpn=f\\\092oo\092,bar,h2
 
+; This vector is out-of-order in the wireformat encoding. That could come
+; from an upstream when this is the secondary zone. To leniently accept such
+; content as a secondary, it has to be able to be written and read back in.
+v21	HTTPS	1 . alpn="h3" port=7777
+
+; If the server can leniently accept broken svcparams, then it should be able
+; to write and read them back in. This svcparam is broken, it is truncated.
+v22	HTTPS	\# 8 000100000300021e

@@ -387,7 +387,7 @@ hex_buffer2wire(sldns_buffer *data_buffer)
 	uint8_t *wire = (uint8_t*)malloc(MAX_PACKETLEN);
 	if(!wire) error("out of memory");
 	
-	hexbuf = (uint8_t*)malloc(MAX_PACKETLEN);
+	hexbuf = (uint8_t*)malloc(MAX_PACKETLEN * 2);
 	if(!hexbuf) error("out of memory");
 	for (data_buf_pos = 0; data_buf_pos < sldns_buffer_position(data_buffer); data_buf_pos++) {
 		c = (int) data_wire[data_buf_pos];
@@ -402,7 +402,7 @@ hex_buffer2wire(sldns_buffer *data_buffer)
 					(c >= 'a' && c <= 'f') ||
 					(c >= 'A' && c <= 'F') )
 				{
-					if (hexbufpos >= MAX_PACKETLEN) {
+					if (hexbufpos >= MAX_PACKETLEN * 2) {
 						error("buffer overflow");
 						free(hexbuf);
 						return 0;
@@ -422,7 +422,7 @@ hex_buffer2wire(sldns_buffer *data_buffer)
 				}
 				break;
 			case 2:
-				if (hexbufpos >= MAX_PACKETLEN) {
+				if (hexbufpos >= MAX_PACKETLEN * 2) {
 					error("buffer overflow");
 					free(hexbuf);
 					return 0;
@@ -433,13 +433,13 @@ hex_buffer2wire(sldns_buffer *data_buffer)
 		}
 	}
 
-	if (hexbufpos >= MAX_PACKETLEN) {
+	if (hexbufpos >= MAX_PACKETLEN * 2) {
 		/*verbose("packet size reached\n");*/
 	}
 	
 	/* lenient mode: length must be multiple of 2 */
 	if (hexbufpos % 2 != 0) {
-		if (hexbufpos >= MAX_PACKETLEN) {
+		if (hexbufpos >= MAX_PACKETLEN * 2) {
 			error("buffer overflow");
 			free(hexbuf);
 			return 0;
@@ -630,7 +630,7 @@ read_entry(FILE* in, const char* name, struct sldns_file_parse_state* pstate,
 				add_section = LDNS_SECTION_ADDITIONAL;
 			else error("%s line %d: bad section %s", name, pstate->lineno, parse);
 		} else if(str_keyword(&parse, "HEX_ANSWER_BEGIN")) {
-			hex_data_buffer = sldns_buffer_new(MAX_PACKETLEN);
+			hex_data_buffer = sldns_buffer_new(MAX_PACKETLEN*2);
 			reading_hex = 1;
 		} else if(str_keyword(&parse, "HEX_ANSWER_END")) {
 			if(!reading_hex) {
@@ -643,7 +643,7 @@ read_entry(FILE* in, const char* name, struct sldns_file_parse_state* pstate,
 		} else if(reading_hex) {
 			sldns_buffer_printf(hex_data_buffer, "%s", line);
 		} else if(str_keyword(&parse, "HEX_EDNSDATA_BEGIN")) {
-			hex_ednsdata_buffer = sldns_buffer_new(MAX_PACKETLEN);
+			hex_ednsdata_buffer = sldns_buffer_new(MAX_PACKETLEN*2);
 			reading_hex_ednsdata = 1;
 		} else if(str_keyword(&parse, "HEX_EDNSDATA_END")) {
 			if (!reading_hex_ednsdata) {

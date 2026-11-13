@@ -53,6 +53,11 @@
 #include "sldns/parseutil.h"
 #include "sldns/wire2str.h"
 
+#define MAX_PARSED_EDNS_OPTIONS 100
+/** The max number of decompression pointers that are allowed in a received
+ * packet. The parse fails if the limit is exceeded. */
+#define PARSE_DECOMPRESS_LIMIT 2048
+
 /** smart comparison of (compressed, valid) dnames from packet */
 static int
 smart_compare(sldns_buffer* pkt, uint8_t* dnow, 
@@ -112,7 +117,7 @@ new_rrset(struct msg_parse* msg, uint8_t* dname, size_t dnamelen,
 
 /** See if next rrset is nsec at zone apex */
 static int
-nsec_at_apex(sldns_buffer* pkt)
+nsec_at_apex(sldns_buffer* pkt, int* budget, int limit)
 {
 	/* we are at ttl position in packet. */
 	size_t pos = sldns_buffer_position(pkt);
@@ -126,17 +131,17 @@ nsec_at_apex(sldns_buffer* pkt)
 		return 0; /* parse error happens later */
 	}
 	/* must validate the nsec next domain name format */
-	if(pkt_dname_len(pkt) == 0) {
+	if(pkt_dname_len_budget(pkt, budget, limit) == 0) {
 		sldns_buffer_set_position(pkt, pos);
 		return 0; /* parse error */
 	}
 
 	/* see if SOA bit is set. */
-	if(sldns_buffer_position(pkt) < pos+4+rdatalen) {
+	if(sldns_buffer_position(pkt) < pos+6+rdatalen) {
 		/* nsec type bitmap contains items */
 		uint8_t win, blen, bits;
 		/* need: windownum, bitmap len, firstbyte */
-		if(sldns_buffer_position(pkt)+3 > pos+4+rdatalen) {
+		if(sldns_buffer_position(pkt)+3 > pos+6+rdatalen) {
 			sldns_buffer_set_position(pkt, pos);
 			return 0; /* malformed nsec */
 		}
@@ -157,10 +162,11 @@ nsec_at_apex(sldns_buffer* pkt)
 
 /** Calculate rrset flags */
 static uint32_t
-pkt_rrset_flags(sldns_buffer* pkt, uint16_t type, sldns_pkt_section sec)
+pkt_rrset_flags(sldns_buffer* pkt, uint16_t type, sldns_pkt_section sec,
+	int* budget, int limit)
 {
 	uint32_t f = 0;
-	if(type == LDNS_RR_TYPE_NSEC && nsec_at_apex(pkt)) {
+	if(type == LDNS_RR_TYPE_NSEC && nsec_at_apex(pkt, budget, limit)) {
 		f |= PACKED_RRSET_NSEC_AT_APEX;
 	} else if(type == LDNS_RR_TYPE_SOA && sec == LDNS_SECTION_AUTHORITY) {
 		f |= PACKED_RRSET_SOA_NEG;
@@ -244,8 +250,10 @@ pkt_rrsig_covered(sldns_buffer* pkt, uint8_t* here, uint16_t* type)
 	size_t pos = sldns_buffer_position(pkt);
 	sldns_buffer_set_position(pkt, (size_t)(here-sldns_buffer_begin(pkt)));
 	/* ttl + len + size of small rrsig(rootlabel, no signature) */
-	if(sldns_buffer_remaining(pkt) < 4+2+19)
+	if(sldns_buffer_remaining(pkt) < 4+2+19) {
+		sldns_buffer_set_position(pkt, pos);
 		return 0;
+	}
 	sldns_buffer_skip(pkt, 4); /* ttl */
 	if(sldns_buffer_read_u16(pkt) < 19) /* too short */ {
 		sldns_buffer_set_position(pkt, pos);
@@ -460,6 +468,8 @@ change_rrsig_rrset(struct rrset_parse* sigset, struct msg_parse* msg,
  * @param rrset_prev: last seen RRset.
  * @param section: the current section in the packet.
  * @param region: used to allocate temporary parsing data.
+ * @param budget: decompression budget.
+ * @param limit: decompression limit.
  * @return 0 on out of memory.
  */
 static int
@@ -469,7 +479,8 @@ find_rrset(struct msg_parse* msg, sldns_buffer* pkt, uint8_t* dname,
 	uint8_t** prev_dname_first, uint8_t** prev_dname_last,
 	size_t* prev_dnamelen, uint16_t* prev_type,
 	uint16_t* prev_dclass, struct rrset_parse** rrset_prev,
-	sldns_pkt_section section, struct regional* region)
+	sldns_pkt_section section, struct regional* region, int* budget,
+	int limit)
 {
 	hashvalue_type dname_h = pkt_hash_rrset_first(pkt, dname);
 	uint16_t covtype;
@@ -496,7 +507,7 @@ find_rrset(struct msg_parse* msg, sldns_buffer* pkt, uint8_t* dname,
 		}
 	}
 	/* find by hashing and lookup in hashtable */
-	*rrset_flags = pkt_rrset_flags(pkt, type, section);
+	*rrset_flags = pkt_rrset_flags(pkt, type, section, budget, limit);
 	
 	/* if rrsig - try to lookup matching data set first */
 	if(type == LDNS_RR_TYPE_RRSIG && pkt_rrsig_covered(pkt, 
@@ -578,10 +589,13 @@ find_rrset(struct msg_parse* msg, sldns_buffer* pkt, uint8_t* dname,
  * @param pkt: packet, position at call must be at start of query section.
  *	at end position is after query section.
  * @param msg: store results here.
+ * @param budget: decompression budget.
+ * @param limit: decompression limit.
  * @return: 0 if OK, or rcode on error.
  */
 static int
-parse_query_section(sldns_buffer* pkt, struct msg_parse* msg)
+parse_query_section(sldns_buffer* pkt, struct msg_parse* msg, int* budget,
+	int limit)
 {
 	if(msg->qdcount == 0)
 		return 0;
@@ -591,7 +605,7 @@ parse_query_section(sldns_buffer* pkt, struct msg_parse* msg)
 	if(sldns_buffer_remaining(pkt) <= 0)
 		return LDNS_RCODE_FORMERR;
 	msg->qname = sldns_buffer_current(pkt);
-	if((msg->qname_len = pkt_dname_len(pkt)) == 0)
+	if((msg->qname_len = pkt_dname_len_budget(pkt, budget, limit)) == 0)
 		return LDNS_RCODE_FORMERR;
 	if(sldns_buffer_remaining(pkt) < sizeof(uint16_t)*2)
 		return LDNS_RCODE_FORMERR;
@@ -636,7 +650,8 @@ get_rdf_size(sldns_rdf_type rdf)
 
 /** calculate the size of one rr */
 static int
-calc_size(sldns_buffer* pkt, uint16_t type, struct rr_parse* rr)
+calc_size(sldns_buffer* pkt, uint16_t type, struct rr_parse* rr, int* budget,
+	int limit)
 {
 	const sldns_rr_descriptor* desc;
 	uint16_t pkt_len; /* length of rr inside the packet */
@@ -657,7 +672,8 @@ calc_size(sldns_buffer* pkt, uint16_t type, struct rr_parse* rr)
 			case LDNS_RDF_TYPE_DNAME:
 				/* decompress every domain name */
 				oldpos = sldns_buffer_position(pkt);
-				if((len = pkt_dname_len(pkt)) == 0)
+				if((len = pkt_dname_len_budget(pkt, budget,
+					limit)) == 0)
 					return 0; /* malformed dname */
 				if(sldns_buffer_position(pkt)-oldpos > pkt_len)
 					return 0; /* dname exceeds rdata */
@@ -685,6 +701,9 @@ calc_size(sldns_buffer* pkt, uint16_t type, struct rr_parse* rr)
 			}
 			rdf++;
 		}
+		/* rdata ended before all _dname_count names were seen */
+		if(count != 0)
+			return 0; /* the rdata is too short. */
 	}
 	/* remaining rdata */
 	rr->size += pkt_len;
@@ -753,7 +772,7 @@ sig_is_double(sldns_buffer* pkt, struct rrset_parse* rrset, uint8_t* ttldata)
 static int
 add_rr_to_rrset(struct rrset_parse* rrset, sldns_buffer* pkt, 
 	struct msg_parse* msg, struct regional* region, 
-	sldns_pkt_section section, uint16_t type)
+	sldns_pkt_section section, uint16_t type, int* budget, int limit)
 {
 	struct rr_parse* rr;
 	/* check section of rrset. */
@@ -804,8 +823,10 @@ add_rr_to_rrset(struct rrset_parse* rrset, sldns_buffer* pkt,
 	}
 
 	/* calc decompressed size */
-	if(!calc_size(pkt, type, rr))
+	if(!calc_size(pkt, type, rr, budget, limit)) {
+		if(*budget > limit) return LDNS_RCODE_SERVFAIL;
 		return LDNS_RCODE_FORMERR;
+	}
 	rrset->size += rr->size;
 
 	return 0;
@@ -820,12 +841,14 @@ add_rr_to_rrset(struct rrset_parse* rrset, sldns_buffer* pkt,
  * @param section: section enum.
  * @param num_rrs: how many rrs are in the section.
  * @param num_rrsets: returns number of rrsets in the section.
+ * @param budget: decompression budget.
+ * @param limit: decompression limit.
  * @return: 0 if OK, or rcode on error.
  */
 static int
 parse_section(sldns_buffer* pkt, struct msg_parse* msg, 
 	struct regional* region, sldns_pkt_section section, 
-	uint16_t num_rrs, size_t* num_rrsets)
+	uint16_t num_rrs, size_t* num_rrsets, int* budget, int limit)
 {
 	uint16_t i;
 	uint8_t* dname, *prev_dname_f = NULL, *prev_dname_l = NULL;
@@ -844,8 +867,10 @@ parse_section(sldns_buffer* pkt, struct msg_parse* msg,
 	for(i=0; i<num_rrs; i++) {
 		/* parse this RR. */
 		dname = sldns_buffer_current(pkt);
-		if((dnamelen = pkt_dname_len(pkt)) == 0)
+		if((dnamelen = pkt_dname_len_budget(pkt, budget, limit)) == 0) {
+			if(*budget > limit) return LDNS_RCODE_SERVFAIL;
 			return LDNS_RCODE_FORMERR;
+		}
 		if(sldns_buffer_remaining(pkt) < 10) /* type, class, ttl, len */
 			return LDNS_RCODE_FORMERR;
 		type = sldns_buffer_read_u16(pkt);
@@ -881,7 +906,7 @@ parse_section(sldns_buffer* pkt, struct msg_parse* msg,
 		if(!find_rrset(msg, pkt, dname, dnamelen, type, dclass, &hash, 
 			&rrset_flags, &prev_dname_f, &prev_dname_l, 
 			&prev_dnamelen, &prev_type, &prev_dclass, &rrset, 
-			section, region))
+			section, region, budget, limit))
 			return LDNS_RCODE_SERVFAIL;
 		if(!rrset) {
 			/* it is a new RR set. hash&flags already calculated.*/
@@ -901,7 +926,7 @@ parse_section(sldns_buffer* pkt, struct msg_parse* msg,
 		}
 		/* add to rrset. */
 		if((r=add_rr_to_rrset(rrset, pkt, msg, region, section, 
-			type)) != 0)
+			type, budget, limit)) != 0)
 			return r;
 	}
 	return 0;
@@ -910,7 +935,7 @@ parse_section(sldns_buffer* pkt, struct msg_parse* msg,
 int
 parse_packet(sldns_buffer* pkt, struct msg_parse* msg, struct regional* region)
 {
-	int ret;
+	int ret, budget = 0, limit = PARSE_DECOMPRESS_LIMIT;
 	if(sldns_buffer_remaining(pkt) < LDNS_HEADER_SIZE)
 		return LDNS_RCODE_FORMERR;
 	/* read the header */
@@ -922,19 +947,20 @@ parse_packet(sldns_buffer* pkt, struct msg_parse* msg, struct regional* region)
 	msg->arcount = sldns_buffer_read_u16(pkt);
 	if(msg->qdcount > 1)
 		return LDNS_RCODE_FORMERR;
-	if((ret = parse_query_section(pkt, msg)) != 0)
+	if((ret = parse_query_section(pkt, msg, &budget, limit)) != 0)
 		return ret;
 	if((ret = parse_section(pkt, msg, region, LDNS_SECTION_ANSWER,
-		msg->ancount, &msg->an_rrsets)) != 0)
+		msg->ancount, &msg->an_rrsets, &budget, limit)) != 0)
 		return ret;
 	if((ret = parse_section(pkt, msg, region, LDNS_SECTION_AUTHORITY,
-		msg->nscount, &msg->ns_rrsets)) != 0)
+		msg->nscount, &msg->ns_rrsets, &budget, limit)) != 0)
 		return ret;
 	if(sldns_buffer_remaining(pkt) == 0 && msg->arcount == 1) {
 		/* BIND accepts leniently that an EDNS record is missing.
 		 * so, we do too. */
 	} else if((ret = parse_section(pkt, msg, region,
-		LDNS_SECTION_ADDITIONAL, msg->arcount, &msg->ar_rrsets)) != 0)
+		LDNS_SECTION_ADDITIONAL, msg->arcount, &msg->ar_rrsets,
+		&budget, limit)) != 0)
 		return ret;
 	/* if(sldns_buffer_remaining(pkt) > 0) { */
 		/* there is spurious data at end of packet. ignore */
@@ -950,6 +976,7 @@ parse_edns_options_from_query(uint8_t* rdata_ptr, size_t rdata_len,
 	struct comm_reply* repinfo, uint32_t now, struct regional* region,
 	struct cookie_secrets* cookie_secrets)
 {
+	int i = 0, nsid_seen = 0, cookie_seen = 0, padding_seen = 0;
 	/* To respond with a Keepalive option, the client connection must have
 	 * received one message with a TCP Keepalive EDNS option, and that
 	 * option must have 0 length data. Subsequent messages sent on that
@@ -968,8 +995,7 @@ parse_edns_options_from_query(uint8_t* rdata_ptr, size_t rdata_len,
 	}
 
 	/* while still more options, and have code+len to read */
-	/* ignores partial content (i.e. rdata len 3) */
-	while(rdata_len >= 4) {
+	while(rdata_len >= 4 && i < MAX_PARSED_EDNS_OPTIONS) {
 		uint16_t opt_code = sldns_read_uint16(rdata_ptr);
 		uint16_t opt_len = sldns_read_uint16(rdata_ptr+2);
 		uint8_t server_cookie[40];
@@ -978,14 +1004,17 @@ parse_edns_options_from_query(uint8_t* rdata_ptr, size_t rdata_len,
 
 		rdata_ptr += 4;
 		rdata_len -= 4;
-		if(opt_len > rdata_len)
-			break; /* option code partial */
+		if(opt_len > rdata_len) {
+			/* option code partial */
+			return LDNS_RCODE_FORMERR;
+		}
 
 		/* handle parse time edns options here */
 		switch(opt_code) {
 		case LDNS_EDNS_NSID:
-			if (!cfg || !cfg->nsid)
+			if (!cfg || !cfg->nsid || nsid_seen)
 				break;
+			nsid_seen = 1;
 			if(!edns_opt_list_append(&edns->opt_list_out,
 						LDNS_EDNS_NSID, cfg->nsid_len,
 						cfg->nsid, region)) {
@@ -1026,9 +1055,13 @@ parse_edns_options_from_query(uint8_t* rdata_ptr, size_t rdata_len,
 			break;
 
 		case LDNS_EDNS_PADDING:
-			if(!cfg || !cfg->pad_responses ||
-					!c || c->type != comm_tcp ||!c->ssl)
+			if(!cfg || !cfg->pad_responses || !c || padding_seen)
 				break;
+			if(!((c->type == comm_tcp && c->ssl) ||
+				(c->type == comm_http && c->ssl) ||
+				c->type == comm_doq))
+				break;
+			padding_seen = 1;
 			if(!edns_opt_list_append(&edns->opt_list_out,
 						LDNS_EDNS_PADDING,
 						0, NULL, region)) {
@@ -1039,8 +1072,9 @@ parse_edns_options_from_query(uint8_t* rdata_ptr, size_t rdata_len,
 			break;
 
 		case LDNS_EDNS_COOKIE:
-			if(!cfg || !cfg->do_answer_cookie || !repinfo)
+			if(!cfg || !cfg->do_answer_cookie || !repinfo || cookie_seen)
 				break;
+			cookie_seen = 1;
 			if(opt_len != 8 && (opt_len < 16 || opt_len > 40)) {
 				verbose(VERB_ALGO, "worker request: "
 					"badly formatted cookie");
@@ -1062,13 +1096,13 @@ parse_edns_options_from_query(uint8_t* rdata_ptr, size_t rdata_len,
 			 * purposes. It will be overwritten if (re)creation
 			 * is needed.
 			 */
-			if(repinfo->remote_addr.ss_family == AF_INET) {
+			if(repinfo->client_addr.ss_family == AF_INET) {
 				memcpy(server_cookie + 16,
-					&((struct sockaddr_in*)&repinfo->remote_addr)->sin_addr, 4);
+					&((struct sockaddr_in*)&repinfo->client_addr)->sin_addr, 4);
 			} else {
 				cookie_is_v4 = 0;
 				memcpy(server_cookie + 16,
-					&((struct sockaddr_in6*)&repinfo->remote_addr)->sin6_addr, 16);
+					&((struct sockaddr_in6*)&repinfo->client_addr)->sin6_addr, 16);
 			}
 
 			if(cfg->cookie_secret_file &&
@@ -1146,7 +1180,11 @@ parse_edns_options_from_query(uint8_t* rdata_ptr, size_t rdata_len,
 		}
 		rdata_ptr += opt_len;
 		rdata_len -= opt_len;
+		i++;
 	}
+	/* partial content (i.e. rdata len 3) is FORMERR */
+	if(rdata_len > 0 && rdata_len <= 3)
+		return LDNS_RCODE_FORMERR;
 	return LDNS_RCODE_NOERROR;
 }
 
@@ -1160,6 +1198,7 @@ parse_extract_edns_from_response_msg(struct msg_parse* msg,
 	struct rrset_parse* found_prev = 0;
 	size_t rdata_len;
 	uint8_t* rdata_ptr;
+	int i = 0;
 	/* since the class encodes the UDP size, we cannot use hash table to
 	 * find the EDNS OPT record. Scan the packet. */
 	while(rrset) {
@@ -1219,13 +1258,15 @@ parse_extract_edns_from_response_msg(struct msg_parse* msg,
 
 	/* while still more options, and have code+len to read */
 	/* ignores partial content (i.e. rdata len 3) */
-	while(rdata_len >= 4) {
+	while(rdata_len >= 4 && i < MAX_PARSED_EDNS_OPTIONS) {
 		uint16_t opt_code = sldns_read_uint16(rdata_ptr);
 		uint16_t opt_len = sldns_read_uint16(rdata_ptr+2);
 		rdata_ptr += 4;
 		rdata_len -= 4;
 		if(opt_len > rdata_len)
 			break; /* option code partial */
+			/* This is lenient for partially broken messages
+			 * from upstream. With a partial EDNS option. */
 
 		if(!edns_opt_list_append(&edns->opt_list_in,
 				opt_code, opt_len, rdata_ptr, region)) {
@@ -1234,6 +1275,7 @@ parse_extract_edns_from_response_msg(struct msg_parse* msg,
 		}
 		rdata_ptr += opt_len;
 		rdata_len -= opt_len;
+		i++;
 	}
 	/* ignore rrsigs */
 	return LDNS_RCODE_NOERROR;

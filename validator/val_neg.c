@@ -42,12 +42,6 @@
  * from cached NSEC records.
  */
 #include "config.h"
-#ifdef HAVE_OPENSSL_SSL_H
-#include <openssl/ssl.h>
-#define NSEC3_SHA_LEN SHA_DIGEST_LENGTH
-#else
-#define NSEC3_SHA_LEN 20
-#endif
 #include "validator/val_neg.h"
 #include "validator/val_nsec.h"
 #include "validator/val_nsec3.h"
@@ -61,6 +55,13 @@
 #include "services/cache/dns.h"
 #include "sldns/rrdef.h"
 #include "sldns/sbuffer.h"
+
+/**
+ * The maximum salt length that the negative cache is willing to use.
+ * Larger salt increases the computation time, while recommendations are
+ * for zero salt length for zones.
+ */
+#define MAX_SALT_LENGTH 64
 
 int val_neg_data_compare(const void* a, const void* b)
 {
@@ -687,6 +688,8 @@ static void wipeout(struct val_neg_cache* neg, struct val_neg_zone* zone,
 	if(ntohs(nsec->rk.type) == LDNS_RR_TYPE_NSEC) {
 		end = d->rr_data[0]+2;
 		end_len = dname_valid(end, d->rr_len[0]-2);
+		if(!end_len)
+			return;
 		end_labs = dname_count_labels(end);
 	} else {
 		/* NSEC3 */
@@ -826,7 +829,11 @@ void neg_insert_data(struct val_neg_cache* neg,
 			(slen != 0 && zone->nsec3_salt && s
 			  && memcmp(zone->nsec3_salt, s, slen) != 0))) {
 
-			if(slen > 0) {
+			if(slen > MAX_SALT_LENGTH) {
+				/* RFC 9276 s3.1: operators SHOULD NOT use a salt; large
+				 * salts inflate per-hash block count. Decline to cache. */
+				return;
+			} else if(slen > 0) {
 				uint8_t* sa = memdup(s, slen);
 				if(sa) {
 					free(zone->nsec3_salt);
@@ -927,6 +934,10 @@ void val_neg_addreply(struct val_neg_cache* neg, struct reply_info* rep)
 			continue;
 		if(!dname_subdomain_c(rep->rrsets[i]->rk.dname, 
 			zone->name)) continue;
+		if(ntohs(rep->rrsets[i]->rk.type) == LDNS_RR_TYPE_NSEC &&
+			!nsec_nextowner_subdomain(rep->rrsets[i], zone->name)) {
+			continue; /* nextowner not in zone */
+		}
 		/* insert NSEC into this zone's tree */
 		neg_insert_data(neg, zone, rep->rrsets[i]);
 	}
@@ -1011,6 +1022,10 @@ void val_neg_addreferral(struct val_neg_cache* neg, struct reply_info* rep,
 			continue;
 		if(!dname_subdomain_c(rep->rrsets[i]->rk.dname, 
 			zone->name)) continue;
+		if(ntohs(rep->rrsets[i]->rk.type) == LDNS_RR_TYPE_NSEC &&
+			!nsec_nextowner_subdomain(rep->rrsets[i], zone->name)) {
+			continue; /* nextowner not in zone */
+		}
 		/* insert NSEC into this zone's tree */
 		neg_insert_data(neg, zone, rep->rrsets[i]);
 	}
@@ -1099,12 +1114,14 @@ grab_nsec(struct rrset_cache* rrset_cache, uint8_t* qname, size_t qname_len,
  * @param rrset_cache: rrset cache
  * @param now: to check ttl against
  * @param region: where to alloc result
+ * @param topname: do not look higher than this name, so that the
+ *   result cannot be taken from a zone above the current trust anchor.
  * @return rrset or NULL
  */
 static struct ub_packed_rrset_key*
 neg_find_nsec(struct val_neg_cache* neg_cache, uint8_t* qname, size_t qname_len,
 	uint16_t qclass, struct rrset_cache* rrset_cache, time_t now,
-	struct regional* region)
+	struct regional* region, uint8_t* topname)
 {
 	int labs;
 	uint32_t flags;
@@ -1119,6 +1136,11 @@ neg_find_nsec(struct val_neg_cache* neg_cache, uint8_t* qname, size_t qname_len,
 	while(zone && !zone->in_use)
 		zone = zone->parent;
 	if(!zone) {
+		lock_basic_unlock(&neg_cache->lock);
+		return NULL;
+	}
+	if(topname && !dname_subdomain_c(zone->name, topname)) {
+		/* Reject NSEC not within trust anchor's bailiwick */
 		lock_basic_unlock(&neg_cache->lock);
 		return NULL;
 	}
@@ -1165,6 +1187,15 @@ neg_find_nsec3_ce(struct val_neg_zone* zone, uint8_t* qname, size_t qname_len,
 	uint8_t hashce[NSEC3_SHA_LEN];
 	uint8_t b32[257];
 	size_t celen, b32len;
+	int hashmax = MAX_NSEC3_CALCULATIONS;
+	if(qlabs > hashmax) {
+		/* strip leading labels so the walk costs at most
+		 * MAX_NSEC3_CALCULATIONS hashes, mirroring val_nsec3.c */
+		while(qlabs > hashmax) {
+			dname_remove_label(&qname, &qname_len);
+			qlabs--;
+		}
+	}
 
 	*nclen = 0;
 	while(qlabs > 0) {
@@ -1203,8 +1234,8 @@ neg_params_ok(struct val_neg_zone* zone, struct ub_packed_rrset_key* rrset)
 		return 0;
 	return (h == zone->nsec3_hash && it == zone->nsec3_iter &&
 		slen == zone->nsec3_saltlen &&
-		(slen != 0 && zone->nsec3_salt && s
-		  && memcmp(zone->nsec3_salt, s, slen) == 0));
+		(slen == 0 || (slen != 0 && zone->nsec3_salt && s
+		  && memcmp(zone->nsec3_salt, s, slen) == 0)));
 }
 
 /** get next closer for nsec3 proof */
@@ -1265,6 +1296,12 @@ neg_nsec3_proof_ds(struct val_neg_zone* zone, uint8_t* qname, size_t qname_len,
 	if(!zone->nsec3_hash) 
 		return NULL; /* not nsec3 zone */
 
+	if(!topname && qlabs > zone->labs + 1)
+		return NULL; /* iterator caller; opt-out proof would be discarded
+			     * at the !topname check below anyway.
+			     * The qlabs check allows the exact-match for
+			     * the one-label-below-zone case. */
+
 	if(!(data=neg_find_nsec3_ce(zone, qname, qname_len, qlabs, buf,
 		hashnc, &nclen))) {
 		return NULL;
@@ -1287,7 +1324,7 @@ neg_nsec3_proof_ds(struct val_neg_zone* zone, uint8_t* qname, size_t qname_len,
 			!nsec3_has_type(ce_rrset, 0, LDNS_RR_TYPE_NS))
 			return NULL;
 		if(!(msg = dns_msg_create(qname, qname_len, 
-			LDNS_RR_TYPE_DS, zone->dclass, region, 1))) 
+			LDNS_RR_TYPE_DS, zone->dclass, region, 2))) /* ce + soa */
 			return NULL;
 		/* The cache response means recursion is available. */
 		msg->rep->flags |= BIT_RA;
@@ -1404,7 +1441,7 @@ val_neg_getmsg(struct val_neg_cache* neg, struct query_info* qinfo,
 
 	/* Get best available NSEC for qname */
 	nsec = neg_find_nsec(neg, qinfo->qname, qinfo->qname_len, qinfo->qclass,
-		rrset_cache, now, region);
+		rrset_cache, now, region, topname);
 
 	/* Matching NSEC, use to generate No Data answer. Not creating answers
 	 * yet for No Data proven using wildcard. */
@@ -1474,6 +1511,7 @@ val_neg_getmsg(struct val_neg_cache* neg, struct query_info* qinfo,
 				lock_rw_unlock(&cache_wc->entry.lock);
 				wcrr->rk.dname = qinfo->qname;
 				wcrr->rk.dname_len = qinfo->qname_len;
+				wcrr->entry.hash = rrset_key_hash(&wcrr->rk);
 				if(!dns_msg_ansadd(msg, region, wcrr, 0))
 					return NULL;
 				/* No SOA needed for wildcard synthesised
@@ -1484,7 +1522,7 @@ val_neg_getmsg(struct val_neg_cache* neg, struct query_info* qinfo,
 				 * proof */
 				if(!(wcrr = neg_find_nsec(neg, wc_qinfo.qname,
 					wc_qinfo.qname_len, qinfo->qclass,
-					rrset_cache, now, region)))
+					rrset_cache, now, region, topname)))
 					return NULL;
 
 				nodata_wc = NULL;

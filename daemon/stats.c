@@ -365,6 +365,12 @@ server_stats_compile(struct worker* worker, struct ub_stats_info* s, int reset)
 #else
 	s->svr.num_query_cachedb = 0;
 #endif
+#ifdef USE_DNSTAP
+	if(worker->daemon->dtenv) {
+		s->svr.num_dnstap_congestion_drop =
+			(long long)worker->dtenv.congestion_count;
+	}
+#endif
 
 	/* get tcp accept usage */
 	s->svr.tcp_accept_usage = 0;
@@ -422,12 +428,28 @@ void server_stats_obtain(struct worker* worker, struct worker* who,
 #  endif
 #endif
 			);
+		log_err("server_stats_obtain: no response from worker %d "
+			"(stats timeout); returning zero stats for this worker",
+			who->thread_num);
+		/* A later reply from the worker, would be sizeof stats reply,
+		 * and the worker_handle_control_cmd routine discards if
+		 * it is not a 4byte command, when that is received here. */
+		memset(s, 0, sizeof(*s));
+		return;
 	}
-	if(!tube_read_msg(worker->cmd, &reply, &len, 0))
-		fatal_exit("failed to read stats over cmd channel");
-	if(len != (uint32_t)sizeof(*s))
-		fatal_exit("stats on cmd channel wrong length %d %d",
-			(int)len, (int)sizeof(*s));
+	if(!tube_read_msg(worker->cmd, &reply, &len, 0)) {
+		log_err("server_stats_obtain: failed to read stats from worker "
+			"(tube read error); returning zero stats for this worker");
+		memset(s, 0, sizeof(*s));
+		return;
+	}
+	if(len != (uint32_t)sizeof(*s)) {
+		log_err("server_stats_obtain: wrong stats length %d (expected %d); "
+			"discarding", (int)len, (int)sizeof(*s));
+		free(reply);
+		memset(s, 0, sizeof(*s));
+		return;
+	}
 	memcpy(s, reply, (size_t)len);
 	free(reply);
 }
@@ -439,7 +461,7 @@ void server_stats_reply(struct worker* worker, int reset)
 	verbose(VERB_ALGO, "write stats replymsg");
 	if(!tube_write_msg(worker->daemon->workers[0]->cmd,
 		(uint8_t*)&s, sizeof(s), 0))
-		fatal_exit("could not write stat values over cmd channel");
+		log_err("could not write stat values over cmd channel");
 }
 
 void server_stats_add(struct ub_stats_info* total, struct ub_stats_info* a)
@@ -507,6 +529,10 @@ void server_stats_add(struct ub_stats_info* total, struct ub_stats_info* a)
 		total->svr.tcp_accept_usage += a->svr.tcp_accept_usage;
 #ifdef USE_CACHEDB
 		total->svr.num_query_cachedb += a->svr.num_query_cachedb;
+#endif
+#ifdef USE_DNSTAP
+		total->svr.num_dnstap_congestion_drop +=
+			a->svr.num_dnstap_congestion_drop;
 #endif
 		for(i=0; i<UB_STATS_QTYPE_NUM; i++)
 			total->svr.qtype[i] += a->svr.qtype[i];

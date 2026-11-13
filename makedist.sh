@@ -409,7 +409,7 @@ if [ "$DOWIN" = "yes" ]; then
 	info "git clone --depth=1 --no-tags -b $GITBRANCH $GITREPO unbound"
 	git clone --depth=1 --no-tags -b $GITBRANCH $GITREPO unbound || error_cleanup "git clone failed"
 	cd unbound || error_cleanup "Unbound not exported correctly from git"
-	rm -rf .git .travis.yml .gitattributes .github .gitignore || error_cleanup "Failed to remove .git tracking and ci information"
+	rm -rf .git .gitattributes .github .gitignore || error_cleanup "Failed to remove .git tracking and ci information"
 
 	# on a re-configure the cache may no longer be valid...
 	if test -f mingw32-config.cache; then rm mingw32-config.cache; fi
@@ -466,9 +466,13 @@ if [ "$DOWIN" = "yes" ]; then
 		|| error_cleanup "Could not configure"
 		set +x
     else
+		# Add -l:libssp:a to statically link libssp if possible.
+		# Put it at the end of LIBS, to satisfy also linked in
+		# dependencies.
 		set -x
 		$configure --enable-debug --enable-static-exe --disable-flto --disable-gost $* $cross_flag \
 		|| error_cleanup "Could not configure"
+		sed -i Makefile -e 's/^\(LIBS=.*\)$/\1 -l:libssp.a/'
 		set +x
     fi
     info "Calling make"
@@ -485,6 +489,7 @@ if [ "$DOWIN" = "yes" ]; then
 		|| error_cleanup "Could not configure"
 		set +x
     else
+		# Do not add -l:libssp:a statically because it is a shared build.
 		set -x
 		$configure --enable-debug --disable-flto --disable-gost $* $shared_cross_flag \
 		|| error_cleanup "Could not configure"
@@ -598,11 +603,13 @@ info "git clone --depth=1 --no-tags -b $GITBRANCH $GITREPO unbound"
 git clone --depth=1 --no-tags -b $GITBRANCH $GITREPO unbound || error_cleanup "git clone failed"
 
 cd unbound || error_cleanup "Unbound not exported correctly from git"
-rm -rf .git .travis.yml .gitattributes .github .gitignore || error_cleanup "Failed to remove .git tracking and ci information"
+rm -rf .git .gitattributes .github .gitignore || error_cleanup "Failed to remove .git tracking and ci information"
 
 info "Adding libtool utils (libtoolize)."
 libtoolize -c --install || libtoolize -c || error_cleanup "Libtoolize failed."
 
+# Turn this off, if the git repo times out for lookups.
+if test "updateconfigsub" = "false"; then
 # https://www.gnu.org/software/gettext/manual/html_node/config_002eguess.html
 info "Updating config.guess and config.sub"
 wget -O config.guess 'https://git.savannah.gnu.org/gitweb/?p=config.git;a=blob_plain;f=config.guess;hb=HEAD'
@@ -615,6 +622,7 @@ if [ `uname -s | grep -i -c darwin` -ne 0 ]; then
         xattr -d com.apple.quarantine config.guess
         xattr -d com.apple.quarantine config.sub
     fi
+fi
 fi
 
 info "Building configure script (autoreconf)."

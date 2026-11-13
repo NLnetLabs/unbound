@@ -78,6 +78,7 @@ struct reply_info;
 struct query_info;
 struct key_entry_key;
 struct sldns_buffer;
+struct val_qstate;
 
 /**
  *     0 1 2 3 4 5 6 7
@@ -97,6 +98,15 @@ struct sldns_buffer;
 
 /** The SHA1 hash algorithm for NSEC3 */
 #define NSEC3_HASH_SHA1	0x01
+
+/**
+ * Max number of NSEC3 calculations at once, suspend query for later.
+ * 8 is low enough and allows for cases where multiple proofs are needed.
+ */
+#define MAX_NSEC3_CALCULATIONS 8
+
+/** Length of the hash in bytes for the NSEC3 algorithm SHA1 */
+#define NSEC3_SHA_LEN 20
 
 /**
 * Cache table for NSEC3 hashes.
@@ -209,6 +219,7 @@ nsec3_prove_wildcard(struct module_env* env, struct val_env* ve,
  * @param reason: string for bogus result.
  * @param reason_bogus: EDE (RFC8914) code paired with the reason of failure.
  * @param qstate: qstate with region.
+ * @param vq: validator qstate.
  * @param ct: cached hashes table.
  * @param reasonbuf: buffer to use for fail reason string print.
  * @param reasonlen: length of reasonbuf.
@@ -224,7 +235,8 @@ nsec3_prove_nods(struct module_env* env, struct val_env* ve,
 	struct ub_packed_rrset_key** list, size_t num, 
 	struct query_info* qinfo, struct key_entry_key* kkey, char** reason,
 	sldns_ede_code* reason_bogus, struct module_qstate* qstate,
-	struct nsec3_cache_table* ct, char* reasonbuf, size_t reasonlen);
+	struct val_qstate* vq, struct nsec3_cache_table* ct, char* reasonbuf,
+	size_t reasonlen);
 
 /**
  * Prove NXDOMAIN or NODATA.

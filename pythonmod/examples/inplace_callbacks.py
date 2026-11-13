@@ -95,7 +95,9 @@ def inplace_reply_callback(qinfo, qstate, rep, rcode, edns, opt_list_out,
                      release. Current parameters:
         ``repinfo``: Reply information for a communication point (comm_reply).
 
-    :return: True on success, False on failure.
+    :return: True on success, False on failure. Failure terminates any further
+             callback processing. If this module is ephemeral it is advised
+             to clean up and return success instead.
 
     """
     log_info("python: called back while replying.")
@@ -123,7 +125,9 @@ def inplace_cache_callback(qinfo, qstate, rep, rcode, edns, opt_list_out,
                      release. Current parameters:
         ``repinfo``: Reply information for a communication point (comm_reply).
 
-    :return: True on success, False on failure.
+    :return: True on success, False on failure. Failure terminates any further
+             callback processing. If this module is ephemeral it is advised
+             to clean up and return success instead.
 
     For demonstration purposes we want to see if EDNS option 65002 is present
     and reply with a new value.
@@ -147,6 +151,12 @@ def inplace_cache_callback(qinfo, qstate, rep, rcode, edns, opt_list_out,
                 else:
                     log_info("python: *failed to add new option code 65002*")
                     return False
+                # If replying with another code is not crucial for operation
+                # we can soft fail instead and allow further callback
+                # processing by Unbound.
+                # else:
+                #     log_info("python: *failed to add new option code 65002*")
+                #     return True
                 break
 
     return True
@@ -173,7 +183,9 @@ def inplace_local_callback(qinfo, qstate, rep, rcode, edns, opt_list_out,
                      release. Current parameters:
         ``repinfo``: Reply information for a communication point (comm_reply).
 
-    :return: True on success, False on failure.
+    :return: True on success, False on failure. Failure terminates any further
+             callback processing. If this module is ephemeral it is advised
+             to clean up and return success instead.
 
     """
     log_info("python: called back while replying with local data or chaos"
@@ -203,7 +215,9 @@ def inplace_servfail_callback(qinfo, qstate, rep, rcode, edns, opt_list_out,
                      release. Current parameters:
         ``repinfo``: Reply information for a communication point (comm_reply).
 
-    :return: True on success, False on failure.
+    :return: True on success, False on failure. Failure terminates any further
+             callback processing. If this module is ephemeral it is advised
+             to clean up and return success instead.
 
     For demonstration purposes we want to reply with an empty EDNS code '65003'
     and log the IP address of the client.
@@ -240,6 +254,10 @@ def inplace_query_callback(qinfo, flags, qstate, addr, zone, region, **kwargs):
                    want to append a new option to opt_lists.
     :param **kwargs: Dictionary that may contain parameters added in a future
                      release.
+
+    :return: True on success, False on failure. Failure terminates any further
+             callback processing. If this module is ephemeral it is advised
+             to clean up and return success instead.
     """
     log_info("python: outgoing query to {}@{}".format(addr.addr, addr.port))
     return True
@@ -254,6 +272,10 @@ def inplace_query_response_callback(qstate, response, **kwargs):
     :param response: struct dns_msg. The reply received from the backend server;
     :param **kwargs: Dictionary that may contain parameters added in a future
                      release.
+
+    :return: True on success, False on failure. Failure terminates any further
+             callback processing. If this module is ephemeral it is advised
+             to clean up and return success instead.
     """
     log_dns_msg(
         "python: incoming reply from {}{}".format(qstate.reply.addr, os.linesep),
@@ -265,11 +287,15 @@ def inplace_query_response_callback(qstate, response, **kwargs):
 def inplace_edns_back_parsed_call(qstate, **kwargs):
     """
     Function that will be registered as an inplace callback function.
-    It will be called after EDNS is parsed on a reply from a backend server..
+    It will be called after EDNS is parsed on a reply from a backend server.
 
     :param qstate: module qstate. opt_lists are available here;
     :param **kwargs: Dictionary that may contain parameters added in a future
                      release.
+
+    :return: True on success, False on failure. Failure terminates any further
+             callback processing. If this module is ephemeral it is advised
+             to clean up and return success instead.
     """
     log_info("python: edns parsed")
     return True
@@ -348,7 +374,7 @@ def inform_super(id, qstate, superqstate, qdata): return True
 
 def operate(id, event, qstate, qdata):
     if (event == MODULE_EVENT_NEW) or (event == MODULE_EVENT_PASS):
-        qstate.ext_state[id] = MODULE_WAIT_MODULE 
+        qstate.ext_state[id] = MODULE_WAIT_MODULE
         return True
 
     elif event == MODULE_EVENT_MODDONE:

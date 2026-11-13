@@ -123,6 +123,8 @@ struct dt_io_thread {
 	int threadnum;
 	/** event base, for event handling */
 	void* event_base;
+	/** lock on io_list and io_list_iter */
+	lock_basic_type io_list_lock;
 	/** list of queues that is registered to get written */
 	struct dt_io_list_item* io_list;
 	/** iterator point in the io_list, to pick from them in a
@@ -271,8 +273,11 @@ void dt_msg_queue_delete(struct dt_msg_queue* mq);
  * 	the buffer is freed as well (and nothing happens, the item
  * 	could not be logged).
  * @param len: length of buffer.
+ * @param congested: set true if the operation failed because the queue is
+ *	congested, and the message is dropped.
  */
-void dt_msg_queue_submit(struct dt_msg_queue* mq, void* buf, size_t len);
+void dt_msg_queue_submit(struct dt_msg_queue* mq, void* buf, size_t len,
+	int* congested);
 
 /** timer callback to wakeup dtio thread to process messages */
 void mq_wakeup_cb(void* arg);

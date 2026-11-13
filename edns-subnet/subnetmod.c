@@ -70,6 +70,7 @@ subnet_data_delete(void *d, void *ATTR_UNUSED(arg))
 	r = (struct subnet_msg_cache_data*)d;
 	addrtree_delete(r->tree4);
 	addrtree_delete(r->tree6);
+	free(r->reason_fail);
 	free(r);
 }
 
@@ -84,6 +85,8 @@ msg_cache_sizefunc(void *k, void *d)
 		+ q->key.qname_len + lock_get_mem(&q->entry.lock);
 	s += addrtree_size(r->tree4);
 	s += addrtree_size(r->tree6);
+	if(r->reason_fail)
+		s += strlen(r->reason_fail)+1;
 	return s;
 }
 
@@ -200,12 +203,18 @@ int ecs_whitelist_check(struct query_info* qinfo,
 			if(sq->ecs_server_out.subnet_source_mask == 0) {
 				sq->subnet_sent_no_subnet = 1;
 				sq->subnet_sent = 0;
+				/* The result should end up in subnet cache,
+				 * not in global cache. */
+				qstate->no_cache_store = 1;
 				return 1;
 			}
 			subnet_ecs_opt_list_append(&sq->ecs_server_out,
 				&qstate->edns_opts_back_out, qstate, region);
 		}
 		sq->subnet_sent = 1;
+		/* Do not store servfails in global cache, since the subnet
+		 * option is sent out. */
+		qstate->no_cache_store = 1;
 	}
 	else {
 		/* Outgoing ECS option is set, but we don't want to sent it to
@@ -427,6 +436,35 @@ update_cache(struct module_qstate *qstate, int id)
 	}
 	/* lru_entry->lock is locked regardless of how we got here,
 	 * either from the slabhash_lookup, or above in the new allocated */
+	if(!qstate->return_msg && qstate->error_response_cache) {
+		struct subnet_msg_cache_data *data =
+			(struct subnet_msg_cache_data*)lru_entry->data;
+		data->ttl_servfail = *qstate->env->now + NORR_TTL;
+		data->ede_fail = errinf_to_reason_bogus(qstate);
+		diff_size = (data->reason_fail?strlen(data->reason_fail)+1:0);
+		if(qstate->errinf) {
+			char* str = errinf_to_str_misc(qstate);
+			free(data->reason_fail);
+			data->reason_fail = NULL;
+			if(str)
+				data->reason_fail = strdup(str);
+		}
+		diff_size = (data->reason_fail?strlen(data->reason_fail)+1:0)
+			- diff_size;
+		lock_rw_unlock(&lru_entry->lock);
+		if (need_to_insert) {
+			slabhash_insert(subnet_msg_cache, h, lru_entry,
+				lru_entry->data, NULL);
+		} else {
+			slabhash_update_space_used(subnet_msg_cache, h, NULL,
+				diff_size);
+		}
+		return;
+	}
+	if(!qstate->return_msg) {
+		lock_rw_unlock(&lru_entry->lock);
+		return;
+	}
 	/* Step 2, find the correct tree */
 	if (!(tree = get_tree(lru_entry->data, edns, sne, qstate->env->cfg))) {
 		lock_rw_unlock(&lru_entry->lock);
@@ -470,6 +508,21 @@ update_cache(struct module_qstate *qstate, int id)
 	}
 }
 
+/** See if there is a stored servfail, returns true if so, and sets reply. */
+static int
+lookup_check_servfail(struct module_qstate *qstate,
+	struct subnet_msg_cache_data *data)
+{
+	struct module_env *env = qstate->env;
+	if(!data)
+		return 0;
+	if(!data->ttl_servfail || TTL_IS_EXPIRED(data->ttl_servfail, *env->now))
+		return 0;
+	qstate->return_rcode = LDNS_RCODE_SERVFAIL;
+	errinf_ede(qstate, data->reason_fail, data->ede_fail);
+	return 1;
+}
+
 /** Lookup in cache and reply true iff reply is sent. */
 static int
 lookup_and_reply(struct module_qstate *qstate, int id, struct subnet_qstate *sq, int prefetch)
@@ -498,12 +551,20 @@ lookup_and_reply(struct module_qstate *qstate, int id, struct subnet_qstate *sq,
 	tree = (ecs->subnet_addr_fam == EDNSSUBNET_ADDRFAM_IP4)?
 		data->tree4 : data->tree6;
 	if (!tree) { /* qinfo in cache but not for this family */
+		if(lookup_check_servfail(qstate, data)) {
+			lock_rw_unlock(&e->lock);
+			return 1;
+		}
 		lock_rw_unlock(&e->lock);
 		return 0;
 	}
 	node = addrtree_find(tree, (addrkey_t*)ecs->subnet_addr, 
 		ecs->subnet_source_mask, *env->now);
 	if (!node) { /* plain old cache miss */
+		if(lookup_check_servfail(qstate, data)) {
+			lock_rw_unlock(&e->lock);
+			return 1;
+		}
 		lock_rw_unlock(&e->lock);
 		return 0;
 	}
@@ -512,11 +573,16 @@ lookup_and_reply(struct module_qstate *qstate, int id, struct subnet_qstate *sq,
 		(struct reply_info *)node->elem, qstate->region, *env->now, 0,
 		env->scratch);
 	scope = (uint8_t)node->scope;
-	lock_rw_unlock(&e->lock);
 	
 	if (!qstate->return_msg) { /* Failed allocation or expired TTL */
+		if(lookup_check_servfail(qstate, data)) {
+			lock_rw_unlock(&e->lock);
+			return 1;
+		}
+		lock_rw_unlock(&e->lock);
 		return 0;
 	}
+	lock_rw_unlock(&e->lock);
 	if(qstate->return_msg->rep->security == sec_status_unchecked
 		&& must_validate) {
 		/* The message has to be validated first. */
@@ -652,6 +718,12 @@ eval_response(struct module_qstate *qstate, int id, struct subnet_qstate *sq)
 		/* already an answer and its not a message, but retain
 		 * the actual rcode, instead of module_error, so send
 		 * module_finished */
+		if(qstate->error_response_cache) {
+			verbose(VERB_ALGO, "subnet: store error response");
+			lock_rw_wrlock(&sne->biglock);
+			update_cache(qstate, id);
+			lock_rw_unlock(&sne->biglock);
+		}
 		return module_finished;
 	}
 
@@ -901,9 +973,11 @@ ecs_edns_back_parsed(struct module_qstate* qstate, int id,
 				sq->max_scope = sq->ecs_server_in.subnet_scope_mask;
 	} else if(sq->subnet_sent_no_subnet) {
 		/* The answer can be stored as scope 0, not in global cache. */
+		/* This was already set in ecs_whitelist_check */
 		qstate->no_cache_store = 1;
 	} else if(sq->subnet_sent) {
 		/* Need another query to be able to store in global cache. */
+		/* This was already set in ecs_whitelist_check */
 		qstate->no_cache_store = 1;
 	}
 
@@ -941,6 +1015,7 @@ subnetmod_operate(struct module_qstate *qstate, enum module_ev event,
 			subnet_ecs_opt_list_append(&sq->ecs_client_out,
 				&qstate->edns_opts_front_out, qstate,
 				qstate->region);
+			qstate->is_subnet_answer = 1;
 		}
 		sq->wait_subquery_done = 0;
 		qstate->ext_state[id] = module_finished;
@@ -1020,6 +1095,7 @@ subnetmod_operate(struct module_qstate *qstate, enum module_ev event,
 				qstate->env->cfg->prefetch)) {
 				sne->num_msg_cache++;
 				lock_rw_unlock(&sne->biglock);
+				qstate->is_subnet_answer = 1;
 				verbose(VERB_QUERY, "subnetcache: answered from cache");
 				qstate->ext_state[id] = module_finished;
 
@@ -1091,6 +1167,8 @@ subnetmod_operate(struct module_qstate *qstate, enum module_ev event,
 			subnet_ecs_opt_list_append(&sq->ecs_client_out,
 				&qstate->edns_opts_front_out, qstate,
 				qstate->region);
+			if(sq->subnet_sent || sq->subnet_sent_no_subnet)
+				qstate->is_subnet_answer = 1;
 			if(verbosity >= VERB_ALGO) {
 				subnet_log_print("reply has edns subnet",
 					edns_opt_list_find(

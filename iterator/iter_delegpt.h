@@ -71,6 +71,10 @@ struct delegpt {
 	struct delegpt_addr* usable_list;
 	/** the list of returned targets; subset of target_list */
 	struct delegpt_addr* result_list;
+	/** Number of names on the list */
+	int num_ns;
+	/** Number of addresses on the list */
+	int num_addr;
 
 	/** if true, the NS RRset was bogus. All info is bad. */
 	int bogus;
@@ -177,6 +181,11 @@ struct delegpt_addr {
 	char* tls_auth_name;
 };
 
+/** Max number of addresses in a delegation point. */
+extern int delegpt_max_addr;
+/** Max number of nameserver names in a delegation point. */
+extern int delegpt_max_ns;
+
 /**
  * Create new delegation point.
  * @param regional: where to allocate it.
@@ -221,10 +230,11 @@ int delegpt_add_ns(struct delegpt* dp, struct regional* regional,
  * @param regional: where to allocate the info.
  * @param ns_rrset: NS rrset.
  * @param lame: rrset is lame, disprefer it.
+ * @param port: port or -1 if not set.
  * @return 0 on alloc error.
  */
 int delegpt_rrset_add_ns(struct delegpt* dp, struct regional* regional,
-	struct ub_packed_rrset_key* ns_rrset, uint8_t lame);
+	struct ub_packed_rrset_key* ns_rrset, uint8_t lame, int port);
 
 /**
  * Add target address to the delegation point.
@@ -365,11 +375,12 @@ size_t delegpt_count_targets(struct delegpt* dp);
  *
  * @param msg: the dns message, referral.
  * @param regional: where to allocate delegation point.
+ * @param port: if not -1 specifies a port number.
  * @return new delegation point or NULL on alloc error, or if the
  *         message was not appropriate.
  */
 struct delegpt* delegpt_from_message(struct dns_msg* msg, 
-	struct regional* regional);
+	struct regional* regional, int port);
 
 /**
  * Mark negative return in delegation point for specific nameserver.

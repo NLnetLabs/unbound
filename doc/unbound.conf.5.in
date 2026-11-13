@@ -691,7 +691,7 @@ Default: 0 (use system value)
 .TP
 .B so\-sndbuf: \fI<number>\fP 
 If not 0, then set the SO_SNDBUF socket option to get more buffer space on
-UDP port 53 outgoing queries.
+UDP port 53 outgoing responses.
 This for very busy servers handles spikes in answer traffic, otherwise:
 .INDENT 7.0
 .INDENT 3.5
@@ -1139,9 +1139,13 @@ The file must contain the private key for the TLS session, the public
 certificate is in the \fI\%tls\-service\-pem\fP
 file and it must also be specified if
 \fI\%tls\-service\-key\fP is specified.
-Enabling or disabling this service requires a restart (a reload is not
-enough), because the key is read while root permissions are held and before
-chroot (if any).
+If the key is stored with root permissions or outside of chroot, then
+a change or enabling or disabling requires a restart (a reload is not
+enough).
+But if the key file (and tls\-service\-pem file) are accessible, then they
+are read in on reload, and fast_reload.
+The server checks the modification time of the file (and the filename)
+to see if the file has changed for reload.
 The ports enabled implicitly or explicitly via
 \fI\%tls\-port\fP and
 \fI\%https\-port\fP do not provide normal DNS TCP
@@ -1294,7 +1298,7 @@ Enable or disable sending the SNI extension on TLS connections.
 \fBNOTE:\fP
 .INDENT 7.0
 .INDENT 3.5
-Changing the value requires a reload.
+Changing the value requires a restart.
 .UNINDENT
 .UNINDENT
 .sp
@@ -1302,33 +1306,19 @@ Default: yes
 .UNINDENT
 .INDENT 0.0
 .TP
-.B tls\-use\-system\-policy\-versions: \fI<yes or no>\fP 
-Enable or disable general\-purpose version\-flexible TLS server configuration
-when serving TLS.
-This will allow the whole list of available TLS versions provided by the
-crypto library, which may have been further restricted by the system\(aqs
-crypto policy.
-.sp
-If disabled Unbound only uses the latest available TLS version.
-.sp
-The default depends on a compilation choice, it is set
-at @SYSTEM_TLS_DEFAULT@ .
-.sp
-\fBCAUTION:\fP
-.INDENT 7.0
-.INDENT 3.5
-Use only if you want to support legacy TLS client connections.
-.UNINDENT
-.UNINDENT
+.B tls\-protocols: \fI\(dq<list of protocols>\(dq\fP 
+Specify the allowed TLS protocol versions to use, in no particular order.
+Possible values are \fBTLSv1.2\fP and \fBTLSv1.3\fP\&.
+Enclose list of protocols in quotes (\fB\(dq\(dq\fP) and put spaces between them.
 .sp
 \fBNOTE:\fP
 .INDENT 7.0
 .INDENT 3.5
-Changing the value requires a reload.
+Changing the value requires a restart.
 .UNINDENT
 .UNINDENT
 .sp
-Default: @SYSTEM_TLS_DEFAULT@
+Default: \(dqTLSv1.2 TLSv1.3\(dq
 .UNINDENT
 .INDENT 0.0
 .TP
@@ -2080,7 +2070,8 @@ Default:  \(dq3 2 1 0 0\(dq
 .INDENT 0.0
 .TP
 .B harden\-short\-bufsize: \fI<yes or no>\fP 
-Very small EDNS buffer sizes from queries are ignored.
+Very small EDNS buffer sizes from queries are ignored and are instead
+set to the normal UDP packet size (512 bytes).
 .sp
 Default: yes (per \fI\%RFC 6891\fP)
 .UNINDENT
@@ -2088,6 +2079,7 @@ Default: yes (per \fI\%RFC 6891\fP)
 .TP
 .B harden\-large\-queries: \fI<yes or no>\fP 
 Very large queries are ignored.
+The cutoff value is chosen to be the normal UDP packet size (512 bytes).
 Default is no, since it is legal protocol wise to send these, and could be
 necessary for operation if TSIG or EDNS payload is very large.
 .sp
@@ -2211,6 +2203,18 @@ Default: no
 .UNINDENT
 .INDENT 0.0
 .TP
+.B harden\-cname\-follow: \fI<yes or no>\fP 
+Harden CNAME redirections by following them.
+If no, then upstream CNAME and DNAME redirections are allowed in a
+response without checking with further messages if those are valid.
+It can only really be disabled safely on localhost net or encrypted
+connectivity.
+Default is on to protect the cache integrity.
+.sp
+Default: yes
+.UNINDENT
+.INDENT 0.0
+.TP
 .B use\-caps\-for\-id: \fI<yes or no>\fP 
 Use 0x20\-encoded random bits in the query to foil spoof attempts.
 This perturbs the lowercase and uppercase of query names sent to authority
@@ -2322,6 +2326,13 @@ The defensive action is to clear the rrset and message caches, hopefully
 flushing away any poison.
 A value of 10 million is suggested.
 .sp
+It is useful to add 0.0.0.0/8 and \(aq::\(aq to the
+\fI\%do\-not\-query\-address\fP list.
+Otherwise they may be answered, from localhost, and the different source
+makes an unwanted reply that unnecessarily ticks up.
+The \fI\%do\-not\-query\-localhost\fP
+option includes them, the zero subnets, when it is enabled.
+.sp
 Default: 0 (disabled)
 .UNINDENT
 .INDENT 0.0
@@ -2339,7 +2350,10 @@ Default: (none)
 .B do\-not\-query\-localhost: \fI<yes or no>\fP 
 If yes, localhost is added to the
 \fI\%do\-not\-query\-address\fP entries,
-both IPv6 \fB::1\fP and IPv4 \fB127.0.0.1/8\fP\&.
+both IPv4 \fB127.0.0.1/8\fP (also \fB::ffff:127.0.0.0/104\fP) and IPv6 \fB::1\fP\&.
+Additionally, the zero subnets \fB0.0.0.0/8\fP (also \fB::ffff:0:0/96\fP) and
+\fB::\fP are added to the list since on some systems they route to
+localhost as well.
 If no, then localhost can be used to send queries to.
 .sp
 Default: yes
@@ -2372,6 +2386,8 @@ If yes, deny queries of type ANY with an empty response.
 If disabled, Unbound responds with a short list of resource records if some
 can be found in the cache and makes the upstream type ANY query if there
 are none.
+The option stops the DNSSEC validation from processing, possibly lengthy,
+ANY responses, when the option is enabled.
 .sp
 Default: no
 .UNINDENT
@@ -2505,6 +2521,9 @@ Format is BIND\-9 style format, the \fBtrusted\-keys { name flag proto algo
 It is possible to use wildcards with this statement, the wildcard is
 expanded on start and on reload.
 .sp
+A wildcard that matches no files is not an error: the entry loads no
+trust anchors, and the condition is logged at operational verbosity.
+.sp
 Default: \(dq\(dq (no trusted keys file)
 .UNINDENT
 .INDENT 0.0
@@ -2614,7 +2633,7 @@ affected.
 Use this setting to protect the users that rely on this validator for
 authentication from potentially bad data in the additional section.
 .sp
-Default: yes
+Default: no
 .UNINDENT
 .INDENT 0.0
 .TP
@@ -2920,6 +2939,9 @@ The types are
 \fI\%inform_redirect\fP,
 \fI\%always_transparent\fP,
 \fI\%block_a\fP,
+\fI\%block_aaaa\fP,
+\fI\%block_a_wdata\fP,
+\fI\%block_aaaa_wdata\fP,
 \fI\%always_refuse\fP,
 \fI\%always_nxdomain\fP,
 \fI\%always_null\fP,
@@ -3107,6 +3129,32 @@ ignores local data and resolves normally all query types excluding A.
 For A queries it unconditionally returns NODATA.
 Useful in cases when there is a need to explicitly force all apps to
 use IPv6 protocol and avoid any queries to IPv4.
+.UNINDENT
+.INDENT 7.0
+.TP
+.B block_aaaa 
+Like \fI\%transparent\fP or
+\fI\%block_a\fP, but
+ignores local data and resolves normally all query types excluding AAAA.
+For AAAA queries it unconditionally returns NODATA.
+Useful in cases when there is a need to explicitly force all apps to
+use IPv4 protocol and avoid any queries to IPv6.
+.UNINDENT
+.INDENT 7.0
+.TP
+.B block_a_wdata 
+Like \fI\%block_a\fP, but
+uses local data if present.
+If there is local data that is returned, and it acts like transparent.
+For A queries it returns NODATA.
+.UNINDENT
+.INDENT 7.0
+.TP
+.B block_aaaa_wdata 
+Like \fI\%block_aaaa\fP, but
+uses local data if present.
+If there is local data that is returned, and it acts like transparent.
+For AAAA queries it returns NODATA.
 .UNINDENT
 .INDENT 7.0
 .TP
@@ -3577,6 +3625,18 @@ For example, 1000 may be a suitable value to stop the server from being
 overloaded with random names, and keeps unbound from sending traffic to the
 nameservers for those zones.
 .sp
+It is intended to count the number of queries towards the nameservers
+for the zone, and keep those queries limited.
+When there is a delegation that needs a lot of lookups, those are
+charged in the counters for the destination, the target name, of
+the NS records.
+Since that is where the nameserver lookup queries are sent to.
+That keeps the target, the victim domain, from having many queries.
+With the \fI\%ratelimit\-factor\fP, some
+genuine queries that are also made to the target zone, can filter
+through, and then end up in cache, where the genuine answers have
+a chance to collect, keeping up service to some extent.
+.sp
 \fBNOTE:\fP
 .INDENT 7.0
 .INDENT 3.5
@@ -3779,6 +3839,10 @@ Default: 32
 Hard limit on the number of times Unbound is allowed to restart a query
 upon encountering a CNAME record.
 Results in SERVFAIL when reached.
+This applies to chained CNAME records but not sporadic CNAME records that
+could be encountered in the lifetime of the query\(aqs resolution effort.
+When a CNAME chain concludes, the counter keeping track of this limit is
+reset.
 Changing this value needs caution as it can allow long CNAME chains to be
 accepted, where Unbound needs to verify (resolve) each link individually.
 .sp
@@ -3806,6 +3870,16 @@ Default: 11
 .UNINDENT
 .INDENT 0.0
 .TP
+.B iter\-scrub\-rrsig: \fI<number>\fP 
+Limit on the number of RRSIGs allowed for an RRset, from the iterator
+scrubber.
+This protects against an overly large number of RRSIGs.
+Clips off the remainder of the RRSIG list at that point.
+.sp
+Default: 8
+.UNINDENT
+.INDENT 0.0
+.TP
 .B max\-global\-quota: \fI<number>\fP 
 Limit on the number of upstream queries sent out for an incoming query and
 its subqueries from recursion.
@@ -3822,6 +3896,28 @@ This protects against poisonous contents, that could affect names in the
 same zone as a spoofed packet.
 .sp
 Default: yes
+.UNINDENT
+.INDENT 0.0
+.TP
+.B val\-validation\-attempts: \fI<number>\fP 
+Limit on the number of DNSSEC validation attempts for a query.
+This protects against too large numbers of cryptographic operations,
+like for a deep delegation chain.
+This counts attempts to validate RRSIGs.
+When it is exceeded, the query fails.
+.sp
+Default: 32
+.UNINDENT
+.INDENT 0.0
+.TP
+.B val\-hash\-attempts: \fI<number>\fP 
+Limit on the number of DNSSEC hash attempts for a query.
+This protects against too large numbers of cryptographic operations,
+like for a deep delegation chain.
+This counts DS hash attempts to match DNSKEYs.
+When it is exceeded, the query fails.
+.sp
+Default: 32
 .UNINDENT
 .INDENT 0.0
 .TP
@@ -3987,7 +4083,7 @@ Default: no
 .UNINDENT
 .INDENT 0.0
 .TP
-.B control\-interface: \fI<IP address or interface name or path>\fP 
+.B control\-interface: \fI<IP address or interface name[@port] or path>\fP 
 Give IPv4 or IPv6 addresses or local socket path to listen on for control
 commands.
 If an interface name is used instead of an IP address, the list of IP
@@ -4589,6 +4685,32 @@ The filename where the zone is stored.
 If not given then no zonefile is used.
 If the file does not exist or is empty, Unbound will attempt to fetch zone
 data (eg. from the primary servers).
+.UNINDENT
+.INDENT 0.0
+.TP
+.B max\-transfer\-size: \fI<number>\fP 
+Number of bytes size of the maximum zone transfer size.
+Larger transfers, over AXFR, IXFR and HTTP, are not allowed.
+A plain number is in bytes, append \(aqk\(aq, \(aqm\(aq or \(aqg\(aq for kilobytes, megabytes
+or gigabytes (1024*1024 bytes in a megabyte).
+The value \fB0\fP disables the feature.
+.sp
+Only consider for untrusted/misbehaving primaries that could hog resources
+and bring down the resolver.
+.sp
+Default: 0
+.UNINDENT
+.INDENT 0.0
+.TP
+.B max\-transfer\-time: \fI<msec>\fP 
+Maximum time in milliseconds that a zone transfer is allowed to take from
+the start.
+The value \fB0\fP disables the feature.
+.sp
+Only consider for untrusted/misbehaving primaries that could hog resources
+and bring down the resolver.
+.sp
+Default: 0
 .UNINDENT
 .SH VIEW OPTIONS
 .sp
@@ -5802,6 +5924,10 @@ from a webserver that would work.
 If you specify the hostname, you cannot use the domain from the zonefile,
 because it may not have that when retrieving that data, instead use a plain
 IP address to avoid a circular dependency on retrieving that IP address.
+.sp
+Every number of IXFR transfers, a full AXFR is performed.
+This is to consolidate the rpz memory, that would otherwise grow.
+The fixed value is after 5 IXFR transfers.
 .UNINDENT
 .INDENT 0.0
 .TP
@@ -5923,6 +6049,32 @@ Enclose list of tags in quotes (\fB\(dq\(dq\fP) and put spaces between tags.
 .sp
 If no tags are specified the policies from this section will be applied for
 all clients.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B max\-transfer\-size: \fI<number>\fP 
+Number of bytes size of the maximum zone transfer size.
+Larger transfers, over AXFR, IXFR and HTTP, are not allowed.
+A plain number is in bytes, append \(aqk\(aq, \(aqm\(aq or \(aqg\(aq for kilobytes, megabytes
+or gigabytes (1024*1024 bytes in a megabyte).
+The value \fB0\fP disables the feature.
+.sp
+Only consider for untrusted/misbehaving primaries that could hog resources
+and bring down the resolver.
+.sp
+Default: 0
+.UNINDENT
+.INDENT 0.0
+.TP
+.B max\-transfer\-time: \fI<msec>\fP 
+Maximum time in milliseconds that a zone transfer is allowed to take from
+the start.
+The value \fB0\fP disables the feature.
+.sp
+Only consider for untrusted/misbehaving primaries that could hog resources
+and bring down the resolver.
+.sp
+Default: 0
 .UNINDENT
 .SH MEMORY CONTROL EXAMPLE
 .sp

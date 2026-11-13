@@ -506,24 +506,37 @@ delete_cname_override(struct rpz* r)
 static int
 rpz_apply_cfg_elements(struct rpz* r, struct config_auth* p)
 {
+	enum rpz_action action_override;
 	if(p->rpz_taglist && p->rpz_taglistlen) {
-		r->taglistlen = p->rpz_taglistlen;
-		r->taglist = memdup(p->rpz_taglist, r->taglistlen);
-		if(!r->taglist) {
+		uint8_t* taglist = memdup(p->rpz_taglist, p->rpz_taglistlen);
+		if(!taglist) {
 			log_err("malloc failure on RPZ taglist alloc");
 			return 0;
+		}
+		if(r->taglist)
+			free(r->taglist);
+		r->taglist = taglist;
+		r->taglistlen = p->rpz_taglistlen;
+	} else {
+		/* free taglist, if any */
+		if(r->taglist) {
+			free(r->taglist);
+			r->taglist = NULL;
+			r->taglistlen = 0;
 		}
 	}
 
 	if(p->rpz_action_override) {
-		r->action_override = rpz_config_to_action(p->rpz_action_override);
+		action_override = rpz_config_to_action(p->rpz_action_override);
 	}
 	else
-		r->action_override = RPZ_NO_OVERRIDE_ACTION;
+		action_override = RPZ_NO_OVERRIDE_ACTION;
 
-	if(r->action_override == RPZ_CNAME_OVERRIDE_ACTION) {
+	if(action_override == RPZ_CNAME_OVERRIDE_ACTION) {
 		uint8_t nm[LDNS_MAX_DOMAINLEN+1];
 		size_t nmlen = sizeof(nm);
+		struct regional* newr;
+		struct ub_packed_rrset_key* cname_override;
 
 		if(!p->rpz_cname) {
 			log_err("rpz: override with cname action found, but no "
@@ -536,17 +549,39 @@ rpz_apply_cfg_elements(struct rpz* r, struct config_auth* p)
 				p->rpz_cname);
 			return 0;
 		}
-		r->cname_override = new_cname_override(r->region, nm, nmlen);
-		if(!r->cname_override) {
+		newr = regional_create_custom(sizeof(struct regional));
+		if(!newr) {
+			log_err("malloc failure on RPZ cname override region");
 			return 0;
 		}
+		cname_override = new_cname_override(newr, nm, nmlen);
+		if(!cname_override) {
+			regional_destroy(newr);
+			return 0;
+		}
+		regional_destroy(r->region);
+		r->region = newr;
+		r->cname_override = cname_override;
+	} else {
+		delete_cname_override(r);
 	}
+	r->action_override = action_override;
 	r->log = p->rpz_log;
 	r->signal_nxdomain_ra = p->rpz_signal_nxdomain_ra;
 	if(p->rpz_log_name) {
-		if(!(r->log_name = strdup(p->rpz_log_name))) {
+		char* log_name = strdup(p->rpz_log_name);
+		if(!log_name) {
 			log_err("malloc failure on RPZ log_name strdup");
 			return 0;
+		}
+		if(r->log_name)
+			free(r->log_name);
+		r->log_name = log_name;
+	} else {
+		/* free logname, if any */
+		if(r->log_name) {
+			free(r->log_name);
+			r->log_name = NULL;
 		}
 	}
 	return 1;
@@ -616,22 +651,6 @@ rpz_config(struct rpz* r, struct config_auth* p)
 {
 	/* If the zonefile changes, it is read later, after which
 	 * rpz_clear and rpz_finish_config is called. */
-
-	/* free taglist, if any */
-	if(r->taglist) {
-		free(r->taglist);
-		r->taglist = NULL;
-		r->taglistlen = 0;
-	}
-
-	/* free logname, if any */
-	if(r->log_name) {
-		free(r->log_name);
-		r->log_name = NULL;
-	}
-
-	delete_cname_override(r);
-
 	if(!rpz_apply_cfg_elements(r, p))
 		return 0;
 	return 1;
@@ -721,13 +740,22 @@ rpz_insert_local_zones_trigger(struct local_zones* lz, uint8_t* dname,
 		char* rrstr = sldns_wire2str_rr(rr, rr_len);
 		if(rrstr == NULL) {
 			log_err("malloc error while inserting rpz nsdname trigger");
-			free(dname);
+			if(!newzone)
+				free(dname);
 			lock_rw_unlock(&lz->lock);
 			return;
 		}
 		lock_rw_wrlock(&z->lock);
-		local_zone_enter_rr(z, dname, dnamelen, dnamelabs, rrtype,
-				    rrclass, ttl, rdata, rdata_len, rrstr);
+		if(!local_zone_enter_rr(z, dname, dnamelen, dnamelabs, rrtype,
+				    rrclass, ttl, rdata, rdata_len, rrstr)) {
+			log_err("rpz: could not enter local-data: %s", rrstr);
+			if(!newzone)
+				free(dname);
+			lock_rw_unlock(&z->lock);
+			lock_rw_unlock(&lz->lock);
+			free(rrstr);
+			return;
+		}
 		lock_rw_unlock(&z->lock);
 		free(rrstr);
 	}
@@ -805,8 +833,9 @@ rpz_insert_nsdname_trigger(struct rpz* r, uint8_t* dname, size_t dnamelen,
 	uint8_t* dname_stripped = NULL;
 	size_t dnamelen_stripped = 0;
 
-	rpz_strip_nsdname_suffix(dname, dnamelen, &dname_stripped,
-		&dnamelen_stripped);
+	if(!rpz_strip_nsdname_suffix(dname, dnamelen, &dname_stripped,
+		&dnamelen_stripped))
+		return;
 	if(a == RPZ_INVALID_ACTION) {
 		verbose(VERB_ALGO, "rpz: skipping invalid action");
 		free(dname_stripped);
@@ -904,8 +933,8 @@ rpz_report_rrset_error(const char* msg, uint8_t* rr, size_t rr_len) {
 
 /* from localzone.c; difference is we don't have a dname */
 static struct local_rrset*
-rpz_clientip_new_rrset(struct regional* region,
-	struct clientip_synthesized_rr* raddr, uint16_t rrtype, uint16_t rrclass)
+rpz_clientip_new_rrset(struct regional* region, uint16_t rrtype,
+	uint16_t rrclass)
 {
 	struct packed_rrset_data* pd;
 	struct local_rrset* rrset = (struct local_rrset*)
@@ -914,8 +943,6 @@ rpz_clientip_new_rrset(struct regional* region,
 		log_err("out of memory");
 		return NULL;
 	}
-	rrset->next = raddr->data;
-	raddr->data = rrset;
 	rrset->rrset = (struct ub_packed_rrset_key*)
 		regional_alloc_zero(region, sizeof(*rrset->rrset));
 	if(rrset->rrset == NULL) {
@@ -954,12 +981,18 @@ rpz_clientip_enter_rr(struct regional* region, struct clientip_synthesized_rr* r
 		return 0;
 	}
 
-	rrset = rpz_clientip_new_rrset(region, raddr, rrtype, rrclass);
-	if(raddr->data == NULL) {
+	rrset = rpz_clientip_new_rrset(region, rrtype, rrclass);
+	if(rrset == NULL) {
 		return 0;
 	}
 
-	return rrset_insert_rr(region, rrset->rrset->entry.data, rdata, rdata_len, ttl, "");
+	if(!rrset_insert_rr(region, rrset->rrset->entry.data, rdata, rdata_len, ttl, ""))
+		return 0;
+
+	/* Link in now that the allocations have succeeded. */
+	rrset->next = raddr->data;
+	raddr->data = rrset;
+	return 1;
 }
 
 static int
@@ -982,7 +1015,6 @@ rpz_clientip_insert_trigger_rr(struct clientip_synthesized_rrset* set, struct so
 	lock_rw_wrlock(&node->lock);
 	lock_rw_unlock(&set->lock);
 
-	node->action = a;
 	if(a == RPZ_LOCAL_DATA_ACTION) {
 		if(!rpz_clientip_enter_rr(set->region, node, rrtype,
 			rrclass, ttl, rdata, rdata_len)) {
@@ -992,6 +1024,7 @@ rpz_clientip_insert_trigger_rr(struct clientip_synthesized_rrset* set, struct so
 		}
 
 	}
+	node->action = a;
 
 	lock_rw_unlock(&node->lock);
 
@@ -1977,8 +2010,9 @@ rpz_synthesize_nodata(struct rpz* ATTR_UNUSED(r), struct module_qstate* ms,
 					     0, /* total */
 					     sec_status_insecure,
 					     LDNS_EDE_NONE);
-	if(msg->rep)
-		msg->rep->authoritative = 1;
+	if(!msg->rep)
+		return NULL;
+	msg->rep->authoritative = 1;
 	if(!rpz_add_soa(msg->rep, ms, az))
 		return NULL;
 	return msg;
@@ -2008,8 +2042,9 @@ rpz_synthesize_nxdomain(struct rpz* r, struct module_qstate* ms,
 					     0, /* total */
 					     sec_status_insecure,
 					     LDNS_EDE_NONE);
-	if(msg->rep)
-		msg->rep->authoritative = 1;
+	if(!msg->rep)
+		return NULL;
+	msg->rep->authoritative = 1;
 	if(!rpz_add_soa(msg->rep, ms, az))
 		return NULL;
 	return msg;
@@ -2062,6 +2097,7 @@ rpz_synthesize_localdata_from_rrset(struct rpz* ATTR_UNUSED(r), struct module_qs
 	 * actual data. So that the actual network data and fake data
 	 * are kept track of separately. */
 	rp->rk.flags |= PACKED_RRSET_RPZ;
+	rp->entry.hash = rrset_key_hash(&rp->rk);
 	new_reply_info->rrsets[0] = rp;
 	msg->rep = new_reply_info;
 	if(!rpz_add_soa(msg->rep, ms, az))
@@ -2227,6 +2263,7 @@ rpz_synthesize_cname_override_msg(struct rpz* r, struct module_qstate* ms,
 	 * actual data. So that the actual network data and fake data
 	 * are kept track of separately. */
 	rp->rk.flags |= PACKED_RRSET_RPZ;
+	rp->entry.hash = rrset_key_hash(&rp->rk);
 	new_reply_info->rrsets[0] = rp;
 
 	msg->rep = new_reply_info;
@@ -2469,6 +2506,7 @@ rpz_callback_from_iterator_module(struct module_qstate* ms, struct iter_qstate* 
 {
 	struct auth_zones* az;
 	struct auth_zone* a;
+	struct dns_msg* ret = NULL;
 	struct clientip_synthesized_rr* raddr = NULL;
 	struct rpz* r = NULL;
 	struct local_zone* z = NULL;
@@ -2512,13 +2550,11 @@ rpz_callback_from_iterator_module(struct module_qstate* ms, struct iter_qstate* 
 		z = rpz_delegation_point_zone_lookup(is->dp, r->nsdname_zones,
 						     is->qchase.qclass, &match);
 		if(z != NULL) {
-			lock_rw_unlock(&a->lock);
 			break;
 		}
 
 		raddr = rpz_delegation_point_ipbased_trigger_lookup(r, is);
 		if(raddr != NULL) {
-			lock_rw_unlock(&a->lock);
 			break;
 		}
 		lock_rw_unlock(&a->lock);
@@ -2533,9 +2569,12 @@ rpz_callback_from_iterator_module(struct module_qstate* ms, struct iter_qstate* 
 		if(z) {
 			lock_rw_unlock(&z->lock);
 		}
-		return rpz_apply_nsip_trigger(ms, &is->qchase, r, raddr, a);
+		ret = rpz_apply_nsip_trigger(ms, &is->qchase, r, raddr, a);
+	} else {
+		ret = rpz_apply_nsdname_trigger(ms, &is->qchase, r, z, &match, a);
 	}
-	return rpz_apply_nsdname_trigger(ms, &is->qchase, r, z, &match, a);
+	lock_rw_unlock(&a->lock);
+	return ret;
 }
 
 struct dns_msg* rpz_callback_from_iterator_cname(struct module_qstate* ms,

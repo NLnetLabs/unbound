@@ -234,6 +234,7 @@ void shm_main_shutdown(struct daemon* daemon)
 #endif /* HAVE_SHMGET */
 }
 
+#ifdef HAVE_SHMGET
 /** Copy general info into the stat structure. */
 static void
 shm_general_info(struct worker* worker)
@@ -257,7 +258,9 @@ shm_general_info(struct worker* worker)
 	 * independent of the configuration of unbound */
 	stats_get_mem_info(worker, &shm_stat->mem);
 }
+#endif /* HAVE_SHMGET */
 
+#ifdef HAVE_SHMGET
 /** See if the thread is first. Caller has lock. */
 static int
 shm_thread_is_first(struct shm_main_info* shm_info, int thread_num,
@@ -294,7 +297,9 @@ shm_thread_is_first(struct shm_main_info* shm_info, int thread_num,
 	}
 	return 0;
 }
+#endif /* HAVE_SHMGET */
 
+#ifdef HAVE_SHMGET
 /** See if the thread is last. Caller has lock. */
 static int
 shm_thread_is_last(struct daemon* daemon)
@@ -309,6 +314,7 @@ shm_thread_is_last(struct daemon* daemon)
 	}
 	return 1;
 }
+#endif /* HAVE_SHMGET */
 
 void shm_main_run(struct worker *worker)
 {
@@ -318,6 +324,8 @@ void shm_main_run(struct worker *worker)
 	int offset;
 	double total_mesh_time_median;
 	struct shm_main_info* shm_info = worker->daemon->shm_info;
+	if(!shm_info)
+		return;
 
 #ifndef S_SPLINT_S
 	verbose(VERB_DETAIL, "SHM run - worker [%d] - daemon [%p] - timenow(%u) - timeboot(%u)",

@@ -160,11 +160,26 @@ read_ssl_line(SSL* ssl, char* buf, size_t len)
 			return 0;
 		}
 		if((r = SSL_read(ssl, buf+n, 1)) <= 0) {
-			if(SSL_get_error(ssl, r) == SSL_ERROR_ZERO_RETURN) {
+			int e = SSL_get_error(ssl, r);
+			if(e == SSL_ERROR_ZERO_RETURN) {
 				/* EOF */
 				break;
+			} else if(e == SSL_ERROR_WANT_READ) {
+				continue;
+			} else if(e == SSL_ERROR_WANT_WRITE) {
+				continue;
+			} else if(e == SSL_ERROR_SYSCALL) {
+				if(verb) printf("could not SSL_read %s\n",
+					strerror(errno));
+			} else if(e == SSL_ERROR_SSL) {
+				int er = ERR_peek_error();
+				if(er)
+					printf("could not SSL_read: %s\n",
+						ERR_reason_error_string(er));
+			} else {
+				if(verb) printf("could not SSL_read "
+						"(SSL_get_error %d)\n", e);
 			}
-			if(verb) printf("could not SSL_read\n");
 			return 0;
 		}
 		if(endnl && buf[n] == '\n') {
