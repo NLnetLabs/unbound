@@ -369,7 +369,7 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_val_hash_attempts | server_iter_scrub_rrsig |
 	server_harden_unverified_glue | server_log_time_iso | server_iter_scrub_promiscuous |
 	server_harden_cname_follow | server_iter_scrub_glue_count |
-	server_delegpt_max_addr | server_delegpt_max_ns
+	server_delegpt_max_addr | server_delegpt_max_ns |
 	server_metrics_enable | server_metrics_interface |
 	server_metrics_port | server_metrics_path
 	;
