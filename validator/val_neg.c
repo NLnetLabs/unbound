@@ -1598,6 +1598,68 @@ val_neg_getmsg(struct val_neg_cache* neg, struct query_info* qinfo,
 }
 
 void
+val_neg_remove_ds_denial(struct val_neg_cache* neg, uint8_t* nm, size_t nmlen,
+	uint16_t dclass, struct sldns_buffer* buf)
+{
+	uint8_t* zname = nm;
+	size_t zname_len = nmlen;
+	int labs;
+	struct val_neg_zone* zone;
+	struct val_neg_data* data = NULL;
+
+	/* The root has no parent zone that could deny its DS. */
+	if(dname_is_root(nm))
+		return;
+	labs = dname_count_labels(nm);
+	dname_remove_label(&zname, &zname_len);
+
+	lock_basic_lock(&neg->lock);
+	/* The denial of the DS is held by the parent zone.  Look it up the
+	 * same way val_neg_getmsg() does, one label up and then the closest
+	 * in-use zone above that; the name one label up is inside the parent
+	 * zone but need not be its apex. */
+	zone = neg_closest_zone_parent(neg, zname, zname_len, labs-1, dclass);
+	while(zone && !zone->in_use)
+		zone = zone->parent;
+	if(zone && !zone->nsec3_hash) {
+		/* The NSEC that matches or covers the name, the one that
+		 * neg_find_nsec() picks. */
+		(void)neg_closest_data(zone, nm, nmlen, labs, &data);
+		if(data && !data->in_use)
+			data = (struct val_neg_data*)rbtree_previous(
+				(rbnode_type*)data);
+	} else if(zone) {
+		/* The NSEC3 that matches the name, or else the one that
+		 * covers the next closer name in an opt-out proof, the ones
+		 * that neg_nsec3_proof_ds() picks.  The closest encloser is
+		 * left alone, it cannot deny the DS without the NSEC3 that
+		 * covers the next closer name. */
+		uint8_t hashnc[NSEC3_SHA_LEN];
+		uint8_t b32[257];
+		size_t nclen, b32len;
+		data = neg_find_nsec3_ce(zone, nm, nmlen, labs, buf, hashnc,
+			&nclen);
+		if(data && nclen != 0) {
+			data = NULL;
+			if((b32len=nsec3_hash_to_b32(hashnc, nclen, zone->name,
+				zone->len, b32, sizeof(b32)))) {
+				(void)neg_closest_data(zone, b32, b32len,
+					zone->labs+1, &data);
+				if(!data && zone->tree.count != 0)
+					data = (struct val_neg_data*)rbtree_last(
+						&zone->tree);
+				while(data && !data->in_use)
+					data = data->parent;
+			}
+		}
+	}
+	/* This can free the zone, it is not touched again. */
+	if(data && (rbnode_type*)data != RBTREE_NULL && data->in_use)
+		neg_delete_data(neg, data);
+	lock_basic_unlock(&neg->lock);
+}
+
+void
 val_neg_adjust_size(struct val_neg_cache* neg, size_t max)
 {
 	lock_basic_lock(&neg->lock);

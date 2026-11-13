@@ -458,6 +458,44 @@ If cachedb is in use.
 .UNINDENT
 .INDENT 0.0
 .TP
+.B flush_delegation [\fB+cs\fP] \fIname\fP 
+Remove the delegation of the name from the cache, so that the next lookup
+resolves the zone cut again from the parent.
+Removes the types SOA, NS, DS, DNSKEY, NSEC, CNAME and DNAME at the name,
+the copy of the NS rrset that was kept from the parent side, the DNSKEY
+trust state that the validator derived for the zone, and the cached NSEC
+or NSEC3 record that denies the existence of a DS for the name.
+That NSEC or NSEC3 record is held by the parent zone.
+Unbound answers DS queries from it even when \fBaggressive\-nsec\fP is
+turned off, so a newly created DS would otherwise stay invisible until
+it expires.
+Only one such record is removed.
+If Unbound has cached overlapping NSEC or NSEC3 records (from different
+points in time), an older one can still deny the DS.
+So if a lookup of the DS is still denied after the command, run the
+command again and repeat the lookup.
+The types A and AAAA at the name are removed as well, so that an NXDOMAIN
+that was cached before the name was delegated does not hide the names
+below it.
+An NXDOMAIN that was cached for another type at the name stays.
+.sp
+Unlike \fBflush_zone\fP this does not walk the cache, and it does not remove
+the names below the name.
+Cached answers for them that contain the SOA or NS of the name are looked
+up again.
+The addresses of the nameservers of the zone, and their entries in the
+infrastructure cache such as round trip times, are also left alone.
+.sp
+The \fB+c\fP option removes the items also from the cachedb cache.
+If cachedb is in use.
+.sp
+The \fB+s\fP option also removes the types CDS, CDNSKEY and CSYNC at the
+name, with which the zone signals changes of its delegation to the parent.
+They keep the validation status from when they were cached, so they would
+otherwise contradict a changed DS until they expire.
+.UNINDENT
+.INDENT 0.0
+.TP
 .B flush_bogus [\fB+c\fP] 
 Remove all bogus data from the cache.
 .sp
