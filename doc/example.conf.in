@@ -43,6 +43,22 @@ server:
 	# Default on.
 	# statistics-inhibit-zero: yes
 
+	# Enable the built-in Prometheus metrics exporter. It serves the same
+	# statistics as 'unbound-control stats_noreset' as a plain HTTP
+	# endpoint, so it can be scraped directly by a Prometheus server.
+	# Default off.
+	# metrics-enable: no
+
+	# interfaces to serve metrics http requests on. Can be given multiple
+	# times. Default is localhost (127.0.0.1 and ::1).
+	# metrics-interface: 127.0.0.1
+
+	# port number for the metrics http interface.
+	# metrics-port: 9100
+
+	# URL path on which the metrics are served.
+	# metrics-path: "/metrics"
+
 	# number of threads to create. 1 disables threading.
 	# num-threads: 1
 

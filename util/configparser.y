@@ -222,6 +222,8 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_ITER_SCRUB_PROMISCUOUS VAR_LOG_THREAD_ID
 %token VAR_HARDEN_CNAME_FOLLOW VAR_ITER_SCRUB_GLUE_COUNT VAR_DELEGPT_MAX_ADDR
 %token VAR_DELEGPT_MAX_NS
+%token VAR_METRICS_ENABLE VAR_METRICS_INTERFACE VAR_METRICS_PORT
+%token VAR_METRICS_PATH
 
 %%
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
@@ -367,7 +369,9 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_val_hash_attempts | server_iter_scrub_rrsig |
 	server_harden_unverified_glue | server_log_time_iso | server_iter_scrub_promiscuous |
 	server_harden_cname_follow | server_iter_scrub_glue_count |
-	server_delegpt_max_addr | server_delegpt_max_ns
+	server_delegpt_max_addr | server_delegpt_max_ns |
+	server_metrics_enable | server_metrics_interface |
+	server_metrics_port | server_metrics_path
 	;
 stub_clause: stubstart contents_stub
 	{
@@ -634,6 +638,38 @@ server_statistics_inhibit_zero: VAR_STATISTICS_INHIBIT_ZERO STRING_ARG
 			yyerror("expected yes or no.");
 		else cfg_parser->cfg->stat_inhibit_zero = (strcmp($2, "yes")==0);
 		free($2);
+	}
+	;
+server_metrics_enable: VAR_METRICS_ENABLE STRING_ARG
+	{
+		OUTYY(("P(server_metrics_enable:%s)\n", $2));
+		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
+			yyerror("expected yes or no.");
+		else cfg_parser->cfg->metrics_enable = (strcmp($2, "yes")==0);
+		free($2);
+	}
+	;
+server_metrics_interface: VAR_METRICS_INTERFACE STRING_ARG
+	{
+		OUTYY(("P(server_metrics_interface:%s)\n", $2));
+		if(!cfg_strlist_append(&cfg_parser->cfg->metrics_ifs, $2))
+			yyerror("out of memory");
+	}
+	;
+server_metrics_port: VAR_METRICS_PORT STRING_ARG
+	{
+		OUTYY(("P(server_metrics_port:%s)\n", $2));
+		if(atoi($2) == 0)
+			yyerror("metrics port number expected");
+		else cfg_parser->cfg->metrics_port = atoi($2);
+		free($2);
+	}
+	;
+server_metrics_path: VAR_METRICS_PATH STRING_ARG
+	{
+		OUTYY(("P(server_metrics_path:%s)\n", $2));
+		free(cfg_parser->cfg->metrics_path);
+		cfg_parser->cfg->metrics_path = $2;
 	}
 	;
 server_shm_enable: VAR_SHM_ENABLE STRING_ARG

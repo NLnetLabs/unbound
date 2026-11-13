@@ -2321,6 +2321,11 @@ worker_init(struct worker* worker, struct config_file *cfg,
 			worker_delete(worker);
 			return 0;
 		}
+		if(!daemon_metrics_open_accept(worker->daemon->metrics,
+			worker->daemon->metrics_ports, worker)) {
+			worker_delete(worker);
+			return 0;
+		}
 #ifdef UB_ON_WINDOWS
 		wsvc_setup_worker(worker);
 #endif /* UB_ON_WINDOWS */
@@ -2591,16 +2596,20 @@ void worker_start_accept(void* arg)
 {
 	struct worker* worker = (struct worker*)arg;
 	listen_start_accept(worker->front);
-	if(worker->thread_num == 0)
+	if(worker->thread_num == 0) {
 		daemon_remote_start_accept(worker->daemon->rc);
+		daemon_metrics_start_accept(worker->daemon->metrics);
+	}
 }
 
 void worker_stop_accept(void* arg)
 {
 	struct worker* worker = (struct worker*)arg;
 	listen_stop_accept(worker->front);
-	if(worker->thread_num == 0)
+	if(worker->thread_num == 0) {
 		daemon_remote_stop_accept(worker->daemon->rc);
+		daemon_metrics_stop_accept(worker->daemon->metrics);
+	}
 }
 
 /* --- fake callbacks for fptr_wlist to work --- */

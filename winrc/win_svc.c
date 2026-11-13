@@ -363,6 +363,12 @@ service_init(int r, struct daemon** d, struct config_file** c)
 		config_delete(cfg);
 		return 0;
 	}
+	if(!(daemon->metrics = daemon_metrics_create(cfg))) {
+		log_err("could not set up metrics exporter");
+		daemon_delete(daemon);
+		config_delete(cfg);
+		return 0;
+	}
 	if(cfg->ssl_service_key && cfg->ssl_service_key[0]) {
 		if(!(daemon->listen_dot_sslctx = listen_sslctx_create(
 			cfg->ssl_service_key, cfg->ssl_service_pem, NULL,

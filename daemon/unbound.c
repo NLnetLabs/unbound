@@ -475,6 +475,14 @@ setup_sslctx_remote(struct daemon* daemon, struct config_file* cfg)
 #endif /* HAVE_SSL */
 }
 
+/** setup the prometheus metrics exporter */
+static void
+setup_metrics(struct daemon* daemon, struct config_file* cfg)
+{
+	if(!(daemon->metrics = daemon_metrics_create(cfg)))
+		fatal_exit("could not set up metrics exporter");
+}
+
 /** daemonize, drop user privileges and chroot if needed */
 static void
 perform_setup(struct daemon* daemon, struct config_file* cfg, int debug_mode,
@@ -502,6 +510,7 @@ perform_setup(struct daemon* daemon, struct config_file* cfg, int debug_mode,
 
 	/* read ssl keys while superuser and outside chroot */
 	setup_sslctx_remote(daemon, cfg);
+	setup_metrics(daemon, cfg);
 	daemon_setup_sslctxs(daemon, cfg);
 
 	/* init syslog (as root) if needed, before daemonize, otherwise

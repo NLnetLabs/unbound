@@ -969,7 +969,23 @@ int remote_accept_callback(struct comm_point* ATTR_UNUSED(c),
 	return 0;
 }
 
-int remote_control_callback(struct comm_point* ATTR_UNUSED(c), 
+int remote_control_callback(struct comm_point* ATTR_UNUSED(c),
+	void* ATTR_UNUSED(arg), int ATTR_UNUSED(error),
+        struct comm_reply* ATTR_UNUSED(repinfo))
+{
+	log_assert(0);
+	return 0;
+}
+
+int metrics_accept_callback(struct comm_point* ATTR_UNUSED(c),
+	void* ATTR_UNUSED(arg), int ATTR_UNUSED(error),
+        struct comm_reply* ATTR_UNUSED(repinfo))
+{
+	log_assert(0);
+	return 0;
+}
+
+int metrics_control_callback(struct comm_point* ATTR_UNUSED(c),
 	void* ATTR_UNUSED(arg), int ATTR_UNUSED(error),
         struct comm_reply* ATTR_UNUSED(repinfo))
 {
