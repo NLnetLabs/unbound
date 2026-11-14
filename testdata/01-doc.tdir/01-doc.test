@@ -40,6 +40,8 @@ grep -F -v -e "dnstap" hlist > ilist; mv ilist hlist
 grep -F -v -e "util/siphash.c" hlist > ilist; mv ilist hlist
 # filter out compat
 grep -F -v -e "compat/" hlist > ilist; mv ilist hlist
+# filter out simdzone
+grep -F -v -e "simdzone/" hlist > ilist; mv ilist hlist
 for h in `cat hlist`; do
 	if grep -F "`basename $h`" $PRE/doc/html/files.html >/dev/null; then
 		: # ok

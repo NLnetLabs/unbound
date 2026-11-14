@@ -24,7 +24,11 @@ example.      86400   IN  ZONEMD  2018031900 1 240 (
 example.      86400   IN  ZONEMD  2018031900 241 1 (
                                   e1846540e33a9e41
                                   89792d18d5d131f6
-                                  05fc283e )
+                                  05fc283e00000000
+                                  6792901f9f88e637
+                                  493daaf401c92c27
+                                  9dd10f0edb1c56f8
+				  )
 ns1.example.  3600    IN  A       203.0.113.63
 ns2.example.  86400   IN  TXT     "This example has multiple digests"
 ns2.example.  3600    IN  AAAA    2001:db8::63

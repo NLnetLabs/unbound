@@ -19,6 +19,14 @@ You can learn more about Unbound by reading our
 Make sure you have the C toolchain, OpenSSL and its include files, and libexpat
 installed.
 If building from the repository source you also need flex and bison installed.
+If building from the repository source, also init the git submodule and
+create the configure script with:
+
+```
+git submodule update --init
+autoreconf -fi
+```
+
 Unbound can be compiled and installed using:
 
 ```
