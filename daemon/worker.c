@@ -1955,11 +1955,16 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 
 	/* If we may apply IP-based actions to the answer, build the client
 	 * information.  As this can be expensive, skip it if there is
-	 * absolutely no possibility of it. */
-	if((worker->daemon->use_response_ip || worker->daemon->use_rpz) &&
+	 * absolutely no possibility of it.  With mesh-isolate-client-tags,
+	 * build it for every query type when the client has tags or a view,
+	 * so that clients with different tags or views do not share a
+	 * mesh state. */
+	if(((worker->daemon->use_response_ip || worker->daemon->use_rpz) &&
 		(qinfo.qtype == LDNS_RR_TYPE_A ||
 		qinfo.qtype == LDNS_RR_TYPE_AAAA ||
-		qinfo.qtype == LDNS_RR_TYPE_ANY)) {
+		qinfo.qtype == LDNS_RR_TYPE_ANY)) ||
+		(worker->env.cfg->mesh_isolate_client_tags &&
+		(acladdr->taglist || acladdr->view))) {
 		cinfo_tmp.taglist = acladdr->taglist;
 		cinfo_tmp.taglen = acladdr->taglen;
 		cinfo_tmp.tag_actions = acladdr->tag_actions;
