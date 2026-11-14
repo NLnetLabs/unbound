@@ -134,6 +134,16 @@ void modstack_call_destartup(struct module_stack* stack, struct module_env* env)
  */
 int modstack_find(struct module_stack* stack, const char* name);
 
+/**
+ * Test whether a whitespace-separated module-config string contains a given
+ * module name as a complete token. Unlike strstr(), this does not match
+ * substrings (e.g. "ipset" does not match "ipsetfoo").
+ * @param module_conf: module-config string (may be NULL).
+ * @param name: module name to look for.
+ * @return 1 if present as a token, 0 otherwise.
+ */
+int modstack_has_module(const char* module_conf, const char* name);
+
 /** fetch memory for a module by name, returns 0 if module not there */
 size_t mod_get_mem(struct module_env* env, const char* name);
 
