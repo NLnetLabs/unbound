@@ -1,3 +1,7 @@
+16 November 2026: Wouter
+	- Fix #1551 Building with --without-pthreads does not work
+	  on NetBSD.
+
 13 November 2026: Wouter
 	- Fix #1549: [FR] Counter for dropped DNSTAP messages.
 	  This adds num.dnstap_congestion_drop to the statistics.
