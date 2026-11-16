@@ -57,6 +57,7 @@ struct worker;
 struct comm_reply;
 struct comm_point;
 struct daemon_remote;
+struct daemon_metrics;
 struct config_strlist_head;
 
 /** number of milliseconds timeout on incoming remote control handshake */
@@ -107,6 +108,56 @@ struct daemon_remote {
 	SSL_CTX* ctx;
 #endif
 };
+
+/**
+ * Create new metrics http exporter state for the daemon.
+ * @param cfg: config file with metrics settings.
+ * @return new state, or NULL on failure.
+ */
+struct daemon_metrics* daemon_metrics_create(struct config_file* cfg);
+
+/**
+ * metrics exporter state to delete.
+ * @param dm: state to delete.
+ */
+void daemon_metrics_delete(struct daemon_metrics* dm);
+
+/**
+ * metrics exporter state to clear up. Busy and accept points are closed.
+ * Does not delete the dm itself.
+ * @param dm: state to clear.
+ */
+void daemon_metrics_clear(struct daemon_metrics* dm);
+
+/**
+ * Open and create listening ports for the metrics exporter.
+ * @param cfg: config options.
+ * @return list of ports or NULL on failure.
+ *	can be freed with listening_ports_free().
+ */
+struct listen_port* daemon_metrics_open_ports(struct config_file* cfg);
+
+/**
+ * Setup comm points for accepting metrics http connections.
+ * @param dm: state
+ * @param ports: already opened ports.
+ * @param worker: worker with communication base.
+ * @return false on error.
+ */
+int daemon_metrics_open_accept(struct daemon_metrics* dm,
+	struct listen_port* ports, struct worker* worker);
+
+/**
+ * Stop accept handlers for the metrics exporter (until enabled again)
+ * @param dm: state
+ */
+void daemon_metrics_stop_accept(struct daemon_metrics* dm);
+
+/**
+ * Start accept handlers for the metrics exporter.
+ * @param dm: state
+ */
+void daemon_metrics_start_accept(struct daemon_metrics* dm);
 
 /**
  * Connection to print to, either SSL or plain over fd

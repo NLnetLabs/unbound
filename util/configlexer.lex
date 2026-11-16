@@ -451,6 +451,10 @@ statistics-interval{COLON}	{ YDVAR(1, VAR_STATISTICS_INTERVAL) }
 statistics-cumulative{COLON}	{ YDVAR(1, VAR_STATISTICS_CUMULATIVE) }
 extended-statistics{COLON}	{ YDVAR(1, VAR_EXTENDED_STATISTICS) }
 statistics-inhibit-zero{COLON}	{ YDVAR(1, VAR_STATISTICS_INHIBIT_ZERO) }
+metrics-enable{COLON}		{ YDVAR(1, VAR_METRICS_ENABLE) }
+metrics-interface{COLON}	{ YDVAR(1, VAR_METRICS_INTERFACE) }
+metrics-port{COLON}		{ YDVAR(1, VAR_METRICS_PORT) }
+metrics-path{COLON}		{ YDVAR(1, VAR_METRICS_PATH) }
 shm-enable{COLON}		{ YDVAR(1, VAR_SHM_ENABLE) }
 shm-key{COLON}			{ YDVAR(1, VAR_SHM_KEY) }
 remote-control{COLON}		{ YDVAR(0, VAR_REMOTE_CONTROL) }

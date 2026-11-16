@@ -47,6 +47,7 @@
 #include "testcode/replay.h"
 #include "testcode/fake_event.h"
 #include "daemon/remote.h"
+#include "daemon/metrics.h"
 #include "libunbound/worker.h"
 #include "daemon/worker.h"
 #include "util/config_file.h"
@@ -643,6 +644,36 @@ int daemon_remote_open_accept(struct daemon_remote* ATTR_UNUSED(rc),
 	return 1;
 }
 
+/* fake metrics exporter */
+struct listen_port* daemon_metrics_open_ports(struct config_file*
+	ATTR_UNUSED(cfg))
+{
+	return NULL;
+}
+
+struct daemon_metrics* daemon_metrics_create(struct config_file*
+	ATTR_UNUSED(cfg))
+{
+	return (struct daemon_metrics*)calloc(1, sizeof(struct daemon_metrics));
+}
+
+void daemon_metrics_delete(struct daemon_metrics* dm)
+{
+	free(dm);
+}
+
+void daemon_metrics_clear(struct daemon_metrics* ATTR_UNUSED(dm))
+{
+	/* nothing */
+}
+
+int daemon_metrics_open_accept(struct daemon_metrics* ATTR_UNUSED(dm),
+        struct listen_port* ATTR_UNUSED(ports),
+	struct worker* ATTR_UNUSED(worker))
+{
+	return 1;
+}
+
 int remote_accept_callback(struct comm_point* ATTR_UNUSED(c), 
 	void* ATTR_UNUSED(arg), int ATTR_UNUSED(error),
         struct comm_reply* ATTR_UNUSED(repinfo))
@@ -651,7 +682,23 @@ int remote_accept_callback(struct comm_point* ATTR_UNUSED(c),
 	return 0;
 }
 
-int remote_control_callback(struct comm_point* ATTR_UNUSED(c), 
+int remote_control_callback(struct comm_point* ATTR_UNUSED(c),
+	void* ATTR_UNUSED(arg), int ATTR_UNUSED(error),
+        struct comm_reply* ATTR_UNUSED(repinfo))
+{
+	log_assert(0);
+	return 0;
+}
+
+int metrics_accept_callback(struct comm_point* ATTR_UNUSED(c),
+	void* ATTR_UNUSED(arg), int ATTR_UNUSED(error),
+        struct comm_reply* ATTR_UNUSED(repinfo))
+{
+	log_assert(0);
+	return 0;
+}
+
+int metrics_control_callback(struct comm_point* ATTR_UNUSED(c),
 	void* ATTR_UNUSED(arg), int ATTR_UNUSED(error),
         struct comm_reply* ATTR_UNUSED(repinfo))
 {

@@ -263,6 +263,72 @@ These options are part of the ``server:`` section.
     Default: yes
 
 
+The following four options configure Unbound's built-in
+`Prometheus <https://prometheus.io/>`_ metrics exporter.
+When enabled, Unbound serves the same statistics that are otherwise only
+available via ``unbound-control stats_noreset`` as a plain HTTP endpoint, in
+the Prometheus text exposition format, so a Prometheus server can scrape
+them directly, without running a separate exporter process.
+This metrics endpoint is independent of the ``remote-control:`` interface
+and does not use certificates.
+It is disabled by default.
+
+To enable it, add for example the following to the ``server:`` clause:
+
+.. code-block:: text
+
+    server:
+        metrics-enable: yes
+        metrics-interface: 127.0.0.1
+        metrics-port: 9100
+        metrics-path: "/metrics"
+
+With the settings above, the metrics can then be fetched with
+``curl http://127.0.0.1:9100/metrics``, or scraped by adding
+``127.0.0.1:9100`` as a target in the Prometheus server's
+``scrape_configs:``.
+
+
+@@UAHL@unbound.conf@metrics-enable@@: *<yes or no>*
+    If enabled, Unbound serves the server statistics (the same values as
+    obtained with ``unbound-control stats_noreset``) over plain HTTP, in
+    the Prometheus text exposition format, so they can be scraped by a
+    Prometheus server without an external exporter process.
+    This metrics endpoint is independent of the ``remote-control:``
+    interface and does not use certificates.
+
+    Default: no
+
+
+@@UAHL@unbound.conf@metrics-interface@@: *<IP address or interface name[@port]>*
+    Give IPv4 or IPv6 addresses, or an interface name, to listen on for
+    metrics http requests. Can be given multiple times to listen on several
+    interfaces.
+    If an interface name is used instead of an IP address, the list of IP
+    addresses on that interface are used.
+
+    By default localhost (``127.0.0.1`` and ``::1``) is listened to.
+    Use ``0.0.0.0`` and ``::0`` to listen to all interfaces.
+    If you change this and permissions have been dropped, you must restart
+    the server for the change to take effect.
+
+
+@@UAHL@unbound.conf@metrics-port@@: *<port number>*
+    The port number to listen on for the metrics http interface.
+
+    .. note::
+        If you change this and permissions have been dropped, you must
+        restart the server for the change to take effect.
+
+    Default: 9100
+
+
+@@UAHL@unbound.conf@metrics-path@@: *<path>*
+    The URL path on which the metrics are served, for example ``/metrics``.
+
+    Default: "/metrics"
+
+
 @@UAHL@unbound.conf@num-threads@@: *<number>*
     The number of threads to create to serve clients. Use 1 for no threading.
 

@@ -110,6 +110,11 @@ config_create(void)
 	cfg->stat_cumulative = 0;
 	cfg->stat_extended = 0;
 	cfg->stat_inhibit_zero = 1;
+	cfg->metrics_enable = 0;
+	cfg->metrics_ifs.first = NULL;
+	cfg->metrics_ifs.last = NULL;
+	cfg->metrics_port = 9100;
+	if(!(cfg->metrics_path = strdup("/metrics"))) goto error_exit;
 	cfg->num_threads = 1;
 	cfg->port = UNBOUND_DNS_PORT;
 	cfg->do_ip4 = 1;
@@ -822,6 +827,10 @@ int config_set_option(struct config_file* cfg, const char* opt,
 	else S_YNO("control-enable:", remote_control_enable)
 	else S_STRLIST_APPEND("control-interface:", control_ifs)
 	else S_NUMBER_NONZERO("control-port:", control_port)
+	else S_YNO("metrics-enable:", metrics_enable)
+	else S_STRLIST_APPEND("metrics-interface:", metrics_ifs)
+	else S_NUMBER_NONZERO("metrics-port:", metrics_port)
+	else S_STR("metrics-path:", metrics_path)
 	else S_STR("server-key-file:", server_key_file)
 	else S_STR("server-cert-file:", server_cert_file)
 	else S_STR("control-key-file:", control_key_file)
@@ -1300,6 +1309,9 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_STR(opt, "server-cert-file", server_cert_file)
 	else O_STR(opt, "control-key-file", control_key_file)
 	else O_STR(opt, "control-cert-file", control_cert_file)
+	else O_YNO(opt, "metrics-enable", metrics_enable)
+	else O_DEC(opt, "metrics-port", metrics_port)
+	else O_STR(opt, "metrics-path", metrics_path)
 	else O_LST(opt, "root-hints", root_hints)
 	else O_LS2(opt, "access-control", acls)
 	else O_LS2(opt, "tcp-connection-limit", tcp_connection_limits)
@@ -1313,6 +1325,7 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_YNO(opt, "trust-anchor-signaling", trust_anchor_signaling)
 	else O_YNO(opt, "root-key-sentinel", root_key_sentinel)
 	else O_LST(opt, "control-interface", control_ifs.first)
+	else O_LST(opt, "metrics-interface", metrics_ifs.first)
 	else O_LST(opt, "domain-insecure", domain_insecure)
 	else O_UNS(opt, "val-override-date", val_date_override)
 	else O_YNO(opt, "minimal-responses", minimal_responses)
@@ -1850,6 +1863,8 @@ config_delete(struct config_file* cfg)
 	config_deltrplstrlist(cfg->interface_tag_actions);
 	config_deltrplstrlist(cfg->interface_tag_datas);
 	config_delstrlist(cfg->control_ifs.first);
+	config_delstrlist(cfg->metrics_ifs.first);
+	free(cfg->metrics_path);
 	config_deldblstrlist(cfg->wait_limit_netblock);
 	config_deldblstrlist(cfg->wait_limit_cookie_netblock);
 	free(cfg->server_key_file);

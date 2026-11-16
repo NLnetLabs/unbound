@@ -703,12 +703,24 @@ daemon_open_shared_ports(struct daemon* daemon)
 		daemon->rc_ports = NULL;
 		daemon->rc_port = 0;
 	}
-	if(daemon->cfg->remote_control_enable && 
+	if(daemon->cfg->remote_control_enable &&
 		daemon->cfg->control_port != daemon->rc_port) {
 		listening_ports_free(daemon->rc_ports);
 		if(!(daemon->rc_ports=daemon_remote_open_ports(daemon->cfg)))
 			return 0;
 		daemon->rc_port = daemon->cfg->control_port;
+	}
+	if(!daemon->cfg->metrics_enable && daemon->metrics_port) {
+		listening_ports_free(daemon->metrics_ports);
+		daemon->metrics_ports = NULL;
+		daemon->metrics_port = 0;
+	}
+	if(daemon->cfg->metrics_enable &&
+		daemon->cfg->metrics_port != daemon->metrics_port) {
+		listening_ports_free(daemon->metrics_ports);
+		if(!(daemon->metrics_ports=daemon_metrics_open_ports(daemon->cfg)))
+			return 0;
+		daemon->metrics_port = daemon->cfg->metrics_port;
 	}
 	return 1;
 }
@@ -1206,6 +1218,7 @@ daemon_cleanup(struct daemon* daemon)
 		auth_zones_cleanup(daemon->env->auth_zones);
 	/* key cache is cleared by module deinit during next daemon_fork() */
 	daemon_remote_clear(daemon->rc);
+	daemon_metrics_clear(daemon->metrics);
 	if(daemon->fast_reload_thread)
 		fast_reload_thread_stop(daemon->fast_reload_thread);
 	if(daemon->fast_reload_printq_list)
@@ -1250,10 +1263,12 @@ daemon_delete(struct daemon* daemon)
 	modstack_call_destartup(&daemon->mods, daemon->env);
 	modstack_free(&daemon->mods);
 	daemon_remote_delete(daemon->rc);
+	daemon_metrics_delete(daemon->metrics);
 	for(i = 0; i < daemon->num_ports; i++)
 		listening_ports_free(daemon->ports[i]);
 	free(daemon->ports);
 	listening_ports_free(daemon->rc_ports);
+	listening_ports_free(daemon->metrics_ports);
 	if(daemon->env) {
 		slabhash_delete(daemon->env->msg_cache);
 		rrset_cache_delete(daemon->env->rrset_cache);

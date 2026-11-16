@@ -59,6 +59,12 @@ int remote_accept_callback(struct comm_point*, void*, int, struct comm_reply*);
 /** handle remote control data callbacks */
 int remote_control_callback(struct comm_point*, void*, int, struct comm_reply*);
 
+/** handle metrics http accept callbacks */
+int metrics_accept_callback(struct comm_point*, void*, int, struct comm_reply*);
+
+/** handle metrics http data callbacks */
+int metrics_control_callback(struct comm_point*, void*, int, struct comm_reply*);
+
 /** routine to printout option values over SSL */
 void  remote_get_opt_ssl(char* line, void* arg);
 
