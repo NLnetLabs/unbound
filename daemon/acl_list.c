@@ -804,8 +804,8 @@ log_acl_action(const char* action, struct sockaddr_storage* addr,
 	addr_to_str(addr, addrlen, a, sizeof(a));
 	port = ntohs(((struct sockaddr_in*)addr)->sin_port);
 	if(acladdr) {
-		addr_to_str(&acladdr->node.addr, acladdr->node.addrlen,
-			n, sizeof(n));
+		addr_to_str((struct sockaddr_storage*)&acladdr->node.addr,
+			acladdr->node.addrlen, n, sizeof(n));
 		verbose(VERB_ALGO, "%s query from %s port %d because of "
 			"%s/%d %s%s", action, a, (int)port, n,
 			acladdr->node.net,

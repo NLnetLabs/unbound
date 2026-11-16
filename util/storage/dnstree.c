@@ -61,7 +61,8 @@ int addr_tree_compare(const void* k1, const void* k2)
 {
         struct addr_tree_node* n1 = (struct addr_tree_node*)k1;
         struct addr_tree_node* n2 = (struct addr_tree_node*)k2;
-        int r = sockaddr_cmp_addr(&n1->addr, n1->addrlen, &n2->addr,
+        int r = sockaddr_cmp_addr((struct sockaddr_storage*)&n1->addr, n1->addrlen,
+                (struct sockaddr_storage*)&n2->addr,
                 n2->addrlen);
         if(r != 0) return r;
         if(n1->net < n2->net)
@@ -75,7 +76,8 @@ int addr_tree_addrport_compare(const void* k1, const void* k2)
 {
 	struct addr_tree_node* n1 = (struct addr_tree_node*)k1;
 	struct addr_tree_node* n2 = (struct addr_tree_node*)k2;
-	return sockaddr_cmp_scopeid(&n1->addr, n1->addrlen, &n2->addr,
+	return sockaddr_cmp_scopeid((struct sockaddr_storage*)&n1->addr, n1->addrlen,
+		(struct sockaddr_storage*)&n2->addr,
 		n2->addrlen);
 }
 
@@ -109,6 +111,8 @@ int name_tree_insert(rbtree_type* tree, struct name_tree_node* node,
 int addr_tree_insert(rbtree_type* tree, struct addr_tree_node* node,
         struct sockaddr_storage* addr, socklen_t addrlen, int net)
 {
+	if(addrlen > (socklen_t)sizeof(node->addr))
+		return 0;
 	node->node.key = node;
 	memcpy(&node->addr, addr, addrlen);
 	node->addrlen = addrlen;
@@ -128,7 +132,8 @@ void addr_tree_init_parents_node(struct addr_tree_node* node)
                         prev = node;
                         continue;
                 }
-                m = addr_in_common(&prev->addr, prev->net, &node->addr,
+                m = addr_in_common((struct sockaddr_storage*)&prev->addr, prev->net,
+                        (struct sockaddr_storage*)&node->addr,
                         node->net, node->addrlen);
                 /* sort order like: ::/0, 1::/2, 1::/4, ... 2::/2 */
                 /* find the previous, or parent-parent-parent */
@@ -226,6 +231,8 @@ struct addr_tree_node* addr_tree_lookup(rbtree_type* tree,
         rbnode_type* res = NULL;
         struct addr_tree_node* result;
         struct addr_tree_node key;
+        if(addrlen > (socklen_t)sizeof(key.addr))
+                return NULL;
         key.node.key = &key;
         memcpy(&key.addr, addr, addrlen);
         key.addrlen = addrlen;
@@ -240,7 +247,7 @@ struct addr_tree_node* addr_tree_lookup(rbtree_type* tree,
                 if(!result || result->addrlen != addrlen)
                         return 0;
                 /* count number of bits matched */
-                m = addr_in_common(&result->addr, result->net, addr,
+                m = addr_in_common((struct sockaddr_storage*)&result->addr, result->net, addr,
                         key.net, addrlen);
                 while(result) { /* go up until addr is inside netblock */
                         if(result->net <= m)
@@ -256,6 +263,8 @@ struct addr_tree_node* addr_tree_find(rbtree_type* tree,
 {
         rbnode_type* res = NULL;
         struct addr_tree_node key;
+        if(addrlen > (socklen_t)sizeof(key.addr))
+                return NULL;
         key.node.key = &key;
         memcpy(&key.addr, addr, addrlen);
         key.addrlen = addrlen;
