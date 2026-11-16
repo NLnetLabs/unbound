@@ -8822,9 +8822,10 @@ fast_reload_thread_start(RES* ssl, struct worker* worker, struct rc_state* s,
 void
 fast_reload_thread_stop(struct fast_reload_thread* fast_reload_thread)
 {
-	struct worker* worker = fast_reload_thread->worker;
+	struct worker* worker;
 	if(!fast_reload_thread)
 		return;
+	worker = fast_reload_thread->worker;
 	fr_send_stop(fast_reload_thread);
 	if(worker->daemon->fast_reload_thread != NULL) {
 		/* If it did not exit yet, join with the thread now. It is

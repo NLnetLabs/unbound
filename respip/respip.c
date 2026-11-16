@@ -134,8 +134,8 @@ respip_sockaddr_delete(struct respip_set* set, struct resp_addr* node)
 	lock_rw_destroy(&node->lock);
 	(void)rbtree_delete(&set->ip_tree, node);
 	/* no free'ing, all allocated in region */
-	if(!prev)
-		addr_tree_init_parents((rbtree_type*)set);
+	if((rbnode_type*)prev == RBTREE_NULL)
+		addr_tree_init_parents(&set->ip_tree);
 	else
 		addr_tree_init_parents_node(&prev->node);
 }

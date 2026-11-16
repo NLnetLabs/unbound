@@ -1,0 +1,169 @@
+; config options
+server:
+	module-config: "respip validator iterator"
+	target-fetch-policy: "0 0 0 0 0"
+	qname-minimisation: no
+	rrset-roundrobin: no
+	access-control: 192.0.0.0/8 allow
+
+rpz:
+	name: "rpz.example.com."
+	master: 10.20.30.40
+	zonefile:
+TEMPFILE_NAME rpz.example.com
+TEMPFILE_CONTENTS rpz.example.com
+rpz.example.com. 3600 IN SOA ns.rpz.example.com. hostmaster.rpz.example.com. 1 3600 900 86400 3600
+rpz.example.com.	3600	IN	NS	ns.rpz.example.net.
+; 10.0.0.0/8 encloses 10.1.2.3/32, and sorts first in the address tree.
+8.0.0.0.10.rpz-ip.rpz.example.com.	CNAME .
+32.3.2.1.10.rpz-ip.rpz.example.com.	A 10.66.0.1
+TEMPFILE_END
+
+stub-zone:
+	name: "."
+	stub-addr: 10.20.30.40
+
+CONFIG_END
+
+SCENARIO_BEGIN Test RPZ IXFR removing an enclosing rpz-ip block that is first in the tree
+
+RANGE_BEGIN 0 100
+	ADDRESS 10.20.30.40
+
+ENTRY_BEGIN
+MATCH opcode qname qtype
+ADJUST copy_id
+REPLY QR NOERROR AA
+SECTION QUESTION
+.	IN	NS
+SECTION ANSWER
+.	IN	NS	ns.
+SECTION ADDITIONAL
+ns.	IN	NS	10.20.30.40
+ENTRY_END
+
+; answer inside 10.0.0.0/8, but not inside 10.1.2.3/32
+ENTRY_BEGIN
+MATCH opcode qname qtype
+ADJUST copy_id
+REPLY QR NOERROR AA
+SECTION QUESTION
+a.example.	IN	A
+SECTION ANSWER
+a.example.	IN	A	10.9.9.9
+ENTRY_END
+
+; answer inside 10.1.2.3/32
+ENTRY_BEGIN
+MATCH opcode qname qtype
+ADJUST copy_id
+REPLY QR NOERROR AA
+SECTION QUESTION
+b.example.	IN	A
+SECTION ANSWER
+b.example.	IN	A	10.1.2.3
+ENTRY_END
+
+ENTRY_BEGIN
+MATCH opcode qname qtype
+ADJUST copy_id
+REPLY QR AA NOERROR
+SECTION QUESTION
+rpz.example.com. IN SOA
+SECTION ANSWER
+rpz.example.com. IN SOA ns.rpz.example.com. hostmaster.rpz.example.com. 2 3600 900 86400 3600
+ENTRY_END
+
+; IXFR from serial 1 to 2 removes the enclosing 10.0.0.0/8 block.
+ENTRY_BEGIN
+MATCH opcode qname qtype
+ADJUST copy_id
+REPLY QR AA NOERROR
+SECTION QUESTION
+rpz.example.com. IN IXFR
+SECTION ANSWER
+rpz.example.com. IN SOA ns.rpz.example.com. hostmaster.rpz.example.com. 2 3600 900 86400 3600
+rpz.example.com. IN SOA ns.rpz.example.com. hostmaster.rpz.example.com. 1 3600 900 86400 3600
+8.0.0.0.10.rpz-ip.rpz.example.com.	CNAME .
+rpz.example.com. IN SOA ns.rpz.example.com. hostmaster.rpz.example.com. 2 3600 900 86400 3600
+rpz.example.com. IN SOA ns.rpz.example.com. hostmaster.rpz.example.com. 2 3600 900 86400 3600
+ENTRY_END
+
+RANGE_END
+
+; before the IXFR, the /8 blocks 10.9.9.9
+STEP 1 QUERY
+ENTRY_BEGIN
+REPLY RD
+SECTION QUESTION
+a.example.	IN	A
+ENTRY_END
+
+STEP 2 CHECK_ANSWER
+ENTRY_BEGIN
+MATCH all
+REPLY QR RD RA NXDOMAIN
+SECTION QUESTION
+a.example.	IN	A
+ENTRY_END
+
+; before the IXFR, the /32 rewrites 10.1.2.3
+STEP 3 QUERY
+ENTRY_BEGIN
+REPLY RD
+SECTION QUESTION
+b.example.	IN	A
+ENTRY_END
+
+STEP 4 CHECK_ANSWER
+ENTRY_BEGIN
+MATCH all
+REPLY QR RD RA NOERROR
+SECTION QUESTION
+b.example.	IN	A
+SECTION ANSWER
+b.example.	IN	A	10.66.0.1
+ENTRY_END
+
+STEP 10 TIME_PASSES ELAPSE 1
+STEP 20 TIME_PASSES ELAPSE 3600
+STEP 30 TRAFFIC
+
+; after the IXFR, the /8 is gone. The /32 must not still point to the
+; removed /8 as its parent, or 10.9.9.9 stays blocked.
+STEP 40 QUERY
+ENTRY_BEGIN
+REPLY RD
+SECTION QUESTION
+a.example.	IN	A
+ENTRY_END
+
+STEP 41 CHECK_ANSWER
+ENTRY_BEGIN
+MATCH all
+REPLY QR RD RA NOERROR
+SECTION QUESTION
+a.example.	IN	A
+SECTION ANSWER
+a.example.	IN	A	10.9.9.9
+ENTRY_END
+
+; the /32 still rewrites 10.1.2.3
+STEP 42 QUERY
+ENTRY_BEGIN
+REPLY RD
+SECTION QUESTION
+b.example.	IN	A
+ENTRY_END
+
+STEP 43 CHECK_ANSWER
+ENTRY_BEGIN
+MATCH all
+REPLY QR RD RA NOERROR
+SECTION QUESTION
+b.example.	IN	A
+SECTION ANSWER
+b.example.	IN	A	10.66.0.1
+ENTRY_END
+
+SCENARIO_END
