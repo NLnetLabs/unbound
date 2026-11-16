@@ -3,6 +3,8 @@
 	  on NetBSD.
 	- Merge #1552 from prthakre: fix: port-list loop, respip
 	  first-entry delete.
+	- Merge #1553 from prthakre: fix: use an IPv4/IPv6 union
+	  for address tree.
 
 13 November 2026: Wouter
 	- Fix #1549: [FR] Counter for dropped DNSTAP messages.
