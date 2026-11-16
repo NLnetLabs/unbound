@@ -1673,7 +1673,8 @@ log_rpz_apply(char* trigger, uint8_t* dname, struct addr_tree_node* addrnode,
 		dname_str(dname, dnamestr);
 	} else if(addrnode) {
 		char addrbuf[128];
-		addr_to_str(&addrnode->addr, addrnode->addrlen, addrbuf, sizeof(addrbuf));
+		addr_to_str((struct sockaddr_storage*)&addrnode->addr,
+			addrnode->addrlen, addrbuf, sizeof(addrbuf));
 		snprintf(dnamestr, sizeof(dnamestr), "%s/%d", addrbuf, addrnode->net);
 	} else {
 		dnamestr[0]=0;
@@ -1717,7 +1718,8 @@ rpz_ipbased_trigger_lookup(struct clientip_synthesized_rrset* set,
 		if(verbosity >= VERB_ALGO) {
 			char ip[256], net[256];
 			addr_to_str(addr, addrlen, ip, sizeof(ip));
-			addr_to_str(&raddr->node.addr, raddr->node.addrlen,
+			addr_to_str((struct sockaddr_storage*)
+				&raddr->node.addr, raddr->node.addrlen,
 				net, sizeof(net));
 			verbose(VERB_ALGO, "rpz: trigger %s %s/%d on %s action=%s",
 				triggername, net, raddr->node.net, ip, rpz_action_to_string(action));

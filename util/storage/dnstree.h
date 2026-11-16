@@ -68,6 +68,16 @@ struct name_tree_node {
 };
 
 /**
+ * IPv4 or IPv6 address in an addr tree node.
+ */
+union addr_tree_addr {
+	/** IPv4 address */
+	struct sockaddr_in in4;
+	/** IPv6 address */
+	struct sockaddr_in6 in6;
+};
+
+/**
  * Tree of IP addresses.  Sorted first by protocol, then by bits.
  * This can be looked up to obtain the enclosing subnet.
  *
@@ -79,8 +89,8 @@ struct addr_tree_node {
 	rbnode_type node;
 	/** parent in tree */
 	struct addr_tree_node* parent;
-	/** address */
-	struct sockaddr_storage addr;
+	/** address, addrlen is at most sizeof(union addr_tree_addr) */
+	union addr_tree_addr addr;
 	/** length of addr */
 	socklen_t addrlen;
 	/** netblock size */

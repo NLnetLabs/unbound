@@ -829,7 +829,7 @@ populate_action_info(struct respip_action_info* actinfo,
 			log_err("out of memory");
 			return 0;
 		}
-		a->addr = raddr->node.addr;
+		memcpy(&a->addr, &raddr->node.addr, raddr->node.addrlen);
 		a->addrlen = raddr->node.addrlen;
 		a->net = raddr->node.net;
 		actinfo->addrinfo = a;
@@ -997,7 +997,9 @@ respip_rewrite_reply(const struct query_info* qinfo,
 						else
 							addr_to_str(&ss, ss_len, ip, sizeof(ip));
 						dname_str(qinfo->qname, qn);
-						addr_to_str(&raddr->node.addr,
+						addr_to_str(
+							(struct sockaddr_storage*)
+							&raddr->node.addr,
 							raddr->node.addrlen,
 							nm, sizeof(nm));
 						verbose(VERB_ALGO, "respip: rpz: response-ip trigger %s/%d on %s %s with action %s", nm, raddr->node.net, qn, ip, rpz_action_to_string(respip_action_to_rpz_action(action)));
