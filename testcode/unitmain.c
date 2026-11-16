@@ -404,6 +404,19 @@ config_memsize_test(void)
 	unit_assert( cfg_parse_memsize("0 Gb", &v) && v==0*1024*1024);
 }
 
+/** test config_file: cfg_ports_list_contains */
+static void
+config_ports_list_test(void)
+{
+	unit_show_func("util/config_file.c", "cfg_ports_list_contains");
+	unit_assert(cfg_ports_list_contains("53 443", 443));
+	unit_assert(!cfg_ports_list_contains("53 443", 853));
+	/* an out of range port is skipped, and must not loop forever */
+	unit_assert(cfg_ports_list_contains("70000 443", 443));
+	unit_assert(!cfg_ports_list_contains("70000", 443));
+	unit_assert(!cfg_ports_list_contains("-1", 443));
+}
+
 /** test config_file: test tag code */
 static void
 config_tag_test(void) 
@@ -958,6 +971,52 @@ respip_view_conf_data_test(void)
 	free(cv);
 }
 
+/** Add a netblock to the respip set */
+static struct resp_addr*
+respip_test_add(struct respip_set* set, char* netblock)
+{
+	struct sockaddr_storage addr;
+	socklen_t addrlen;
+	int net;
+	unit_assert(netblockstrtoaddr(netblock, UNBOUND_DNS_PORT, &addr,
+		&addrlen, &net));
+	return respip_sockaddr_find_or_create(set, &addr, addrlen, net, 1,
+		netblock);
+}
+
+/** Find the netblock that encloses ip, like an answer IP lookup does */
+static struct resp_addr*
+respip_test_lookup(struct respip_set* set, const char* ip)
+{
+	struct sockaddr_storage addr;
+	socklen_t addrlen;
+	unit_assert(ipstrtoaddr(ip, UNBOUND_DNS_PORT, &addr, &addrlen));
+	return (struct resp_addr*)addr_tree_lookup(respip_set_get_tree(set),
+		&addr, addrlen);
+}
+
+/** Delete the first node in the tree, a netblock that encloses another
+ * node. The enclosed node must not keep the deleted node as parent. */
+static void
+respip_delete_first_test(void)
+{
+	struct respip_set* set = respip_set_create();
+	struct resp_addr* block, *host;
+	unit_show_func("respip/respip.c", "respip_sockaddr_delete");
+	unit_assert(set);
+	block = respip_test_add(set, "10.0.0.0/8");
+	host = respip_test_add(set, "10.1.2.3/32");
+	unit_assert(block && host);
+	addr_tree_init_parents(respip_set_get_tree(set));
+	unit_assert(respip_test_lookup(set, "10.9.9.9") == block);
+	unit_assert(respip_test_lookup(set, "10.1.2.3") == host);
+
+	respip_sockaddr_delete(set, block);
+	unit_assert(respip_test_lookup(set, "10.9.9.9") == NULL);
+	unit_assert(respip_test_lookup(set, "10.1.2.3") == host);
+	respip_set_delete(set);
+}
+
 /** respip unit tests */
 static void respip_test(void)
 {
@@ -965,6 +1024,7 @@ static void respip_test(void)
 	respip_conf_data_test();
 	respip_view_conf_actions_test();
 	respip_conf_actions_test();
+	respip_delete_first_test();
 }
 
 #include "util/regional.h"
@@ -1478,6 +1538,7 @@ main(int argc, char* argv[])
 	verify_test();
 	net_test();
 	config_memsize_test();
+	config_ports_list_test();
 	config_tag_test();
 	dname_test();
 	rtt_test();

@@ -2995,11 +2995,11 @@ cfg_ports_list_contains(char* ports, int p)
 			break;
 		after = now;
 		extraport = (int)strtol(now, &after, 10);
-		if(extraport < 0 || extraport > 65535)
-			continue; /* Out of range. */
 		if(extraport == 0 && now == after)
 			return 0; /* Number could not be parsed. */
 		now = after;
+		if(extraport < 0 || extraport > 65535)
+			continue; /* Out of range. */
 		if(extraport == p)
 			return 1;
 	}
