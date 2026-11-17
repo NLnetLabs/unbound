@@ -41,6 +41,9 @@
 
 #include "config.h"
 #include "dns64/dns64.h"
+#ifdef CLIENT_SUBNET
+#include "services/mesh.h"
+#endif
 #include "services/cache/dns.h"
 #include "services/cache/rrset.h"
 #include "util/config_file.h"
@@ -533,6 +536,20 @@ generate_type_A_query(struct module_qstate* qstate, int id)
 		subq->curmod = id;
 		subq->ext_state[id] = module_state_initial;
 		subq->minfo[id] = NULL;
+#ifdef CLIENT_SUBNET
+		/* Pass the client address to the subquery so that the
+		 * subnetcache module can derive an EDNS client subnet
+		 * option for it.  Without this the A query is sent
+		 * without subnet information; the answer then reflects
+		 * the resolver's own address, is cached in the global
+		 * cache and poisons later answers and dns64 synthesis
+		 * for clients from other subnets. */
+		if(qstate->mesh_info && qstate->mesh_info->reply_list)
+			subq->client_addr = qstate->mesh_info->
+				reply_list->query_reply.client_addr;
+		else
+			subq->client_addr = qstate->client_addr;
+#endif
 	}
 
 	return module_wait_subquery;

@@ -5,6 +5,9 @@
 	- make depend.
 	- Merge #1555 from ligurio: Add CIFuzz GitHub Actions
 	  workflow.
+	- Fix #1556 dns64 + subnetcache: dns64's internal A subquery
+	  is sent without the client subnet, poisoning the global
+	  cache with resolver-region answers.
 
 16 November 2026: Wouter
 	- Fix #1551 Building with --without-pthreads does not work
