@@ -109,6 +109,10 @@ struct acl_addr {
 	size_t tag_datas_size;
 	/* If the acl node is for an interface */
 	int is_interface;
+	/* If the acl node is an implicit default */
+	int is_default;
+	/* If an interface action was explicitly configured */
+	int has_action;
 	/* view element, NULL if none */
 	struct view* view;
 };
@@ -171,6 +175,26 @@ int acl_interface_apply_cfg(struct acl_list* acl_interface, struct config_file* 
  * @return: what to do with message from this address.
  */
 enum acl_access acl_get_control(struct acl_addr* acl);
+
+/**
+ * Resolve effective ACL node for a client query, considering client ACL
+ * and interface ACL fallback.
+ * @param acl_client: the client ACL node (from acl_addr_lookup) or NULL.
+ * @param acl_interface: the interface ACL node (from socket->acl) or NULL.
+ * @return the resolved acl_addr node to use for access control.
+ */
+struct acl_addr* acl_resolve_client_interface(struct acl_addr* acl_client,
+	struct acl_addr* acl_interface);
+
+/**
+ * Resolve effective view for a request, considering client ACL view
+ * and interface ACL view fallback.
+ * @param acl_client: the client ACL node or NULL.
+ * @param acl_interface: the interface ACL node or NULL.
+ * @return the resolved view or NULL.
+ */
+struct view* acl_resolve_view(struct acl_addr* acl_client,
+	struct acl_addr* acl_interface);
 
 /**
  * Lookup address to see its acl structure

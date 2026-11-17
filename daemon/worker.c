@@ -1406,10 +1406,8 @@ deny_refuse_all(struct comm_point* c, enum acl_access* acl,
 		*acladdr = acl_addr_lookup(worker->daemon->acl,
 			&repinfo->client_addr, repinfo->client_addrlen);
 	}
-	/* If there is no ACL based on client IP use the interface ACL. */
-	if(!(*acladdr) && c->socket) {
-		*acladdr = c->socket->acl;
-	}
+	*acladdr = acl_resolve_client_interface(*acladdr,
+		(c->socket ? c->socket->acl : NULL));
 	*acl = acl_get_control(*acladdr);
 	return deny_refuse(c, *acl, acl_deny, acl_refuse, worker, repinfo,
 		*acladdr, ede, check_result);
@@ -1854,30 +1852,49 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 		regional_free_all(worker->scratchpad);
 		goto send_reply;
 	}
-	if(local_zones_answer(worker->daemon->local_zones, &worker->env, &qinfo,
-		&edns, c->buffer, worker->scratchpad, repinfo, acladdr->taglist,
-		acladdr->taglen, acladdr->tag_actions,
-		acladdr->tag_actions_size, acladdr->tag_datas,
-		acladdr->tag_datas_size, worker->daemon->cfg->tagname,
-		worker->daemon->cfg->num_tags, acladdr->view)) {
-		regional_free_all(worker->scratchpad);
-		if(sldns_buffer_limit(c->buffer) == 0) {
-			comm_point_drop_reply(repinfo);
-			return 0;
+	{
+		uint8_t* taglist = acladdr?acladdr->taglist:NULL;
+		size_t taglen = acladdr?acladdr->taglen:0;
+		uint8_t* tag_actions = acladdr?acladdr->tag_actions:NULL;
+		size_t tag_actions_size = acladdr?acladdr->tag_actions_size:0;
+		struct config_strlist** tag_datas = acladdr?acladdr->tag_datas:NULL;
+		size_t tag_datas_size = acladdr?acladdr->tag_datas_size:0;
+		struct view* view = acl_resolve_view(acladdr,
+			(c->socket ? c->socket->acl : NULL));
+		if(!taglist && c->socket && c->socket->acl && c->socket->acl->taglist) {
+			taglist = c->socket->acl->taglist;
+			taglen = c->socket->acl->taglen;
+			tag_actions = c->socket->acl->tag_actions;
+			tag_actions_size = c->socket->acl->tag_actions_size;
+			tag_datas = c->socket->acl->tag_datas;
+			tag_datas_size = c->socket->acl->tag_datas_size;
 		}
-		goto send_reply;
-	}
-	if(worker->env.auth_zones &&
-		rpz_callback_from_worker_request(worker->env.auth_zones,
-		&worker->env, &qinfo, &edns, c->buffer, worker->scratchpad,
-		repinfo, acladdr->taglist, acladdr->taglen, &worker->stats,
-		&rpz_passthru)) {
-		regional_free_all(worker->scratchpad);
-		if(sldns_buffer_limit(c->buffer) == 0) {
-			comm_point_drop_reply(repinfo);
-			return 0;
+
+		if(local_zones_answer(worker->daemon->local_zones, &worker->env, &qinfo,
+			&edns, c->buffer, worker->scratchpad, repinfo, taglist,
+			taglen, tag_actions,
+			tag_actions_size, tag_datas,
+			tag_datas_size, worker->daemon->cfg->tagname,
+			worker->daemon->cfg->num_tags, view)) {
+			regional_free_all(worker->scratchpad);
+			if(sldns_buffer_limit(c->buffer) == 0) {
+				comm_point_drop_reply(repinfo);
+				return 0;
+			}
+			goto send_reply;
 		}
-		goto send_reply;
+		if(worker->env.auth_zones &&
+			rpz_callback_from_worker_request(worker->env.auth_zones,
+			&worker->env, &qinfo, &edns, c->buffer, worker->scratchpad,
+			repinfo, taglist, taglen, &worker->stats,
+			&rpz_passthru)) {
+			regional_free_all(worker->scratchpad);
+			if(sldns_buffer_limit(c->buffer) == 0) {
+				comm_point_drop_reply(repinfo);
+				return 0;
+			}
+			goto send_reply;
+		}
 	}
 	if(worker->env.auth_zones &&
 		auth_zones_downstream_answer(worker->env.auth_zones,
@@ -1953,22 +1970,41 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 		}
 	}
 
-	/* If we may apply IP-based actions to the answer, build the client
-	 * information.  As this can be expensive, skip it if there is
-	 * absolutely no possibility of it. */
-	if((worker->daemon->use_response_ip || worker->daemon->use_rpz) &&
-		(qinfo.qtype == LDNS_RR_TYPE_A ||
-		qinfo.qtype == LDNS_RR_TYPE_AAAA ||
-		qinfo.qtype == LDNS_RR_TYPE_ANY)) {
-		cinfo_tmp.taglist = acladdr->taglist;
-		cinfo_tmp.taglen = acladdr->taglen;
-		cinfo_tmp.tag_actions = acladdr->tag_actions;
-		cinfo_tmp.tag_actions_size = acladdr->tag_actions_size;
-		cinfo_tmp.tag_datas = acladdr->tag_datas;
-		cinfo_tmp.tag_datas_size = acladdr->tag_datas_size;
-		cinfo_tmp.view = acladdr->view;
-		cinfo_tmp.view_name = NULL;
-		cinfo = &cinfo_tmp;
+	/* If we may apply IP-based actions to the answer, or if a view is
+	 * matched for this client or interface, build the client information. */
+	{
+		uint8_t* taglist = acladdr?acladdr->taglist:NULL;
+		size_t taglen = acladdr?acladdr->taglen:0;
+		uint8_t* tag_actions = acladdr?acladdr->tag_actions:NULL;
+		size_t tag_actions_size = acladdr?acladdr->tag_actions_size:0;
+		struct config_strlist** tag_datas = acladdr?acladdr->tag_datas:NULL;
+		size_t tag_datas_size = acladdr?acladdr->tag_datas_size:0;
+		struct view* view = acl_resolve_view(acladdr,
+			(c->socket ? c->socket->acl : NULL));
+		if(!taglist && c->socket && c->socket->acl && c->socket->acl->taglist) {
+			taglist = c->socket->acl->taglist;
+			taglen = c->socket->acl->taglen;
+			tag_actions = c->socket->acl->tag_actions;
+			tag_actions_size = c->socket->acl->tag_actions_size;
+			tag_datas = c->socket->acl->tag_datas;
+			tag_datas_size = c->socket->acl->tag_datas_size;
+		}
+
+		if(((worker->daemon->use_response_ip || worker->daemon->use_rpz) &&
+			(qinfo.qtype == LDNS_RR_TYPE_A ||
+			qinfo.qtype == LDNS_RR_TYPE_AAAA ||
+			qinfo.qtype == LDNS_RR_TYPE_ANY)) ||
+			view) {
+			cinfo_tmp.taglist = taglist;
+			cinfo_tmp.taglen = taglen;
+			cinfo_tmp.tag_actions = tag_actions;
+			cinfo_tmp.tag_actions_size = tag_actions_size;
+			cinfo_tmp.tag_datas = tag_datas;
+			cinfo_tmp.tag_datas_size = tag_datas_size;
+			cinfo_tmp.view = view;
+			cinfo_tmp.view_name = NULL;
+			cinfo = &cinfo_tmp;
+		}
 	}
 
 	/* Keep the original edns list around. The pointer could change if there is

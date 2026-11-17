@@ -47,6 +47,22 @@ SECTION QUESTION
 version.bind. CH TXT
 ENTRY_END
 
+; default localhost allow
+STEP 6 QUERY ADDRESS 127.0.0.1
+ENTRY_BEGIN
+SECTION QUESTION
+version.bind. CH TXT
+ENTRY_END
+STEP 7 CHECK_ANSWER
+ENTRY_BEGIN
+MATCH all
+REPLY QR RA
+SECTION QUESTION
+version.bind. CH TXT
+SECTION ANSWER
+version.bind. 0 CH TXT	"test-version"
+ENTRY_END
+
 ; no answer must be pending
 
 SCENARIO_END

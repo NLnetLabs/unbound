@@ -366,6 +366,198 @@ net_test(void)
 }
 
 #include "util/config_file.h"
+#include "daemon/acl_list.h"
+#include "services/view.h"
+
+/** test daemon/acl_list.c and interface-view precedence */
+static void
+acl_test(void)
+{
+	struct config_file cfg;
+	struct views* vs;
+	struct acl_list* acl;
+	struct acl_list* acl_interface;
+	struct sockaddr_storage cl_loop4, cl_loop6, cl_loop4map, cl_ext;
+	struct sockaddr_storage if_wild, if_loop, if_refuse, if_allow;
+	socklen_t l;
+	struct acl_addr *node_cl, *node_if;
+
+	unit_show_feature("acl_list and interface-view precedence");
+	memset(&cfg, 0, sizeof(cfg));
+	cfg.do_ip6 = 1;
+	vs = views_create();
+	unit_assert(vs);
+	acl = acl_list_create();
+	unit_assert(acl);
+	acl_interface = acl_list_create();
+	unit_assert(acl_interface);
+	acl_interface_init(acl_interface);
+
+	/* Apply defaults to acl */
+	unit_assert(acl_list_apply_cfg(acl, &cfg, vs));
+
+	/* Check default loopback client nodes exist and have is_default=1 */
+	l = (socklen_t)sizeof(cl_loop4);
+	unit_assert(ipstrtoaddr("127.0.0.1", 53, &cl_loop4, &l));
+	node_cl = acl_addr_lookup(acl, &cl_loop4, l);
+	unit_assert(node_cl != NULL);
+	unit_assert(node_cl->is_default == 1);
+	unit_assert(node_cl->control == acl_allow);
+
+	l = (socklen_t)sizeof(cl_loop6);
+	unit_assert(ipstrtoaddr("::1", 53, &cl_loop6, &l));
+	node_cl = acl_addr_lookup(acl, &cl_loop6, l);
+	unit_assert(node_cl != NULL);
+	unit_assert(node_cl->is_default == 1);
+	unit_assert(node_cl->control == acl_allow);
+
+	l = (socklen_t)sizeof(cl_loop4map);
+	unit_assert(ipstrtoaddr("::ffff:127.0.0.1", 53, &cl_loop4map, &l));
+	node_cl = acl_addr_lookup(acl, &cl_loop4map, l);
+	unit_assert(node_cl != NULL);
+	unit_assert(node_cl->is_default == 1);
+	unit_assert(node_cl->control == acl_allow);
+
+	/* Non-loopback client has no default rule in acl */
+	l = (socklen_t)sizeof(cl_ext);
+	unit_assert(ipstrtoaddr("192.168.1.100", 53, &cl_ext, &l));
+	node_cl = acl_addr_lookup(acl, &cl_ext, l);
+	unit_assert(node_cl == NULL);
+
+	/* Set up interfaces in acl_interface */
+	/* 1. Wildcard interface 0.0.0.0 with default acl_refuse (no interface-action) */
+	l = (socklen_t)sizeof(if_wild);
+	unit_assert(ipstrtoaddr("0.0.0.0", 53, &if_wild, &l));
+	node_if = acl_interface_insert(acl_interface, &if_wild, l, acl_refuse);
+	unit_assert(node_if != NULL);
+	unit_assert(node_if->control == acl_refuse);
+	unit_assert(node_if->has_action == 0);
+
+	/* 2. Loopback interface 127.0.0.1 with default acl_refuse (no interface-action) */
+	l = (socklen_t)sizeof(if_loop);
+	unit_assert(ipstrtoaddr("127.0.0.1", 53, &if_loop, &l));
+	node_if = acl_interface_insert(acl_interface, &if_loop, l, acl_refuse);
+	unit_assert(node_if != NULL);
+	unit_assert(node_if->control == acl_refuse);
+	unit_assert(node_if->has_action == 0);
+
+	/* 3. Interface with explicit interface-action refuse (e.g. 127.0.0.2) */
+	l = (socklen_t)sizeof(if_refuse);
+	unit_assert(ipstrtoaddr("127.0.0.2", 53, &if_refuse, &l));
+	node_if = acl_interface_insert(acl_interface, &if_refuse, l, acl_refuse);
+	unit_assert(node_if != NULL);
+	node_if->control = acl_refuse;
+	node_if->has_action = 1;
+
+	/* 4. Interface with explicit interface-action allow (e.g. 192.168.1.1) */
+	l = (socklen_t)sizeof(if_allow);
+	unit_assert(ipstrtoaddr("192.168.1.1", 53, &if_allow, &l));
+	node_if = acl_interface_insert(acl_interface, &if_allow, l, acl_refuse);
+	unit_assert(node_if != NULL);
+	node_if->control = acl_allow;
+	node_if->has_action = 1;
+
+	/* Test deny_refuse_all fallback logic using production helper */
+	/* Finding 1 regression check: loopback client querying wildcard 0.0.0.0 */
+	{
+		socklen_t len4 = (socklen_t)sizeof(struct sockaddr_in);
+		struct acl_addr* client_acl = acl_addr_lookup(acl, &cl_loop4, len4);
+		struct acl_addr* iface_acl = (struct acl_addr*)addr_tree_find(&acl_interface->tree, &if_wild, len4, 32);
+		struct acl_addr* res = acl_resolve_client_interface(client_acl, iface_acl);
+		unit_assert(res == client_acl);
+		unit_assert(acl_get_control(res) == acl_allow);
+	}
+
+	/* Loopback client querying loopback interface 127.0.0.1 (without explicit interface-action) */
+	{
+		socklen_t len4 = (socklen_t)sizeof(struct sockaddr_in);
+		struct acl_addr* client_acl = acl_addr_lookup(acl, &cl_loop4, len4);
+		struct acl_addr* iface_acl = (struct acl_addr*)addr_tree_find(&acl_interface->tree, &if_loop, len4, 32);
+		struct acl_addr* res = acl_resolve_client_interface(client_acl, iface_acl);
+		unit_assert(res == client_acl);
+		unit_assert(acl_get_control(res) == acl_allow);
+	}
+
+	/* Loopback client querying interface 127.0.0.2 with explicit interface-action refuse */
+	{
+		socklen_t len4 = (socklen_t)sizeof(struct sockaddr_in);
+		struct acl_addr* client_acl = acl_addr_lookup(acl, &cl_loop4, len4);
+		struct acl_addr* iface_acl = (struct acl_addr*)addr_tree_find(&acl_interface->tree, &if_refuse, len4, 32);
+		struct acl_addr* res = acl_resolve_client_interface(client_acl, iface_acl);
+		unit_assert(res == iface_acl);
+		unit_assert(acl_get_control(res) == acl_refuse);
+	}
+
+	/* Finding 2 regression check: non-loopback client arriving on loopback interface */
+	{
+		socklen_t len4 = (socklen_t)sizeof(struct sockaddr_in);
+		struct acl_addr* client_acl = acl_addr_lookup(acl, &cl_ext, len4);
+		struct acl_addr* iface_acl = (struct acl_addr*)addr_tree_find(&acl_interface->tree, &if_loop, len4, 32);
+		struct acl_addr* res = acl_resolve_client_interface(client_acl, iface_acl);
+		unit_assert(res == iface_acl);
+		unit_assert(acl_get_control(res) == acl_refuse);
+	}
+
+	/* Non-loopback client arriving on explicit allow interface */
+	{
+		socklen_t len4 = (socklen_t)sizeof(struct sockaddr_in);
+		struct acl_addr* client_acl = acl_addr_lookup(acl, &cl_ext, len4);
+		struct acl_addr* iface_acl = (struct acl_addr*)addr_tree_find(&acl_interface->tree, &if_allow, len4, 32);
+		struct acl_addr* res = acl_resolve_client_interface(client_acl, iface_acl);
+		unit_assert(res == iface_acl);
+		unit_assert(acl_get_control(res) == acl_allow);
+	}
+
+	/* Explicit client access-control takes precedence over explicit interface-action */
+	{
+		socklen_t len4 = (socklen_t)sizeof(struct sockaddr_in);
+		struct acl_addr explicit_client;
+		struct acl_addr* iface_acl = (struct acl_addr*)addr_tree_find(&acl_interface->tree, &if_refuse, len4, 32);
+		struct acl_addr* res;
+		memset(&explicit_client, 0, sizeof(explicit_client));
+		explicit_client.is_default = 0;
+		explicit_client.control = acl_allow;
+
+		res = acl_resolve_client_interface(&explicit_client, iface_acl);
+		unit_assert(res == &explicit_client);
+		unit_assert(acl_get_control(res) == acl_allow);
+	}
+
+	/* View inheritance check for #1444 using production helper */
+	{
+		socklen_t len4 = (socklen_t)sizeof(struct sockaddr_in);
+		struct view fake_view;
+		struct acl_addr* client_acl = acl_addr_lookup(acl, &cl_loop4, len4);
+		struct acl_addr* iface_acl = (struct acl_addr*)addr_tree_find(&acl_interface->tree, &if_loop, len4, 32);
+		struct view* resolved_view;
+
+		memset(&fake_view, 0, sizeof(fake_view));
+		fake_view.name = "myview";
+		iface_acl->view = &fake_view;
+		unit_assert(client_acl->view == NULL);
+
+		/* Worker view resolution using production helper */
+		resolved_view = acl_resolve_view(client_acl, iface_acl);
+		unit_assert(resolved_view == &fake_view);
+	}
+
+	/* Reload check: acl_interface_apply_cfg clears stale has_action, control, and view */
+	{
+		unit_assert(node_if->has_action == 1);
+		unit_assert(node_if->control == acl_allow);
+		/* Apply empty config simulating removal of interface-action */
+		unit_assert(acl_interface_apply_cfg(acl_interface, &cfg, vs));
+		/* Flags should be reset to default */
+		unit_assert(node_if->has_action == 0);
+		unit_assert(node_if->control == acl_refuse);
+		unit_assert(node_if->view == NULL);
+	}
+
+	acl_list_delete(acl);
+	acl_list_delete(acl_interface);
+	views_delete(vs);
+}
+
 /** test config_file: cfg_parse_memsize */
 static void
 config_memsize_test(void) 
@@ -1537,6 +1729,7 @@ main(int argc, char* argv[])
 	respip_test();
 	verify_test();
 	net_test();
+	acl_test();
 	config_memsize_test();
 	config_ports_list_test();
 	config_tag_test();

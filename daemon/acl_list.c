@@ -119,7 +119,7 @@ parse_acl_access(const char* str, enum acl_access* control)
 }
 
 /** apply acl_list string */
-static int
+static struct acl_addr*
 acl_list_str_cfg(struct acl_list* acl, const char* str, const char* s2,
 	int complain_duplicates)
 {
@@ -128,18 +128,14 @@ acl_list_str_cfg(struct acl_list* acl, const char* str, const char* s2,
 	socklen_t addrlen;
 	enum acl_access control;
 	if(!parse_acl_access(s2, &control)) {
-		return 0;
+		return NULL;
 	}
 	if(!netblockstrtoaddr(str, UNBOUND_DNS_PORT, &addr, &addrlen, &net)) {
 		log_err("cannot parse access control: %s %s", str, s2);
-		return 0;
+		return NULL;
 	}
-	if(!acl_list_insert(acl, &addr, addrlen, net, control,
-		complain_duplicates)) {
-		log_err("out of memory");
-		return 0;
-	}
-	return 1;
+	return acl_list_insert(acl, &addr, addrlen, net, control,
+		complain_duplicates);
 }
 
 /** find or create node (NULL on parse or error) */
@@ -213,6 +209,7 @@ acl_interface_str_cfg(struct acl_list* acl_interface, const char* iface,
 		return 0;
 	}
 	node->control = control;
+	node->has_action = 1;
 	return 1;
 }
 
@@ -539,15 +536,19 @@ acl_list_apply_cfg(struct acl_list* acl, struct config_file* cfg,
 		return 0;
 	if(!read_acl_tag_datas(acl, cfg, &cfg->acl_tag_datas))
 		return 0;
+	struct acl_addr* defnode;
 	/* insert defaults, with '0' to ignore them if they are duplicates */
 	/* the 'refuse' defaults for /0 are now done per interface instead */
-	if(!acl_list_str_cfg(acl, "127.0.0.0/8", "allow", 0))
+	if(!(defnode = acl_list_str_cfg(acl, "127.0.0.0/8", "allow", 0)))
 		return 0;
+	defnode->is_default = 1;
 	if(cfg->do_ip6) {
-		if(!acl_list_str_cfg(acl, "::1", "allow", 0))
+		if(!(defnode = acl_list_str_cfg(acl, "::1", "allow", 0)))
 			return 0;
-		if(!acl_list_str_cfg(acl, "::ffff:127.0.0.1", "allow", 0))
+		defnode->is_default = 1;
+		if(!(defnode = acl_list_str_cfg(acl, "::ffff:127.0.0.1", "allow", 0)))
 			return 0;
+		defnode->is_default = 1;
 	}
 	addr_tree_init_parents(&acl->tree);
 	return 1;
@@ -739,6 +740,18 @@ int
 acl_interface_apply_cfg(struct acl_list* acl_interface, struct config_file* cfg,
 	struct views* v)
 {
+	struct acl_addr* node;
+	RBTREE_FOR(node, struct acl_addr*, &acl_interface->tree) {
+		node->control = acl_refuse;
+		node->has_action = 0;
+		node->view = NULL;
+		node->taglist = NULL;
+		node->taglen = 0;
+		node->tag_actions = NULL;
+		node->tag_actions_size = 0;
+		node->tag_datas = NULL;
+		node->tag_datas_size = 0;
+	}
 	if(!read_acl_interface_action(acl_interface, cfg->interface_actions,
 		cfg->port))
 		return 0;
@@ -763,6 +776,33 @@ acl_get_control(struct acl_addr* acl)
 {
 	if(acl) return acl->control;
 	return acl_deny;
+}
+
+struct acl_addr*
+acl_resolve_client_interface(struct acl_addr* acl_client,
+	struct acl_addr* acl_interface)
+{
+	/* If there is no ACL based on client IP, use the interface ACL.
+	 * If client only matched an implicit default rule (e.g. 127.0.0.0/8
+	 * allow) and the interface has an explicit interface-action
+	 * configured, use the interface ACL. */
+	if(!acl_client) {
+		return acl_interface;
+	} else if(acl_client->is_default && acl_interface &&
+		acl_interface->has_action) {
+		return acl_interface;
+	}
+	return acl_client;
+}
+
+struct view*
+acl_resolve_view(struct acl_addr* acl_client, struct acl_addr* acl_interface)
+{
+	if(acl_client && acl_client->view)
+		return acl_client->view;
+	if(acl_interface && acl_interface->view)
+		return acl_interface->view;
+	return NULL;
 }
 
 struct acl_addr*
