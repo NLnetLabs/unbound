@@ -153,6 +153,9 @@ usage(void)
 	printf("		+c		remove from cachedb too\n");
 	printf("  flush_zone [+c] <name>	flush everything at or under name\n");
 	printf("  				from rr and dnssec caches\n");
+	printf("  flush_delegation [+cs] <name>	flush the delegation of name, the\n");
+	printf("  				zone cut data on both sides of it\n");
+	printf("		+s		also flush CDS, CDNSKEY and CSYNC\n");
 	printf("  flush_bogus [+c]		flush all bogus data\n");
 	printf("  flush_negative [+c]		flush all negative data\n");
 	printf("  flush_stats 			flush statistics, make zero\n");

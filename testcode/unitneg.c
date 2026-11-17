@@ -45,7 +45,9 @@
 #include "util/data/dname.h"
 #include "testcode/unitmain.h"
 #include "validator/val_neg.h"
+#include "validator/val_nsec3.h"
 #include "sldns/rrdef.h"
+#include "sldns/sbuffer.h"
 
 /** verbose unit test for negative cache */
 static int negverbose = 0;
@@ -498,6 +500,241 @@ static void check_neg_invariants(struct val_neg_cache* neg)
 	lock_basic_unlock(&neg->lock);
 }
 
+/** add an NSEC with the given owner name to the given zone.
+ * The names are wireformat dnames without 0 bytes inside them, so that
+ * strlen works on them, like the rest of this test file. */
+static void add_item_at(struct val_neg_cache* neg, char* zname, char* from,
+	char* to)
+{
+	struct val_neg_zone* z;
+	struct packed_rrset_data rd;
+	struct ub_packed_rrset_key nsec;
+	size_t rr_len;
+	time_t rr_ttl;
+	uint8_t* rr_data;
+	char rdata[256];
+
+	lock_basic_lock(&neg->lock);
+	z = neg_find_zone(neg, (uint8_t*)zname, strlen(zname)+1,
+		LDNS_RR_CLASS_IN);
+	if(!z)
+		z = neg_create_zone(neg, (uint8_t*)zname, strlen(zname)+1,
+			LDNS_RR_CLASS_IN);
+	unit_assert(z);
+	val_neg_zone_take_inuse(z);
+
+	/* the rdata is the next owner name, with the rdata length in front */
+	memmove(rdata+2, to, strlen(to)+1);
+	rdata[0] = 0;
+	rdata[1] = (char)(strlen(to)+1);
+
+	memset(&rd, 0, sizeof(rd));
+	memset(&nsec, 0, sizeof(nsec));
+	nsec.rk.dname = (uint8_t*)from;
+	nsec.rk.dname_len = strlen(from)+1;
+	nsec.rk.type = htons(LDNS_RR_TYPE_NSEC);
+	nsec.rk.rrset_class = htons(LDNS_RR_CLASS_IN);
+	nsec.entry.data = &rd;
+	rd.security = sec_status_secure;
+	rd.count = 1;
+	rd.rr_len = &rr_len;
+	rr_len = strlen(to)+1+2;
+	rd.rr_ttl = &rr_ttl;
+	rr_ttl = 0;
+	rd.rr_data = &rr_data;
+	rr_data = (uint8_t*)rdata;
+
+	neg_insert_data(neg, z, &nsec);
+	lock_basic_unlock(&neg->lock);
+}
+
+/** see if a zone is present and in use in the negative cache */
+static int zone_in_use(struct val_neg_cache* neg, char* zname)
+{
+	struct val_neg_zone* z;
+	int res;
+	lock_basic_lock(&neg->lock);
+	z = neg_find_zone(neg, (uint8_t*)zname, strlen(zname)+1,
+		LDNS_RR_CLASS_IN);
+	res = (z && z->in_use);
+	lock_basic_unlock(&neg->lock);
+	return res;
+}
+
+/** find the data element with the given name in a zone, or NULL.
+ * Caller must hold neg->lock. */
+static struct val_neg_data* find_item_at(struct val_neg_cache* neg,
+	char* zname, char* name)
+{
+	struct val_neg_zone* z;
+	struct val_neg_data key;
+	z = neg_find_zone(neg, (uint8_t*)zname, strlen(zname)+1,
+		LDNS_RR_CLASS_IN);
+	if(!z)
+		return NULL;
+	key.node.key = &key;
+	key.name = (uint8_t*)name;
+	key.len = strlen(name)+1;
+	key.labs = dname_count_labels(key.name);
+	return (struct val_neg_data*)rbtree_search(&z->tree, &key);
+}
+
+/** see if a data element is present and in use in a zone */
+static int item_in_use(struct val_neg_cache* neg, char* zname, char* name)
+{
+	struct val_neg_data* d;
+	int res;
+	lock_basic_lock(&neg->lock);
+	d = find_item_at(neg, zname, name);
+	res = (d && d->in_use);
+	lock_basic_unlock(&neg->lock);
+	return res;
+}
+
+/** delete a data element from a zone, if it is in use */
+static void del_item_at(struct val_neg_cache* neg, char* zname, char* name)
+{
+	struct val_neg_data* d;
+	lock_basic_lock(&neg->lock);
+	d = find_item_at(neg, zname, name);
+	if(d && d->in_use)
+		neg_delete_data(neg, d);
+	lock_basic_unlock(&neg->lock);
+}
+
+/** get the NSEC3 owner name of a name, with SHA1, no salt and no extra
+ * iterations, in the given zone. The result is a wireformat dname
+ * without 0 bytes inside it. */
+static void hashed_name(sldns_buffer* buf, char* zname, char* name,
+	char* result, size_t max)
+{
+	uint8_t hash[NSEC3_SHA_LEN];
+	size_t hlen;
+	hlen = nsec3_get_hashed(buf, (uint8_t*)name, strlen(name)+1,
+		NSEC3_HASH_SHA1, 0, NULL, 0, hash, sizeof(hash));
+	unit_assert(hlen == NSEC3_SHA_LEN);
+	unit_assert(nsec3_hash_to_b32(hash, hlen, (uint8_t*)zname,
+		strlen(zname)+1, (uint8_t*)result, max));
+}
+
+/** test val_neg_remove_ds_denial */
+static void remove_ds_denial_test(struct val_neg_cache* neg)
+{
+	char* com = "\003com";
+	char* example = "\007example\003com";
+	char* aaa = "\003aaa\003com";
+	char* qqq = "\003qqq\003com";
+	char* net = "\003net";
+	char* org = "\003org";
+	char h_org[257], h_example[257], h_insecure[257], h_cover[257];
+	struct val_neg_zone* z;
+	sldns_buffer* buf = sldns_buffer_new(1024);
+	unit_assert(buf);
+
+	if(negverbose)
+		printf("neg remove_ds_denial test\n");
+
+	/* An NSEC parent zone.  The denial of the DS for example.com is the
+	 * NSEC at the name itself, or the one that covers it. */
+	add_item_at(neg, com, aaa, "\003ddd\003com");
+	add_item_at(neg, com, example, "\003fff\003com");
+	add_item_at(neg, com, qqq, "\003rrr\003com");
+	/* the negative cache of the zone itself has no DS denial */
+	add_item_at(neg, example, example, "\003www\007example\003com");
+	/* an unrelated zone that has to be left alone */
+	add_item_at(neg, net, "\003aaa\003net", "\003bbb\003net");
+	check_neg_invariants(neg);
+
+	/* the NSEC at the name */
+	val_neg_remove_ds_denial(neg, (uint8_t*)example, strlen(example)+1,
+		LDNS_RR_CLASS_IN, buf);
+	check_neg_invariants(neg);
+	unit_assert(!item_in_use(neg, com, example));
+	unit_assert(item_in_use(neg, com, aaa));
+	unit_assert(item_in_use(neg, com, qqq));
+	unit_assert(item_in_use(neg, example, example));
+	unit_assert(zone_in_use(neg, net));
+
+	/* the NSEC that covers the name */
+	val_neg_remove_ds_denial(neg, (uint8_t*)"\003ccc\003com", 9,
+		LDNS_RR_CLASS_IN, buf);
+	check_neg_invariants(neg);
+	unit_assert(!item_in_use(neg, com, aaa));
+	unit_assert(item_in_use(neg, com, qqq));
+
+	/* it is not an error if there is nothing to remove */
+	val_neg_remove_ds_denial(neg, (uint8_t*)example, strlen(example)+1,
+		LDNS_RR_CLASS_IN, buf);
+	check_neg_invariants(neg);
+	unit_assert(item_in_use(neg, com, qqq));
+	unit_assert(item_in_use(neg, example, example));
+
+	/* the root has no parent to look in, and must not walk off the name */
+	val_neg_remove_ds_denial(neg, (uint8_t*)"", 1, LDNS_RR_CLASS_IN, buf);
+	check_neg_invariants(neg);
+	unit_assert(item_in_use(neg, com, qqq));
+	unit_assert(item_in_use(neg, example, example));
+	unit_assert(zone_in_use(neg, net));
+
+	/* An NSEC3 parent zone.  The NSEC3 at the zone apex is the closest
+	 * encloser of the opt-out proofs.  It stays, it cannot deny a DS
+	 * without the NSEC3 that covers the next closer name.
+	 * check_neg_invariants() expects NSEC zones only, it is called
+	 * again once this zone is gone. */
+	lock_basic_lock(&neg->lock);
+	z = neg_create_zone(neg, (uint8_t*)org, strlen(org)+1,
+		LDNS_RR_CLASS_IN);
+	unit_assert(z);
+	z->nsec3_hash = NSEC3_HASH_SHA1;
+	z->nsec3_iter = 0;
+	lock_basic_unlock(&neg->lock);
+	hashed_name(buf, org, org, h_org, sizeof(h_org));
+	hashed_name(buf, org, "\007example\003org", h_example,
+		sizeof(h_example));
+	hashed_name(buf, org, "\010insecure\003org", h_insecure,
+		sizeof(h_insecure));
+	/* an owner name just before the hash of insecure.org, its NSEC3
+	 * covers the next closer name of the opt-out proof */
+	memmove(h_cover, h_insecure, strlen(h_insecure)+1);
+	h_cover[32]--;
+	/* NSEC typed items, so that no NSEC3 next owner is needed;
+	 * pointing at themselves they do not wipe out other items. */
+	add_item_at(neg, org, h_org, h_org);
+	add_item_at(neg, org, h_example, h_example);
+	add_item_at(neg, org, h_cover, h_cover);
+	unit_assert(item_in_use(neg, org, h_org));
+	unit_assert(item_in_use(neg, org, h_example));
+	unit_assert(item_in_use(neg, org, h_cover));
+
+	/* the NSEC3 that matches the name */
+	val_neg_remove_ds_denial(neg, (uint8_t*)"\007example\003org", 13,
+		LDNS_RR_CLASS_IN, buf);
+	unit_assert(!item_in_use(neg, org, h_example));
+	unit_assert(item_in_use(neg, org, h_org));
+	unit_assert(item_in_use(neg, org, h_cover));
+
+	/* the NSEC3 that covers the next closer name */
+	val_neg_remove_ds_denial(neg, (uint8_t*)"\010insecure\003org", 14,
+		LDNS_RR_CLASS_IN, buf);
+	unit_assert(!item_in_use(neg, org, h_cover));
+	unit_assert(item_in_use(neg, org, h_org));
+	unit_assert(item_in_use(neg, com, qqq));
+	unit_assert(zone_in_use(neg, net));
+
+	/* clean up for the next test */
+	del_item_at(neg, com, qqq);
+	del_item_at(neg, example, example);
+	del_item_at(neg, net, "\003aaa\003net");
+	del_item_at(neg, org, h_org);
+	check_neg_invariants(neg);
+	unit_assert(!zone_in_use(neg, com));
+	unit_assert(!zone_in_use(neg, example));
+	unit_assert(!zone_in_use(neg, net));
+	unit_assert(!zone_in_use(neg, org));
+	unit_assert(neg->first == NULL);
+	sldns_buffer_free(buf);
+}
+
 /** perform stress test on insert and delete in neg cache */
 static void stress_test(struct val_neg_cache* neg)
 {
@@ -539,6 +776,7 @@ void neg_test(void)
 	neg = val_neg_create(NULL, 1500);
 	unit_assert(neg);
 	
+	remove_ds_denial_test(neg);
 	stress_test(neg);
 
 	neg_cache_delete(neg);
