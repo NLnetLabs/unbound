@@ -19152,7 +19152,7 @@ main (void)
   return 0;
 }
 _ACEOF
-if ac_fn_c_try_compile "$LINENO"
+if ac_fn_c_try_link "$LINENO"
 then :
 
 	    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: yes" >&5
@@ -19167,7 +19167,8 @@ else $as_nop
 printf "%s\n" "no" >&6; }
 
 fi
-rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
+rm -f core conftest.err conftest.$ac_objext conftest.beam \
+    conftest$ac_exeext conftest.$ac_ext
 	# NetBSD has 3 arguments to allow for formatting of the name.
 	{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking whether pthread_setname_np has 3 arguments" >&5
 printf %s "checking whether pthread_setname_np has 3 arguments... " >&6; }
@@ -19189,7 +19190,7 @@ main (void)
   return 0;
 }
 _ACEOF
-if ac_fn_c_try_compile "$LINENO"
+if ac_fn_c_try_link "$LINENO"
 then :
 
 	    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: yes" >&5
@@ -19204,7 +19205,8 @@ else $as_nop
 printf "%s\n" "no" >&6; }
 
 fi
-rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
+rm -f core conftest.err conftest.$ac_objext conftest.beam \
+    conftest$ac_exeext conftest.$ac_ext
 	# Most OSes have the common 2 arguments, thread and name.
 	{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking whether pthread_setname_np has the common 2 arguments" >&5
 printf %s "checking whether pthread_setname_np has the common 2 arguments... " >&6; }
@@ -19226,7 +19228,7 @@ main (void)
   return 0;
 }
 _ACEOF
-if ac_fn_c_try_compile "$LINENO"
+if ac_fn_c_try_link "$LINENO"
 then :
 
 	    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: yes" >&5
@@ -19241,7 +19243,8 @@ else $as_nop
 printf "%s\n" "no" >&6; }
 
 fi
-rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
+rm -f core conftest.err conftest.$ac_objext conftest.beam \
+    conftest$ac_exeext conftest.$ac_ext
 	# FreeBSD/OpenBSD use a slightly different function name.
 	{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking whether pthread_setname_np exists as pthread_set_name_np instead" >&5
 printf %s "checking whether pthread_setname_np exists as pthread_set_name_np instead... " >&6; }
@@ -19263,7 +19266,7 @@ main (void)
   return 0;
 }
 _ACEOF
-if ac_fn_c_try_compile "$LINENO"
+if ac_fn_c_try_link "$LINENO"
 then :
 
 	    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: yes" >&5
@@ -19278,7 +19281,8 @@ else $as_nop
 printf "%s\n" "no" >&6; }
 
 fi
-rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
+rm -f core conftest.err conftest.$ac_objext conftest.beam \
+    conftest$ac_exeext conftest.$ac_ext
 	CFLAGS="$BAKCFLAGS"
 fi
 

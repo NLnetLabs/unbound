@@ -746,7 +746,7 @@ if test x_$ub_have_pthreads != x_no; then
 	CFLAGS="$CFLAGS -Werror"
 	# MacOS only has 1 argument, the name.
 	AC_MSG_CHECKING([whether pthread_setname_np has only 1 argument])
-	AC_COMPILE_IFELSE([AC_LANG_PROGRAM([AC_INCLUDES_DEFAULT
+	AC_LINK_IFELSE([AC_LANG_PROGRAM([AC_INCLUDES_DEFAULT
 #include <pthread.h>
 #ifdef HAVE_PTHREAD_NP_H
 #include <pthread_np.h>
@@ -761,7 +761,7 @@ if test x_$ub_have_pthreads != x_no; then
 	])
 	# NetBSD has 3 arguments to allow for formatting of the name.
 	AC_MSG_CHECKING([whether pthread_setname_np has 3 arguments])
-	AC_COMPILE_IFELSE([AC_LANG_PROGRAM([AC_INCLUDES_DEFAULT
+	AC_LINK_IFELSE([AC_LANG_PROGRAM([AC_INCLUDES_DEFAULT
 #include <pthread.h>
 #ifdef HAVE_PTHREAD_NP_H
 #include <pthread_np.h>
@@ -776,7 +776,7 @@ if test x_$ub_have_pthreads != x_no; then
 	])
 	# Most OSes have the common 2 arguments, thread and name.
 	AC_MSG_CHECKING([whether pthread_setname_np has the common 2 arguments])
-	AC_COMPILE_IFELSE([AC_LANG_PROGRAM([AC_INCLUDES_DEFAULT
+	AC_LINK_IFELSE([AC_LANG_PROGRAM([AC_INCLUDES_DEFAULT
 #include <pthread.h>
 #ifdef HAVE_PTHREAD_NP_H
 #include <pthread_np.h>
@@ -791,7 +791,7 @@ if test x_$ub_have_pthreads != x_no; then
 	])
 	# FreeBSD/OpenBSD use a slightly different function name.
 	AC_MSG_CHECKING([whether pthread_setname_np exists as pthread_set_name_np instead])
-	AC_COMPILE_IFELSE([AC_LANG_PROGRAM([AC_INCLUDES_DEFAULT
+	AC_LINK_IFELSE([AC_LANG_PROGRAM([AC_INCLUDES_DEFAULT
 #include <pthread.h>
 #ifdef HAVE_PTHREAD_NP_H
 #include <pthread_np.h>
