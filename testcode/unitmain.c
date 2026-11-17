@@ -65,6 +65,8 @@
 #include "sldns/keyraw.h"
 #include "util/log.h"
 #include "testcode/unitmain.h"
+#include "iterator/iter_fwd.h"
+#include "iterator/iter_delegpt.h"
 
 /** number of tests done */
 int testcount = 0;
@@ -844,6 +846,79 @@ respip_view_conf_actions_test(void)
 	free(cv2);
 }
 
+/** Per-view forward zones test; apply configuration with two views
+ * having separate forwarders for root and verify their delegpts */
+static void
+view_forwards_conf_test(void)
+{
+	struct config_file cfg;
+	struct config_view* cv1;
+	struct config_view* cv2;
+	struct config_stub* s1;
+	struct config_stub* s2;
+	struct views* views = NULL;
+	struct view* v = NULL;
+	struct delegpt* dp = NULL;
+
+	unit_show_feature("per-view forward-zone config apply");
+	memset(&cfg, 0, sizeof(cfg));
+	cv1 = (struct config_view*)calloc(1, sizeof(struct config_view));
+	cv2 = (struct config_view*)calloc(1, sizeof(struct config_view));
+	unit_assert(cv1 && cv2);
+	cv1->name = strdup("m-a");
+	cv2->name = strdup("m");
+	unit_assert(cv1->name && cv2->name);
+	cv1->next = cv2;
+	cfg.views = cv1;
+
+	/* Forward zone for cv1: m-a */
+	s1 = (struct config_stub*)calloc(1, sizeof(struct config_stub));
+	unit_assert(s1);
+	s1->name = strdup(".");
+	s1->ssl_upstream = 1;
+	unit_assert(cfg_strlist_insert(&s1->addrs, strdup("1.1.1.3@853#family.cloudflare-dns.com")));
+	unit_assert(cfg_strlist_insert(&s1->addrs, strdup("1.0.0.3@853#family.cloudflare-dns.com")));
+	cv1->forwards = s1;
+
+	/* Forward zone for cv2: m */
+	s2 = (struct config_stub*)calloc(1, sizeof(struct config_stub));
+	unit_assert(s2);
+	s2->name = strdup(".");
+	s2->ssl_upstream = 1;
+	unit_assert(cfg_strlist_insert(&s2->addrs, strdup("1.1.1.2@853#security.cloudflare-dns.com")));
+	unit_assert(cfg_strlist_insert(&s2->addrs, strdup("1.0.0.2@853#security.cloudflare-dns.com")));
+	cv2->forwards = s2;
+
+	views = views_create();
+	unit_assert(views);
+	unit_assert(views_apply_cfg(views, &cfg));
+
+	/* Verify view m-a */
+	v = views_find_view(views, "m-a", 0);
+	unit_assert(v);
+	unit_assert(v->forwards);
+	dp = forwards_lookup(v->forwards, (uint8_t*)"\000", LDNS_RR_CLASS_IN, 0);
+	unit_assert(dp != NULL);
+	unit_assert(dp->ssl_upstream == 1);
+	unit_assert(dp->target_list != NULL);
+	lock_rw_unlock(&v->forwards->lock);
+	lock_rw_unlock(&v->lock);
+
+	/* Verify view m */
+	v = views_find_view(views, "m", 0);
+	unit_assert(v);
+	unit_assert(v->forwards);
+	dp = forwards_lookup(v->forwards, (uint8_t*)"\000", LDNS_RR_CLASS_IN, 0);
+	unit_assert(dp != NULL);
+	unit_assert(dp->ssl_upstream == 1);
+	unit_assert(dp->target_list != NULL);
+	lock_rw_unlock(&v->forwards->lock);
+	lock_rw_unlock(&v->lock);
+
+	views_delete(views);
+	config_delviews(cfg.views);
+}
+
 typedef struct addr_data {char* ip; char* data;} addr_data_t;
 
 /** find the respip address node in the specified tree (by address lookup)
@@ -1020,6 +1095,7 @@ respip_delete_first_test(void)
 /** respip unit tests */
 static void respip_test(void)
 {
+	view_forwards_conf_test();
 	respip_view_conf_data_test();
 	respip_conf_data_test();
 	respip_view_conf_actions_test();

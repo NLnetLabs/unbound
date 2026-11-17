@@ -3,6 +3,8 @@
 	  cache reply ttl is correct. log testframe cachedb store ttl.
 
 17 November 2026: Wouter
+	- Fix #1369: [FR] forward-zone support for views. Independent per-view
+	  cache storage.
 	- Fix #1554: configure's pthread_setname_np variant checks are
 	  compile-only and can select the nonexistent FreeBSD
 	  pthread_set_name_np on glibc.

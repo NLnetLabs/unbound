@@ -48,6 +48,9 @@ struct regional;
 struct config_file;
 struct config_view;
 struct respip_set;
+struct iter_forwards;
+struct slabhash;
+struct rrset_cache;
 
 
 /**
@@ -78,6 +81,12 @@ struct view {
 	/** Fallback to global local_zones when there is no match in the view
 	 * specific tree. 1 for yes, 0 for no */	
 	int isfirst;
+	/** view specific forward zones */
+	struct iter_forwards* forwards;
+	/** view specific message cache */
+	struct slabhash* msg_cache;
+	/** view specific rrset cache */
+	struct rrset_cache* rrset_cache;
 	/** lock on the data in the structure
 	 * For the node and name you need to also hold the views_tree lock to
 	 * change them. */

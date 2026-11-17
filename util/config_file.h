@@ -927,6 +927,8 @@ struct config_view {
 	struct config_str2list* respip_actions;
 	/** data complementing the 'redirect' response IP actions */
 	struct config_str2list* respip_data;
+	/** forward zones for this view, linked list */
+	struct config_stub* forwards;
 };
 
 /**

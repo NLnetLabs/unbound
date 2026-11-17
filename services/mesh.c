@@ -63,6 +63,7 @@
 #include "services/localzone.h"
 #include "util/data/dname.h"
 #include "respip/respip.h"
+#include "services/view.h"
 #include "services/listen_dnsport.h"
 #include "util/timeval_func.h"
 
@@ -784,13 +785,13 @@ mesh_new_callback(struct mesh_area* mesh, struct query_info* qinfo,
  * will not be run recursively on top of the current state. */
 static void mesh_schedule_prefetch(struct mesh_area* mesh,
 	struct query_info* qinfo, uint16_t qflags, time_t leeway, int run,
-	int rpz_passthru)
+	int rpz_passthru, struct respip_client_info* cinfo)
 {
 	/* Explicitly set the BIT_RD regardless of the client's flags. This is
 	 * for a prefetch query (no client attached) but it needs to be treated
 	 * as a recursion query. */
 	uint16_t mesh_flags = BIT_RD|(qflags&BIT_CD);
-	struct mesh_state* s = mesh_area_find(mesh, NULL, qinfo,
+	struct mesh_state* s = mesh_area_find(mesh, cinfo, qinfo,
 		mesh_flags, 0, 0);
 #ifdef UNBOUND_DEBUG
 	struct rbnode_type* n;
@@ -811,7 +812,7 @@ static void mesh_schedule_prefetch(struct mesh_area* mesh,
 		return;
 	}
 
-	s = mesh_state_create(mesh->env, qinfo, NULL, mesh_flags, 0, 0);
+	s = mesh_state_create(mesh->env, qinfo, cinfo, mesh_flags, 0, 0);
 	if(!s) {
 		log_err("prefetch mesh_state_create: out of memory");
 		return;
@@ -865,7 +866,8 @@ static void mesh_schedule_prefetch(struct mesh_area* mesh,
  * attached its own ECS data. */
 static void mesh_schedule_prefetch_subnet(struct mesh_area* mesh,
 	struct query_info* qinfo, uint16_t qflags, time_t leeway, int run,
-	int rpz_passthru, struct sockaddr_storage* addr, struct edns_option* edns_list)
+	int rpz_passthru, struct sockaddr_storage* addr, struct edns_option* edns_list,
+	struct respip_client_info* cinfo)
 {
 	struct mesh_state* s = NULL;
 	struct edns_option* opt = NULL;
@@ -882,7 +884,7 @@ static void mesh_schedule_prefetch_subnet(struct mesh_area* mesh,
 		return;
 	}
 
-	s = mesh_state_create(mesh->env, qinfo, NULL, mesh_flags, 0, 0);
+	s = mesh_state_create(mesh->env, qinfo, cinfo, mesh_flags, 0, 0);
 	if(!s) {
 		log_err("prefetch_subnet mesh_state_create: out of memory");
 		return;
@@ -948,18 +950,19 @@ static void mesh_schedule_prefetch_subnet(struct mesh_area* mesh,
 
 void mesh_new_prefetch(struct mesh_area* mesh, struct query_info* qinfo,
 	uint16_t qflags, time_t leeway, int rpz_passthru,
-	struct sockaddr_storage* addr, struct edns_option* opt_list)
+	struct sockaddr_storage* addr, struct edns_option* opt_list,
+	struct respip_client_info* cinfo)
 {
 	(void)addr;
 	(void)opt_list;
 #ifdef CLIENT_SUBNET
 	if(addr)
 		mesh_schedule_prefetch_subnet(mesh, qinfo, qflags, leeway, 1,
-			rpz_passthru, addr, opt_list);
+			rpz_passthru, addr, opt_list, cinfo);
 	else
 #endif
 		mesh_schedule_prefetch(mesh, qinfo, qflags, leeway, 1,
-			rpz_passthru);
+			rpz_passthru, cinfo);
 }
 
 void mesh_report_reply(struct mesh_area* mesh, struct outbound_entry* e,
@@ -1077,6 +1080,23 @@ mesh_state_create(struct module_env* env, struct query_info* qinfo,
 	mstate->s.return_msg = 0;
 	mstate->s.return_rcode = LDNS_RCODE_NOERROR;
 	mstate->s.env = env;
+	if(cinfo && (cinfo->view || cinfo->view_name)) {
+		struct view* v = cinfo->view;
+		if(!v && cinfo->view_name && env->views) {
+			v = views_find_view(env->views, cinfo->view_name, 0);
+			if(v) lock_rw_unlock(&v->lock);
+		}
+		if(v && v->msg_cache && v->rrset_cache) {
+			struct module_env* v_env = (struct module_env*)regional_alloc(
+				region, sizeof(struct module_env));
+			if(v_env) {
+				*v_env = *env;
+				v_env->msg_cache = v->msg_cache;
+				v_env->rrset_cache = v->rrset_cache;
+				mstate->s.env = v_env;
+			}
+		}
+	}
 	mstate->s.mesh_info = mstate;
 	mstate->s.prefetch_leeway = 0;
 	mstate->s.serve_expired_data = NULL;
@@ -2274,12 +2294,17 @@ mesh_continue(struct mesh_area* mesh, struct mesh_state* mstate,
 				rpz_p = mstate->s.rpz_passthru;
 			}
 
+			struct respip_client_info* cinfo = NULL;
+			if(mstate->s.client_info) {
+				cinfo = mesh_copy_client_info(mesh->env->scratch,
+					mstate->s.client_info);
+			}
 			if(qinfo) {
 				mesh_state_delete(&mstate->s);
 				mesh_new_prefetch(mesh, qinfo, qflags, 0,
 					rpz_p,
 					addr.ss_family!=AF_UNSPEC?&addr:NULL,
-					opt_list);
+					opt_list, cinfo);
 			} else {
 				mesh_state_delete(&mstate->s);
 			}

@@ -4161,13 +4161,17 @@ Each with a :ref:`name<unbound.conf.view.name>` and zero or more
 :ref:`local-data<unbound.conf.view.local-data>` options.
 Views can also contain :ref:`view-first<unbound.conf.view.view-first>`,
 :ref:`response-ip<unbound.conf.response-ip>`,
-:ref:`response-ip-data<unbound.conf.response-ip-data>` and
-:ref:`local-data-ptr<unbound.conf.view.local-data-ptr>` options.
+:ref:`response-ip-data<unbound.conf.response-ip-data>`,
+:ref:`local-data-ptr<unbound.conf.view.local-data-ptr>` and
+:ref:`forward-zone<unbound.conf.forward-zone>` options.
 View can be mapped to requests by specifying the view name in an
 :ref:`access-control-view<unbound.conf.access-control-view>` option.
 Options from matching views will override global options.
 Global options will be used if no matching view is found, or when the matching
 view does not have the option specified.
+Each view maintains its own message and RRset cache for independent cache
+storage and isolation. Cache memory consumption scales with the number of
+configured views.
 
 
 @@UAHL@unbound.conf.view@name@@: *<view name>*
@@ -4215,6 +4219,13 @@ view does not have the option specified.
 
     Similar to :ref:`response-ip-data<unbound.conf.response-ip-data>` but
     only applies to this view.
+
+
+@@UAHL@unbound.conf.view@forward-zone@@:
+    View specific forward zone.
+    Has the same options and behaviour as the global
+    :ref:`forward-zone<unbound.conf.forward-zone>` clause.
+    Queries matching this view will query view-specific forwarders.
 
 
 @@UAHL@unbound.conf.view@view-first@@: *<yes or no>*

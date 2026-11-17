@@ -448,7 +448,36 @@ viewstart: VAR_VIEW
 contents_view: contents_view content_view
 	| ;
 content_view: view_name | view_local_zone | view_local_data | view_first |
-		view_response_ip | view_response_ip_data | view_local_data_ptr
+		view_response_ip | view_response_ip_data | view_local_data_ptr |
+		view_forward_clause
+	;
+view_forward_clause: view_forwardstart contents_view_forward
+	{
+		/* view forward end */
+		if(cfg_parser->cfg->views &&
+			cfg_parser->cfg->views->forwards &&
+			!cfg_parser->cfg->views->forwards->name)
+			yyerror("forward-zone without name");
+	}
+	;
+view_forwardstart: VAR_FORWARD_ZONE
+	{
+		struct config_stub* s;
+		OUTYY(("\nP(view_forward_zone:)\n"));
+		s = (struct config_stub*)calloc(1, sizeof(struct config_stub));
+		if(s) {
+			s->next = cfg_parser->cfg->views->forwards;
+			cfg_parser->cfg->views->forwards = s;
+		} else {
+			yyerror("out of memory");
+		}
+	}
+	;
+contents_view_forward: contents_view_forward content_view_forward
+	| ;
+content_view_forward: view_forward_name | view_forward_host | view_forward_addr |
+	view_forward_first | view_forward_no_cache | view_forward_ssl_upstream |
+	view_forward_tcp_upstream
 	;
 authstart: VAR_AUTH_ZONE
 	{
@@ -3457,6 +3486,68 @@ view_first: VAR_VIEW_FIRST STRING_ARG
 		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
 			yyerror("expected yes or no.");
 		else cfg_parser->cfg->views->isfirst=(strcmp($2, "yes")==0);
+		free($2);
+	}
+	;
+view_forward_name: VAR_NAME STRING_ARG
+	{
+		OUTYY(("P(view_forward_name:%s)\n", $2));
+		if(cfg_parser->cfg->views->forwards->name)
+			yyerror("forward name override, there must be one "
+				"name for one forward-zone");
+		free(cfg_parser->cfg->views->forwards->name);
+		cfg_parser->cfg->views->forwards->name = $2;
+	}
+	;
+view_forward_host: VAR_FORWARD_HOST STRING_ARG
+	{
+		OUTYY(("P(view_forward_host:%s)\n", $2));
+		if(!cfg_strlist_insert(&cfg_parser->cfg->views->forwards->hosts, $2))
+			yyerror("out of memory");
+	}
+	;
+view_forward_addr: VAR_FORWARD_ADDR STRING_ARG
+	{
+		OUTYY(("P(view_forward_addr:%s)\n", $2));
+		if(!cfg_strlist_insert(&cfg_parser->cfg->views->forwards->addrs, $2))
+			yyerror("out of memory");
+	}
+	;
+view_forward_first: VAR_FORWARD_FIRST STRING_ARG
+	{
+		OUTYY(("P(view_forward_first:%s)\n", $2));
+		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
+			yyerror("expected yes or no.");
+		else cfg_parser->cfg->views->forwards->isfirst=(strcmp($2, "yes")==0);
+		free($2);
+	}
+	;
+view_forward_no_cache: VAR_FORWARD_NO_CACHE STRING_ARG
+	{
+		OUTYY(("P(view_forward_no_cache:%s)\n", $2));
+		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
+			yyerror("expected yes or no.");
+		else cfg_parser->cfg->views->forwards->no_cache=(strcmp($2, "yes")==0);
+		free($2);
+	}
+	;
+view_forward_ssl_upstream: VAR_FORWARD_SSL_UPSTREAM STRING_ARG
+	{
+		OUTYY(("P(view_forward_ssl_upstream:%s)\n", $2));
+		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
+			yyerror("expected yes or no.");
+		else cfg_parser->cfg->views->forwards->ssl_upstream =
+			(strcmp($2, "yes")==0);
+		free($2);
+	}
+	;
+view_forward_tcp_upstream: VAR_FORWARD_TCP_UPSTREAM STRING_ARG
+	{
+		OUTYY(("P(view_forward_tcp_upstream:%s)\n", $2));
+		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
+			yyerror("expected yes or no.");
+		else cfg_parser->cfg->views->forwards->tcp_upstream =
+			(strcmp($2, "yes")==0);
 		free($2);
 	}
 	;

@@ -371,10 +371,12 @@ int mesh_new_callback(struct mesh_area* mesh, struct query_info* qinfo,
  * @param addr: sockaddr_storage for the client; to be used with subnet.
  * @param opt_list: edns opt_list from the client; to be used when subnet is
  *	enabled.
+ * @param cinfo: client information for view/tag data or NULL.
  */
 void mesh_new_prefetch(struct mesh_area* mesh, struct query_info* qinfo,
 	uint16_t qflags, time_t leeway, int rpz_passthru,
-	struct sockaddr_storage* addr, struct edns_option* opt_list);
+	struct sockaddr_storage* addr, struct edns_option* opt_list,
+	struct respip_client_info* cinfo);
 
 /**
  * Handle new event from the wire. A serviced query has returned.

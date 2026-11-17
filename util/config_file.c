@@ -1736,6 +1736,9 @@ config_delview(struct config_view* p)
 	config_delstrlist(p->local_zones_ipset);
 #endif
 	config_delstrlist(p->local_data);
+	config_deldblstrlist(p->respip_actions);
+	config_deldblstrlist(p->respip_data);
+	config_delstubs(p->forwards);
 	free(p);
 }
 

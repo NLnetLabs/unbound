@@ -132,6 +132,10 @@ ub_rrset_key_delete(void* key, void* userdata)
 	k->id = 0;
 	free(k->rk.dname);
 	k->rk.dname = NULL;
+	if(!a) {
+		free(k);
+		return;
+	}
 	alloc_special_release(a, k);
 }
 

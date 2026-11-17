@@ -62,6 +62,7 @@ struct ub_packed_rrset_key;
 struct module_stack;
 struct outside_network;
 struct iter_nat64;
+struct view;
 
 /* max number of lookups in the cache for target nameserver names.
  * This stops, for large delegations, N*N lookups in the cache. */
@@ -419,6 +420,14 @@ int iter_dp_cangodown(struct query_info* qinfo, struct delegpt* dp);
 int iter_stub_fwd_no_cache(struct module_qstate *qstate,
 	struct query_info *qinf, uint8_t** retdpname, size_t* retdpnamelen,
 	uint8_t* dpname_storage, size_t dpname_storage_len);
+
+/**
+ * Get view for qstate, if any.
+ * Returns view with read-lock held, or NULL. Caller must unlock view->lock if non-NULL.
+ * @param qstate: query state.
+ * @return view with read-lock held, or NULL.
+ */
+struct view* qstate_get_view(struct module_qstate* qstate);
 
 /**
  * Set support for IP4 and IP6 depending on outgoing interfaces

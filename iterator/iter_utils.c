@@ -47,6 +47,8 @@
 #include "iterator/iter_donotq.h"
 #include "iterator/iter_delegpt.h"
 #include "iterator/iter_priv.h"
+#include "services/view.h"
+#include "respip/respip.h"
 #include "services/cache/infra.h"
 #include "services/cache/dns.h"
 #include "services/cache/rrset.h"
@@ -1540,6 +1542,25 @@ int iter_dp_cangodown(struct query_info* qinfo, struct delegpt* dp)
 	return 1;
 }
 
+struct view*
+qstate_get_view(struct module_qstate* qstate)
+{
+	struct respip_client_info* cinfo;
+	if(!qstate)
+		return NULL;
+	cinfo = qstate->client_info;
+	if(!cinfo)
+		return NULL;
+	if(cinfo->view) {
+		lock_rw_rdlock(&cinfo->view->lock);
+		return cinfo->view;
+	}
+	if(cinfo->view_name && qstate->env->views) {
+		return views_find_view(qstate->env->views, cinfo->view_name, 0);
+	}
+	return NULL;
+}
+
 int
 iter_stub_fwd_no_cache(struct module_qstate *qstate, struct query_info *qinf,
 	uint8_t** retdpname, size_t* retdpnamelen, uint8_t* dpname_storage,
@@ -1548,11 +1569,58 @@ iter_stub_fwd_no_cache(struct module_qstate *qstate, struct query_info *qinf,
 	struct iter_hints_stub *stub;
 	struct delegpt *dp;
 	int nolock = 1;
+	struct view* v = NULL;
 
 	log_assert((retdpname && retdpnamelen
 		&& dpname_storage && dpname_storage_len > 0) ||
 		(retdpname == NULL && retdpnamelen == NULL
 		 && dpname_storage == NULL && dpname_storage_len == 0));
+
+	v = qstate_get_view(qstate);
+	if(v && v->forwards) {
+		lock_rw_rdlock(&v->forwards->lock);
+		dp = forwards_lookup(v->forwards, qinf->qname, qinf->qclass,
+			nolock);
+		if(dp) {
+			enum verbosity_value level = VERB_ALGO;
+			int dp_no_cache = dp->no_cache;
+			if(verbosity >= level && dp_no_cache) {
+				char qname[LDNS_MAX_DOMAINLEN];
+				char dpname[LDNS_MAX_DOMAINLEN];
+				dname_str(qinf->qname, qname);
+				dname_str(dp->name, dpname);
+				verbose(level, "view forward for %s %s has no_cache", qname, dpname);
+			}
+			if(retdpname) {
+				if(dp->namelen > dpname_storage_len) {
+					verbose(VERB_ALGO, "no cache dpname too long");
+					lock_rw_unlock(&v->forwards->lock);
+					lock_rw_unlock(&v->lock);
+					*retdpname = NULL;
+					*retdpnamelen = 0;
+					return dp_no_cache;
+				}
+				memmove(dpname_storage, dp->name, dp->namelen);
+				*retdpname = dpname_storage;
+				*retdpnamelen = dp->namelen;
+			}
+			lock_rw_unlock(&v->forwards->lock);
+			lock_rw_unlock(&v->lock);
+			return dp_no_cache;
+		}
+		lock_rw_unlock(&v->forwards->lock);
+		if(!v->isfirst) {
+			lock_rw_unlock(&v->lock);
+			if(retdpname) {
+				*retdpname = NULL;
+				*retdpnamelen = 0;
+			}
+			return 0;
+		}
+	}
+	if(v) {
+		lock_rw_unlock(&v->lock);
+	}
 
 	/* Check for stub. */
 	/* Lock both forwards and hints for atomic read. */

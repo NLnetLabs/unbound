@@ -190,6 +190,19 @@ donotquerylocalhostcheck(struct config_file* cfg)
 				}
 			}
 		}
+		{
+			struct config_view* cv;
+			for(cv=cfg->views; cv; cv=cv->next) {
+				for(p=cv->forwards; p; p=p->next) {
+					for(s=p->addrs; s; s=s->next) {
+						if(str_addr_is_localhost(s->str)) {
+							fprintf(stderr, "unbound-checkconf: warning: forward-addr: '%s' is specified for forward-zone: '%s' in view: '%s', but do-not-query-localhost: yes means that the address will not be used for lookups.\n",
+								s->str, p->name, cv->name?cv->name:"");
+						}
+					}
+				}
+			}
+		}
 	}
 }
 
@@ -852,8 +865,12 @@ check_file_clobber(struct config_file* cfg)
 static void
 morechecks(struct config_file* cfg)
 {
+	struct config_view* cv;
 	warn_hosts("stub-host", cfg->stubs);
 	warn_hosts("forward-host", cfg->forwards);
+	for(cv=cfg->views; cv; cv=cv->next) {
+		warn_hosts("forward-host", cv->forwards);
+	}
 	interfacechecks(cfg);
 	ifautomaticportschecks(cfg->if_automatic_ports);
 	aclchecks(cfg);

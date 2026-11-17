@@ -55,6 +55,7 @@
 #include "services/cache/rrset.h"
 #include "services/cache/infra.h"
 #include "services/authzone.h"
+#include "services/view.h"
 #include "util/module.h"
 #include "util/netevent.h"
 #include "util/net_help.h"
@@ -683,12 +684,14 @@ errinf_reply(struct module_qstate* qstate, struct iter_qstate* iq)
 
 /** see if last resort is possible - does config allow queries to parent */
 static int
-can_have_last_resort(struct module_env* env, uint8_t* nm, size_t ATTR_UNUSED(nmlen),
+can_have_last_resort(struct module_qstate* qstate, uint8_t* nm, size_t ATTR_UNUSED(nmlen),
 	uint16_t qclass, int* have_dp, struct delegpt** retdp,
 	struct regional* region)
 {
+	struct module_env* env = qstate->env;
 	struct delegpt* dp = NULL;
 	int nolock = 0;
+	struct view* v = NULL;
 	/* do not process a last resort (the parent side) if a stub
 	 * or forward is configured, because we do not want to go 'above'
 	 * the configured servers */
@@ -705,6 +708,28 @@ can_have_last_resort(struct module_env* env, uint8_t* nm, size_t ATTR_UNUSED(nml
 	if(dp) {
 		lock_rw_unlock(&env->hints->lock);
 		dp = NULL;
+	}
+	v = qstate_get_view(qstate);
+	if(v) {
+		if(v->forwards) {
+			if((dp = forwards_find(v->forwards, nm, qclass, nolock)) &&
+				dp->has_parent_side_NS) {
+				if(retdp) *retdp = delegpt_copy(dp, region);
+				lock_rw_unlock(&v->forwards->lock);
+				lock_rw_unlock(&v->lock);
+				if(have_dp) *have_dp = 1;
+				return 0;
+			}
+			if(dp) {
+				lock_rw_unlock(&v->forwards->lock);
+				dp = NULL;
+			}
+			if(!v->isfirst) {
+				lock_rw_unlock(&v->lock);
+				return 1;
+			}
+		}
+		lock_rw_unlock(&v->lock);
 	}
 	if((dp = forwards_find(env->fwds, nm, qclass, nolock)) &&
 		/* has_parent_side is turned off for forward_first, where
@@ -1240,7 +1265,7 @@ generate_ns_check(struct module_qstate* qstate, struct iter_qstate* iq, int id)
 
 	if(iq->depth == ie->max_dependency_depth)
 		return;
-	if(!can_have_last_resort(qstate->env, iq->dp->name, iq->dp->namelen,
+	if(!can_have_last_resort(qstate, iq->dp->name, iq->dp->namelen,
 		iq->qchase.qclass, NULL, NULL, NULL))
 		return;
 	/* is this query the same as the nscheck? */
@@ -1355,6 +1380,7 @@ forward_request(struct module_qstate* qstate, struct iter_qstate* iq)
 	uint8_t* delname = iq->qchase.qname;
 	size_t delnamelen = iq->qchase.qname_len;
 	int nolock = 0;
+	struct view* v = NULL;
 	if(iq->refetch_glue && iq->dp) {
 		delname = iq->dp->name;
 		delnamelen = iq->dp->namelen;
@@ -1363,6 +1389,26 @@ forward_request(struct module_qstate* qstate, struct iter_qstate* iq)
 	if( (iq->qchase.qtype == LDNS_RR_TYPE_DS || iq->refetch_glue)
 		&& !dname_is_root(iq->qchase.qname))
 		dname_remove_label(&delname, &delnamelen);
+	v = qstate_get_view(qstate);
+	if(v) {
+		if(v->forwards) {
+			dp = forwards_lookup(v->forwards, delname,
+				iq->qchase.qclass, nolock);
+			if(dp) {
+				iq->chase_flags |= BIT_RD;
+				iq->dp = delegpt_copy(dp, qstate->region);
+				lock_rw_unlock(&v->forwards->lock);
+				lock_rw_unlock(&v->lock);
+				verbose(VERB_ALGO, "forwarding request to view %s forwarder", v->name);
+				return 1;
+			}
+			if(!v->isfirst) {
+				lock_rw_unlock(&v->lock);
+				return 0;
+			}
+		}
+		lock_rw_unlock(&v->lock);
+	}
 	dp = forwards_lookup(qstate->env->fwds, delname, iq->qchase.qclass,
 		nolock);
 	if(!dp) return 0;
@@ -1443,7 +1489,7 @@ processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
 	 */
 	if (iq->refetch_glue &&
 	        iq->dp &&
-	        !can_have_last_resort(qstate->env, iq->dp->name,
+	        !can_have_last_resort(qstate, iq->dp->name,
 	             iq->dp->namelen, iq->qchase.qclass, NULL, NULL, NULL)) {
 	    iq->refetch_glue = 0;
 	}
@@ -1643,7 +1689,7 @@ processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
 	}
 	if(iq->qchase.qtype == LDNS_RR_TYPE_DS || iq->refetch_glue ||
 	   (iq->qchase.qtype == LDNS_RR_TYPE_NS && qstate->prefetch_leeway
-	   && can_have_last_resort(qstate->env, delname, delnamelen, iq->qchase.qclass, NULL, NULL, NULL))) {
+	   && can_have_last_resort(qstate, delname, delnamelen, iq->qchase.qclass, NULL, NULL, NULL))) {
 		/* remove first label from delname, root goes to hints,
 		 * but only to fetch glue, not for qtype=DS. */
 		/* also when prefetching an NS record, fetch it again from
@@ -1686,9 +1732,27 @@ processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
 				break; /* got noprime-stub-zone, continue */
 			else if(r)
 				return 0; /* stub prime request made */
-			if(forwards_lookup_root(qstate->env->fwds,
+			int fwd_root = 0;
+			int can_fallback_global = 1;
+			struct view* v = qstate_get_view(qstate);
+			if(v) {
+				if(v->forwards) {
+					if(forwards_lookup_root(v->forwards,
+						iq->qchase.qclass, nolock)) {
+						lock_rw_unlock(&v->forwards->lock);
+						fwd_root = 1;
+					}
+					if(!v->isfirst)
+						can_fallback_global = 0;
+				}
+				lock_rw_unlock(&v->lock);
+			}
+			if(!fwd_root && can_fallback_global && forwards_lookup_root(qstate->env->fwds,
 				iq->qchase.qclass, nolock)) {
 				lock_rw_unlock(&qstate->env->fwds->lock);
+				fwd_root = 1;
+			}
+			if(fwd_root) {
 				/* forward zone root, no root prime needed */
 				/* fill in some dp - safety belt */
 				iq->dp = hints_find_root(qstate->env->hints,
@@ -1741,7 +1805,7 @@ processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
 			iq->dp, ie->supports_ipv4, ie->supports_ipv6,
 			ie->nat64.use_nat64)) {
 			int have_dp = 0;
-			if(!can_have_last_resort(qstate->env, iq->dp->name, iq->dp->namelen, iq->qchase.qclass, &have_dp, &iq->dp, qstate->region)) {
+			if(!can_have_last_resort(qstate, iq->dp->name, iq->dp->namelen, iq->qchase.qclass, &have_dp, &iq->dp, qstate->region)) {
 				if(have_dp) {
 					verbose(VERB_QUERY, "cache has stub "
 						"or fwd but no addresses, "
@@ -2169,7 +2233,7 @@ processLastResort(struct module_qstate* qstate, struct iter_qstate* iq,
 	verbose(VERB_ALGO, "No more query targets, attempting last resort");
 	log_assert(iq->dp);
 
-	if(!can_have_last_resort(qstate->env, iq->dp->name, iq->dp->namelen,
+	if(!can_have_last_resort(qstate, iq->dp->name, iq->dp->namelen,
 		iq->qchase.qclass, NULL, NULL, NULL)) {
 		/* fail -- no more targets, no more hope of targets, no hope 
 		 * of a response. */
@@ -2290,7 +2354,7 @@ processLastResort(struct module_qstate* qstate, struct iter_qstate* iq,
 		 * delegation point is a stub and we cannot go higher, skip*/
 		if( ((ie->supports_ipv6 && !ns->done_pside6) ||
 		    ((ie->supports_ipv4 || ie->nat64.use_nat64) && !ns->done_pside4)) &&
-		    !can_have_last_resort(qstate->env, ns->name, ns->namelen,
+		    !can_have_last_resort(qstate, ns->name, ns->namelen,
 			iq->qchase.qclass, NULL, NULL, NULL)) {
 			log_nametypeclass(VERB_ALGO, "cannot pside lookup ns "
 				"because it is also a stub/forward,",
@@ -4192,9 +4256,22 @@ processCollectClass(struct module_qstate* qstate, int id)
 	 * towards the Finished state when done. */
 	if(iq->qchase.qclass == 0) {
 		uint16_t c = 0;
+		struct iter_forwards* root_fwds = qstate->env->fwds;
+		struct iter_forwards* v_fwds = NULL;
+		int isfirst = 0;
+		struct view* v = qstate_get_view(qstate);
+		if(v) {
+			if(v->forwards) {
+				v_fwds = v->forwards;
+				isfirst = v->isfirst;
+			}
+			lock_rw_unlock(&v->lock);
+		}
+		if(v_fwds && !isfirst)
+			root_fwds = v_fwds;
 		iq->qchase.qclass = LDNS_RR_CLASS_ANY;
 		while(iter_get_next_root(qstate->env->hints,
-			qstate->env->fwds, &c)) {
+			root_fwds, &c)) {
 			/* generate query for this class */
 			log_nametypeclass(VERB_ALGO, "spawn collect query",
 				qstate->qinfo.qname, qstate->qinfo.qtype, c);
@@ -4213,6 +4290,29 @@ processCollectClass(struct module_qstate* qstate, int id)
 			if(c == 0xffff)
 				break;
 			else c++;
+		}
+		if(v_fwds && isfirst && root_fwds != v_fwds) {
+			uint16_t cv = 0;
+			while(forwards_next_root(v_fwds, &cv, 0)) {
+				if(!forwards_lookup_root(root_fwds, cv, 0)) {
+					log_nametypeclass(VERB_ALGO, "spawn collect query",
+						qstate->qinfo.qname, qstate->qinfo.qtype, cv);
+					if(!generate_sub_request(qstate->qinfo.qname,
+						qstate->qinfo.qname_len, qstate->qinfo.qtype,
+						cv, qstate, id, iq, INIT_REQUEST_STATE,
+						FINISHED_STATE, &subq,
+						(int)!(qstate->query_flags&BIT_CD), 0)) {
+						errinf(qstate, "could not generate class ANY"
+							" lookup query");
+						return error_response(qstate, id,
+							LDNS_RCODE_SERVFAIL);
+					}
+					iq->num_current_queries ++;
+				}
+				if(cv == 0xffff)
+					break;
+				else cv++;
+			}
 		}
 		/* if no roots are configured at all, return */
 		if(iq->num_current_queries == 0) {

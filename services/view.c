@@ -44,6 +44,11 @@
 #include "services/localzone.h"
 #include "util/config_file.h"
 #include "respip/respip.h"
+#include "iterator/iter_fwd.h"
+#include "services/cache/rrset.h"
+#include "services/cache/dns.h"
+#include "util/storage/slabhash.h"
+#include "util/data/msgreply.h"
 
 int 
 view_cmp(const void* v1, const void* v2)
@@ -75,6 +80,9 @@ view_delete(struct view* v)
 	lock_rw_destroy(&v->lock);
 	local_zones_delete(v->local_zones);
 	respip_set_delete(v->respip_set);
+	forwards_delete(v->forwards);
+	slabhash_delete(v->msg_cache);
+	rrset_cache_delete(v->rrset_cache);
 	free(v->name);
 	free(v);
 }
@@ -211,6 +219,43 @@ views_apply_cfg(struct views* vs, struct config_file* cfg)
 			cv->local_data = NULL;
 			cv->local_zones_nodefault = NULL;
 		}
+		if(cv->forwards) {
+			struct config_file fwd_cfg;
+			if(!(v->forwards = forwards_create())) {
+				lock_rw_unlock(&v->lock);
+				return 0;
+			}
+			memset(&fwd_cfg, 0, sizeof(fwd_cfg));
+			fwd_cfg.forwards = cv->forwards;
+			fwd_cfg.stubs = cfg->stubs;
+			fwd_cfg.auths = cfg->auths;
+			if(!forwards_apply_cfg(v->forwards, &fwd_cfg)) {
+				lock_rw_unlock(&v->lock);
+				return 0;
+			}
+		}
+		{
+			size_t slabs = (cfg && cfg->msg_cache_slabs ? cfg->msg_cache_slabs : HASH_DEFAULT_SLABS);
+			size_t maxmem = (cfg && cfg->msg_cache_size ? cfg->msg_cache_size : HASH_DEFAULT_MAXMEM);
+			size_t rrset_slabs = (cfg && cfg->rrset_cache_slabs ? cfg->rrset_cache_slabs : HASH_DEFAULT_SLABS);
+			size_t rrset_maxmem = (cfg && cfg->rrset_cache_size ? cfg->rrset_cache_size : HASH_DEFAULT_MAXMEM);
+
+			if(!(v->msg_cache = slabhash_create(slabs,
+				HASH_DEFAULT_STARTARRAY, maxmem,
+				msgreply_sizefunc, query_info_compare,
+				query_entry_delete, reply_info_delete, NULL))) {
+				lock_rw_unlock(&v->lock);
+				return 0;
+			}
+			if(!(v->rrset_cache = (struct rrset_cache*)slabhash_create(
+				rrset_slabs, HASH_DEFAULT_STARTARRAY, rrset_maxmem,
+				ub_rrset_sizefunc, ub_rrset_compare,
+				ub_rrset_key_delete, rrset_data_delete, NULL))) {
+				lock_rw_unlock(&v->lock);
+				return 0;
+			}
+			slabhash_setmarkdel(&v->rrset_cache->table, &rrset_markdel);
+		}
 		lock_rw_unlock(&v->lock);
 	}
 	return 1;
@@ -265,6 +310,12 @@ size_t view_get_mem(struct view* v)
 	m += getmem_str(v->name);
 	m += local_zones_get_mem(v->local_zones);
 	m += respip_set_get_mem(v->respip_set);
+	if(v->forwards)
+		m += forwards_get_mem(v->forwards);
+	if(v->msg_cache)
+		m += slabhash_get_mem(v->msg_cache);
+	if(v->rrset_cache)
+		m += slabhash_get_mem(&v->rrset_cache->table);
 	lock_rw_unlock(&v->lock);
 	return m;
 }

@@ -773,7 +773,8 @@ answer_from_cache(struct worker* worker, struct query_info* qinfo,
 	int* is_secure_answer, struct ub_packed_rrset_key** alias_rrset,
 	struct reply_info** partial_repp,
 	struct reply_info* rep, uint16_t id, uint16_t flags,
-	struct comm_reply* repinfo, struct edns_data* edns, int* rpz_passthru)
+	struct comm_reply* repinfo, struct edns_data* edns, int* rpz_passthru,
+	struct rrset_cache* rrset_cache)
 {
 	time_t timenow = *worker->env.now;
 	uint16_t udpsize = edns->udp_size;
@@ -849,7 +850,7 @@ answer_from_cache(struct worker* worker, struct query_info* qinfo,
 		}
 		error_encode(repinfo->c->buffer, LDNS_RCODE_SERVFAIL,
 			qinfo, id, flags, edns);
-		rrset_array_unlock_touch(worker->env.rrset_cache,
+		rrset_array_unlock_touch(rrset_cache,
 			worker->scratchpad, rep->ref, rep->rrset_count);
 		if(worker->stats.extended) {
 			worker->stats.ans_bogus ++;
@@ -941,13 +942,13 @@ answer_from_cache(struct worker* worker, struct query_info* qinfo,
 	}
 	/* cannot send the reply right now, because blocking network syscall
 	 * is bad while holding locks. */
-	rrset_array_unlock_touch(worker->env.rrset_cache, worker->scratchpad,
+	rrset_array_unlock_touch(rrset_cache, worker->scratchpad,
 		rep->ref, rep->rrset_count);
 	/* go and return this buffer to the client */
 	return 1;
 
 bail_out:
-	rrset_array_unlock_touch(worker->env.rrset_cache,
+	rrset_array_unlock_touch(rrset_cache,
 		worker->scratchpad, rep->ref, rep->rrset_count);
 	return 0;
 }
@@ -956,7 +957,8 @@ bail_out:
 static void
 reply_and_prefetch(struct worker* worker, struct query_info* qinfo,
 	uint16_t flags, struct comm_reply* repinfo, time_t leeway, int noreply,
-	int rpz_passthru, struct edns_option* opt_list)
+	int rpz_passthru, struct edns_option* opt_list,
+	struct respip_client_info* cinfo)
 {
 	(void)opt_list;
 	/* first send answer to client to keep its latency
@@ -978,7 +980,7 @@ reply_and_prefetch(struct worker* worker, struct query_info* qinfo,
 		&& worker->env.unique_mesh) {
 		mesh_new_prefetch(worker->env.mesh, qinfo, flags, leeway +
 			PREFETCH_EXPIRY_ADD, rpz_passthru,
-			&repinfo->client_addr, opt_list);
+			&repinfo->client_addr, opt_list, cinfo);
 		return;
 	}
 #endif
@@ -987,7 +989,7 @@ reply_and_prefetch(struct worker* worker, struct query_info* qinfo,
 	 * the cache and go to the network for the data). */
 	/* this (potentially) runs the mesh for the new query */
 	mesh_new_prefetch(worker->env.mesh, qinfo, flags, leeway +
-		PREFETCH_EXPIRY_ADD, rpz_passthru, NULL, NULL);
+		PREFETCH_EXPIRY_ADD, rpz_passthru, NULL, NULL, cinfo);
 }
 
 /**
@@ -1500,6 +1502,13 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 	struct respip_client_info* cinfo = NULL, cinfo_tmp;
 	struct timeval wait_time;
 	struct check_request_result check_result = {0,0};
+	struct view* view = NULL;
+	uint8_t* taglist = NULL;
+	size_t taglen = 0;
+	uint8_t* tag_actions = NULL;
+	size_t tag_actions_size = 0;
+	struct config_strlist** tag_datas = NULL;
+	size_t tag_datas_size = 0;
 	memset(&qinfo, 0, sizeof(qinfo));
 
 	if((error != NETEVENT_NOERROR && error != NETEVENT_DONE)|| !repinfo) {
@@ -1854,12 +1863,31 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 		regional_free_all(worker->scratchpad);
 		goto send_reply;
 	}
+	taglist = acladdr?acladdr->taglist:NULL;
+	taglen = acladdr?acladdr->taglen:0;
+	tag_actions = acladdr?acladdr->tag_actions:NULL;
+	tag_actions_size = acladdr?acladdr->tag_actions_size:0;
+	tag_datas = acladdr?acladdr->tag_datas:NULL;
+	tag_datas_size = acladdr?acladdr->tag_datas_size:0;
+	view = acladdr?acladdr->view:NULL;
+
+	if(!view && c->socket && c->socket->acl && c->socket->acl->view)
+		view = c->socket->acl->view;
+	if(!taglist && c->socket && c->socket->acl && c->socket->acl->taglist) {
+		taglist = c->socket->acl->taglist;
+		taglen = c->socket->acl->taglen;
+		tag_actions = c->socket->acl->tag_actions;
+		tag_actions_size = c->socket->acl->tag_actions_size;
+		tag_datas = c->socket->acl->tag_datas;
+		tag_datas_size = c->socket->acl->tag_datas_size;
+	}
+
 	if(local_zones_answer(worker->daemon->local_zones, &worker->env, &qinfo,
-		&edns, c->buffer, worker->scratchpad, repinfo, acladdr->taglist,
-		acladdr->taglen, acladdr->tag_actions,
-		acladdr->tag_actions_size, acladdr->tag_datas,
-		acladdr->tag_datas_size, worker->daemon->cfg->tagname,
-		worker->daemon->cfg->num_tags, acladdr->view)) {
+		&edns, c->buffer, worker->scratchpad, repinfo, taglist,
+		taglen, tag_actions,
+		tag_actions_size, tag_datas,
+		tag_datas_size, worker->daemon->cfg->tagname,
+		worker->daemon->cfg->num_tags, view)) {
 		regional_free_all(worker->scratchpad);
 		if(sldns_buffer_limit(c->buffer) == 0) {
 			comm_point_drop_reply(repinfo);
@@ -1870,7 +1898,7 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 	if(worker->env.auth_zones &&
 		rpz_callback_from_worker_request(worker->env.auth_zones,
 		&worker->env, &qinfo, &edns, c->buffer, worker->scratchpad,
-		repinfo, acladdr->taglist, acladdr->taglen, &worker->stats,
+		repinfo, taglist, taglen, &worker->stats,
 		&rpz_passthru)) {
 		regional_free_all(worker->scratchpad);
 		if(sldns_buffer_limit(c->buffer) == 0) {
@@ -1953,20 +1981,20 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 		}
 	}
 
-	/* If we may apply IP-based actions to the answer, build the client
-	 * information.  As this can be expensive, skip it if there is
-	 * absolutely no possibility of it. */
-	if((worker->daemon->use_response_ip || worker->daemon->use_rpz) &&
+	/* If we may apply IP-based actions to the answer, or if a view is
+	 * matched for this client or interface, build the client information. */
+	if(((worker->daemon->use_response_ip || worker->daemon->use_rpz) &&
 		(qinfo.qtype == LDNS_RR_TYPE_A ||
 		qinfo.qtype == LDNS_RR_TYPE_AAAA ||
-		qinfo.qtype == LDNS_RR_TYPE_ANY)) {
-		cinfo_tmp.taglist = acladdr->taglist;
-		cinfo_tmp.taglen = acladdr->taglen;
-		cinfo_tmp.tag_actions = acladdr->tag_actions;
-		cinfo_tmp.tag_actions_size = acladdr->tag_actions_size;
-		cinfo_tmp.tag_datas = acladdr->tag_datas;
-		cinfo_tmp.tag_datas_size = acladdr->tag_datas_size;
-		cinfo_tmp.view = acladdr->view;
+		qinfo.qtype == LDNS_RR_TYPE_ANY)) ||
+		view) {
+		cinfo_tmp.taglist = taglist;
+		cinfo_tmp.taglen = taglen;
+		cinfo_tmp.tag_actions = tag_actions;
+		cinfo_tmp.tag_actions_size = tag_actions_size;
+		cinfo_tmp.tag_datas = tag_datas;
+		cinfo_tmp.tag_datas_size = tag_datas_size;
+		cinfo_tmp.view = view;
 		cinfo_tmp.view_name = NULL;
 		cinfo = &cinfo_tmp;
 	}
@@ -1982,10 +2010,24 @@ lookup_cache:
 	 * each pass.  We should still pass the original qinfo to
 	 * answer_from_cache(), however, since it's used to build the reply. */
 	if(!edns_bypass_cache_stage(edns.opt_list_in, &worker->env)) {
+		struct slabhash* msg_cache = worker->env.msg_cache;
+		struct rrset_cache* rrset_cache = worker->env.rrset_cache;
+		int is_view_cache = 0;
+		if(view && view->msg_cache && view->rrset_cache) {
+			msg_cache = view->msg_cache;
+			rrset_cache = view->rrset_cache;
+			is_view_cache = 1;
+		}
 		is_expired_answer = 0;
 		is_secure_answer = 0;
 		h = query_info_hash(lookup_qinfo, sldns_buffer_read_u16_at(c->buffer, 2));
-		if((e=slabhash_lookup(worker->env.msg_cache, h, lookup_qinfo, 0))) {
+		e = slabhash_lookup(msg_cache, h, lookup_qinfo, 0);
+		if(!e && is_view_cache && view->isfirst) {
+			msg_cache = worker->env.msg_cache;
+			rrset_cache = worker->env.rrset_cache;
+			e = slabhash_lookup(msg_cache, h, lookup_qinfo, 0);
+		}
+		if(e) {
 			struct reply_info* rep = (struct reply_info*)e->data;
 			/* answer from cache - we have acquired a readlock on it */
 			if(answer_from_cache(worker, &qinfo, cinfo, &need_drop,
@@ -1993,7 +2035,7 @@ lookup_cache:
 				&alias_rrset, &partial_rep, rep,
 				*(uint16_t*)(void *)sldns_buffer_begin(c->buffer),
 				sldns_buffer_read_u16_at(c->buffer, 2), repinfo,
-				&edns, &rpz_passthru)) {
+				&edns, &rpz_passthru, rrset_cache)) {
 				/* prefetch it if the prefetch TTL expired.
 				 * Note that if there is more than one pass
 				 * its qname must be that used for cache
@@ -2013,7 +2055,8 @@ lookup_cache:
 						repinfo, leeway,
 						(partial_rep || need_drop),
 						rpz_passthru,
-						original_edns_list);
+						original_edns_list,
+						cinfo);
 					if(!partial_rep) {
 						rc = 0;
 						regional_free_all(worker->scratchpad);

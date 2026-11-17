@@ -1323,16 +1323,23 @@ remote-control:
 # Views
 # Create named views. Name must be unique.
 # Map views to requests using the access-control-view/interface-view options.
-# Views can contain zero or more local-zone and local-data options.
+# Views can contain zero or more local-zone, local-data, and forward-zone
+# options.
 # Options from matching views will override global options.
 # Global options will be used if no matching view is found.
 # With view-first yes, it will try to answer using the global local-zone and
 # local-data elements if there is no view specific match.
+# Each view maintains its own message and RRset cache for independent cache
+# storage and isolation. Cache memory consumption scales with the number of
+# configured views.
 # view:
 #	name: "viewname"
 #	local-zone: "example.com" redirect
 #	local-data: "example.com A 192.0.2.3"
 #	local-data-ptr: "192.0.2.3 www.example.com"
+#	forward-zone:
+#		name: "."
+#		forward-addr: 192.0.2.1
 #	response-ip: 192.0.2.0/24 redirect
 #	response-ip-data: 192.0.2.0/24 "example. A 192.0.2.1"
 #	view-first: no
