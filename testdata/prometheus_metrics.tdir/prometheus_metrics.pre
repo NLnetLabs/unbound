@@ -1,0 +1,33 @@
+# #-- prometheus_metrics.pre--#
+# source the master var file when it's there
+[ -f ../.tpkg.var.master ] && source ../.tpkg.var.master
+# use .tpkg.var.test for in test variable passing
+[ -f .tpkg.var.test ] && source .tpkg.var.test
+
+. ../common.sh
+PRE="../.."
+if grep "define USE_METRICS" $PRE/config.h; then echo test enabled; else skip_test "test skipped"; fi
+# Is curl available
+if test -f "$(which curl 2>&1)"; then
+	echo "curl available, do test"
+else
+	skip_test "curl not available, skip test"
+fi
+
+get_random_port 3
+UNBOUND_PORT=$RND_PORT
+CONTROL_PORT=$(($RND_PORT + 1))
+METRICS_PORT=$(($RND_PORT + 2))
+echo "UNBOUND_PORT=$UNBOUND_PORT" >> .tpkg.var.test
+echo "CONTROL_PORT=$CONTROL_PORT" >> .tpkg.var.test
+echo "METRICS_PORT=$METRICS_PORT" >> .tpkg.var.test
+
+# make config file
+sed -e 's/@PORT\@/'$UNBOUND_PORT'/' -e 's/@METRICSPORT\@/'$METRICS_PORT'/' -e 's/@CONTROL_PORT\@/'$CONTROL_PORT'/' < prometheus_metrics.conf > ub.conf
+# start unbound in the background
+$PRE/unbound -d -c ub.conf >unbound.log 2>&1 &
+UNBOUND_PID=$!
+echo "UNBOUND_PID=$UNBOUND_PID" >> .tpkg.var.test
+
+cat .tpkg.var.test
+wait_unbound_up unbound.log

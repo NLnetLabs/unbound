@@ -650,6 +650,22 @@ int ub_ctx_data_remove(struct ub_ctx* ctx, const char *data);
 const char* ub_version(void);
 
 /**
+ * Memory statistics values. The values describe memory usage (in bytes).
+ */
+struct ub_mem_stat_info {
+	long long msg;
+	long long rrset;
+	long long val;
+	long long iter;
+	long long subnet;
+	long long ipsecmod;
+	long long respip;
+	long long dnscrypt_shared_secret;
+	long long dnscrypt_nonce;
+	long long dynlib;
+};
+
+/**
  * Some global statistics that are not in struct stats_info,
  * this struct is shared on a shm segment (shm-key in unbound.conf)
  */
@@ -662,18 +678,7 @@ struct ub_shm_stat_info {
 		long long elapsed_sec, elapsed_usec;
 	} time;
 
-	struct {
-		long long msg;
-		long long rrset;
-		long long val;
-		long long iter;
-		long long subnet;
-		long long ipsecmod;
-		long long respip;
-		long long dnscrypt_shared_secret;
-		long long dnscrypt_nonce;
-		long long dynlib;
-	} mem;
+	struct ub_mem_stat_info mem;
 };
 
 /** number of qtype that is stored for in array */

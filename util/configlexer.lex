@@ -491,6 +491,10 @@ interface-tag-action{COLON}	{ YDVAR(3, VAR_INTERFACE_TAG_ACTION) }
 interface-tag-data{COLON}	{ YDVAR(3, VAR_INTERFACE_TAG_DATA) }
 interface-view{COLON}		{ YDVAR(2, VAR_INTERFACE_VIEW) }
 local-zone-override{COLON}	{ YDVAR(3, VAR_LOCAL_ZONE_OVERRIDE) }
+metrics-enable{COLON}		{ YDVAR(1, VAR_METRICS_ENABLE) }
+metrics-interface{COLON}	{ YDVAR(1, VAR_METRICS_INTERFACE) }
+metrics-port{COLON}		{ YDVAR(1, VAR_METRICS_PORT) }
+metrics-path{COLON}		{ YDVAR(1, VAR_METRICS_PATH) }
 dnstap{COLON}			{ YDVAR(0, VAR_DNSTAP) }
 dnstap-enable{COLON}		{ YDVAR(1, VAR_DNSTAP_ENABLE) }
 dnstap-bidirectional{COLON}	{ YDVAR(1, VAR_DNSTAP_BIDIRECTIONAL) }
