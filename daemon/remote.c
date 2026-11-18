@@ -5492,6 +5492,7 @@ config_file_getmem(struct config_file* cfg)
 	m += getmem_config_strlist(cfg->dynlib_file);
 	m += getmem_str(cfg->dns64_prefix);
 	m += getmem_config_strlist(cfg->dns64_ignore_aaaa);
+	m += (cfg->dns64_taglist ? cfg->dns64_taglistlen : 0);
 	m += getmem_str(cfg->nat64_prefix);
 	m += getmem_str(cfg->dnstap_socket_path);
 	m += getmem_str(cfg->dnstap_ip);
@@ -6514,6 +6515,9 @@ fr_atomic_copy_cfg(struct config_file* oldcfg, struct config_file* cfg,
 	COPY_VAR_ptr(dns64_prefix);
 	COPY_VAR_int(dns64_synthall);
 	COPY_VAR_ptr(dns64_ignore_aaaa);
+	/* Not copied because it references tagname.
+	 dns64_taglist, dns64_taglistlen
+	*/
 	COPY_VAR_ptr(nat64_prefix);
 	COPY_VAR_int(dnstap);
 	COPY_VAR_int(dnstap_bidirectional);
