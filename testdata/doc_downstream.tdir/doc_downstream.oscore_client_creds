@@ -1,0 +1,3 @@
+master_secret,hex,"0102030405060708090a0b0c0d0e0f10"
+recipient_id,ascii,"server"
+sender_id,ascii,"client"
