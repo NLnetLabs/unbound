@@ -296,7 +296,8 @@ addr_to_additional(struct ub_packed_rrset_key* rrset, struct regional* region,
 {
 	if((msg->rep->rrsets[msg->rep->rrset_count] = 
 		packed_rrset_copy_region(rrset, region, now))) {
-		struct packed_rrset_data* d = rrset->entry.data;
+		struct packed_rrset_data* d = msg->rep->rrsets[
+			msg->rep->rrset_count]->entry.data;
 		msg->rep->ar_numrrsets++;
 		msg->rep->rrset_count++;
 		UPDATE_TTL_FROM_RRSET(msg->rep->ttl, d->ttl);
@@ -482,7 +483,8 @@ find_add_ds(struct module_env* env, struct regional* region,
 		/* add it to auth section. This is the second rrset. */
 		if((msg->rep->rrsets[msg->rep->rrset_count] = 
 			packed_rrset_copy_region(rrset, region, now))) {
-			struct packed_rrset_data* d = rrset->entry.data;
+			struct packed_rrset_data* d = msg->rep->rrsets[
+				msg->rep->rrset_count]->entry.data;
 			msg->rep->ns_numrrsets++;
 			msg->rep->rrset_count++;
 			UPDATE_TTL_FROM_RRSET(msg->rep->ttl, d->ttl);
@@ -530,11 +532,12 @@ int
 dns_msg_authadd(struct dns_msg* msg, struct regional* region,
 	struct ub_packed_rrset_key* rrset, time_t now)
 {
-	struct packed_rrset_data* d = rrset->entry.data;
+	struct packed_rrset_data* d;
 	if(!(msg->rep->rrsets[msg->rep->rrset_count++] =
 		packed_rrset_copy_region(rrset, region, now)))
 		return 0;
 	msg->rep->ns_numrrsets++;
+	d = msg->rep->rrsets[msg->rep->rrset_count-1]->entry.data;
 	UPDATE_TTL_FROM_RRSET(msg->rep->ttl, d->ttl);
 	return 1;
 }
@@ -543,11 +546,12 @@ int
 dns_msg_ansadd(struct dns_msg* msg, struct regional* region,
 	struct ub_packed_rrset_key* rrset, time_t now)
 {
-	struct packed_rrset_data* d = rrset->entry.data;
+	struct packed_rrset_data* d;
 	if(!(msg->rep->rrsets[msg->rep->rrset_count++] =
 		packed_rrset_copy_region(rrset, region, now)))
 		return 0;
 	msg->rep->an_numrrsets++;
+	d = msg->rep->rrsets[msg->rep->rrset_count-1]->entry.data;
 	UPDATE_TTL_FROM_RRSET(msg->rep->ttl, d->ttl);
 	return 1;
 }

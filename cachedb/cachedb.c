@@ -171,13 +171,14 @@ testframe_lookup(struct module_env* env, struct cachedb_env* cachedb_env,
 
 static void
 testframe_store(struct module_env* env, struct cachedb_env* cachedb_env,
-	char* key, uint8_t* data, size_t data_len, time_t ATTR_UNUSED(ttl))
+	char* key, uint8_t* data, size_t data_len, time_t ttl)
 {
 	struct testframe_moddata* d = (struct testframe_moddata*)
 		cachedb_env->backend_data;
 	(void)env;
 	lock_basic_lock(&d->lock);
-	verbose(VERB_ALGO, "testframe_store %s (%d bytes)", key, (int)data_len);
+	verbose(VERB_ALGO, "testframe_store %s (%d bytes) ttl %u", key,
+		(int)data_len, (unsigned)ttl);
 
 	/* free old data element (if any) */
 	free(d->stored_key);

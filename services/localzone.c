@@ -445,6 +445,10 @@ rrset_insert_rr(struct regional* region, struct packed_rrset_data* pd,
 			sizeof(*pd->rr_ttl)*(pd->count-1));
 		memcpy(pd->rr_data+1, olddata, 
 			sizeof(*pd->rr_data)*(pd->count-1));
+		if(ttl < pd->ttl)
+			pd->ttl = ttl;
+	} else {
+		pd->ttl = ttl;
 	}
 	pd->rr_len[0] = rdata_len;
 	pd->rr_ttl[0] = ttl;
