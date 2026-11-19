@@ -1277,6 +1277,7 @@ set_recvpktinfo(int s, int family)
  * @param tls_additional_port: list of additional ssl service port numbers.
  * @param https_port: DoH service port number
  * @param proxy_protocol_port: list of PROXYv2 port numbers.
+ * @param allow_proxy_tree: the allow proxy tree.
  * @param reuseport: try to set SO_REUSEPORT if nonNULL and true.
  * 	set to false on exit if reuseport failed due to no kernel support.
  * @param transparent: set IP_TRANSPARENT socket option.
@@ -1299,6 +1300,7 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 	size_t rcv, size_t snd, int ssl_port,
 	struct config_strlist* tls_additional_port, int https_port,
 	struct config_strlist* proxy_protocol_port,
+	struct rbtree_type* allow_proxy_tree,
 	int* reuseport, int transparent, int tcp_mss, int freebind,
 	int http2_nodelay, int use_systemd, int dnscrypt_port, int dscp,
 	int quic_port, int http_notls_downstream, int sock_queue_timeout)
@@ -1345,6 +1347,9 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 		ub_sock = calloc(1, sizeof(struct unbound_socket));
 		if(!ub_sock)
 			return 0;
+		if(is_pp2) {
+			ub_sock->allow_proxy_tree = allow_proxy_tree;
+		}
 		if(is_dnscrypt) {
 			auto_port_type = listen_type_udpancil_dnscrypt;
 			add = "udpancil_dnscrypt";
@@ -1397,6 +1402,9 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 		ub_sock = calloc(1, sizeof(struct unbound_socket));
 		if(!ub_sock)
 			return 0;
+		if(is_pp2) {
+			ub_sock->allow_proxy_tree = allow_proxy_tree;
+		}
 		if(is_dnscrypt) {
 			udp_port_type = listen_type_udp_dnscrypt;
 			add = "dnscrypt";
@@ -1459,6 +1467,9 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 		ub_sock = calloc(1, sizeof(struct unbound_socket));
 		if(!ub_sock)
 			return 0;
+		if(is_pp2) {
+			ub_sock->allow_proxy_tree = allow_proxy_tree;
+		}
 		if(is_ssl) {
 			port_type = listen_type_ssl;
 			add = "tls";
@@ -1916,7 +1927,7 @@ int resolve_interface_names(char** ifs, int num_ifs,
 
 struct listen_port*
 listening_ports_open(struct config_file* cfg, char** ifs, int num_ifs,
-	int* reuseport)
+	int* reuseport, struct rbtree_type* allow_proxy_tree)
 {
 	struct listen_port* list = NULL;
 	struct addrinfo hints;
@@ -1976,6 +1987,7 @@ listening_ports_open(struct config_file* cfg, char** ifs, int num_ifs,
 						cfg->ssl_port, cfg->tls_additional_port,
 						cfg->https_port,
 						cfg->proxy_protocol_port,
+						allow_proxy_tree,
 						reuseport, cfg->ip_transparent,
 						cfg->tcp_mss, cfg->ip_freebind,
 						cfg->http_nodelay, cfg->use_systemd,
@@ -1995,6 +2007,7 @@ listening_ports_open(struct config_file* cfg, char** ifs, int num_ifs,
 						cfg->ssl_port, cfg->tls_additional_port,
 						cfg->https_port,
 						cfg->proxy_protocol_port,
+						allow_proxy_tree,
 						reuseport, cfg->ip_transparent,
 						cfg->tcp_mss, cfg->ip_freebind,
 						cfg->http_nodelay, cfg->use_systemd,
@@ -2016,6 +2029,7 @@ listening_ports_open(struct config_file* cfg, char** ifs, int num_ifs,
 				cfg->so_rcvbuf, cfg->so_sndbuf,
 				cfg->ssl_port, cfg->tls_additional_port,
 				cfg->https_port, cfg->proxy_protocol_port,
+				allow_proxy_tree,
 				reuseport, cfg->ip_transparent,
 				cfg->tcp_mss, cfg->ip_freebind,
 				cfg->http_nodelay, cfg->use_systemd,
@@ -2034,6 +2048,7 @@ listening_ports_open(struct config_file* cfg, char** ifs, int num_ifs,
 				cfg->so_rcvbuf, cfg->so_sndbuf,
 				cfg->ssl_port, cfg->tls_additional_port,
 				cfg->https_port, cfg->proxy_protocol_port,
+				allow_proxy_tree,
 				reuseport, cfg->ip_transparent,
 				cfg->tcp_mss, cfg->ip_freebind,
 				cfg->http_nodelay, cfg->use_systemd,
@@ -2054,6 +2069,7 @@ listening_ports_open(struct config_file* cfg, char** ifs, int num_ifs,
 				cfg->so_rcvbuf, cfg->so_sndbuf,
 				cfg->ssl_port, cfg->tls_additional_port,
 				cfg->https_port, cfg->proxy_protocol_port,
+				allow_proxy_tree,
 				reuseport, cfg->ip_transparent,
 				cfg->tcp_mss, cfg->ip_freebind,
 				cfg->http_nodelay, cfg->use_systemd,
@@ -2072,6 +2088,7 @@ listening_ports_open(struct config_file* cfg, char** ifs, int num_ifs,
 				cfg->so_rcvbuf, cfg->so_sndbuf,
 				cfg->ssl_port, cfg->tls_additional_port,
 				cfg->https_port, cfg->proxy_protocol_port,
+				allow_proxy_tree,
 				reuseport, cfg->ip_transparent,
 				cfg->tcp_mss, cfg->ip_freebind,
 				cfg->http_nodelay, cfg->use_systemd,
@@ -5790,3 +5807,122 @@ size_t doq_table_quic_size_get(struct doq_table* table)
 	return sz;
 }
 #endif /* HAVE_NGTCP2 */
+
+struct rbtree_type* allow_proxy_tree_create(void)
+{
+	struct rbtree_type* allow_proxy_tree = (struct rbtree_type*)
+		calloc(1, sizeof(*allow_proxy_tree));
+	if(!allow_proxy_tree) {
+		log_err("out of memory");
+		return NULL;
+	}
+	addr_tree_init(allow_proxy_tree);
+	return allow_proxy_tree;
+}
+
+/** delete elements from the allow proxy tree */
+static void
+allow_proxy_node_del(rbnode_type* node, void* ATTR_UNUSED(arg))
+{
+	if(!node)
+		return;
+	free(node);
+}
+
+/** clear the allow proxy tree */
+static void
+allow_proxy_tree_clear(struct rbtree_type* allow_proxy_tree)
+{
+	if(!allow_proxy_tree)
+		return;
+	traverse_postorder(allow_proxy_tree, allow_proxy_node_del, NULL);
+	addr_tree_init(allow_proxy_tree);
+}
+
+void allow_proxy_tree_delete(struct rbtree_type* allow_proxy_tree)
+{
+	if(!allow_proxy_tree)
+		return;
+	traverse_postorder(allow_proxy_tree, allow_proxy_node_del, NULL);
+	free(allow_proxy_tree);
+}
+
+/** Insert netblock into allow proxy tree */
+static int
+allow_proxy_tree_insert(struct rbtree_type* allow_proxy_tree, const char* str)
+{
+	struct sockaddr_storage addr;
+	socklen_t addrlen;
+	int net;
+	struct addr_tree_node* node;
+	if(!netblockstrtoaddr(str, UNBOUND_DNS_PORT, &addr, &addrlen, &net)) {
+		log_err("Could not parse allow-proxy: %s", str);
+		return 0;
+	}
+	/* The tree contains the allowed addresses, so no extra data is
+	 * required on top of the addr_tree_node. */
+	node = (struct addr_tree_node*)calloc(1, sizeof(*node));
+	if(!node) {
+		log_err("out of memory");
+		return 0;
+	}
+	node->node.key = node;
+	memcpy(&node->addr, &addr, addrlen);
+	node->addrlen = addrlen;
+	node->net = net;
+	if(!addr_tree_insert(allow_proxy_tree, node, &addr, addrlen, net)) {
+		verbose(VERB_QUERY, "duplicate element in allow-proxy, "
+			"ignored, %s", str);
+		free(node);
+		return 1;
+	}
+	return 1;
+}
+
+/** Apply config to the allow proxy tree. */
+int allow_proxy_tree_apply_cfg(struct rbtree_type* allow_proxy_tree,
+	struct config_file* cfg)
+{
+	struct config_strlist* s;
+	allow_proxy_tree_clear(allow_proxy_tree);
+	for(s=cfg->allow_proxy; s; s=s->next) {
+		if(!allow_proxy_tree_insert(allow_proxy_tree, s->str)) {
+			return 0;
+		}
+	}
+	addr_tree_init_parents(allow_proxy_tree);
+	return 1;
+}
+
+/** Check incoming proxy address, false is rejected. */
+int allow_proxy_check_incoming_proxy(struct unbound_socket* ub_sock,
+	struct sockaddr_storage* addr, socklen_t addrlen)
+{
+	struct addr_tree_node* n;
+	if(!ub_sock)
+		return 1;
+	if(!ub_sock->allow_proxy_tree || ub_sock->allow_proxy_tree->count == 0)
+		return 1; /* no allow-proxy configured, allowed all IP addrs. */
+	n = addr_tree_lookup(ub_sock->allow_proxy_tree, addr, addrlen);
+	if(!n)
+		return 0; /* not in allow-proxy */
+	return 1;
+}
+
+size_t allow_proxy_tree_get_mem(struct rbtree_type* allow_proxy_tree)
+{
+	if(!allow_proxy_tree)
+		return 0;
+	return sizeof(*allow_proxy_tree) +
+		sizeof(struct addr_tree_node)*allow_proxy_tree->count;
+}
+
+void allow_proxy_tree_swap_tree(struct rbtree_type* a, struct rbtree_type* b)
+{
+	rbnode_type* root = a->root;
+	size_t count = a->count;
+	a->root = b->root;
+	a->count = b->count;
+	b->root = root;
+	b->count = count;
+}

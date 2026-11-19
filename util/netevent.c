@@ -926,6 +926,36 @@ static int udp_recv_needs_log(int err)
 	return 1;
 }
 
+/* Check if proxy is allowed */
+static int
+pp2_is_allowed(struct comm_point* c, struct comm_reply* rep)
+{
+	if(!c->socket) return 0; /* should not happen */
+	/* Absence of tree means every IP addr is allowed. */
+	if(!c->socket->allow_proxy_tree ||
+		allow_proxy_check_incoming_proxy(c->socket,
+			&rep->remote_addr, rep->remote_addrlen)) {
+		if(verbosity >= VERB_CLIENT) {
+			char str[128];
+			addr_to_str(&rep->remote_addr, rep->remote_addrlen,
+				str, sizeof(str));
+			verbose(VERB_CLIENT, "proxy_protocol: %s is allowed",
+				str);
+		}
+	} else {
+		if(verbosity >= VERB_ALGO) {
+			char str[128];
+			addr_to_str(&rep->remote_addr, rep->remote_addrlen,
+				str, sizeof(str));
+			verbose(VERB_ALGO, "proxy_protocol: %s is not in "
+				"allow-proxy list", str);
+		}
+		return 0;
+	}
+	return 1;
+}
+
+
 /** Parses the PROXYv2 header from buf and updates the comm_reply struct.
  *  Returns 1 on success, 0 on failure. */
 static int consume_pp2_header(struct sldns_buffer* buf, struct comm_reply* rep,
@@ -1108,10 +1138,13 @@ comm_point_udp_ancil_callback(int fd, short event, void* arg)
 			p_ancil("receive_udp on interface", &rep);
 #endif /* S_SPLINT_S */
 
-		if(rep.c->pp2_enabled && !consume_pp2_header(rep.c->buffer,
-			&rep, 0)) {
-			log_err("proxy_protocol: could not consume PROXYv2 header");
-			return;
+		if(rep.c->pp2_enabled) {
+			if(!pp2_is_allowed(rep.c, &rep))
+				continue;
+			if(!consume_pp2_header(rep.c->buffer, &rep, 0)) {
+				log_err("proxy_protocol: could not consume PROXYv2 header");
+				continue;
+			}
 		}
 		if(!rep.is_proxied) {
 			rep.client_addrlen = rep.remote_addrlen;
@@ -1182,10 +1215,13 @@ comm_point_udp_callback(int fd, short event, void* arg)
 		rep.srctype = 0;
 		rep.is_proxied = 0;
 
-		if(rep.c->pp2_enabled && !consume_pp2_header(rep.c->buffer,
-			&rep, 0)) {
-			log_err("proxy_protocol: could not consume PROXYv2 header");
-			return;
+		if(rep.c->pp2_enabled) {
+			if(!pp2_is_allowed(rep.c, &rep))
+				continue;
+			if(!consume_pp2_header(rep.c->buffer, &rep, 0)) {
+				log_err("proxy_protocol: could not consume PROXYv2 header");
+				continue;
+			}
 		}
 		if(!rep.is_proxied) {
 			rep.client_addrlen = rep.remote_addrlen;
@@ -3845,6 +3881,8 @@ ssl_handle_read(struct comm_point* c)
 			return 0;
 		}
 		sldns_buffer_flip(c->buffer);
+		if(!pp2_is_allowed(c, &c->repinfo))
+			return 0;
 		if(!consume_pp2_header(c->buffer, &c->repinfo, 1)) {
 			log_err_addr("proxy_protocol: could not consume "
 				"PROXYv2 header", "", &c->repinfo.remote_addr,
@@ -4223,6 +4261,8 @@ comm_point_tcp_handle_read(int fd, struct comm_point* c, int short_ok)
 			return 0;
 		}
 		sldns_buffer_flip(c->buffer);
+		if(!pp2_is_allowed(c, &c->repinfo))
+			return 0;
 		if(!consume_pp2_header(c->buffer, &c->repinfo, 1)) {
 			log_err_addr("proxy_protocol: could not consume "
 				"PROXYv2 header", "", &c->repinfo.remote_addr,

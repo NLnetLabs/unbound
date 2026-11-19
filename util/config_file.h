@@ -125,6 +125,8 @@ struct config_file {
 	int sock_queue_timeout;
 	/** proxy protocol ports */
 	struct config_strlist* proxy_protocol_port;
+	/** the allow proxy list that are allowed proxy-protocol use */
+	struct config_strlist* allow_proxy;
 
 	/** private key file for dnstcp-ssl service (enabled if not NULL) */
 	char* ssl_service_key;

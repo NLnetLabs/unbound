@@ -211,6 +211,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_INTERFACE_ACTION VAR_INTERFACE_VIEW VAR_INTERFACE_TAG
 %token VAR_INTERFACE_TAG_ACTION VAR_INTERFACE_TAG_DATA
 %token VAR_QUIC_PORT VAR_QUIC_SIZE
+%token VAR_ALLOW_PROXY
 %token VAR_PROXY_PROTOCOL_PORT VAR_STATISTICS_INHIBIT_ZERO
 %token VAR_HARDEN_UNKNOWN_ADDITIONAL VAR_DISABLE_EDNS_DO VAR_CACHEDB_NO_STORE
 %token VAR_LOG_DESTADDR VAR_CACHEDB_CHECK_WHEN_SERVE_EXPIRED
@@ -358,7 +359,7 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_tcp_reuse_timeout | server_tcp_auth_query_timeout |
 	server_quic_port | server_quic_size |
 	server_interface_automatic_ports | server_ede |
-	server_dns_error_reporting |
+	server_dns_error_reporting | server_allow_proxy |
 	server_proxy_protocol_port | server_statistics_inhibit_zero |
 	server_harden_unknown_additional | server_disable_edns_do |
 	server_log_destaddr | server_cookie_secret_file |
@@ -3117,6 +3118,13 @@ server_proxy_protocol_port: VAR_PROXY_PROTOCOL_PORT STRING_ARG
 	{
 		OUTYY(("P(server_proxy_protocol_port:%s)\n", $2));
 		if(!cfg_strlist_insert(&cfg_parser->cfg->proxy_protocol_port, $2))
+			yyerror("out of memory");
+	}
+	;
+server_allow_proxy: VAR_ALLOW_PROXY STRING_ARG
+	{
+		OUTYY(("P(server_allow_proxy:%s)\n", $2));
+		if(!cfg_strlist_insert(&cfg_parser->cfg->allow_proxy, $2))
 			yyerror("out of memory");
 	}
 	;

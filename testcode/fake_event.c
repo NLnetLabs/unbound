@@ -1459,7 +1459,8 @@ int resolve_interface_names(char** ATTR_UNUSED(ifs), int ATTR_UNUSED(num_ifs),
 
 struct listen_port* listening_ports_open(struct config_file* ATTR_UNUSED(cfg),
 	char** ATTR_UNUSED(ifs), int ATTR_UNUSED(num_ifs),
-	int* ATTR_UNUSED(reuseport))
+	int* ATTR_UNUSED(reuseport),
+	struct rbtree_type* ATTR_UNUSED(allow_proxy_tree))
 {
 	return calloc(1, sizeof(struct listen_port));
 }
@@ -2103,6 +2104,27 @@ int fast_reload_client_callback(struct comm_point* ATTR_UNUSED(c),
 {
 	log_assert(0);
 	return 0;
+}
+
+struct rbtree_type* allow_proxy_tree_create(void)
+{
+	return calloc(1, sizeof(struct rbtree_type));
+}
+
+void allow_proxy_tree_delete(struct rbtree_type* allow_proxy_tree)
+{
+	if(!allow_proxy_tree)
+		return;
+	free(allow_proxy_tree);
+}
+
+/** Apply config to the allow proxy tree. */
+int allow_proxy_tree_apply_cfg(
+	struct rbtree_type* ATTR_UNUSED(allow_proxy_tree),
+	struct config_file* ATTR_UNUSED(cfg))
+{
+	/* nothing */
+	return 1;
 }
 
 /*********** End of Dummy routines ***********/

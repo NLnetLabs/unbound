@@ -63,6 +63,7 @@ struct cookie_secrets;
 struct fast_reload_thread;
 struct fast_reload_printq;
 struct shared_ports;
+struct rbtree_type;
 
 #include "dnstap/dnstap_config.h"
 #ifdef USE_DNSTAP
@@ -148,6 +149,8 @@ struct daemon {
 	struct acl_list* acl_interface;
 	/** TCP connection limit, limit connections from client IPs */
 	struct tcl_list* tcl;
+	/** allow proxy addr tree, allowed addresses are in the tree. */
+	struct rbtree_type* allow_proxy_tree;
 	/** local authority zones */
 	struct local_zones* local_zones;
 	/** last time of statistics printout */

@@ -4813,6 +4813,8 @@ struct fast_reload_construct {
 	struct acl_list* acl_interface;
 	/** construct for tcp connection limit */
 	struct tcl_list* tcl;
+	/** construct for allow proxy tree */
+	struct rbtree_type* allow_proxy_tree;
 	/** construct for local zones */
 	struct local_zones* local_zones;
 	/** if there is response ip configuration in use */
@@ -5231,6 +5233,9 @@ fr_check_nopause_compat_cfg(struct fast_reload_thread* fr, struct config_file* n
 	FR_CHECK_CHANGED_CFG_STR2LIST("ratelimit-below-domain", ratelimit_below_domain, changed_str);
 	FR_CHECK_CHANGED_CFG_STR2LIST("ratelimit-for-domain", ratelimit_for_domain, changed_str);
 
+	/* Check outside network */
+	FR_CHECK_CHANGED_CFG_STRLIST("allow-proxy", allow_proxy, changed_str);
+
 	/* Check for dnstap. */
 	FR_CHECK_CHANGED_CFG("dnstap-send-identity", dnstap_send_identity, changed_str);
 	FR_CHECK_CHANGED_CFG("dnstap-send-version", dnstap_send_version, changed_str);
@@ -5265,6 +5270,7 @@ fr_construct_clear(struct fast_reload_construct* ct)
 	acl_list_delete(ct->acl);
 	acl_list_delete(ct->acl_interface);
 	tcl_list_delete(ct->tcl);
+	allow_proxy_tree_delete(ct->allow_proxy_tree);
 	edns_strings_delete(ct->edns_strings);
 	anchors_delete(ct->anchors);
 	views_delete(ct->views);
@@ -5415,6 +5421,7 @@ config_file_getmem(struct config_file* cfg)
 	size_t m = 0;
 	m += sizeof(*cfg);
 	m += getmem_config_strlist(cfg->proxy_protocol_port);
+	m += getmem_config_strlist(cfg->allow_proxy);
 	m += getmem_str(cfg->ssl_service_key);
 	m += getmem_str(cfg->ssl_service_pem);
 	m += getmem_str(cfg->tls_cert_bundle);
@@ -5550,6 +5557,7 @@ fr_printmem(struct fast_reload_thread* fr,
 	mem += acl_list_get_mem(ct->acl);
 	mem += acl_list_get_mem(ct->acl_interface);
 	mem += tcl_list_get_mem(ct->tcl);
+	mem += allow_proxy_tree_get_mem(ct->allow_proxy_tree);
 	mem += edns_strings_get_mem(ct->edns_strings);
 	mem += anchors_get_mem(ct->anchors);
 	mem += sizeof(*ct->oldcfg);
@@ -5980,6 +5988,17 @@ fr_construct_from_config(struct fast_reload_thread* fr,
 	if(fr_poll_for_quit(fr))
 		return 1;
 
+	if(!(ct->allow_proxy_tree = allow_proxy_tree_create())) {
+		fr_construct_clear(ct);
+		return 0;
+	}
+	if(!allow_proxy_tree_apply_cfg(ct->allow_proxy_tree, newcfg)) {
+		fr_construct_clear(ct);
+		return 0;
+	}
+	if(fr_poll_for_quit(fr))
+		return 1;
+
 	if(!(ct->auth_zones = auth_zones_create())) {
 		fr_construct_clear(ct);
 		return 0;
@@ -6291,6 +6310,7 @@ fr_atomic_copy_cfg(struct config_file* oldcfg, struct config_file* cfg,
 	COPY_VAR_int(tcp_keepalive_timeout);
 	COPY_VAR_int(sock_queue_timeout);
 	COPY_VAR_ptr(proxy_protocol_port);
+	COPY_VAR_ptr(allow_proxy);
 	COPY_VAR_ptr(ssl_service_key);
 	COPY_VAR_ptr(ssl_service_pem);
 	COPY_VAR_int(ssl_port);
@@ -6847,6 +6867,8 @@ fr_reload_config(struct fast_reload_thread* fr, struct config_file* newcfg,
 	acl_list_swap_tree(daemon->acl, ct->acl);
 	acl_list_swap_tree(daemon->acl_interface, ct->acl_interface);
 	tcl_list_swap_tree(daemon->tcl, ct->tcl);
+	allow_proxy_tree_swap_tree(daemon->allow_proxy_tree,
+		ct->allow_proxy_tree);
 	local_zones_swap_tree(daemon->local_zones, ct->local_zones);
 	respip_set_swap_tree(env->respip_set, ct->respip_set);
 	daemon->use_response_ip = ct->use_response_ip;

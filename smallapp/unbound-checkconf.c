@@ -571,6 +571,23 @@ tcpconnlimitchecks(struct config_file* cfg)
 	}
 }
 
+/** check allow-proxy ips */
+static void
+allowproxychecks(struct config_file* cfg)
+{
+	int d;
+	struct sockaddr_storage a;
+	socklen_t alen;
+	struct config_strlist* s;
+	for(s=cfg->allow_proxy; s; s = s->next) {
+		if(!netblockstrtoaddr(s->str, UNBOUND_DNS_PORT, &a, &alen,
+			&d)) {
+			fatal_exit("cannot parse allow-proxy address %s",
+				s->str);
+		}
+	}
+}
+
 /** true if fname is a file */
 static int
 is_file(const char* fname)
@@ -858,6 +875,7 @@ morechecks(struct config_file* cfg)
 	ifautomaticportschecks(cfg->if_automatic_ports);
 	aclchecks(cfg);
 	tcpconnlimitchecks(cfg);
+	allowproxychecks(cfg);
 
 	if(cfg->verbosity < 0)
 		fatal_exit("verbosity value < 0");

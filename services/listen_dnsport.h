@@ -130,6 +130,8 @@ struct unbound_socket {
 	int fam;
 	/** ACL on the socket (listening interface) */
 	struct acl_addr* acl;
+	/** allow proxy tree, addr tree if the IP is allowed proxy-protocol. */
+	struct rbtree_type* allow_proxy_tree;
 };
 
 /**
@@ -161,10 +163,12 @@ struct listen_port {
  * @param reuseport: set to true if you want reuseport, or NULL to not have it,
  *   set to false on exit if reuseport failed to apply (because of no
  *   kernel support).
+ * @param allow_proxy_tree: the allow-proxy tree, for reference in pp2 sockets.
  * @return: linked list of ports or NULL on error.
  */
 struct listen_port* listening_ports_open(struct config_file* cfg,
-	char** ifs, int num_ifs, int* reuseport);
+	char** ifs, int num_ifs, int* reuseport,
+	struct rbtree_type* allow_proxy_tree);
 
 /**
  * Close and delete the (list of) listening ports.
@@ -896,5 +900,25 @@ void doq_client_event_cb(int fd, short event, void* arg);
 
 /** timer event callback for testcode/doqclient */
 void doq_client_timer_cb(int fd, short event, void* arg);
+
+/** Create allow proxy tree */
+struct rbtree_type* allow_proxy_tree_create(void);
+
+/** Delete allow proxy tree */
+void allow_proxy_tree_delete(struct rbtree_type* allow_proxy_tree);
+
+/** Apply config to the allow proxy tree. */
+int allow_proxy_tree_apply_cfg(struct rbtree_type* allow_proxy_tree,
+	struct config_file* cfg);
+
+/** Check incoming proxy address, false is rejected. */
+int allow_proxy_check_incoming_proxy(struct unbound_socket* ub_sock,
+	struct sockaddr_storage* addr, socklen_t addrlen);
+
+/** Get memory usage of allow proxy tree */
+size_t allow_proxy_tree_get_mem(struct rbtree_type* allow_proxy_tree);
+
+/** Swap tree for allow proxy tree */
+void allow_proxy_tree_swap_tree(struct rbtree_type* a, struct rbtree_type* b);
 
 #endif /* LISTEN_DNSPORT_H */

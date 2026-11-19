@@ -605,6 +605,7 @@ nsid{COLON}			{ YDVAR(1, VAR_NSID ) }
 ede{COLON}			{ YDVAR(1, VAR_EDE ) }
 dns-error-reporting{COLON}	{ YDVAR(1, VAR_DNS_ERROR_REPORTING ) }
 proxy-protocol-port{COLON}	{ YDVAR(1, VAR_PROXY_PROTOCOL_PORT) }
+allow-proxy{COLON}		{ YDVAR(1, VAR_ALLOW_PROXY) }
 iter-scrub-ns{COLON}		{ YDVAR(1, VAR_ITER_SCRUB_NS) }
 iter-scrub-cname{COLON}		{ YDVAR(1, VAR_ITER_SCRUB_CNAME) }
 iter-scrub-rrsig{COLON}		{ YDVAR(1, VAR_ITER_SCRUB_RRSIG) }

@@ -1060,6 +1060,10 @@ server:
 	# expect PROXYv2. For UDP and TCP/TLS interfaces.
 	# proxy-protocol-port: portno for each of the port numbers.
 
+	# Allowed proxy senders. Without an allow-proxy option, any IP address
+	# is allowed. This is the outer, proxy source address.
+	# allow-proxy: 192.0.2.0/24
+
 	# DNS64 prefix. Must be specified when DNS64 is use.
 	# Enable dns64 in module-config.  Used to synthesize IPv6 from IPv4.
 	# dns64-prefix: 64:ff9b::0/96

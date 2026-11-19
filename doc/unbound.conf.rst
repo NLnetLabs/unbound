@@ -1296,11 +1296,26 @@ These options are part of the ``server:`` section.
     and will be used where applicable for logging, ACL, DNSTAP, RPZ and IP
     ratelimiting.
 
+    It is a good idea to limit the allowed users of the proxy protocol,
+    with :ref:`allow-proxy<unbound.conf.allow-proxy>` so that disallowed
+    clients can not open a major security breach by impersonating addresses.
+
     PROXYv2 is supported for UDP and TCP/TLS listening interfaces.
 
     There is no support for PROXYv2 on a DoH, DoQ or DNSCrypt listening interface.
 
     Can list multiple, each on a new statement.
+
+
+@@UAHL@unbound.conf@allow-proxy@@: *<IP netblock>*
+    List the netblocks that are allowed to send proxy-protocol headers.
+    Without the option, any IP address is allowed, because that is backwards
+    compatible.
+
+    It can be given multiple times to allow multiple netblocks, or
+    with /32 or /128 specific addresses can be listed.
+    The restriction for proxy senders is advised, because otherwise a client
+    could make use of a wrong address for its query.
 
 
 @@UAHL@unbound.conf@quic-port@@: *<number>*

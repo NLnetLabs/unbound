@@ -913,6 +913,7 @@ int config_set_option(struct config_file* cfg, const char* opt,
 	else S_YNO("pad-queries:", pad_queries)
 	else S_SIZET_NONZERO("pad-queries-block-size:", pad_queries_block_size)
 	else S_STRLIST("proxy-protocol-port:", proxy_protocol_port)
+	else S_STRLIST("allow-proxy:", allow_proxy)
 #ifdef USE_IPSECMOD
 	else S_YNO("ipsecmod-enabled:", ipsecmod_enabled)
 	else S_YNO("ipsecmod-ignore-bogus:", ipsecmod_ignore_bogus)
@@ -1429,6 +1430,7 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_DEC(opt, "pad-queries-block-size", pad_queries_block_size)
 	else O_LS2(opt, "edns-client-strings", edns_client_strings)
 	else O_LST(opt, "proxy-protocol-port", proxy_protocol_port)
+	else O_LST(opt, "allow-proxy", allow_proxy)
 #ifdef USE_IPSECMOD
 	else O_YNO(opt, "ipsecmod-enabled", ipsecmod_enabled)
 	else O_YNO(opt, "ipsecmod-ignore-bogus", ipsecmod_ignore_bogus)
@@ -1873,6 +1875,7 @@ config_delete(struct config_file* cfg)
 	config_delstrlist(cfg->dynlib_file);
 	config_deldblstrlist(cfg->edns_client_strings);
 	config_delstrlist(cfg->proxy_protocol_port);
+	config_delstrlist(cfg->allow_proxy);
 #ifdef USE_IPSECMOD
 	free(cfg->ipsecmod_hook);
 	config_delstrlist(cfg->ipsecmod_whitelist);

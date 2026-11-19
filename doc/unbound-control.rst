@@ -259,7 +259,8 @@ There are several commands that the server understands.
     :ref:`wait-limit-netblock<unbound.conf.wait-limit-netblock>`,
     :ref:`wait-limit-cookie-netblock<unbound.conf.wait-limit-cookie-netblock>`,
     :ref:`ratelimit-below-domain<unbound.conf.ratelimit-below-domain>`,
-    :ref:`ratelimit-for-domain<unbound.conf.ratelimit-for-domain>`.
+    :ref:`ratelimit-for-domain<unbound.conf.ratelimit-for-domain>`,
+    :ref:`allow-proxy<unbound.conf.allow-proxy>`.
 
     The ``+d`` option makes the reload drop queries that the worker threads are
     working on.

@@ -567,6 +567,16 @@ daemon_init(void)
 		free(daemon);
 		return NULL;
 	}
+	daemon->allow_proxy_tree = allow_proxy_tree_create();
+	if(!daemon->allow_proxy_tree) {
+		acl_list_delete(daemon->acl_interface);
+		acl_list_delete(daemon->acl);
+		tcl_list_delete(daemon->tcl);
+		edns_known_options_delete(daemon->env);
+		free(daemon->env);
+		free(daemon);
+		return NULL;
+	}
 	listen_setup_locks();
 	if(gettimeofday(&daemon->time_boot, NULL) < 0)
 		log_err("gettimeofday: %s", strerror(errno));
@@ -575,6 +585,7 @@ daemon_init(void)
 		acl_list_delete(daemon->acl_interface);
 		acl_list_delete(daemon->acl);
 		tcl_list_delete(daemon->tcl);
+		allow_proxy_tree_delete(daemon->allow_proxy_tree);
 		edns_known_options_delete(daemon->env);
 		free(daemon->env);
 		free(daemon);
@@ -585,6 +596,7 @@ daemon_init(void)
 		acl_list_delete(daemon->acl_interface);
 		acl_list_delete(daemon->acl);
 		tcl_list_delete(daemon->tcl);
+		allow_proxy_tree_delete(daemon->allow_proxy_tree);
 		edns_known_options_delete(daemon->env);
 		free(daemon->env);
 		free(daemon);
@@ -642,7 +654,7 @@ daemon_open_shared_ports(struct daemon* daemon)
 #endif
 		/* try to use reuseport */
 		p0 = listening_ports_open(daemon->cfg, resif, num_resif,
-			&daemon->reuseport);
+			&daemon->reuseport, daemon->allow_proxy_tree);
 		if(!p0) {
 			listening_ports_free(p0);
 			config_del_strarray(resif, num_resif);
@@ -675,7 +687,8 @@ daemon_open_shared_ports(struct daemon* daemon)
 				if(!(daemon->ports[i]=
 					listening_ports_open(daemon->cfg,
 						resif, num_resif,
-						&daemon->reuseport))
+						&daemon->reuseport,
+						daemon->allow_proxy_tree))
 					|| !daemon->reuseport ) {
 					for(i=0; i<daemon->num_ports; i++)
 						listening_ports_free(daemon->ports[i]);
@@ -1031,6 +1044,8 @@ daemon_fork(struct daemon* daemon)
 		fatal_exit("Could not setup interface control list");
 	if(!tcl_list_apply_cfg(daemon->tcl, daemon->cfg))
 		fatal_exit("Could not setup TCP connection limits");
+	if(!allow_proxy_tree_apply_cfg(daemon->allow_proxy_tree, daemon->cfg))
+		fatal_exit("Could not setup allow-proxy list");
 	if(daemon->cfg->dnscrypt) {
 #ifdef USE_DNSCRYPT
 		daemon->dnscenv = dnsc_create();
@@ -1267,6 +1282,7 @@ daemon_delete(struct daemon* daemon)
 	acl_list_delete(daemon->acl);
 	acl_list_delete(daemon->acl_interface);
 	tcl_list_delete(daemon->tcl);
+	allow_proxy_tree_delete(daemon->allow_proxy_tree);
 	cookie_secrets_delete(daemon->cookie_secrets);
 	listen_desetup_locks();
 	free(daemon->chroot);
