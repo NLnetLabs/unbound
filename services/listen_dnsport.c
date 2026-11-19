@@ -2217,6 +2217,9 @@ void tcp_req_info_clear(struct tcp_req_info* req)
 	req->num_open_req = 0;
 
 	/* free pending writable result packets */
+	if(req->num_done_req != 0)
+		verbose(VERB_CLIENT, "tcp channel closed with %d pending "
+			"replies remaining", req->num_done_req);
 	item = req->done_req_list;
 	while(item) {
 		nitem = item->next;

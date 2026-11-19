@@ -7,6 +7,9 @@
 	  on inactivity. This stops the dnstap log stream from hanging
 	  on a stalled collector. Thanks to Qifan Zhang from Palo
 	  Alto Networks for the report.
+	- Fix to add log if a tcp channel closes with unwritten
+	  replies on it. It logs at the client info verbosity level.
+	  Thanks to Qifan Zhang from Palo Alto Networks for the report.
 
 18 November 2026: Wouter
 	- For #1558: Fix that localdata rrset ttl is correct. Fix that
