@@ -3,6 +3,10 @@
 	  allowed to use PROXYv2. This limits the proxy access to
 	  only the allowed netblocks. Thanks to Qifan Zhang from
 	  Palo Alto Networks for the report.
+	- Fix dnstap bidirectional stream handshake to have a timeout
+	  on inactivity. This stops the dnstap log stream from hanging
+	  on a stalled collector. Thanks to Qifan Zhang from Palo
+	  Alto Networks for the report.
 
 18 November 2026: Wouter
 	- For #1558: Fix that localdata rrset ttl is correct. Fix that

@@ -68,6 +68,9 @@
 #define DTIO_RECONNECT_TIMEOUT_MAX 1000
 /** the msec to wait for reconnect slow, to stop busy spinning on reconnect */
 #define DTIO_RECONNECT_TIMEOUT_SLOW 1000
+/** the msec to wait for an ACCEPT frame during bidirectional handshake with
+ * the collector. This is sent in response to a READY frame. */
+#define DTIO_HANDSHAKE_TIMEOUT 5000
 /** number of messages before wakeup of thread */
 #define DTIO_MSG_FOR_WAKEUP 32
 
@@ -581,29 +584,32 @@ static int dtio_find_msg(struct dt_io_thread* dtio)
 	return 0;
 }
 
-/** callback for the dnstap reconnect, to start reconnecting to output */
-void dtio_reconnect_timeout_cb(int ATTR_UNUSED(fd),
-	short ATTR_UNUSED(bits), void* arg)
+/** attempt to reconnect to the output, after a timeout */
+static void dtio_reconnect_enable_timeout(struct dt_io_thread* dtio, int msec)
 {
-	struct dt_io_thread* dtio = (struct dt_io_thread*)arg;
-	dtio->reconnect_is_added = 0;
-	verbose(VERB_ALGO, "dnstap io: reconnect timer");
+	struct timeval tv;
+	if(dtio->want_to_exit) return;
+	if(dtio->reconnect_is_added)
+		return; /* already done */
 
-	dtio_open_output(dtio);
-	if(dtio->event) {
-		if(!dtio_add_output_event_write(dtio))
-			return;
-		/* nothing wrong so far, wait on the output event */
+	verbose(VERB_ALGO, "dnstap io: set reconnect attempt after %d msec",
+		msec);
+
+	/* setup wait timer */
+	memset(&tv, 0, sizeof(tv));
+	tv.tv_sec = msec/1000;
+	tv.tv_usec = (msec%1000)*1000;
+	if(ub_timer_add(dtio->reconnect_timer, dtio->event_base,
+		&dtio_reconnect_timeout_cb, dtio, &tv) != 0) {
+		log_err("dnstap io: could not reconnect ev timer add");
 		return;
 	}
-	/* exponential backoff and retry on timer */
-	dtio_reconnect_enable(dtio);
+	dtio->reconnect_is_added = 1;
 }
 
 /** attempt to reconnect to the output, after a timeout */
 static void dtio_reconnect_enable(struct dt_io_thread* dtio)
 {
-	struct timeval tv;
 	int msec;
 	if(dtio->want_to_exit) return;
 	if(dtio->reconnect_is_added)
@@ -618,19 +624,7 @@ static void dtio_reconnect_enable(struct dt_io_thread* dtio)
 		if(dtio->reconnect_timeout > DTIO_RECONNECT_TIMEOUT_MAX)
 			dtio->reconnect_timeout = DTIO_RECONNECT_TIMEOUT_MAX;
 	}
-	verbose(VERB_ALGO, "dnstap io: set reconnect attempt after %d msec",
-		msec);
-
-	/* setup wait timer */
-	memset(&tv, 0, sizeof(tv));
-	tv.tv_sec = msec/1000;
-	tv.tv_usec = (msec%1000)*1000;
-	if(ub_timer_add(dtio->reconnect_timer, dtio->event_base,
-		&dtio_reconnect_timeout_cb, dtio, &tv) != 0) {
-		log_err("dnstap io: could not reconnect ev timer add");
-		return;
-	}
-	dtio->reconnect_is_added = 1;
+	dtio_reconnect_enable_timeout(dtio, msec);
 }
 
 /** remove dtio reconnect timer */
@@ -656,6 +650,14 @@ static void dtio_reconnect_slow(struct dt_io_thread* dtio, int msec)
 	dtio_reconnect_del(dtio);
 	dtio->reconnect_timeout = msec;
 	dtio_reconnect_enable(dtio);
+}
+
+/** reconnect during handshake, we wait for a bit, and reconnect on timeout */
+static void dtio_reconnect_handshake(struct dt_io_thread* dtio, int msec)
+{
+	dtio_reconnect_del(dtio);
+	dtio->reconnect_timeout = msec;
+	dtio_reconnect_enable_timeout(dtio, msec);
 }
 
 /** delete the current message in the dtio, and reset counters */
@@ -726,6 +728,40 @@ static void dtio_close_output(struct dt_io_thread* dtio)
 	dtio->accept_frame_received = 0;
 	dtio_read_frame_free(&dtio->read_frame);
 
+	dtio_reconnect_enable(dtio);
+}
+
+/** callback for the dnstap reconnect, to start reconnecting to output */
+void dtio_reconnect_timeout_cb(int ATTR_UNUSED(fd),
+	short ATTR_UNUSED(bits), void* arg)
+{
+	struct dt_io_thread* dtio = (struct dt_io_thread*)arg;
+	dtio->reconnect_is_added = 0;
+	verbose(VERB_ALGO, "dnstap io: reconnect timer");
+
+	/* The timer is also used during handshake. For a bidirectional
+	 * connection, the handshake waits for ACCEPT after a READY is sent.
+	 * If this times out, the collector is stalled; drop it and take
+	 * the normal close path. */
+	if(dtio->event && dtio->is_bidirectional && dtio->ready_frame_sent &&
+		!dtio->accept_frame_received) {
+		log_err("dnstap io: collector did not send ACCEPT control "
+			"frame within %d msec of READY, reconnecting",
+			DTIO_HANDSHAKE_TIMEOUT);
+		dtio_del_output_event(dtio);
+		dtio_reconnect_slow(dtio, DTIO_RECONNECT_TIMEOUT_SLOW);
+		dtio_close_output(dtio);
+		return;
+	}
+
+	dtio_open_output(dtio);
+	if(dtio->event) {
+		if(!dtio_add_output_event_write(dtio))
+			return;
+		/* nothing wrong so far, wait on the output event */
+		return;
+	}
+	/* exponential backoff and retry on timer */
 	dtio_reconnect_enable(dtio);
 }
 
@@ -1210,6 +1246,8 @@ static int dtio_read_accept_frame(struct dt_io_thread* dtio)
 					goto close_connection;
 				}
 				dtio->accept_frame_received = 1;
+				/* clear the bidirectional handshake timeout */
+				dtio_reconnect_clear(dtio);
 				if(!dtio_add_output_event_write(dtio))
 					goto close_connection;
 				return 1;
@@ -1592,6 +1630,9 @@ void dtio_output_cb(int ATTR_UNUSED(fd), short bits, void* arg)
 		if(dtio->is_bidirectional && !dtio->ready_frame_sent) {
 			dtio->ready_frame_sent = 1;
 			(void)dtio_add_output_event_read(dtio);
+			/* Set timeout on the ACCEPT response during the
+			 * bidirectional stream handshake. */
+			dtio_reconnect_handshake(dtio, DTIO_HANDSHAKE_TIMEOUT);
 			break;
 		}
 	}
