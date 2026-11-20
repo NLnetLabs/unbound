@@ -1706,8 +1706,11 @@ int
 local_zones_zone_answer(struct local_zone* z, struct module_env* env,
 	struct query_info* qinfo, struct edns_data* edns,
 	struct comm_reply* repinfo, sldns_buffer* buf, struct regional* temp,
-	struct local_data* ld, enum localzone_type lz_type)
+	struct local_data* ld, enum localzone_type lz_type,
+	const char* ede_txt)
 {
+	if(!ede_txt)
+		ede_txt = "blocked by local-zone policy";
 	if(lz_type == local_zone_deny ||
 		lz_type == local_zone_always_deny ||
 		lz_type == local_zone_inform_deny) {
@@ -1719,7 +1722,7 @@ local_zones_zone_answer(struct local_zone* z, struct module_env* env,
 		|| lz_type == local_zone_always_refuse) {
 		local_error_encode(qinfo, env, edns, repinfo, buf, temp,
 			LDNS_RCODE_REFUSED, (LDNS_RCODE_REFUSED|BIT_AA),
-			LDNS_EDE_NONE, NULL);
+			LDNS_EDE_BLOCKED, ede_txt);
 		return 1;
 	} else if(lz_type == local_zone_static ||
 		lz_type == local_zone_redirect ||
@@ -1745,7 +1748,7 @@ local_zones_zone_answer(struct local_zone* z, struct module_env* env,
 			return local_encode(qinfo, env, edns, repinfo, buf, temp,
 				z->soa_negative, 0, rcode);
 		local_error_encode(qinfo, env, edns, repinfo, buf, temp,
-			rcode, (rcode|BIT_AA), LDNS_EDE_NONE, NULL);
+			rcode, (rcode|BIT_AA), LDNS_EDE_BLOCKED, ede_txt);
 		return 1;
 	} else if(lz_type == local_zone_typetransparent
 		|| lz_type == local_zone_always_transparent) {
@@ -1757,7 +1760,7 @@ local_zones_zone_answer(struct local_zone* z, struct module_env* env,
 		if(qinfo->qtype == LDNS_RR_TYPE_A) {
 			local_error_encode(qinfo, env, edns, repinfo, buf, temp,
 				LDNS_RCODE_NOERROR, (LDNS_RCODE_NOERROR|BIT_AA),
-				LDNS_EDE_NONE, NULL);
+				LDNS_EDE_BLOCKED, ede_txt);
 				return 1;
 		}
 
@@ -1768,7 +1771,7 @@ local_zones_zone_answer(struct local_zone* z, struct module_env* env,
 		if(qinfo->qtype == LDNS_RR_TYPE_AAAA) {
 			local_error_encode(qinfo, env, edns, repinfo, buf, temp,
 				LDNS_RCODE_NOERROR, (LDNS_RCODE_NOERROR|BIT_AA),
-				LDNS_EDE_NONE, NULL);
+				LDNS_EDE_BLOCKED, ede_txt);
 				return 1;
 		}
 
@@ -2003,7 +2006,8 @@ local_zones_answer(struct local_zones* zones, struct module_env* env,
 		 * a local alias. */
 		return !qinfo->local_alias;
 	}
-	r = local_zones_zone_answer(z, env, qinfo, edns, repinfo, buf, temp, ld, lzt);
+	r = local_zones_zone_answer(z, env, qinfo, edns, repinfo, buf, temp, ld, lzt,
+		NULL);
 	lock_rw_unlock(&z->lock);
 	return r && !qinfo->local_alias; /* see above */
 }
