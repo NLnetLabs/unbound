@@ -474,6 +474,18 @@ struct iter_qstate {
 	int minimise_count;
 
 	/**
+	 * True if the outbound query just sent from MINIMISE_STATE is the
+	 * terminal-label type-hiding "A" probe (qinfo_out.qname already
+	 * equals the full target qname, but qtype is not the real requested
+	 * qtype). If that probe fails (non-NOERROR response), the
+	 * best-effort minimisation fallback restores this query target's
+	 * attempt budget before retrying with the real qtype -- otherwise a
+	 * single-nameserver zone can be left with no usable target at all
+	 * for the real query, causing an avoidable SERVFAIL.
+	 * See GitHub issue #1500. */
+	int minimise_terminal_probe;
+
+	/**
 	 * Count number of time-outs. Used to prevent resolving failures when
 	 * the QNAME minimisation QTYPE is blocked. Used to determine if
 	 * capsforid fallback should be started.*/
