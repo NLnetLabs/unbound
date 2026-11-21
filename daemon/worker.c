@@ -59,6 +59,7 @@
 #include "services/cache/infra.h"
 #include "services/cache/dns.h"
 #include "services/authzone.h"
+#include "services/authload.h"
 #include "services/mesh.h"
 #include "services/localzone.h"
 #include "services/rpz.h"
@@ -2262,6 +2263,7 @@ worker_create(struct daemon* daemon, int id)
 		free(worker);
 		return NULL;
 	}
+	rbtree_init(&worker->auth_load_tree, auth_load_tree_cmp);
 	explicit_bzero(&seed, sizeof(seed));
 	return worker;
 }

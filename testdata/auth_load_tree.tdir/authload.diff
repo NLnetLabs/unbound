@@ -1,0 +1,18 @@
+diff --git a/services/authload.c b/services/authload.c
+index 314d1d40b..b0c7336ea 100644
+--- a/services/authload.c
++++ b/services/authload.c
+@@ -709,6 +709,13 @@ auth_load_thread_process(struct auth_load_thread* thr)
+ 	if(gettimeofday(&start, NULL) < 0)
+ 		log_err("gettimeofday: %s", strerror(errno));
+ 
++	if(1) {
++		struct timespec dur;
++		dur.tv_sec = 1;
++		dur.tv_nsec = 500ULL * 1000000ULL;
++		nanosleep(&dur, NULL);
++	}
++
+ 	/* apply data */
+ 	if(task->task_type == AUTH_LOAD_TASK_ZONEFILE_WRITE) {
+ 		if(!auth_load_process_write(thr))

@@ -86,6 +86,7 @@
 #include "services/view.h"
 #include "services/modstack.h"
 #include "services/authzone.h"
+#include "services/authload.h"
 #include "util/module.h"
 #include "util/random.h"
 #include "util/tube.h"
@@ -597,6 +598,17 @@ daemon_init(void)
 		acl_list_delete(daemon->acl);
 		tcl_list_delete(daemon->tcl);
 		allow_proxy_tree_delete(daemon->allow_proxy_tree);
+		edns_known_options_delete(daemon->env);
+		free(daemon->env);
+		free(daemon);
+		return NULL;
+	}
+	if(!(daemon->auth_load_info = auth_load_info_create())) {
+		edns_strings_delete(daemon->env->edns_strings);
+		auth_zones_delete(daemon->env->auth_zones);
+		acl_list_delete(daemon->acl_interface);
+		acl_list_delete(daemon->acl);
+		tcl_list_delete(daemon->tcl);
 		edns_known_options_delete(daemon->env);
 		free(daemon->env);
 		free(daemon);
@@ -1179,6 +1191,7 @@ daemon_fork(struct daemon* daemon)
 
 	/* we exited! a signal happened! Stop other threads */
 	daemon_stop_others(daemon);
+	auth_load_stop_threads(daemon);
 
 	/* Shutdown SHM */
 	shm_main_shutdown(daemon);
@@ -1219,6 +1232,7 @@ daemon_cleanup(struct daemon* daemon)
 	daemon->env->views = NULL;
 	if(daemon->env->auth_zones)
 		auth_zones_cleanup(daemon->env->auth_zones);
+	auth_load_info_cleanup(daemon->auth_load_info);
 	/* key cache is cleared by module deinit during next daemon_fork() */
 	daemon_remote_clear(daemon->rc);
 	if(daemon->fast_reload_thread)
@@ -1277,6 +1291,7 @@ daemon_delete(struct daemon* daemon)
 		edns_strings_delete(daemon->env->edns_strings);
 		auth_zones_delete(daemon->env->auth_zones);
 	}
+	auth_load_info_delete(daemon->auth_load_info);
 	ub_randfree(daemon->rand);
 	alloc_clear(&daemon->superalloc);
 	acl_list_delete(daemon->acl);

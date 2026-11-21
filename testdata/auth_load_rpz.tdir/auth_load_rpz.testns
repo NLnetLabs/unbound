@@ -1,0 +1,22 @@
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR AA NOERROR
+SECTION QUESTION
+rpz.example.com. IN SOA
+SECTION ANSWER
+rpz.example.com. IN SOA ns.example.com. hostmaster.example.com. 1 3600 900 86400 3600
+ENTRY_END
+
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR AA NOERROR
+SECTION QUESTION
+rpz.example.com. IN AXFR
+SECTION ANSWER
+rpz.example.com. IN SOA ns.example.com. hostmaster.example.com. 1 3600 900 86400 3600
+rpz.example.com.	IN NS	ns.example.net.
+www.example.com.rpz.example.com. IN A	1.2.3.4
+rpz.example.com. IN SOA ns.example.com. hostmaster.example.com. 1 3600 900 86400 3600
+ENTRY_END
