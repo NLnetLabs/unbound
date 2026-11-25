@@ -1434,11 +1434,27 @@ The proxied address (if any) will then be used as the true client address
 and will be used where applicable for logging, ACL, DNSTAP, RPZ and IP
 ratelimiting.
 .sp
+It is a good idea to limit the allowed users of the proxy protocol,
+with \fI\%allow\-proxy\fP so that disallowed
+clients can not open a major security breach by impersonating addresses.
+.sp
 PROXYv2 is supported for UDP and TCP/TLS listening interfaces.
 .sp
 There is no support for PROXYv2 on a DoH, DoQ or DNSCrypt listening interface.
 .sp
 Can list multiple, each on a new statement.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B allow\-proxy: \fI<IP netblock>\fP 
+List the netblocks that are allowed to send proxy\-protocol headers.
+Without the option, any IP address is allowed, because that is backwards
+compatible.
+.sp
+It can be given multiple times to allow multiple netblocks, or
+with /32 or /128 specific addresses can be listed.
+The restriction for proxy senders is advised, because otherwise a client
+could make use of a wrong address for its query.
 .UNINDENT
 .INDENT 0.0
 .TP
@@ -2431,32 +2447,43 @@ Default: no
 .B module\-config: \fI\(dq<module names>\(dq\fP 
 Module configuration, a list of module names separated by spaces, surround
 the string with quotes (\fB\(dq\(dq\fP).
-The modules can be \fBrespip\fP, \fBvalidator\fP, or \fBiterator\fP (and possibly
-more, see below).
+The available modules are \fBrespip\fP, \fBdns64\fP, \fBvalidator\fP and
+\fBiterator\fP\&.
+Depending on compilation options \fBpython\fP, \fBdynlib\fP, \fBsubnetcache\fP,
+\fBipsecmod\fP and \fBcachedb\fP could also be available.
 .sp
 \fBNOTE:\fP
 .INDENT 7.0
 .INDENT 3.5
 The ordering of the modules is significant, the order decides the order
 of processing.
+\fI\%unbound\-checkconf(8)\fP checks for
+module configurations that are known to work.
 .UNINDENT
 .UNINDENT
 .sp
-Setting this to just \(dqiterator\(dq will result in a non\-validating server.
-Setting this to \(dqvalidator iterator\(dq will turn on DNSSEC validation.
+Setting this to just \fB\(dqiterator\(dq\fP results in a non\-validating server.
+Setting this to \fB\(dqvalidator iterator\(dq\fP (default) enables the DNSSEC
+validator module but not DNSSEC validation.
 .sp
 \fBNOTE:\fP
 .INDENT 7.0
 .INDENT 3.5
-You must also set trust\-anchors for validation to be useful.
+To turn on DNSSEC validation you must configure trust\-anchors.
 .UNINDENT
 .UNINDENT
 .sp
-Adding \fBrespip\fP to the front will cause RPZ processing to be done on all
-queries.
+The \fBiterator\fP module has to be at the end, it handles outgoing recursive
+traffic.
+.sp
+The \fBvalidator\fP module will DNSSEC validate messages for the modules that
+come before it.
 .sp
 Most modules that need to be listed here have to be listed at the beginning
 of the line.
+.sp
+Adding \fBrespip\fP to the front will cause RPZ processing to be done on all
+queries. If combined with \fBdns64\fP, \fBrespip\fP should come first.
 .sp
 The \fBsubnetcache\fP module has to be listed just before the iterator.
 .sp
@@ -2465,6 +2492,10 @@ the output of the module it is just before.
 .sp
 The \fBdynlib\fP module can be listed pretty much anywhere, it is only a very
 thin wrapper that allows dynamic libraries to run in its place.
+.sp
+The \fBipsecmod\fP module has to be listed at the beginning of the line.
+.sp
+The \fBcachedb\fP module is best to be placed after the \fBvalidator\fP module.
 .sp
 Default: \(dqvalidator iterator\(dq
 .UNINDENT
@@ -3921,6 +3952,37 @@ Default: 32
 .UNINDENT
 .INDENT 0.0
 .TP
+.B iter\-scrub\-glue\-count: \fI<number>\fP 
+Limit on the number of glue RRs from upstream responses.
+This protects against too large numbers of additional section records.
+When it is exceeded, the remainder is removed from the message.
+.sp
+Default: 100
+.UNINDENT
+.INDENT 0.0
+.TP
+.B delegpt\-max\-addr: \fI<number>\fP 
+The max number of addresses in a delegation point.
+This protects the internals of the iterator from very long lists of
+items to examine.
+That stops it from looping over them to find new glue, cache lookups,
+and sending queries there.
+.sp
+Default: 100
+.UNINDENT
+.INDENT 0.0
+.TP
+.B delegpt\-max\-ns: \fI<number>\fP 
+The max number of nameserver names in a delegation point.
+This protects the internals of the iterator from a very long list
+of nameserver names to examine.
+That stops it from looping over that list to find names in cache,
+and making queries there.
+.sp
+Default: 20
+.UNINDENT
+.INDENT 0.0
+.TP
 .B fast\-server\-permil: \fI<number>\fP 
 Specify how many times out of 1000 to pick from the set of fastest servers.
 0 turns the feature off.
@@ -4797,12 +4859,13 @@ Default: no
 These options are part of the \fBpython:\fP section.
 .sp
 The \fBpython:\fP section gives the settings for the \fIpython(1)\fP script module.
-This module acts like the iterator and validator modules do, on queries and
-answers.
-To enable the script module it has to be compiled into the daemon, and the word
-\fBpython\fP has to be put in the
-\fI\%module\-config\fP option (usually first, or
-between the validator and iterator).
+This module allows a custom Python script to be loaded on runtime and act
+on queries and answers like other modules.
+To enable the module, Python module support has to be compiled into Unbound
+(\fB\-\-with\-pythonmodule\fP), and the word \fBpython\fP has to be put in the
+\fI\%module\-config\fP option.
+The Python module is a wildcard module and can be put anywhere but the last
+place in the \fI\%module\-config\fP option.
 Multiple instances of the python module are supported by adding the word
 \fBpython\fP more than once.
 .sp
@@ -4825,10 +4888,12 @@ These options are part of the \fBdynlib:\fP section.
 .sp
 The \fBdynlib:\fP section gives the settings for the \fBdynlib\fP module.
 This module is only a very small wrapper that allows dynamic modules to be
-loaded on runtime instead of being compiled into the application.
-To enable the dynlib module it has to be compiled into the daemon, and the word
-\fBdynlib\fP has to be put in the
+loaded on runtime instead of being compiled into Unbound.
+To enable the dynlib module it has to be compiled into Unbound
+(\fB\-\-with\-dynlibmodule\fP) and the word \fBdynlib\fP has to be put in the
 \fI\%module\-config\fP option.
+The dynamic library module is a wildcard module and can be put anywhere but the
+last place in the \fI\%module\-config\fP option.
 Multiple instances of dynamic libraries are supported by adding the word
 \fBdynlib\fP more than once.
 .sp
@@ -4859,8 +4924,6 @@ module\-config: \(dqdns64 validator iterator\(dq
 .fi
 .UNINDENT
 .UNINDENT
-.sp
-and be compiled into the daemon to be enabled.
 .sp
 \fBNOTE:\fP
 .INDENT 0.0
@@ -5090,7 +5153,7 @@ module\-config: \(dqsubnetcache validator iterator\(dq
 .UNINDENT
 .UNINDENT
 .sp
-and be compiled into the daemon to be enabled.
+and be compiled into Unbound (\fB\-\-enable\-subnet\fP) to be enabled.
 .sp
 If the destination address is allowed in the configuration Unbound will add the
 EDNS0 option to the query containing the relevant part of the client\(aqs address.
@@ -5230,7 +5293,7 @@ module\-config: \(dqipsecmod validator iterator\(dq
 .UNINDENT
 .UNINDENT
 .sp
-and be compiled into Unbound by using \fB\-\-enable\-ipsecmod\fP to be enabled.
+and be compiled into Unbound (\fB\-\-enable\-ipsecmod\fP) to be enabled.
 .sp
 When Unbound receives an A/AAAA query that is not in the cache and finds a
 valid answer, it will withhold returning the answer and instead will generate
@@ -5346,7 +5409,7 @@ module\-config: \(dqvalidator cachedb iterator\(dq
 .UNINDENT
 .UNINDENT
 .sp
-and be compiled into the daemon with \fB\-\-enable\-cachedb\fP\&.
+and be compiled into Unbound with \fB\-\-enable\-cachedb\fP\&.
 .sp
 If this module is enabled and configured, the specified backend database works
 as a second level cache; when Unbound cannot find an answer to a query in its

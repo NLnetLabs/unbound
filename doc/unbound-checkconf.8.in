@@ -32,7 +32,7 @@ level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
 unbound-checkconf \- Check Unbound @version@ configuration file for errors.
 .SH SYNOPSIS
 .sp
-\fBunbound\-checkconf\fP [\fB\-hf\fP] [\fB\-o option\fP] [cfgfile]
+\fBunbound\-checkconf\fP [\fB\-ahf\fP] [\fB\-o option\fP] [cfgfile]
 .SH DESCRIPTION
 .sp
 \fBunbound\-checkconf\fP checks the configuration file for the
@@ -41,6 +41,12 @@ The config file syntax is described in
 \fI\%unbound.conf(5)\fP\&.
 .sp
 The available options are:
+.INDENT 0.0
+.TP
+.B \-a
+Also read the zonefiles for auth\-zones and RPZ.
+It checks if the syntax is okay of the zonefiles.
+.UNINDENT
 .INDENT 0.0
 .TP
 .B \-h
