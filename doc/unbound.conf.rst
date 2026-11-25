@@ -2179,12 +2179,16 @@ These options are part of the ``server:`` section.
 @@UAHL@unbound.conf@module-config@@: *"<module names>"*
     Module configuration, a list of module names separated by spaces, surround
     the string with quotes (``""``).
-    The modules can be ``respip``, ``validator``, or ``iterator`` (and possibly
-    more, see below).
+    The available modules are ``respip``, ``dns64``, ``validator`` and
+    ``iterator``.
+    Depending on compilation options ``python``, ``dynlib``, ``subnetcache``,
+    ``ipsecmod`` and ``cachedb`` could also be available.
 
     .. note::
         The ordering of the modules is significant, the order decides the order
         of processing.
+        :doc:`unbound-checkconf(8)</manpages/unbound-checkconf>` checks for
+        module configurations that are known to work.
 
     Setting this to just ``"iterator"`` results in a non-validating server.
     Setting this to ``"validator iterator"`` (default) enables the DNSSEC
@@ -2193,11 +2197,17 @@ These options are part of the ``server:`` section.
     .. note::
         To turn on DNSSEC validation you must configure trust-anchors.
 
-    Adding ``respip`` to the front will cause RPZ processing to be done on all
-    queries.
+    The ``iterator`` module has to be at the end, it handles outgoing recursive
+    traffic.
+
+    The ``validator`` module will DNSSEC validate messages for the modules that
+    come before it.
 
     Most modules that need to be listed here have to be listed at the beginning
     of the line.
+
+    Adding ``respip`` to the front will cause RPZ processing to be done on all
+    queries. If combined with ``dns64``, ``respip`` should come first.
 
     The ``subnetcache`` module has to be listed just before the iterator.
 
@@ -2206,6 +2216,10 @@ These options are part of the ``server:`` section.
 
     The ``dynlib`` module can be listed pretty much anywhere, it is only a very
     thin wrapper that allows dynamic libraries to run in its place.
+
+    The ``ipsecmod`` module has to be listed at the beginning of the line.
+
+    The ``cachedb`` module is best to be placed after the ``validator`` module.
 
     Default: "validator iterator"
 
@@ -4248,12 +4262,13 @@ Python Module Options
 These options are part of the ``python:`` section.
 
 The ``python:`` section gives the settings for the *python(1)* script module.
-This module acts like the iterator and validator modules do, on queries and
-answers.
-To enable the script module it has to be compiled into the daemon, and the word
-``python`` has to be put in the
-:ref:`module-config<unbound.conf.module-config>` option (usually first, or
-between the validator and iterator).
+This module allows a custom Python script to be loaded on runtime and act
+on queries and answers like other modules.
+To enable the module, Python module support has to be compiled into Unbound
+(``--with-pythonmodule``), and the word ``python`` has to be put in the
+:ref:`module-config<unbound.conf.module-config>` option.
+The Python module is a wildcard module and can be put anywhere but the last
+place in the :ref:`module-config<unbound.conf.module-config>` option.
 Multiple instances of the python module are supported by adding the word
 ``python`` more than once.
 
@@ -4279,10 +4294,12 @@ These options are part of the ``dynlib:`` section.
 
 The ``dynlib:`` section gives the settings for the ``dynlib`` module.
 This module is only a very small wrapper that allows dynamic modules to be
-loaded on runtime instead of being compiled into the application.
-To enable the dynlib module it has to be compiled into the daemon, and the word
-``dynlib`` has to be put in the
+loaded on runtime instead of being compiled into Unbound.
+To enable the dynlib module it has to be compiled into Unbound
+(``--with-dynlibmodule``) and the word ``dynlib`` has to be put in the
 :ref:`module-config<unbound.conf.module-config>` option.
+The dynamic library module is a wildcard module and can be put anywhere but the
+last place in the :ref:`module-config<unbound.conf.module-config>` option.
 Multiple instances of dynamic libraries are supported by adding the word
 ``dynlib`` more than once.
 
@@ -4308,8 +4325,6 @@ The ``dns64`` module must be configured in the
 .. code-block:: text
 
     module-config: "dns64 validator iterator"
-
-and be compiled into the daemon to be enabled.
 
 .. note::
     If combining the ``respip`` and ``dns64`` modules, the ``respip`` module
@@ -4501,7 +4516,7 @@ The ECS module must be configured in the
 
     module-config: "subnetcache validator iterator"
 
-and be compiled into the daemon to be enabled.
+and be compiled into Unbound (``--enable-subnet``) to be enabled.
 
 If the destination address is allowed in the configuration Unbound will add the
 EDNS0 option to the query containing the relevant part of the client's address.
@@ -4628,7 +4643,7 @@ The IPsec module must be configured in the
 
     module-config: "ipsecmod validator iterator"
 
-and be compiled into Unbound by using ``--enable-ipsecmod`` to be enabled.
+and be compiled into Unbound (``--enable-ipsecmod``) to be enabled.
 
 When Unbound receives an A/AAAA query that is not in the cache and finds a
 valid answer, it will withhold returning the answer and instead will generate
@@ -4733,7 +4748,7 @@ The Cache DB module must be configured in the
 
     module-config: "validator cachedb iterator"
 
-and be compiled into the daemon with ``--enable-cachedb``.
+and be compiled into Unbound with ``--enable-cachedb``.
 
 If this module is enabled and configured, the specified backend database works
 as a second level cache; when Unbound cannot find an answer to a query in its

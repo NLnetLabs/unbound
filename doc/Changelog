@@ -1,6 +1,7 @@
 25 November 2026: Yorgos
 	- Merge #1557 from Konstantinos Spartalis: Close #1373: allow
 	  python and dynlib as wildcard modules in unbound-checkconf.
+	- Refresh module references on the man page.
 
 19 November 2026: Wouter
 	- Add allow-proxy: netblock config that sets what peers are
