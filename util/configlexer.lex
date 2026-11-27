@@ -348,6 +348,7 @@ forward-addr{COLON}		{ YDVAR(1, VAR_FORWARD_ADDR) }
 forward-host{COLON}		{ YDVAR(1, VAR_FORWARD_HOST) }
 forward-first{COLON}		{ YDVAR(1, VAR_FORWARD_FIRST) }
 forward-no-cache{COLON}		{ YDVAR(1, VAR_FORWARD_NO_CACHE) }
+forward-sequential{COLON}	{ YDVAR(1, VAR_FORWARD_SEQUENTIAL) }
 forward-ssl-upstream{COLON}	{ YDVAR(1, VAR_FORWARD_SSL_UPSTREAM) }
 forward-tls-upstream{COLON}	{ YDVAR(1, VAR_FORWARD_SSL_UPSTREAM) }
 forward-tcp-upstream{COLON}	{ YDVAR(1, VAR_FORWARD_TCP_UPSTREAM) }
