@@ -688,4 +688,14 @@ lz_enter_zone(struct local_zones* zones, const char* name, const char* type,
  */
 void
 lz_init_parents(struct local_zones* zones);
+
+/** create a new localzone */
+struct local_zone* local_zone_create(uint8_t* nm, size_t len, int labs,
+	enum localzone_type t, uint16_t dclass);
+
+/** Mark the SOA record for the zone. */
+int lz_mark_soa_for_zone(struct local_zone* z,
+	struct ub_packed_rrset_key* soa_rrset, uint8_t* rdata,
+	size_t rdata_len, time_t ttl, const char* rrstr);
+
 #endif /* SERVICES_LOCALZONE_H */
