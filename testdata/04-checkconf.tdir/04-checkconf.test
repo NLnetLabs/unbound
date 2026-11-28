@@ -34,6 +34,12 @@ if grep "define USE_DNSCRYPT 1" ../../config.h; then
 else
 	with_dnscrypt=0
 fi
+# detect nftset
+if grep "define USE_NFTSET 1" ../../config.h; then
+	with_nftset=1
+else
+	with_nftset=0
+fi
 
 # test check of config files.
 for f in bad.*; do
@@ -47,6 +53,10 @@ for f in bad.*; do
 		echo "skipped; no DNSCRYPT support"
 		continue
 	fi
+	if echo $f | grep -q "nftset" && test $with_nftset -eq 0; then
+		echo "skipped; no USE_NFTSET support"
+		continue
+	fi
 
 	$PRE/unbound-checkconf $f
 	if test $? != 1; then
@@ -57,6 +67,10 @@ done
 for f in good.*; do
 	echo
 	echo $PRE/unbound-checkconf $f
+	if echo $f | grep -q "nftset" && test $with_nftset -eq 0; then
+		echo "skipped; no USE_NFTSET support"
+		continue
+	fi
 	$PRE/unbound-checkconf $f
 	if test $? != 0; then
 		echo "exit code case $f wrong"
