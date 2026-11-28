@@ -479,6 +479,7 @@ max-udp-size{COLON}		{ YDVAR(1, VAR_MAX_UDP_SIZE) }
 dns64-prefix{COLON}		{ YDVAR(1, VAR_DNS64_PREFIX) }
 dns64-synthall{COLON}		{ YDVAR(1, VAR_DNS64_SYNTHALL) }
 dns64-ignore-aaaa{COLON}	{ YDVAR(1, VAR_DNS64_IGNORE_AAAA) }
+dns64-tags{COLON}		{ YDVAR(1, VAR_DNS64_TAGS) }
 nat64-prefix{COLON}		{ YDVAR(1, VAR_NAT64_PREFIX) }
 define-tag{COLON}		{ YDVAR(1, VAR_DEFINE_TAG) }
 local-zone-tag{COLON}		{ YDVAR(2, VAR_LOCAL_ZONE_TAG) }
