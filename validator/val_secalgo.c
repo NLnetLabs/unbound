@@ -1480,14 +1480,13 @@ verify_canonrrset(sldns_buffer* buf, int algo, unsigned char* sigblock,
 
 #elif defined(HAVE_NETTLE)
 
-#include "sha.h"
+#include "version.h"
+#include "sha1.h"
+#include "sha2.h"
 #include "bignum.h"
 #include "macros.h"
 #include "rsa.h"
 #include "dsa.h"
-#ifdef HAVE_NETTLE_DSA_COMPAT_H
-#include "dsa-compat.h"
-#endif
 #include "asn1.h"
 #ifdef USE_ECDSA
 #include "ecdsa.h"
@@ -1507,7 +1506,11 @@ _digest_nettle(int algo, uint8_t* buf, size_t len,
 			struct sha1_ctx ctx;
 			sha1_init(&ctx);
 			sha1_update(&ctx, len, buf);
-			sha1_digest(&ctx, SHA1_DIGEST_SIZE, res);
+			sha1_digest(&ctx,
+#if NETTLE_VERSION_MAJOR < 4
+				SHA1_DIGEST_SIZE,
+#endif
+				res);
 			return 1;
 		}
 		case SHA256_DIGEST_SIZE:
@@ -1515,7 +1518,11 @@ _digest_nettle(int algo, uint8_t* buf, size_t len,
 			struct sha256_ctx ctx;
 			sha256_init(&ctx);
 			sha256_update(&ctx, len, buf);
-			sha256_digest(&ctx, SHA256_DIGEST_SIZE, res);
+			sha256_digest(&ctx,
+#if NETTLE_VERSION_MAJOR < 4
+				SHA256_DIGEST_SIZE,
+#endif
+				res);
 			return 1;
 		}
 		case SHA384_DIGEST_SIZE:
@@ -1523,7 +1530,11 @@ _digest_nettle(int algo, uint8_t* buf, size_t len,
 			struct sha384_ctx ctx;
 			sha384_init(&ctx);
 			sha384_update(&ctx, len, buf);
-			sha384_digest(&ctx, SHA384_DIGEST_SIZE, res);
+			sha384_digest(&ctx,
+#if NETTLE_VERSION_MAJOR < 4
+				SHA384_DIGEST_SIZE,
+#endif
+				res);
 			return 1;
 		}
 		case SHA512_DIGEST_SIZE:
@@ -1531,7 +1542,11 @@ _digest_nettle(int algo, uint8_t* buf, size_t len,
 			struct sha512_ctx ctx;
 			sha512_init(&ctx);
 			sha512_update(&ctx, len, buf);
-			sha512_digest(&ctx, SHA512_DIGEST_SIZE, res);
+			sha512_digest(&ctx,
+#if NETTLE_VERSION_MAJOR < 4
+				SHA512_DIGEST_SIZE,
+#endif
+				res);
 			return 1;
 		}
 		default:
@@ -1624,7 +1639,10 @@ int secalgo_hash_final(struct secalgo_hash* hash, uint8_t* result,
 			return 0;
 		}
 		*resultlen = SHA384_DIGEST_SIZE;
-		sha384_digest(&hash->ctx384, SHA384_DIGEST_SIZE,
+		sha384_digest(&hash->ctx384,
+#if NETTLE_VERSION_MAJOR < 4
+			SHA384_DIGEST_SIZE,
+#endif
 			(unsigned char*)result);
 	} else if(hash->active == 512) {
 		if(SHA512_DIGEST_SIZE > maxlen) {
@@ -1633,7 +1651,10 @@ int secalgo_hash_final(struct secalgo_hash* hash, uint8_t* result,
 			return 0;
 		}
 		*resultlen = SHA512_DIGEST_SIZE;
-		sha512_digest(&hash->ctx512, SHA512_DIGEST_SIZE,
+		sha512_digest(&hash->ctx512,
+#if NETTLE_VERSION_MAJOR < 4
+			SHA512_DIGEST_SIZE,
+#endif
 			(unsigned char*)result);
 	} else {
 		*resultlen = 0;
@@ -1757,7 +1778,8 @@ _verify_nettle_dsa(sldns_buffer* buf, unsigned char* sigblock,
 	uint8_t key_t_value;
 	int res = 0;
 	size_t offset;
-	struct dsa_public_key pubkey;
+	struct dsa_params params;
+	mpz_t y;
 	struct dsa_signature signature;
 	unsigned int expected_len;
 
@@ -1813,24 +1835,26 @@ _verify_nettle_dsa(sldns_buffer* buf, unsigned char* sigblock,
 	}
 
 	/* Extract DSA pubkey from the record */
-	nettle_dsa_public_key_init(&pubkey);
+	dsa_params_init(&params);
+	mpz_init(y);
 	offset = 1;
-	nettle_mpz_set_str_256_u(pubkey.q, 20, key+offset);
+	nettle_mpz_set_str_256_u(params.q, 20, key+offset);
 	offset += 20;
-	nettle_mpz_set_str_256_u(pubkey.p, (64 + key_t_value*8), key+offset);
+	nettle_mpz_set_str_256_u(params.p, (64 + key_t_value*8), key+offset);
 	offset += (64 + key_t_value*8);
-	nettle_mpz_set_str_256_u(pubkey.g, (64 + key_t_value*8), key+offset);
+	nettle_mpz_set_str_256_u(params.g, (64 + key_t_value*8), key+offset);
 	offset += (64 + key_t_value*8);
-	nettle_mpz_set_str_256_u(pubkey.y, (64 + key_t_value*8), key+offset);
+	nettle_mpz_set_str_256_u(y, (64 + key_t_value*8), key+offset);
 
 	/* Digest content of "buf" and verify its DSA signature in "sigblock"*/
 	res = _digest_nettle(SHA1_DIGEST_SIZE, (unsigned char*)sldns_buffer_begin(buf),
 						(unsigned int)sldns_buffer_limit(buf), (unsigned char*)digest);
-	res &= dsa_sha1_verify_digest(&pubkey, digest, &signature);
+	res &= dsa_verify(&params, y, SHA1_DIGEST_SIZE, digest, &signature);
 
 	/* Clear and return */
 	nettle_dsa_signature_clear(&signature);
-	nettle_dsa_public_key_clear(&pubkey);
+	dsa_params_clear(&params);
+	mpz_clear(y);
 	if (!res)
 		return "DSA signature verification failed";
 	else
