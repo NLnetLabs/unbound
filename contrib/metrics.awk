@@ -67,6 +67,7 @@ END {
 	print "unbound_memory_bytes{type=\"rrset.cache.count\"} " val["rrset.cache.count"];
 	print "unbound_memory_bytes{type=\"infra.cache.count\"} " val["infra.cache.count"];
 	print "unbound_memory_bytes{type=\"key.cache.count\"} " val["key.cache.count"];
+	print "unbound_memory_bytes{type=\"mem.auth_zones\"} " val["mem.auth_zones"];
 	print ""
 
 	print "# HELP unbound_by_type_queries Unbound DNS queries by type"

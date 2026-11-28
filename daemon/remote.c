@@ -913,7 +913,7 @@ static int
 print_mem(RES* ssl, struct worker* worker, struct daemon* daemon,
 	struct ub_stats_info* s)
 {
-	size_t msg, rrset, val, iter, respip;
+	size_t msg, rrset, val, iter, respip, auth;
 #ifdef CLIENT_SUBNET
 	size_t subnet = 0;
 #endif /* CLIENT_SUBNET */
@@ -932,6 +932,7 @@ print_mem(RES* ssl, struct worker* worker, struct daemon* daemon,
 	val = mod_get_mem(&worker->env, "validator");
 	iter = mod_get_mem(&worker->env, "iterator");
 	respip = mod_get_mem(&worker->env, "respip");
+	auth = auth_zones_get_mem(worker->env.auth_zones);
 #ifdef CLIENT_SUBNET
 	subnet = mod_get_mem(&worker->env, "subnetcache");
 #endif /* CLIENT_SUBNET */
@@ -979,6 +980,8 @@ print_mem(RES* ssl, struct worker* worker, struct daemon* daemon,
 	if(!print_longnum(ssl, "mem.mod.dynlibmod"SQ, dynlib))
 		return 0;
 #endif /* WITH_DYNLIBMODULE */
+	if(!print_longnum(ssl, "mem.auth_zones"SQ, auth))
+		return 0;
 	if(!print_longnum(ssl, "mem.streamwait"SQ,
 		(size_t)s->svr.mem_stream_wait))
 		return 0;
